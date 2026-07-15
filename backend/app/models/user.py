@@ -6,8 +6,9 @@ from sqlmodel import Field, SQLModel
 
 class UserBase(SQLModel):
     email: str = Field(unique=True, index=True)
+    full_name: Optional[str] = Field(default=None)
+    role: str = Field(default="user") # "user" or "admin"
     is_active: bool = Field(default=True)
-    language_level: Optional[str] = Field(default="beginner") # e.g. beginner, intermediate, advanced
 
 
 class User(UserBase, table=True):

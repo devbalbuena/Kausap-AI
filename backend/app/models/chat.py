@@ -20,6 +20,7 @@ class ChatSession(ChatSessionBase, table=True):
 class ChatMessageBase(SQLModel):
     role: str = Field(index=True) # "user" or "assistant"
     content: str
+    risk_flag: bool = Field(default=False)
 
 
 class ChatMessage(ChatMessageBase, table=True):
