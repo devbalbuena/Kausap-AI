@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Kausap AI Design System
 /// Colors, text styles, and shared widget helpers extracted from Figma.
@@ -38,93 +39,79 @@ class AppColors {
 }
 
 class AppTextStyles {
-  static const String _fontFamily = 'Inter';
-
-  static const TextStyle heading1 = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle heading1 = GoogleFonts.inter(
     fontSize: 26,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
     letterSpacing: -0.5,
   );
 
-  static const TextStyle heading2 = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle heading2 = GoogleFonts.inter(
     fontSize: 20,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     letterSpacing: -0.3,
   );
 
-  static const TextStyle subheading = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle subheading = GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
     height: 1.5,
   );
 
-  static const TextStyle body = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle body = GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
   );
 
-  static const TextStyle label = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle label = GoogleFonts.inter(
     fontSize: 13,
     fontWeight: FontWeight.w500,
     color: AppColors.textPrimary,
   );
 
-  static const TextStyle inputText = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle inputText = GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
   );
 
-  static const TextStyle hint = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle hint = GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.textHint,
   );
 
-  static const TextStyle button = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle button = GoogleFonts.inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.textOnPrimary,
     letterSpacing: 0.2,
   );
 
-  static const TextStyle link = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle link = GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w600,
     color: AppColors.link,
     decoration: TextDecoration.none,
   );
 
-  static const TextStyle caption = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle caption = GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
     letterSpacing: 0.5,
   );
 
-  static const TextStyle errorText = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle errorText = GoogleFonts.inter(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.error,
   );
 
-  static const TextStyle brandName = TextStyle(
-    fontFamily: _fontFamily,
+  static TextStyle brandName = GoogleFonts.inter(
     fontSize: 20,
     fontWeight: FontWeight.w700,
     color: AppColors.primary,
@@ -135,7 +122,7 @@ class AppTextStyles {
 class AppTheme {
   static ThemeData get theme => ThemeData(
         useMaterial3: true,
-        fontFamily: 'Inter',
+        textTheme: GoogleFonts.interTextTheme(),
         scaffoldBackgroundColor: AppColors.background,
         colorScheme: const ColorScheme.light(
           primary: AppColors.primary,
