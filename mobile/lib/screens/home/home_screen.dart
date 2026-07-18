@@ -29,7 +29,7 @@ class HomeScreen extends StatelessWidget {
               child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
             ),
             const SizedBox(width: 8),
-            const Text('Kausap AI', style: AppTextStyles.brandName),
+            Text('Kausap AI', style: AppTextStyles.brandName),
           ],
         ),
         actions: [

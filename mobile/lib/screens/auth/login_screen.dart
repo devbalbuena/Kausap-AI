@@ -127,16 +127,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Header
-                        const Text('Welcome back!', style: AppTextStyles.heading1),
+                        Text('Welcome back!', style: AppTextStyles.heading1),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           'Sign in to your Kausap AI account',
                           style: AppTextStyles.subheading,
                         ),
                         const SizedBox(height: 28),
 
                         // Email field
-                        const Text('Email', style: AppTextStyles.label),
+                        Text('Email', style: AppTextStyles.label),
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _emailController,
@@ -158,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
 
                         // Password field
-                        const Text('Password', style: AppTextStyles.label),
+                        Text('Password', style: AppTextStyles.label),
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _passwordController,
@@ -195,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               minimumSize: Size.zero,
                             ),
-                            child: const Text(
+                            child: Text(
                               'FORGOT PASSWORD?',
                               style: TextStyle(
                                 fontSize: 11,
@@ -242,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
-                              : const Text('Sign In'),
+                              : Text('Sign In'),
                         ),
 
                         const SizedBox(height: 20),
@@ -259,7 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               text: TextSpan(
                                 style: AppTextStyles.body
                                     .copyWith(color: AppColors.textSecondary),
-                                children: const [
+                                children: [
                                   TextSpan(text: "Don't have an account? "),
                                   TextSpan(text: 'Sign Up', style: AppTextStyles.link),
                                 ],

@@ -31,7 +31,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Welcome back!', style: AppTextStyles.heading1),
+                      Text('Welcome back!', style: AppTextStyles.heading1),
                       const SizedBox(height: 24),
 
                       // Client card
@@ -71,7 +71,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           child: RichText(
                             text: TextSpan(
                               style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-                              children: const [
+                              children: [
                                 TextSpan(text: 'Already have an account? '),
                                 TextSpan(
                                   text: 'Sign In',
