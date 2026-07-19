@@ -54,14 +54,14 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> register(String email, String password) async {
+  Future<void> register(Map<String, dynamic> payload) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      await _authService.register(email, password);
-      // After registration, auto login
-      await login(email, password);
+      await _authService.register(payload);
+      // Auto-login after successful registration
+      await login(payload['email'], payload['password']);
     } finally {
       _isLoading = false;
       notifyListeners();

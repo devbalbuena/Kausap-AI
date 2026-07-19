@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import 'login_screen.dart';
+import '../signup/client_signup_step1_screen.dart';
 
 /// Role Selection — matches Figma "Role Selection" frame.
 /// Two role cards: Client / Patient and Professional.
@@ -41,7 +42,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         subtitle: 'Client / Patient',
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const _SignupPlaceholder(role: 'Client'),
+                            builder: (_) => const ClientSignupStep1Screen(),
                           ),
                         ),
                       ),
