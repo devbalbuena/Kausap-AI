@@ -19,6 +19,13 @@ This repository is a monorepo containing both the Flutter frontend app and the F
 - **Doctor Referrals**: Manage referrals to health professionals.
 - **Unified Design System**: Built with Figma specs in mind, using the `Inter` Google Font and specific, modern constraints.
 
+## 📈 Development Progress (Phase Tracker)
+- **Phase 1-6 (Backend)**: ✅ Completed. FastAPI models, auth routes, Neon PostgreSQL setup.
+- **Phase 7-8 (Client Signup)**: ✅ Completed. Full UI and API integration for client registration.
+- **Phase 9 (Professional Signup)**: ✅ Completed. 3-step registration, license upload flow, and pending verification screen.
+- **Phase 10 (Client Home Screen)**: ✅ Completed. Fully functional home UI matching Figma, including 7-day streak, quick actions, upcoming sessions, and mood trends.
+- **Phase 11 (TBD)**: 🔄 In Progress. (Options: Daily Check-in, Chatbot, Professional Dashboard).
+
 ## 🛠 Tech Stack
 
 ### Frontend (Mobile & Web)
