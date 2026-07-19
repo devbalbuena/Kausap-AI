@@ -279,8 +279,9 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 /// Error banner — matches the "Error Banner" frame in Figma Login Error State.

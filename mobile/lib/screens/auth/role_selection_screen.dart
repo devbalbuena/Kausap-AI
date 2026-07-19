@@ -95,7 +95,9 @@ class RoleSelectionScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }
 
@@ -172,43 +174,3 @@ class _RoleCardState extends State<_RoleCard> {
   }
 }
 
-/// Temporary placeholder for signup flows — replaced in next phase.
-class _SignupPlaceholder extends StatelessWidget {
-  final String role;
-  const _SignupPlaceholder({required this.role});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('$role Sign Up', style: AppTextStyles.heading2),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              role == 'Client' ? Icons.favorite_rounded : Icons.psychology_rounded,
-              size: 64,
-              color: AppColors.primary,
-            ),
-            const SizedBox(height: 16),
-            Text('$role Sign Up', style: AppTextStyles.heading1),
-            const SizedBox(height: 8),
-            Text(
-              'Coming in next phase.',
-              style: AppTextStyles.subheading,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
