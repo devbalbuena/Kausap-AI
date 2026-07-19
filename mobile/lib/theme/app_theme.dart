@@ -4,25 +4,32 @@ import 'package:google_fonts/google_fonts.dart';
 /// Kausap AI Design System
 /// Colors, text styles, and shared widget helpers extracted from Figma.
 class AppColors {
-  // Primary brand
-  static const Color primary = Color(0xFF2D6A4F);
-  static const Color primaryLight = Color(0xFF40916C);
-  static const Color primaryDark = Color(0xFF1B4332);
+  // Primary brand — Figma: #0077B6
+  static const Color primary = Color(0xFF0077B6);
+  static const Color primaryLight = Color(0xFF00B4D8);
+  static const Color primaryDark = Color(0xFF005F92);
+
+  // Accent colors from Figma
+  static const Color accentGreen = Color(0xFF519C6B);   // Start Activity button
+  static const Color accentOrange = Color(0xFFFE8235);  // Book a Session button
+  static const Color sessionCard = Color(0xFF00B4D8);   // Upcoming Session card bg
+  static const Color bookSessionCard = Color(0xFFFDECDF); // Book Session card bg
+  static const Color bookSessionText = Color(0xFF573926); // Brown text
 
   // Backgrounds
-  static const Color background = Color(0xFFF6F8F7);
+  static const Color background = Color(0xFFFBF8FF);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color cardBackground = Color(0xFFFFFFFF);
 
-  // Text
-  static const Color textPrimary = Color(0xFF1A1A2E);
-  static const Color textSecondary = Color(0xFF6B7280);
+  // Text — Figma: #3D405B
+  static const Color textPrimary = Color(0xFF3D405B);
+  static const Color textSecondary = Color(0xFF717680);
   static const Color textHint = Color(0xFF9CA3AF);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
 
   // Input
   static const Color inputBorder = Color(0xFFD1D5DB);
-  static const Color inputBorderFocused = Color(0xFF2D6A4F);
+  static const Color inputBorderFocused = Color(0xFF0077B6);
   static const Color inputBorderError = Color(0xFFEF4444);
   static const Color inputBackground = Color(0xFFFFFFFF);
 
@@ -35,7 +42,13 @@ class AppColors {
   static const Color divider = Color(0xFFE5E7EB);
 
   // Link / accent
-  static const Color link = Color(0xFF2D6A4F);
+  static const Color link = Color(0xFF0077B6);
+
+  // Navbar bar background tint
+  static const Color streakTrack = Color(0xFFECEDF5);
+  static const Color checkinIcon = Color(0xFFFEE9E7);   // heart icon bg
+  static const Color chatbotIcon = Color(0xFFE4F9FF);   // robot icon bg
+  static const Color activityIcon = Color(0xFFE7FEEE);  // barbell icon bg
 }
 
 class AppTextStyles {

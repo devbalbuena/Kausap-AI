@@ -209,7 +209,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                             _FieldLabel('Gender'),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              value: _selectedGender,
+                              initialValue: _selectedGender,
                               style: AppTextStyles.inputText,
                               decoration: const InputDecoration(
                                   hintText: 'Select Gender'),
