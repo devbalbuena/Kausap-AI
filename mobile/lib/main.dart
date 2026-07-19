@@ -4,6 +4,7 @@ import 'providers/auth_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/auth/role_selection_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/signup/professional_pending_screen.dart';
 
 void main() {
   runApp(
@@ -82,7 +83,14 @@ class _AppStartup extends StatelessWidget {
     }
 
     if (auth.isAuthenticated && auth.currentUser != null) {
-      return HomeScreen(user: auth.currentUser!);
+      final user = auth.currentUser!;
+      if (user['role'] == 'professional') {
+        final profile = user['professional_profile'];
+        if (profile == null || profile['is_verified'] != true) {
+          return const ProfessionalPendingScreen();
+        }
+      }
+      return HomeScreen(user: user);
     }
 
     return const RoleSelectionScreen();
