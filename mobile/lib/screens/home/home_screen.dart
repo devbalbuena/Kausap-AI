@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
+import '../chat/chatbot_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -82,7 +83,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               iconColor: const Color(0xFF0077B6),
                               title: 'Chat with Kausap AI',
                               subtitle: 'Need someone to talk to?',
-                              onTap: () {},
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const ChatbotScreen(),
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(height: 16),
                             _buildUpcomingSessionCard(),
