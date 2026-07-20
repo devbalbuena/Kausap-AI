@@ -17,6 +17,7 @@ This repository is a monorepo containing both the Flutter frontend app and the F
 - **Mental Health Chatbot**: AI-driven conversation sessions with risk-flagging capabilities.
 - **Mood Tracking**: Track and monitor user mood entries over time.
 - **Doctor Referrals**: Manage referrals to health professionals.
+- **Session Booking**: Clients can book, view upcoming, and review past 1-on-1 therapy sessions with conflict checking.
 - **Unified Design System**: Built with Figma specs in mind, using the `Inter` Google Font and specific, modern constraints.
 
 ## 📈 Development Progress (Phase Tracker)
@@ -25,7 +26,9 @@ This repository is a monorepo containing both the Flutter frontend app and the F
 - **Phase 9 (Professional Signup)**: ✅ Completed. 3-step registration, license upload flow, and pending verification screen.
 - **Phase 10 (Client Home Screen)**: ✅ Completed. Fully functional home UI matching Figma, including 7-day streak, quick actions, upcoming sessions, and mood trends.
 - **Phase 11 (Daily Check-in)**: ✅ Completed. Multi-step mood logging UI matching Figma, updated `MoodEntry` schemas, and API integration.
-- **Phase 12 (TBD)**: 🔄 In Progress. (Options: Chatbot Flow, Professional Dashboard).
+- **Phase 12 (Client Chatbot)**: ✅ Completed. Real-time chat interface connected to `POST /chat/sessions/{id}/messages` with empty states and typing indicators.
+- **Phase 13 (Client Sessions Screens)**: ✅ Completed. `TherapySession` table on Neon PostgreSQL. `POST /sessions` (with conflict check), `GET /sessions/upcoming`, `GET /sessions/past` endpoints. Flutter screens: Upcoming, Past, and Book Session (calendar + hardcoded slots + reason dropdown + Online/In-person toggle). Wired into bottom navigation and Home Screen cards.
+- **Phase 14 (TBD)**: 🔄 Planned.
 
 ## 🛠 Tech Stack
 

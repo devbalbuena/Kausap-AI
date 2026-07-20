@@ -93,7 +93,7 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
                             _FieldLabel('I am a...'),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              initialValue: _selectedOccupation,
+                              value: _selectedOccupation,
                               style: AppTextStyles.inputText,
                               decoration: const InputDecoration(
                                   hintText: 'Select your occupation'),

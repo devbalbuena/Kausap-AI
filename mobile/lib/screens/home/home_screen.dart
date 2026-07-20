@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../chat/chatbot_screen.dart';
+import '../session/session_tabs_screen.dart';
+import '../session/book_session_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -369,7 +371,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const SessionTabsScreen(),
+                      ),
+                    );
+                  },
                   child: const Text('View Session'),
                 ),
               ],
@@ -508,7 +516,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppColors.accentOrange,
                         fontWeight: FontWeight.w700),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const BookSessionScreen(),
+                      ),
+                    );
+                  },
                   child: const Text('Book a Session'),
                 ),
               ],
@@ -634,7 +648,16 @@ class _HomeScreenState extends State<HomeScreen> {
               children: List.generate(items.length, (i) {
                 final selected = i == _navIndex;
                 return GestureDetector(
-                  onTap: () => setState(() => _navIndex = i),
+                  onTap: () {
+                    setState(() => _navIndex = i);
+                    if (i == 3) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SessionTabsScreen(),
+                        ),
+                      );
+                    }
+                  },
                   behavior: HitTestBehavior.opaque,
                   child: SizedBox(
                     width: 68,

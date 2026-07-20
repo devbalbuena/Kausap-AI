@@ -12,6 +12,11 @@ class ApiConfig {
   static const String mood = '/mood';
   static const String moodSummary = '/mood/summary';
 
+  // Session endpoints
+  static const String sessions = '/sessions';
+  static const String sessionsUpcoming = '/sessions/upcoming';
+  static const String sessionsPast = '/sessions/past';
+
   // Chat endpoints
   static const String chatSessions = '/chat/sessions';
 
