@@ -24,7 +24,8 @@ This repository is a monorepo containing both the Flutter frontend app and the F
 - **Phase 7-8 (Client Signup)**: ✅ Completed. Full UI and API integration for client registration.
 - **Phase 9 (Professional Signup)**: ✅ Completed. 3-step registration, license upload flow, and pending verification screen.
 - **Phase 10 (Client Home Screen)**: ✅ Completed. Fully functional home UI matching Figma, including 7-day streak, quick actions, upcoming sessions, and mood trends.
-- **Phase 11 (TBD)**: 🔄 In Progress. (Options: Daily Check-in, Chatbot, Professional Dashboard).
+- **Phase 11 (Daily Check-in)**: ✅ Completed. Multi-step mood logging UI matching Figma, updated `MoodEntry` schemas, and API integration.
+- **Phase 12 (TBD)**: 🔄 In Progress. (Options: Chatbot Flow, Professional Dashboard).
 
 ## 🛠 Tech Stack
 

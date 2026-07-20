@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/role_selection_screen.dart';
+import '../checkin/daily_checkin_step1_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -66,7 +67,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               iconColor: const Color(0xFFE74C3C),
                               title: 'How are you feeling today?',
                               subtitle: 'Tap to check-in',
-                              onTap: () {},
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const DailyCheckinStep1Screen(),
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(height: 12),
                             _buildQuickActionCard(

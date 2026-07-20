@@ -45,6 +45,8 @@ def create_mood_entry(
     entry = MoodEntry(
         user_id=current_user.id,
         mood_level=payload.mood_level,
+        emotions=payload.emotions,
+        intensity=payload.intensity,
         note=payload.note,
     )
     session.add(entry)
@@ -132,6 +134,12 @@ def update_mood_entry(
         if not (1 <= payload.mood_level <= 5):
             raise HTTPException(status_code=400, detail="mood_level must be between 1 and 5")
         entry.mood_level = payload.mood_level
+
+    if payload.emotions is not None:
+        entry.emotions = payload.emotions
+        
+    if payload.intensity is not None:
+        entry.intensity = payload.intensity
 
     if payload.note is not None:
         entry.note = payload.note
