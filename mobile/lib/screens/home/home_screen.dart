@@ -9,6 +9,7 @@ import '../session/session_tabs_screen.dart';
 import '../session/book_session_screen.dart';
 import '../activity/activity_screen.dart';
 import '../activity/activity_start_screen.dart';
+import '../profile/profile_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -670,6 +671,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const SessionTabsScreen(),
+                        ),
+                      );
+                    } else if (i == 4) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
                         ),
                       );
                     }
