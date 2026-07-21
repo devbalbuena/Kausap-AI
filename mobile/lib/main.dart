@@ -5,6 +5,7 @@ import 'theme/app_theme.dart';
 import 'screens/auth/role_selection_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/signup/professional_pending_screen.dart';
+import 'screens/professional/professional_base_screen.dart';
 
 void main() {
   runApp(
@@ -89,6 +90,7 @@ class _AppStartup extends StatelessWidget {
         if (profile == null || profile['is_verified'] != true) {
           return const ProfessionalPendingScreen();
         }
+        return const ProfessionalBaseScreen();
       }
       return HomeScreen(user: user);
     }

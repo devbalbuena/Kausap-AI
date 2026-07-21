@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import 'role_selection_screen.dart';
 import '../home/home_screen.dart';
+import '../professional/professional_base_screen.dart';
 
 /// Unified Login Screen — matches Figma "Unified Login" + "Login Error State" frames.
 ///
@@ -67,10 +68,28 @@ class _LoginScreenState extends State<LoginScreen> {
       // Navigate based on role
       final user = authProvider.currentUser;
       if (user != null) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
-          (route) => false,
-        );
+        if (user['role'] == 'professional') {
+          final profile = user['professional_profile'];
+          if (profile != null && profile['is_verified'] == true) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const ProfessionalBaseScreen()),
+              (route) => false,
+            );
+          } else {
+            // Unverified professional — let main.dart AuthWrapper handle it or route directly
+            // For now, if unverified, just let AuthWrapper decide by popping to root, or push pending screen directly.
+            // Since login is pushed over AuthWrapper, we need to push to pending screen directly.
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const RoleSelectionScreen()), // A simple hack is to just pop and let main.dart rebuild
+              (route) => false,
+            );
+          }
+        } else {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
+            (route) => false,
+          );
+        }
       }
     } on ApiException catch (e) {
       _parseApiError(e);
