@@ -30,6 +30,7 @@ This repository is a monorepo containing both the Flutter frontend app and the F
 - **Phase 13 (Client Sessions Screens)**: ✅ Completed. `TherapySession` table on Neon PostgreSQL. `POST /sessions` (with conflict check), `GET /sessions/upcoming`, `GET /sessions/past` endpoints. Flutter screens: Upcoming, Past, and Book Session (calendar + hardcoded slots + reason dropdown + Online/In-person toggle). Wired into bottom navigation and Home Screen cards.
 - **Phase 14 (Client Activity)**: ✅ Completed. Activity library UI and session start screens integrated.
 - **Phase 15 (Client Profile)**: ✅ Completed. Profile screen with account info, settings, support links, and logout.
+- **Phase 16 (Professional Dashboard)**: ✅ Completed. Mobile-first responsive Professional Dashboard with BottomNavigationBar + Drawer (mobile) and left Sidebar (desktop/tablet). Includes Triage & Alerts card (scoped strictly to the professional's own clients via `GET /professional/dashboard`), Active Patients & Pending Requests stat cards, and Today's Schedule. Verified professionals are routed here automatically after login.
 
 ## 🛠 Tech Stack
 
