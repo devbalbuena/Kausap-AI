@@ -48,6 +48,24 @@ class AppColors {
   static const Color streakTrack = Color(0xFFECEDF5);
   static const Color checkinIcon = Color(0xFFFEE9E7);   // heart icon bg
   static const Color chatbotIcon = Color(0xFFE4F9FF);   // robot icon bg
+  static const Color streakCardBg = Color(0xFFEBF7DC);      // Green-tinted streak card bg (~rgba(201,238,169,0.4))
+  static const Color streakCardBorder = Color(0xFFC9EEA9);   // #C9EEA9
+  static const Color streakCardText = Color(0xFF4E6D36);     // Dark green label text
+  static const Color streakCardTitle = Color(0xFF3D405B);    // Same as textPrimary
+  static const Color streakCardBody = Color(0xFF404944);     // Body text in streak card
+
+  // Activity tag colors (from Figma Activity/Start)
+  static const Color tagGreenBg = Color(0xFFEBF7DC);         // rgba(201,238,169,0.4)
+  static const Color tagGreenBorder = Color(0xFFD0E8B0);     // rgba(72,103,48,0.1)
+  static const Color tagGreenText = Color(0xFF4E6D36);       // Anxiety tag
+  static const Color tagOrangeBg = Color(0x338F3C26);        // rgba(143,60,38,0.2) Stress tag
+  static const Color tagOrangeText = Color(0xFF712611);
+  static const Color tagBlueBg = Color(0xFFDFE0FF);          // Sleep issues tag
+  static const Color tagBlueText = Color(0xFF404944);
+
+  // Category pill (unselected)
+  static const Color categoryChipBg = Color(0xFFEDECFF);
+
   static const Color activityIcon = Color(0xFFE7FEEE);  // barbell icon bg
 }
 

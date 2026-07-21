@@ -28,7 +28,7 @@ This repository is a monorepo containing both the Flutter frontend app and the F
 - **Phase 11 (Daily Check-in)**: ✅ Completed. Multi-step mood logging UI matching Figma, updated `MoodEntry` schemas, and API integration.
 - **Phase 12 (Client Chatbot)**: ✅ Completed. Real-time chat interface connected to `POST /chat/sessions/{id}/messages` with empty states and typing indicators.
 - **Phase 13 (Client Sessions Screens)**: ✅ Completed. `TherapySession` table on Neon PostgreSQL. `POST /sessions` (with conflict check), `GET /sessions/upcoming`, `GET /sessions/past` endpoints. Flutter screens: Upcoming, Past, and Book Session (calendar + hardcoded slots + reason dropdown + Online/In-person toggle). Wired into bottom navigation and Home Screen cards.
-- **Phase 14 (TBD)**: 🔄 Planned.
+- **Phase 14 (Client Activity)**: ✅ Completed. Activity library UI and session start screens integrated.
 
 ## 🛠 Tech Stack
 
