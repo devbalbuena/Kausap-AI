@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/role_selection_screen.dart';
 import 'dashboard/professional_dashboard_screen.dart';
+import 'clients/professional_clients_screen.dart';
+import 'ai_insights/professional_ai_insights_screen.dart';
+import 'appointments/professional_appointments_screen.dart';
 
 class ProfessionalBaseScreen extends StatefulWidget {
   const ProfessionalBaseScreen({super.key});
@@ -18,9 +21,9 @@ class _ProfessionalBaseScreenState extends State<ProfessionalBaseScreen> {
 
   final List<Widget> _screens = [
     const ProfessionalDashboardScreen(),
-    const Center(child: Text("Clients Screen (Coming Soon)")),
-    const Center(child: Text("AI Insights Screen (Coming Soon)")),
-    const Center(child: Text("Appointments Screen (Coming Soon)")),
+    const ProfessionalClientsScreen(),
+    const ProfessionalAIInsightsScreen(),
+    const ProfessionalAppointmentsScreen(),
     const Center(child: Text("Activity Screen (Coming Soon)")),
     const Center(child: Text("Reports Screen (Coming Soon)")),
     const Center(child: Text("Settings Screen (Coming Soon)")),
