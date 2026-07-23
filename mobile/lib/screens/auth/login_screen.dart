@@ -7,6 +7,8 @@ import '../../services/api_client.dart';
 import 'role_selection_screen.dart';
 import '../home/home_screen.dart';
 import '../professional/professional_base_screen.dart';
+import '../signup/client_signup_step1_screen.dart';
+import '../signup/professional_signup_step1_screen.dart';
 
 /// Unified Login Screen — matches Figma "Unified Login" + "Login Error State" frames.
 ///
@@ -16,7 +18,8 @@ import '../professional/professional_base_screen.dart';
 ///   - Banner: "Unable to sign in. Please check your credentials and try again, or reset your password."
 ///     (shown when the backend doesn't distinguish which field failed)
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? defaultRole;
+  const LoginScreen({super.key, this.defaultRole});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -257,29 +260,77 @@ class _LoginScreenState extends State<LoginScreen> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
-                              : Text('Sign In'),
+                              : const Text('Sign In'),
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
+
+                        // Social Sign-in Buttons
+                        OutlinedButton(
+                          onPressed: () {},
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            side: BorderSide(color: AppColors.inputBorder),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.network('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg', width: 24, height: 24),
+                              const SizedBox(width: 12),
+                              Text('Sign in with Google', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () {},
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            side: BorderSide(color: AppColors.inputBorder),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.network('https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png', width: 24, height: 24),
+                              const SizedBox(width: 12),
+                              Text('Sign in with Facebook', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
 
                         // Sign Up link
                         Center(
                           child: GestureDetector(
-                            onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                  builder: (_) => const RoleSelectionScreen()),
-                              (route) => false,
-                            ),
+                            onTap: () {
+                              Widget nextScreen;
+                              if (widget.defaultRole == 'client') {
+                                nextScreen = const ClientSignupStep1Screen();
+                              } else if (widget.defaultRole == 'professional') {
+                                nextScreen = const ProfessionalSignupStep1Screen();
+                              } else {
+                                nextScreen = const RoleSelectionScreen();
+                              }
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (_) => nextScreen),
+                                (route) => false,
+                              );
+                            },
                             child: RichText(
                               text: TextSpan(
-                                style: AppTextStyles.body
-                                    .copyWith(color: AppColors.textSecondary),
+                                style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
                                 children: [
-                                  TextSpan(text: "Don't have an account? "),
+                                  const TextSpan(text: "Don't have an account? "),
                                   TextSpan(text: 'Sign Up', style: AppTextStyles.link),
                                 ],
                               ),

@@ -288,7 +288,7 @@ class _ProfessionalSignupStep1ScreenState
                                 onTap: () => Navigator.of(context)
                                     .pushAndRemoveUntil(
                                   MaterialPageRoute(
-                                      builder: (_) => const LoginScreen()),
+                                      builder: (_) => const LoginScreen(defaultRole: 'professional')),
                                   (r) => false,
                                 ),
                                 child: RichText(
