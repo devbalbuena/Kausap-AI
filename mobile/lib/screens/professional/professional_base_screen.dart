@@ -7,6 +7,8 @@ import 'dashboard/professional_dashboard_screen.dart';
 import 'clients/professional_clients_screen.dart';
 import 'ai_insights/professional_ai_insights_screen.dart';
 import 'appointments/professional_appointments_screen.dart';
+import 'reports/professional_reports_screen.dart';
+import 'settings/professional_settings_screen.dart';
 
 class ProfessionalBaseScreen extends StatefulWidget {
   const ProfessionalBaseScreen({super.key});
@@ -25,8 +27,8 @@ class _ProfessionalBaseScreenState extends State<ProfessionalBaseScreen> {
     const ProfessionalAIInsightsScreen(),
     const ProfessionalAppointmentsScreen(),
     const Center(child: Text("Activity Screen (Coming Soon)")),
-    const Center(child: Text("Reports Screen (Coming Soon)")),
-    const Center(child: Text("Settings Screen (Coming Soon)")),
+    const ProfessionalReportsScreen(),
+    const ProfessionalSettingsScreen(),
   ];
 
   @override
