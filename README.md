@@ -32,6 +32,7 @@ This repository is a monorepo containing both the Flutter frontend app and the F
 - **Phase 15 (Client Profile)**: ✅ Completed. Profile screen with account info, settings, support links, and logout.
 - **Phase 16 (Professional Dashboard)**: ✅ Completed. Mobile-first responsive Professional Dashboard with BottomNavigationBar + Drawer (mobile) and left Sidebar (desktop/tablet). Includes Triage & Alerts card (scoped strictly to the professional's own clients via `GET /professional/dashboard`), Active Patients & Pending Requests stat cards, and Today's Schedule. Verified professionals are routed here automatically after login.
 - **Phase 17 (Professional Clients, Appointments & AI Insights)**: ✅ Completed. Added 3 core pages: Clients (data table / vertical list with filters), Appointments (calendar view + pending requests), and AI Insights (Flagged queue + AI report). Mobile-first responsive layouts wired into base navigation.
+- **Phase 18 (Professional Reports & Settings)**: ✅ Completed. Reports screen with `fl_chart` grouped bar chart (PHQ-9 & GAD-7 Outcome Tracking), 3 metric cards, Crisis Protocol Metrics panel, RA 11036 Compliance card, Crisis Intervention Log modal, and Compliance PDF loading modal. Settings screen with profile edit, notification toggles, security, and logout.
 
 ## 🛠 Tech Stack
 
