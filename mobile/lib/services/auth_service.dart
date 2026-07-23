@@ -38,4 +38,26 @@ class AuthService {
     final response = await _apiClient.get(ApiConfig.me);
     return response as Map<String, dynamic>;
   }
+
+  Future<void> forgotPassword(String email) async {
+    await _apiClient.post(
+      ApiConfig.forgotPassword,
+      body: {'email': email},
+    );
+  }
+
+  Future<Map<String, dynamic>> verifyCode(String email, String code) async {
+    final response = await _apiClient.post(
+      ApiConfig.verifyCode,
+      body: {'email': email, 'code': code},
+    );
+    return response as Map<String, dynamic>;
+  }
+
+  Future<void> resetPassword(String resetToken, String newPassword) async {
+    await _apiClient.post(
+      ApiConfig.resetPassword,
+      body: {'reset_token': resetToken, 'new_password': newPassword},
+    );
+  }
 }

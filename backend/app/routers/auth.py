@@ -4,7 +4,14 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.models.user import User, UserRole, ProfessionalProfile
 from app.schemas.user import RegisterRequest, UserRead
-from app.schemas.auth import Token, LoginRequest
+from app.schemas.auth import Token, LoginRequest, ForgotPasswordRequest, VerifyCodeRequest, ResetPasswordRequest
+import random
+import string
+import uuid
+
+# In-memory storage for OTPs and reset tokens (for demonstration)
+otp_cache = {}  # dict of email -> str (OTP)
+reset_token_cache = {}  # dict of token -> email
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.deps import get_current_user
 
@@ -102,3 +109,60 @@ def login(credentials: LoginRequest, session: Annotated[Session, Depends(get_ses
 def me(current_user: Annotated[User, Depends(get_current_user)]):
     """Return the currently authenticated user's profile."""
     return current_user
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, session: Annotated[Session, Depends(get_session)]):
+    """Generate and send a 6-digit OTP for password reset."""
+    user = session.exec(select(User).where(User.email == payload.email)).first()
+    if not user:
+        # Prevent email enumeration by returning a success message anyway
+        return {"message": "If that email is registered, we have sent a verification code."}
+    
+    # Generate 6-digit OTP
+    otp = ''.join(random.choices(string.digits, k=6))
+    otp_cache[payload.email] = otp
+    
+    # In a real app, send this via email/SMS here. We'll just print it.
+    print(f"--- MOCK EMAIL --- Sent OTP {otp} to {payload.email}")
+    
+    return {"message": "If that email is registered, we have sent a verification code."}
+
+
+@router.post("/verify-code")
+def verify_code(payload: VerifyCodeRequest):
+    """Verify the 6-digit OTP and issue a reset token."""
+    expected_otp = otp_cache.get(payload.email)
+    if not expected_otp or expected_otp != payload.code:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
+    
+    # OTP is valid, generate a temporary reset token
+    reset_token = str(uuid.uuid4())
+    reset_token_cache[reset_token] = payload.email
+    
+    # Remove OTP so it can't be reused
+    del otp_cache[payload.email]
+    
+    return {"message": "Code verified", "reset_token": reset_token}
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordRequest, session: Annotated[Session, Depends(get_session)]):
+    """Set a new password using a valid reset token."""
+    email = reset_token_cache.get(payload.reset_token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
+    
+    user = session.exec(select(User).where(User.email == email)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    # Update password
+    user.hashed_password = hash_password(payload.new_password)
+    session.add(user)
+    session.commit()
+    
+    # Invalidate token
+    del reset_token_cache[payload.reset_token]
+    
+    return {"message": "Password successfully reset."}

@@ -9,6 +9,7 @@ import '../home/home_screen.dart';
 import '../professional/professional_base_screen.dart';
 import '../signup/client_signup_step1_screen.dart';
 import '../signup/professional_signup_step1_screen.dart';
+import 'forgot_password_screen.dart';
 
 /// Unified Login Screen — matches Figma "Unified Login" + "Login Error State" frames.
 ///
@@ -212,7 +213,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {}, // placeholder
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                              );
+                            },
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               minimumSize: Size.zero,
