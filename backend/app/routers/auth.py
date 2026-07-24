@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models.user import User, UserRole, ProfessionalProfile
-from app.schemas.user import RegisterRequest, UserRead
+from app.schemas.user import RegisterRequest, UserRead, UserUpdate
 from app.schemas.auth import Token, LoginRequest, ForgotPasswordRequest, VerifyCodeRequest, ResetPasswordRequest
 import random
 import string
@@ -108,6 +108,20 @@ def login(credentials: LoginRequest, session: Annotated[Session, Depends(get_ses
 @router.get("/me", response_model=UserRead)
 def me(current_user: Annotated[User, Depends(get_current_user)]):
     """Return the currently authenticated user's profile."""
+    return current_user
+
+
+@router.put("/me", response_model=UserRead)
+def update_me(payload: UserUpdate, current_user: Annotated[User, Depends(get_current_user)], session: Annotated[Session, Depends(get_session)]):
+    """Update the currently authenticated user's profile."""
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(current_user, key, value)
+    
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    
     return current_user
 
 
