@@ -215,7 +215,7 @@ class _ProfessionalAppointmentsScreenState extends State<ProfessionalAppointment
           
           // Check if there's an appointment starting at this hour
           final appointment = _appointments.firstWhere(
-            (a) => a.startTime.startsWith('${hour > 12 ? (hour - 12).toString().padLeft(2, '0') : hour.toString().padLeft(2, '0')}'),
+            (a) => a.startTime.startsWith(hour > 12 ? (hour - 12).toString().padLeft(2, '0') : hour.toString().padLeft(2, '0')),
             orElse: () => AppointmentItem.fromJson({'id': 'none', 'client_name': '', 'initials': '', 'start_time': '', 'end_time': '', 'date': '', 'mode': '', 'reason': '', 'status': ''}),
           );
           

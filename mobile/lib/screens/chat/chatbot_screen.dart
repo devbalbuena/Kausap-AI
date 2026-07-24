@@ -304,7 +304,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 child: Image.asset(
                   _currentAvatar.imagePath,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, _) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: const Color(0xFFEEF2FF),
                     child: Icon(Icons.person, color: AppColors.primary, size: 22),
                   ),
@@ -341,7 +341,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               child: Image.asset(
                 _currentAvatar.imagePath,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, _) => Center(
+                errorBuilder: (_, _, _) => Center(
                   child: Icon(Icons.smart_toy_rounded,
                       color: AppColors.primary, size: 80),
                 ),
@@ -423,7 +423,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 child: Image.asset(
                   _currentAvatar.imagePath,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, _) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: const Color(0xFFE4F9FF),
                     child: const Icon(Icons.smart_toy_rounded,
                         color: AppColors.primary, size: 18),
@@ -549,7 +549,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 child: Image.asset(
                   _currentAvatar.imagePath,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, _) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: const Color(0xFFE4F9FF),
                     child: const Icon(Icons.smart_toy_rounded,
                         color: AppColors.primary, size: 18),
