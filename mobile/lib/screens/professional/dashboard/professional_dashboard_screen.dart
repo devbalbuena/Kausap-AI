@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/api_client.dart';
+import '../../chat/direct_message_screen.dart';
 
 class DashboardData {
   final List<dynamic> alerts;
@@ -358,12 +359,28 @@ class _ProfessionalDashboardScreenState extends State<ProfessionalDashboardScree
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Text(
-                  "Message Patient",
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                GestureDetector(
+                  onTap: () {
+                    final clientId = alert['client_id'] ?? 'dummy-client-id';
+                    final clientName = alert['client_name'] ?? 'Client';
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DirectMessageScreen(
+                          otherUserId: clientId.toString(),
+                          otherUserName: clientName,
+                          otherUserRole: 'client',
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    "Message Client",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

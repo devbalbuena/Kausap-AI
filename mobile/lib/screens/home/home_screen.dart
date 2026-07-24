@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../chat/chatbot_screen.dart';
+import '../chat/direct_message_screen.dart';
 import '../session/session_tabs_screen.dart';
 import '../session/book_session_screen.dart';
 import '../activity/activity_screen.dart';
@@ -92,6 +93,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (_) => const ChatbotScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildQuickActionCard(
+                              iconBg: const Color(0xFFE2E8F0),
+                              icon: Icons.person_rounded,
+                              iconColor: const Color(0xFF1E293B),
+                              title: 'Message Professional',
+                              subtitle: 'Directly contact your therapist',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const DirectMessageScreen(
+                                      otherUserId: 'dummy-prof-id',
+                                      otherUserName: 'Dr. Jane Smith',
+                                      otherUserRole: 'professional',
+                                    ),
                                   ),
                                 );
                               },

@@ -12,9 +12,11 @@ class ApiConfig {
   static const String verifyCode = '/auth/verify-code';
   static const String resetPassword = '/auth/reset-password';
 
-  // Mood endpoints
   static const String mood = '/mood';
   static const String moodSummary = '/mood/summary';
+
+  // Direct Messages
+  static const String directMessages = '/direct-messages';
 
   // Session endpoints
   static const String sessions = '/sessions';
