@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
@@ -10,8 +12,9 @@ import 'select_avatar_screen.dart';
 class _ChatMessage {
   final String role; // 'user' | 'assistant'
   final String content;
+  final String? imagePath;
 
-  const _ChatMessage({required this.role, required this.content});
+  const _ChatMessage({required this.role, required this.content, this.imagePath});
 }
 
 /// Phase 12/21 — Client Chatbot Screen
@@ -41,6 +44,54 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   bool _showMenu = false;
 
   AvatarModel _currentAvatar = AvatarData.defaultAvatar;
+
+  final ImagePicker _imagePicker = ImagePicker();
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(source: source);
+      if (image != null) {
+        _sendMessage('', imagePath: image.path);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick image: $e')),
+        );
+      }
+    }
+  }
+
+  void _showAttachmentMenu() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   // Animated dots for typing indicator
   late AnimationController _dotController;
@@ -82,13 +133,13 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     return _sessionId!;
   }
 
-  Future<void> _sendMessage(String text) async {
+  Future<void> _sendMessage(String text, {String? imagePath}) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty && imagePath == null) return;
 
     _inputController.clear();
     setState(() {
-      _messages.add(_ChatMessage(role: 'user', content: trimmed));
+      _messages.add(_ChatMessage(role: 'user', content: trimmed, imagePath: imagePath));
       _isTyping = true;
     });
     _scrollToBottom();
@@ -340,7 +391,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         }
         final msg = _messages[index];
         return msg.role == 'user'
-            ? _buildUserBubble(msg.content)
+            ? _buildUserBubble(msg)
             : _buildAiBubble(msg.content);
       },
     );
@@ -418,7 +469,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   }
 
   // User message bubble
-  Widget _buildUserBubble(String content) {
+  Widget _buildUserBubble(_ChatMessage msg) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Align(
@@ -442,14 +493,31 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
             ],
           ),
-          child: Text(
-            content,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white,
-              height: 1.43,
-              fontWeight: FontWeight.w400,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (msg.imagePath != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(msg.imagePath!),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              if (msg.content.isNotEmpty)
+                Text(
+                  msg.content,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.white,
+                    height: 1.43,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -613,12 +681,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   const SizedBox(width: 10),
                   // Attachment button
                   GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Attachments coming soon!')),
-                      );
-                    },
+                    onTap: _showAttachmentMenu,
                     child: const Padding(
                       padding: EdgeInsets.all(6),
                       child: Icon(Icons.add_circle_outline,
