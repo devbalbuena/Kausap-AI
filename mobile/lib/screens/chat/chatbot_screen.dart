@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
+import '../../models/avatar_model.dart';
+import 'select_avatar_screen.dart';
 
 /// A single message in the chat (either user or assistant).
 class _ChatMessage {
@@ -12,16 +14,15 @@ class _ChatMessage {
   const _ChatMessage({required this.role, required this.content});
 }
 
-/// Phase 12 — Client Chatbot Screen
-/// Figma: "Client/Chatbot Empty" and "Client/Chatbot Convo"
+/// Phase 12/21 — Client Chatbot Screen
+/// Figma: "Basic" and "Premium" chat frames (node 395:8846, 477:172313)
 ///
-/// States:
-///   - Empty  : Disclaimer banner + quick-reply chips (no messages yet)
-///   - Convo  : Scrollable chat history with AI/user bubbles + typing indicator
-///
-/// API flow:
-///   1. On first message → POST /chat/sessions  (creates a session)
-///   2. Each message     → POST /chat/sessions/{id}/messages
+/// Features:
+///   - Large avatar portrait fills the screen in the empty/welcome state
+///   - Header: "Kausap AI" + tier label left, phone/video icons + profile menu right
+///   - Profile dropdown: Account, Switch Avatar, Article, Upgrade Plan, Logout
+///   - Scrollable chat history with AI/user bubbles + typing indicator
+///   - Input bar with + attachment and send button
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
 
@@ -37,6 +38,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   final List<_ChatMessage> _messages = [];
   String? _sessionId;
   bool _isTyping = false;
+  bool _showMenu = false;
+
+  AvatarModel _currentAvatar = AvatarData.defaultAvatar;
 
   // Animated dots for typing indicator
   late AnimationController _dotController;
@@ -126,53 +130,135 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     });
   }
 
+  Future<void> _openSelectAvatar() async {
+    setState(() => _showMenu = false);
+    final result = await Navigator.of(context).push<AvatarModel>(
+      MaterialPageRoute(
+        builder: (_) => SelectAvatarScreen(currentAvatar: _currentAvatar),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _currentAvatar = result;
+        // Start a new session when avatar changes
+        _sessionId = null;
+        _messages.clear();
+      });
+    }
+  }
+
   // ── UI builders ─────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FF),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildDisclaimerBanner(),
-            Expanded(
-              child: _messages.isEmpty && !_isTyping
-                  ? const SizedBox() // Empty state — nothing in the scroll area
-                  : _buildChatHistory(),
-            ),
-            _buildInputArea(),
-          ],
+    final bool isEmpty = _messages.isEmpty && !_isTyping;
+
+    return GestureDetector(
+      // Dismiss menu when tapping outside
+      onTap: () {
+        if (_showMenu) setState(() => _showMenu = false);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF0F2FF),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _buildHeader(),
+                  Expanded(
+                    child: isEmpty ? _buildWelcomeView() : _buildChatView(),
+                  ),
+                  _buildInputArea(isEmpty),
+                ],
+              ),
+              // Dropdown menu overlay
+              if (_showMenu) _buildDropdownMenu(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Header — Figma: "Kausap AI" title centered
+  // Header — Figma: "Kausap AI" + tier label left, phone/video + avatar right
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 27,
-            height: 27,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(Icons.chat_bubble_rounded,
-                color: Colors.white, size: 15),
+          // Left: Brand name + tier
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kausap AI',
+                style: AppTextStyles.heading2.copyWith(
+                  color: AppColors.primary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              Text(
+                _currentAvatar.isPremium ? 'Premium' : 'Basic',
+                style: AppTextStyles.body.copyWith(
+                  fontSize: 12,
+                  color: _currentAvatar.isPremium
+                      ? const Color(0xFFFFC107)
+                      : AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          // Phone call icon
+          _HeaderIconBtn(
+            icon: Icons.phone_outlined,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Voice call coming soon!')),
+              );
+            },
           ),
           const SizedBox(width: 8),
-          Text(
-            'Kausap AI',
-            style: AppTextStyles.heading2.copyWith(
-              color: AppColors.primary,
-              fontSize: 20,
-              letterSpacing: -0.55,
+          // Video call icon
+          _HeaderIconBtn(
+            icon: Icons.videocam_outlined,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Video call coming soon!')),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+          // Avatar profile circle → opens menu
+          GestureDetector(
+            onTap: () => setState(() => _showMenu = !_showMenu),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  _currentAvatar.imagePath,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFFEEF2FF),
+                    child: Icon(Icons.person, color: AppColors.primary, size: 22),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -180,51 +266,73 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     );
   }
 
-  // Disclaimer banner — Figma: green bg, info icon, text
-  Widget _buildDisclaimerBanner() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
-        decoration: BoxDecoration(
-          color: const Color(0xFFE7FEEE),
-          border: Border.all(color: const Color(0xFF98F5CE)),
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0D000000),
-              blurRadius: 1,
-              offset: Offset(0, 1),
+  // Welcome state — large avatar portrait + text
+  Widget _buildWelcomeView() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          // Large avatar image
+          Container(
+            width: double.infinity,
+            height: 340,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFDDE6FF), Color(0xFFF0E6FF)],
+              ),
             ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.info_outline,
-                color: Color(0xFF006C4F), size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                "I'm an AI assistant here to listen and support you, but I can't replace a professional counselor. If you're in crisis, please use the emergency resources.",
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 12,
-                  color: const Color(0xFF006C4F),
-                  height: 1.75,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Image.asset(
+                _currentAvatar.imagePath,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Icon(Icons.smart_toy_rounded,
+                      color: AppColors.primary, size: 80),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 24),
+          // "Meet Kausap AI, your companion" text
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                style: AppTextStyles.heading2.copyWith(
+                  fontSize: 22,
+                  height: 1.4,
+                  color: const Color(0xFF191C21),
+                ),
+                children: const [
+                  TextSpan(
+                    text: 'Meet Kausap AI',
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  TextSpan(text: ', your\ncompanion'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }
 
-  // Scrollable chat history (shown once messages exist)
-  Widget _buildChatHistory() {
+  // Chat history view (messages)
+  Widget _buildChatView() {
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _messages.length && _isTyping) {
@@ -238,33 +346,46 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     );
   }
 
-  // AI message bubble — Figma: white bg, light-blue robot avatar, tl=2px radius
+  // AI message bubble
   Widget _buildAiBubble(String content) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Robot avatar
+          // Small avatar circle
           Padding(
-            padding: const EdgeInsets.only(top: 4, right: 12),
+            padding: const EdgeInsets.only(top: 4, right: 10),
             child: Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE4F9FF),
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 6,
+                  ),
+                ],
               ),
-              child: const Icon(Icons.smart_toy_rounded,
-                  color: AppColors.primary, size: 18),
+              child: ClipOval(
+                child: Image.asset(
+                  _currentAvatar.imagePath,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFFE4F9FF),
+                    child: const Icon(Icons.smart_toy_rounded,
+                        color: AppColors.primary, size: 18),
+                  ),
+                ),
+              ),
             ),
           ),
           // Bubble
           Flexible(
             child: Container(
               constraints: const BoxConstraints(maxWidth: 258),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: const BorderRadius.only(
@@ -296,7 +417,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     );
   }
 
-  // User message bubble — Figma: primary blue bg, white text, tr=2px radius
+  // User message bubble
   Widget _buildUserBubble(String content) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -304,7 +425,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         alignment: Alignment.centerRight,
         child: Container(
           constraints: const BoxConstraints(maxWidth: 240),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: const BoxDecoration(
             color: AppColors.primary,
             borderRadius: BorderRadius.only(
@@ -335,7 +456,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     );
   }
 
-  // Typing indicator — Figma: 3 grey dots in a white bubble
+  // Typing indicator
   Widget _buildTypingIndicator() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -343,21 +464,34 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 4, right: 12),
+            padding: const EdgeInsets.only(top: 4, right: 10),
             child: Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE4F9FF),
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 6,
+                  ),
+                ],
               ),
-              child: const Icon(Icons.smart_toy_rounded,
-                  color: AppColors.primary, size: 18),
+              child: ClipOval(
+                child: Image.asset(
+                  _currentAvatar.imagePath,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFFE4F9FF),
+                    child: const Icon(Icons.smart_toy_rounded,
+                        color: AppColors.primary, size: 18),
+                  ),
+                ),
+              ),
             ),
           ),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
@@ -380,7 +514,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(3, (i) {
-                    final phase = ((_dotAnimation.value * 3) - i).clamp(0.0, 1.0);
+                    final phase =
+                        ((_dotAnimation.value * 3) - i).clamp(0.0, 1.0);
                     final bounce = (phase < 0.5 ? phase : 1 - phase) * 2;
                     return Padding(
                       padding: EdgeInsets.only(right: i < 2 ? 4 : 0),
@@ -406,24 +541,22 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     );
   }
 
-  // Bottom input area — Figma: Quick reply chips + message input form
-  Widget _buildInputArea() {
-    final bool isEmpty = _messages.isEmpty && !_isTyping;
-
+  // Bottom input area
+  Widget _buildInputArea(bool isEmpty) {
     return Container(
-      color: const Color(0xFFF8F9FF),
+      color: const Color(0xFFF0F2FF),
       child: Column(
         children: [
           // Quick reply chips (shown only in empty state)
           if (isEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             SizedBox(
               height: 38,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: _quickReplies.length,
-                separatorBuilder: (_, index) => const SizedBox(width: 8),
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
                   return GestureDetector(
                     onTap: () => _sendMessage(_quickReplies[i]),
@@ -434,7 +567,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                            color: const Color(0xFFC1C7D3).withValues(alpha: 0.5)),
+                            color: const Color(0xFFC1C7D3)
+                                .withValues(alpha: 0.5)),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x0D000000),
@@ -458,40 +592,40 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             ),
           ],
           const SizedBox(height: 8),
-          // Message input form
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                     color: const Color(0xFFC1C7D3).withValues(alpha: 0.4)),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x0D000000),
-                    blurRadius: 1,
-                    offset: Offset(0, 1),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  const SizedBox(width: 9),
-                  // Attachment button (UI only per Figma)
+                  const SizedBox(width: 10),
+                  // Attachment button
                   GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Icon(Icons.add_circle_outline,
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Attachments coming soon!')),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Icon(Icons.add_circle_outline,
                           color: AppColors.textSecondary, size: 22),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   // Text input
                   Expanded(
                     child: TextField(
@@ -503,14 +637,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       style: AppTextStyles.body.copyWith(
                           fontSize: 14, color: const Color(0xFF191C21)),
                       decoration: InputDecoration(
-                        hintText: 'Type your message...',
+                        hintText: 'Start conversation...',
                         hintStyle: AppTextStyles.body.copyWith(
                           fontSize: 14,
-                          color: const Color(0xFF6B7280),
+                          color: const Color(0xFF9BA4B4),
                         ),
                         border: InputBorder.none,
                         contentPadding:
-                            const EdgeInsets.symmetric(vertical: 10),
+                            const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
                   ),
@@ -519,17 +653,17 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   GestureDetector(
                     onTap: () => _sendMessage(_inputController.text),
                     child: Container(
-                      width: 30,
-                      height: 30,
-                      margin: const EdgeInsets.all(5),
+                      width: 34,
+                      height: 34,
+                      margin: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
-                            color: Color(0x0D000000),
-                            blurRadius: 1,
-                            offset: Offset(0, 1),
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -543,6 +677,169 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           ),
         ],
       ),
+    );
+  }
+
+  // Profile dropdown menu — Figma: Account, Switch Avatar, Article, Upgrade Plan, Logout
+  Widget _buildDropdownMenu() {
+    return Positioned(
+      top: 62,
+      right: 20,
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(16),
+        shadowColor: Colors.black.withValues(alpha: 0.2),
+        child: Container(
+          width: 200,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _MenuItem(
+                icon: Icons.person_outline,
+                label: 'Account',
+                onTap: () {
+                  setState(() => _showMenu = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Account settings coming soon!')),
+                  );
+                },
+              ),
+              _MenuDivider(),
+              _MenuItem(
+                icon: Icons.swap_horiz_rounded,
+                label: 'Switch Avatar',
+                onTap: _openSelectAvatar,
+              ),
+              _MenuDivider(),
+              _MenuItem(
+                icon: Icons.article_outlined,
+                label: 'Article',
+                iconColor: const Color(0xFF6E6EFF),
+                onTap: () {
+                  setState(() => _showMenu = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Articles coming soon!')),
+                  );
+                },
+              ),
+              _MenuDivider(),
+              _MenuItem(
+                icon: Icons.credit_card_outlined,
+                label: 'Upgrade Plan',
+                iconColor: const Color(0xFF6E6EFF),
+                labelColor: const Color(0xFF6E6EFF),
+                onTap: () {
+                  setState(() => _showMenu = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Upgrade plan coming soon!')),
+                  );
+                },
+              ),
+              _MenuDivider(),
+              _MenuItem(
+                icon: Icons.logout_rounded,
+                label: 'Logout',
+                iconColor: AppColors.error,
+                labelColor: AppColors.error,
+                onTap: () {
+                  setState(() => _showMenu = false);
+                  // Navigate back to the parent which handles logout
+                  Navigator.of(context).pop();
+                },
+              ),
+              const SizedBox(height: 4),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Helper widgets ─────────────────────────────────────────────────────────────
+
+class _HeaderIconBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _HeaderIconBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.8),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 20, color: const Color(0xFF191C21)),
+      ),
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color iconColor;
+  final Color labelColor;
+  final VoidCallback onTap;
+
+  const _MenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.iconColor = const Color(0xFF191C21),
+    this.labelColor = const Color(0xFF191C21),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: AppTextStyles.body.copyWith(
+                fontWeight: FontWeight.w500,
+                color: labelColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      indent: 16,
+      endIndent: 16,
+      color: const Color(0xFFE5E7EB),
     );
   }
 }

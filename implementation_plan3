@@ -1,0 +1,37 @@
+# Kausap AI - New Feature Roadmap (Phases 21+)
+
+Based on the new Figma designs provided, we have identified two major new feature sets to implement next. 
+
+*(Note: Phases 1 through 20, including all Client and Professional core flows, the AI Chatbot, Reports, Appointments, and Authentication/Forgot Password, are fully completed and pushed to GitHub!)*
+
+---
+
+## Phase 21 — AI Avatar Selection & Premium Tiers
+
+**Figma Frames Identified:** `Premium/Switch Avatar`, `Create Avatar Banner`, `Free Avatar`, `Premium Avatar`, `Generate Avatar Container`
+
+**Goal:** Allow users to choose different AI Personas/Avatars to chat with. Some avatars will be free, while others are locked behind a "Premium" tier (denoted by the crown icon).
+
+### Proposed Changes:
+1. **Avatar Data Model:** Update the backend to support different AI Personas with properties like `is_premium`, `name`, `system_prompt`, and `image_url`.
+2. **Select Avatar Screen:** A new mobile screen showing a grid of available avatars, split into "Free" and "Premium" sections.
+3. **Switch Avatar UI:** Add the dropdown/switch avatar button to the main chat interface so users can swap personas mid-conversation.
+4. **Generate Avatar:** Add the UI banner for users to dynamically create their own custom AI avatar (UI only for now, unless we want to hook it up to an image generation API).
+
+---
+
+## Phase 22 — Chat UI Enhancements (Audio/Video & Attachments)
+
+**Figma Frames Identified:** `Phone Icon Container`, `Video Icon Container`, `lucide/camera`, `lucide/image`
+
+**Goal:** Enhance the AI Chat interface to feel like a modern messaging app.
+
+### Proposed Changes:
+1. **Call Buttons:** Add Audio (`lucide/phone`) and Video (`lucide/video`) call buttons to the chat header. (We will implement the UI first; if you want them to actually function via WebRTC or a voice API, we can discuss that for a later phase).
+2. **Attachment Menu:** Add a dropdown menu to the chat input area (`lucide/plus`) that reveals Camera and Image Upload options.
+3. **Message Handling:** Update the chat UI to display image attachments in the chat history.
+
+---
+
+## Which would you like to tackle first?
+We can begin **Phase 21 (Avatar Selection)** or **Phase 22 (Chat Enhancements)** immediately. Just let me know your preference!
