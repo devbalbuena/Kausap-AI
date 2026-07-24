@@ -205,7 +205,7 @@ class _ProfessionalAppointmentsScreenState extends State<ProfessionalAppointment
     // Simple mock time grid
     final hours = List.generate(12, (index) => index + 8); // 8 AM to 7 PM
 
-    return Container(
+    return SizedBox(
       height: 600, // Fixed height for scrollable area
       child: ListView.builder(
         itemCount: hours.length,
@@ -309,7 +309,7 @@ class _ProfessionalAppointmentsScreenState extends State<ProfessionalAppointment
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _pendingRequests.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE8EAED)),
+              separatorBuilder: (_, _) => const Divider(height: 1, color: Color(0xFFE8EAED)),
               itemBuilder: (context, index) {
                 final req = _pendingRequests[index];
                 return Padding(

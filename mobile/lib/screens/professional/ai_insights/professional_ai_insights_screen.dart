@@ -284,7 +284,7 @@ class _ProfessionalAIInsightsScreenState extends State<ProfessionalAIInsightsScr
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _unresolved.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE8EAED)),
+              separatorBuilder: (_, _) => const Divider(height: 1, color: Color(0xFFE8EAED)),
               itemBuilder: (context, index) {
                 final item = _unresolved[index];
                 final isSelected = index == 0; // Highlight the first one for now

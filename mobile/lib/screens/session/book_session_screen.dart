@@ -182,7 +182,7 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
             Text('Session Details', style: AppTextStyles.heading2),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedReason,
+              initialValue: _selectedReason,
               hint: const Text('Select a topic'),
               decoration: InputDecoration(
                 filled: true,

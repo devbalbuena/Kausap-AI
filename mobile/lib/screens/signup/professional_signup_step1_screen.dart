@@ -158,10 +158,12 @@ class _ProfessionalSignupStep1ScreenState
                               decoration:
                                   const InputDecoration(hintText: 'john.doe@gmail.com'),
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return 'Email is required';
-                                if (!v.contains('@'))
+                                }
+                                if (!v.contains('@')) {
                                   return 'Enter a valid email';
+                                }
                                 return null;
                               },
                             ),
@@ -202,7 +204,7 @@ class _ProfessionalSignupStep1ScreenState
                             _FieldLabel('Gender'),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              value: _selectedGender,
+                              initialValue: _selectedGender,
                               style: AppTextStyles.inputText,
                               decoration: const InputDecoration(
                                   hintText: 'Select Gender'),
@@ -238,10 +240,12 @@ class _ProfessionalSignupStep1ScreenState
                                 ),
                               ),
                               validator: (v) {
-                                if (v == null || v.isEmpty)
+                                if (v == null || v.isEmpty) {
                                   return 'Password is required';
-                                if (v.length < 8)
+                                }
+                                if (v.length < 8) {
                                   return 'Password must be at least 8 characters';
+                                }
                                 return null;
                               },
                             ),
@@ -268,10 +272,12 @@ class _ProfessionalSignupStep1ScreenState
                                 ),
                               ),
                               validator: (v) {
-                                if (v == null || v.isEmpty)
+                                if (v == null || v.isEmpty) {
                                   return 'Please confirm your password';
-                                if (v != _passwordController.text)
+                                }
+                                if (v != _passwordController.text) {
                                   return 'Passwords do not match';
+                                }
                                 return null;
                               },
                             ),

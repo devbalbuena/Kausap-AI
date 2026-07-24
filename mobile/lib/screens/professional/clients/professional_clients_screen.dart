@@ -294,7 +294,7 @@ class _ProfessionalClientsScreenState extends State<ProfessionalClientsScreen> {
           Expanded(
             child: ListView.separated(
               itemCount: _clients.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE8EAED)),
+              separatorBuilder: (_, _) => const Divider(height: 1, color: Color(0xFFE8EAED)),
               itemBuilder: (context, index) {
                 final client = _clients[index];
                 return Padding(

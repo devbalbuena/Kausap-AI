@@ -109,7 +109,7 @@ class _ProfessionalSignupStep2ScreenState
                             _FieldLabel('Profession'),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              value: _selectedProfession,
+                              initialValue: _selectedProfession,
                               style: AppTextStyles.inputText,
                               decoration: const InputDecoration(
                                   hintText: 'Select your profession'),
@@ -169,10 +169,12 @@ class _ProfessionalSignupStep2ScreenState
                               decoration:
                                   const InputDecoration(hintText: 'e.g. 5'),
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return 'Experience is required';
-                                if (int.tryParse(v.trim()) == null)
+                                }
+                                if (int.tryParse(v.trim()) == null) {
                                   return 'Must be a valid number';
+                                }
                                 return null;
                               },
                             ),
@@ -206,7 +208,7 @@ class _ProfessionalSignupStep2ScreenState
 
                             SwitchListTile(
                               contentPadding: EdgeInsets.zero,
-                              activeColor: AppColors.primary,
+                              activeThumbColor: AppColors.primary,
                               title: const Text('Accepting New Clients'),
                               subtitle: const Text(
                                   'Display your profile to clients looking for support.'),

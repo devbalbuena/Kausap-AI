@@ -256,7 +256,7 @@ class _AvatarCard extends StatelessWidget {
                     child: Image.asset(
                       avatar.imagePath,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, __, _) => Container(
                         color: const Color(0xFFEEF2FF),
                         child: Icon(Icons.person, color: AppColors.primary, size: 40),
                       ),
