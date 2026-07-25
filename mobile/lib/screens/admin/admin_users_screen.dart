@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import 'admin_dashboard_screen.dart';
+import 'admin_moderation_screen.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -241,7 +242,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> with SingleTickerPr
             );
           }),
           _buildNavItem(Icons.people_alt_rounded, 'Users', true, null),
-          _buildNavItem(Icons.flag_rounded, 'Moderation', false, null),
+          _buildNavItem(Icons.flag_rounded, 'Moderation', false, () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
+            );
+          }),
         ],
       ),
     );
