@@ -39,4 +39,7 @@ class ApiConfig {
   static const String notifications = '/notifications';
   static const String notificationsUnreadCount = '/notifications/unread-count';
   static const String notificationsReadAll = '/notifications/read-all';
+
+  // Settings endpoints
+  static const String changePassword = '/auth/change-password';
 }
