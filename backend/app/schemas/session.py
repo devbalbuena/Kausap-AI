@@ -21,3 +21,9 @@ class TherapySessionRead(BaseModel):
     status: SessionStatus
     notes: Optional[str] = None
     created_at: datetime
+    rating: Optional[int] = None
+    review: Optional[str] = None
+
+class TherapySessionRateRequest(BaseModel):
+    rating: int
+    review: Optional[str] = None

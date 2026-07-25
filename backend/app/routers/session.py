@@ -6,7 +6,7 @@ from app.database import get_session
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.models.session import TherapySession, SessionStatus
-from app.schemas.session import TherapySessionCreate, TherapySessionRead
+from app.schemas.session import TherapySessionCreate, TherapySessionRead, TherapySessionRateRequest
 from datetime import datetime
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
@@ -78,3 +78,32 @@ def get_past_sessions(
                ((TherapySession.status == SessionStatus.SCHEDULED) & (TherapySession.date_time < datetime.utcnow())))
         .order_by(TherapySession.date_time.desc())
     ).all()
+
+@router.post("/{session_id}/rate", response_model=TherapySessionRead)
+def rate_session(
+    session_id: uuid.UUID,
+    payload: TherapySessionRateRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_session)],
+):
+    """Rate a completed therapy session."""
+    session_obj = db.get(TherapySession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    if session_obj.client_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to rate this session")
+        
+    if session_obj.status != SessionStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Only completed sessions can be rated")
+        
+    if payload.rating < 1 or payload.rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+        
+    session_obj.rating = payload.rating
+    session_obj.review = payload.review
+    db.add(session_obj)
+    db.commit()
+    db.refresh(session_obj)
+    
+    return session_obj
