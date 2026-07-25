@@ -180,3 +180,26 @@ def reset_password(payload: ResetPasswordRequest, session: Annotated[Session, De
     del reset_token_cache[payload.reset_token]
     
     return {"message": "Password successfully reset."}
+
+
+@router.put("/change-password")
+def change_password(
+    payload: dict,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+):
+    """Change password for the currently authenticated user."""
+    old_password = payload.get("old_password", "")
+    new_password = payload.get("new_password", "")
+
+    if not verify_password(old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+
+    current_user.hashed_password = hash_password(new_password)
+    session.add(current_user)
+    session.commit()
+
+    return {"message": "Password changed successfully."}

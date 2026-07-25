@@ -13,6 +13,7 @@ import '../activity/activity_screen.dart';
 import '../activity/activity_start_screen.dart';
 import '../profile/profile_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../discover/discover_professionals_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -110,6 +111,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (_) => const ChatbotScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildQuickActionCard(
+                              iconBg: const Color(0xFFF1F5F9),
+                              icon: Icons.search_rounded,
+                              iconColor: const Color(0xFF3B82F6),
+                              title: 'Find a Professional',
+                              subtitle: 'Discover therapists and counselors',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const DiscoverProfessionalsScreen(),
                                   ),
                                 );
                               },
