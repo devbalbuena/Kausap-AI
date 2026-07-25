@@ -283,11 +283,11 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: _sendMessage,
+            onTap: _isSending ? null : _sendMessage,
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
+              decoration: BoxDecoration(
+                color: _isSending ? const Color(0xFFCBD5E1) : AppColors.primary,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),

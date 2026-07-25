@@ -4,3 +4,4 @@ from app.models.mood import MoodEntry
 from app.models.referral import DoctorReferral
 from app.models.session import TherapySession, SessionStatus
 from app.models.direct_message import DirectMessage
+from app.models.notification import Notification

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_db_and_tables
-from app.routers import auth, mood, chat, referral, admin, session, dashboard, professional, reports, direct_message
+from app.routers import auth, mood, chat, referral, admin, session, dashboard, professional, reports, direct_message, notification
 
 
 @asynccontextmanager
@@ -46,3 +46,4 @@ app.include_router(dashboard.router)
 app.include_router(professional.router)
 app.include_router(reports.router)
 app.include_router(direct_message.router)
+app.include_router(notification.router)

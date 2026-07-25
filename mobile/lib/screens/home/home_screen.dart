@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/notification_service.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../chat/chatbot_screen.dart';
@@ -11,6 +12,7 @@ import '../session/book_session_screen.dart';
 import '../activity/activity_screen.dart';
 import '../activity/activity_start_screen.dart';
 import '../profile/profile_screen.dart';
+import '../notifications/notifications_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -25,8 +27,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _navIndex = 0;
+  int _unreadCount = 0;
+  final NotificationService _notificationService = NotificationService();
 
   String get _firstName => widget.user['first_name'] ?? 'User';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUnreadCount();
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    try {
+      final count = await _notificationService.getUnreadCount();
+      if (mounted) setState(() => _unreadCount = count);
+    } catch (_) {}
+  }
 
   String _greeting() {
     final hour = DateTime.now().hour;
@@ -164,8 +181,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   .copyWith(color: AppColors.primary, fontSize: 20)),
         ]),
         Row(children: [
-          const Icon(Icons.notifications_outlined,
-              color: AppColors.textPrimary, size: 24),
+          GestureDetector(
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
+              _fetchUnreadCount(); // refresh badge after returning
+            },
+            child: Stack(
+              children: [
+                const Icon(Icons.notifications_outlined,
+                    color: AppColors.textPrimary, size: 24),
+                if (_unreadCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           const SizedBox(width: 12),
           GestureDetector(
             onTap: _showProfileMenu,

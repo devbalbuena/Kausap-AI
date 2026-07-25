@@ -34,4 +34,9 @@ class ApiConfig {
   static const String adminUsers = '/admin/users';
   static const String adminFlaggedMessages = '/admin/flagged-messages';
   static const String adminStats = '/admin/stats';
+
+  // Notification endpoints
+  static const String notifications = '/notifications';
+  static const String notificationsUnreadCount = '/notifications/unread-count';
+  static const String notificationsReadAll = '/notifications/read-all';
 }

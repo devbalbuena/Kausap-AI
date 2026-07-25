@@ -75,6 +75,21 @@ class ApiClient {
     return jsonDecode(response.body);
   }
 
+  Future<dynamic> put(String path, {Map<String, dynamic>? body}) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}$path');
+    final headers = await _getHeaders();
+
+    final response = await http.put(
+      uri,
+      headers: headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+    _handleResponse(response);
+
+    if (response.body.isEmpty) return null;
+    return jsonDecode(response.body);
+  }
+
   Future<dynamic> patch(String path, {Map<String, dynamic>? body}) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}$path');
     final headers = await _getHeaders();
