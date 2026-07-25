@@ -10,6 +10,7 @@ import '../professional/professional_base_screen.dart';
 import '../signup/client_signup_step1_screen.dart';
 import '../signup/professional_signup_step1_screen.dart';
 import 'forgot_password_screen.dart';
+import '../admin/admin_dashboard_screen.dart';
 
 /// Unified Login Screen — matches Figma "Unified Login" + "Login Error State" frames.
 ///
@@ -72,7 +73,12 @@ class _LoginScreenState extends State<LoginScreen> {
       // Navigate based on role
       final user = authProvider.currentUser;
       if (user != null) {
-        if (user['role'] == 'professional') {
+        if (user['role'] == 'admin') {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+            (route) => false,
+          );
+        } else if (user['role'] == 'professional') {
           final profile = user['professional_profile'];
           if (profile != null && profile['is_verified'] == true) {
             Navigator.of(context).pushAndRemoveUntil(

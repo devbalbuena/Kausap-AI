@@ -1,0 +1,42 @@
+# Kausap AI: Admin Mobile Dashboard & GitHub Badges
+
+Since the Client and Professional sides are complete, we are pivoting to build out the **Admin Mobile Dashboard**. We'll also use this opportunity to easily unlock several GitHub achievements.
+
+---
+
+## 🏆 GitHub Achievement Strategy
+
+While we build the admin side, you can unlock these badges:
+1. **Pair Extraordinaire** (Co-author a commit): For our next commit, I will append a special tag (`Co-authored-by: devbalbuena <balbuenadexter2@gmail.com>`) to the commit message. GitHub will give you this badge automatically!
+2. **Quickdraw** (Close an issue/PR within 5 minutes): Go to your GitHub repo right now, click **Issues -> New Issue**, type anything (e.g., "Test Issue"), submit it, and then *immediately* click **Close Issue**. You'll get the badge instantly.
+3. **Pull Shark** (Merge a Pull Request): Once we finish Phase 29, I will push the code to a new branch and help you open a **Pull Request (PR)** on GitHub. When you click "Merge PR", you will unlock the Pull Shark badge!
+
+---
+
+## 🗺️ New Admin App Phases
+
+Here is the breakdown for building the Admin Dashboard:
+
+### Phase 29: Admin Login & Dashboard Overview
+- **Backend**: Ensure Admin role login works perfectly.
+- **Mobile UI**: 
+  - Update `RoleSelectionScreen` to include an "Admin Login" option (can be a standard button or a hidden developer tap).
+  - Create the `AdminDashboardScreen` which will show high-level system metrics (Total Users, Active Sessions, Pending Verifications) using the `GET /admin/stats` API.
+  - Set up an Admin Bottom Navigation bar (Dashboard, Users, Moderation, Settings).
+
+### Phase 30: User Management & Professional Verification
+- **Backend**: Add a new endpoint `PATCH /admin/users/{id}/verify` to approve Professional accounts.
+- **Mobile UI**:
+  - Create an `AdminUsersScreen` with tabs for Clients, Professionals, and Pending Approvals.
+  - Create a detailed view to look at a user's status, and a button to **Verify** professional accounts or **Deactivate** abusive accounts.
+
+### Phase 31: Content Moderation (Flagged Messages)
+- **Mobile UI**:
+  - Create an `AdminModerationScreen` that pulls from `GET /admin/flagged-messages`.
+  - Displays risk-flagged conversations (from the AI chatbot analyzing suicidal/self-harm intents).
+  - Allow the admin to review these logs to reach out or enforce safety protocols.
+
+## Open Questions for the User
+> [!IMPORTANT]  
+> 1. For Phase 29, do you want the "Admin Login" button to be plainly visible on the start screen, or hidden (e.g., you have to long-press the Kausap logo to reveal it)?
+> 2. Are you ready to start on Phase 29 and try to get the "Pair Extraordinaire" badge on our first commit?

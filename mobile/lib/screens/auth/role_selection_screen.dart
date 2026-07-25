@@ -82,6 +82,23 @@ class RoleSelectionScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const LoginScreen(defaultRole: 'admin')),
+                          ),
+                          child: const Text(
+                            'Admin Login',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
