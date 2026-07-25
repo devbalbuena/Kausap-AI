@@ -15,6 +15,8 @@ class TherapySessionBase(SQLModel):
     reason: str
     mode: str
     notes: Optional[str] = Field(default=None)
+    rating: Optional[int] = Field(default=None)
+    review: Optional[str] = Field(default=None)
 
 class TherapySession(TherapySessionBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

@@ -113,3 +113,12 @@ class RegisterRequest(BaseModel):
         if v == UserRole.admin:
             raise ValueError("Cannot register as admin — admin accounts must be set manually in the database.")
         return v
+
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    birthday: Optional[date] = None
+    gender: Optional[GenderEnum] = None
+    bio: Optional[str] = None

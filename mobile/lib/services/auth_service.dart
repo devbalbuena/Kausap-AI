@@ -39,6 +39,14 @@ class AuthService {
     return response as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
+    final response = await _apiClient.put(
+      ApiConfig.updateProfile,
+      body: data,
+    );
+    return response as Map<String, dynamic>;
+  }
+
   Future<void> forgotPassword(String email) async {
     await _apiClient.post(
       ApiConfig.forgotPassword,

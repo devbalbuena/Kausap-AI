@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/role_selection_screen.dart';
+import '../settings/notification_settings_screen.dart';
+import '../settings/security_screen.dart';
+import '../settings/privacy_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -110,19 +114,45 @@ class ProfileScreen extends StatelessWidget {
                 _buildListItem(
                   icon: Icons.person_outline_rounded,
                   title: 'Profile',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                    );
+                  },
                 ),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.notifications_none_rounded,
                   title: 'Notifications',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
+                    );
+                  },
                 ),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.lock_outline_rounded,
                   title: 'Privacy',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+                    );
+                  },
+                ),
+                _buildDivider(),
+                _buildListItem(
+                  icon: Icons.security_rounded,
+                  title: 'Security',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SecurityScreen()),
+                    );
+                  },
                 ),
               ],
             ),

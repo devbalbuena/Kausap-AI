@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from app.database import get_session
 from app.models.user import User, UserRole, ProfessionalProfile
-from app.schemas.user import RegisterRequest, UserRead
+from app.schemas.user import RegisterRequest, UserRead, UserUpdate
 from app.schemas.auth import Token, LoginRequest, ForgotPasswordRequest, VerifyCodeRequest, ResetPasswordRequest
 import random
 import string
@@ -111,6 +111,20 @@ def me(current_user: Annotated[User, Depends(get_current_user)]):
     return current_user
 
 
+@router.put("/me", response_model=UserRead)
+def update_me(payload: UserUpdate, current_user: Annotated[User, Depends(get_current_user)], session: Annotated[Session, Depends(get_session)]):
+    """Update the currently authenticated user's profile."""
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(current_user, key, value)
+    
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    
+    return current_user
+
+
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest, session: Annotated[Session, Depends(get_session)]):
     """Generate and send a 6-digit OTP for password reset."""
@@ -166,3 +180,26 @@ def reset_password(payload: ResetPasswordRequest, session: Annotated[Session, De
     del reset_token_cache[payload.reset_token]
     
     return {"message": "Password successfully reset."}
+
+
+@router.put("/change-password")
+def change_password(
+    payload: dict,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+):
+    """Change password for the currently authenticated user."""
+    old_password = payload.get("old_password", "")
+    new_password = payload.get("new_password", "")
+
+    if not verify_password(old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+
+    current_user.hashed_password = hash_password(new_password)
+    session.add(current_user)
+    session.commit()
+
+    return {"message": "Password changed successfully."}

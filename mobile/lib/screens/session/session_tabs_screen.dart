@@ -3,6 +3,7 @@ import '../../theme/app_theme.dart';
 import 'upcoming_sessions_view.dart';
 import 'past_sessions_view.dart';
 import 'book_session_screen.dart';
+import '../discover/discover_professionals_screen.dart';
 
 class SessionTabsScreen extends StatelessWidget {
   const SessionTabsScreen({super.key});
@@ -41,6 +42,14 @@ class SessionTabsScreen extends StatelessWidget {
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.search_rounded, color: AppColors.textPrimary),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const DiscoverProfessionalsScreen()),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.notifications_none_rounded, color: AppColors.textPrimary),
               onPressed: () {},

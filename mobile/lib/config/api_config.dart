@@ -7,13 +7,16 @@ class ApiConfig {
   static const String register = '/auth/register';
   static const String login = '/auth/login';
   static const String me = '/auth/me';
+  static const String updateProfile = '/auth/me';
   static const String forgotPassword = '/auth/forgot-password';
   static const String verifyCode = '/auth/verify-code';
   static const String resetPassword = '/auth/reset-password';
 
-  // Mood endpoints
   static const String mood = '/mood';
   static const String moodSummary = '/mood/summary';
+
+  // Direct Messages
+  static const String directMessages = '/direct-messages';
 
   // Session endpoints
   static const String sessions = '/sessions';
@@ -31,4 +34,15 @@ class ApiConfig {
   static const String adminUsers = '/admin/users';
   static const String adminFlaggedMessages = '/admin/flagged-messages';
   static const String adminStats = '/admin/stats';
+
+  // Notification endpoints
+  static const String notifications = '/notifications';
+  static const String notificationsUnreadCount = '/notifications/unread-count';
+  static const String notificationsReadAll = '/notifications/read-all';
+
+  // Settings endpoints
+  static const String changePassword = '/auth/change-password';
+
+  // Discover endpoints
+  static const String discoverProfessionals = '/discover/professionals';
 }
