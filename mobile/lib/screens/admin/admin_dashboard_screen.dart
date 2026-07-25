@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../auth/role_selection_screen.dart';
 import 'admin_users_screen.dart';
+import 'admin_moderation_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -166,7 +167,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
             );
           }),
-          _buildNavItem(Icons.flag_rounded, 'Moderation', false, null),
+          _buildNavItem(Icons.flag_rounded, 'Moderation', false, () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
+            );
+          }),
         ],
       ),
     );
