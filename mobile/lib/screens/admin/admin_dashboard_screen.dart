@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../auth/role_selection_screen.dart';
+import 'admin_users_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -159,31 +160,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(Icons.dashboard_rounded, 'Dashboard', true),
-          _buildNavItem(Icons.people_alt_rounded, 'Users', false),
-          _buildNavItem(Icons.flag_rounded, 'Moderation', false),
+          _buildNavItem(Icons.dashboard_rounded, 'Dashboard', true, null),
+          _buildNavItem(Icons.people_alt_rounded, 'Users', false, () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+            );
+          }),
+          _buildNavItem(Icons.flag_rounded, 'Moderation', false, null),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isSelected) {
+  Widget _buildNavItem(IconData icon, String label, bool isSelected, VoidCallback? onTap) {
     final color = isSelected ? AppColors.primary : AppColors.textSecondary;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 10,
-            color: color,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 10,
+              color: color,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
