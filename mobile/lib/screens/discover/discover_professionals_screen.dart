@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/discover_service.dart';
@@ -13,6 +14,7 @@ class DiscoverProfessionalsScreen extends StatefulWidget {
 class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScreen> {
   final DiscoverService _discoverService = DiscoverService();
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
 
   List<Map<String, dynamic>> _professionals = [];
   bool _isLoading = true;
@@ -29,6 +31,7 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -115,6 +118,12 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                     ),
                     child: TextField(
                       controller: _searchController,
+                      onChanged: (value) {
+                        if (_debounce?.isActive ?? false) _debounce!.cancel();
+                        _debounce = Timer(const Duration(milliseconds: 500), () {
+                          _fetchProfessionals();
+                        });
+                      },
                       onSubmitted: (_) => _fetchProfessionals(),
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
@@ -123,13 +132,22 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                         prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
-                          onPressed: () {
-                            _searchController.clear();
-                            _fetchProfessionals();
-                          },
-                        ),
+                        suffixIcon: _isLoading
+                            ? const Padding(
+                                padding: EdgeInsets.all(14),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _fetchProfessionals();
+                                },
+                              ),
                       ),
                     ),
                   ),
