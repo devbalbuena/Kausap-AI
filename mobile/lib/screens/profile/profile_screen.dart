@@ -6,6 +6,7 @@ import '../auth/role_selection_screen.dart';
 import '../settings/notification_settings_screen.dart';
 import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
+import '../settings/about_screen.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -172,6 +173,17 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.help_outline_rounded,
                   title: 'FAQ',
                   onTap: () {},
+                ),
+                _buildDivider(),
+                _buildListItem(
+                  icon: Icons.info_outline_rounded,
+                  title: 'About Kausap AI',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AboutScreen()),
+                    );
+                  },
                 ),
               ],
             ),
