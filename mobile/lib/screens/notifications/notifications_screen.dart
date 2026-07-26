@@ -141,15 +141,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ),
                       ),
                       if (hasUnread)
-                        TextButton(
+                        TextButton.icon(
                           onPressed: _markAllAsRead,
-                          child: const Text(
+                          icon: const Icon(Icons.done_all_rounded, size: 16, color: AppColors.primary),
+                          label: const Text(
                             'Mark all read',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 12,
                               color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         )
