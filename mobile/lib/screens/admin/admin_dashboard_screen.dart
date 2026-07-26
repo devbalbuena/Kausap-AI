@@ -17,6 +17,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _stats;
+  int _pendingCount = 0;
   String? _error;
 
   @override
@@ -27,10 +28,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _fetchStats() async {
     try {
-      final data = await ApiClient().get('/admin/stats');
+      final results = await Future.wait([
+        ApiClient().get('/admin/stats'),
+        ApiClient().get('/admin/users?limit=200'),
+      ]);
+      final stats = results[0] as Map<String, dynamic>;
+      final users = results[1] as List<dynamic>;
+      final pending = users.where((u) =>
+        u['role'] == 'professional' && u['is_verified'] == false
+      ).length;
       if (mounted) {
         setState(() {
-          _stats = data as Map<String, dynamic>;
+          _stats = stats;
+          _pendingCount = pending;
           _isLoading = false;
         });
       }
@@ -95,6 +105,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          if (_pendingCount > 0)
+            GestureDetector(
+              onTap: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+              ),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFB923C)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.pending_actions_rounded, color: Color(0xFFF97316), size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$_pendingCount Professional${_pendingCount > 1 ? 's' : ''} Pending Verification',
+                            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: Color(0xFFC2410C)),
+                          ),
+                          const Text('Tap to review and verify.', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFFF97316))),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFF97316), size: 16),
+                  ],
+                ),
+              ),
+            ),
           Text('System Overview', style: AppTextStyles.heading2),
           const SizedBox(height: 16),
           GridView.count(
