@@ -60,6 +60,53 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        content: const Text(
+          'Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be erased.',
+          style: TextStyle(fontFamily: 'Poppins'),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                final authProvider = context.read<AuthProvider>();
+                final userId = authProvider.currentUser?['id'];
+                if (userId != null) {
+                  await ApiClient().delete('/admin/users/$userId');
+                }
+                await authProvider.logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+                    (route) => false,
+                  );
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to delete account. Please try again.')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -282,6 +329,20 @@ class ProfileScreen extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppColors.error),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Delete Account Button
+            SizedBox(
+              height: 52,
+              child: TextButton.icon(
+                onPressed: () => _showDeleteDialog(context),
+                icon: const Icon(Icons.delete_forever_rounded, size: 18, color: Color(0xFFDC2626)),
+                label: const Text(
+                  'Delete Account',
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFFDC2626)),
                 ),
               ),
             ),
