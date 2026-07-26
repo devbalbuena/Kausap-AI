@@ -6,6 +6,7 @@ import 'screens/auth/role_selection_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/signup/professional_pending_screen.dart';
 import 'screens/professional/professional_base_screen.dart';
+import 'screens/splash/splash_screen.dart';
 
 void main() {
   runApp(
@@ -42,45 +43,8 @@ class _AppStartup extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
 
     if (auth.isLoading) {
-      // Splash / loading
-      return Scaffold(
-        backgroundColor: AppColors.primary,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(30),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 36),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Kausap AI',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 40),
-              const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      // Show proper animated splash while auth checks token
+      return const SplashScreen();
     }
 
     if (auth.isAuthenticated && auth.currentUser != null) {
