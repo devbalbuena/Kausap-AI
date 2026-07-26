@@ -7,10 +7,58 @@ import '../settings/notification_settings_screen.dart';
 import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
 import '../settings/about_screen.dart';
+import '../../services/api_client.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  void _showDeactivateDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Deactivate Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        content: const Text(
+          'Are you sure you want to deactivate your account? You will be logged out and your account will be suspended. Contact support to reactivate.',
+          style: TextStyle(fontFamily: 'Poppins'),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                final authProvider = context.read<AuthProvider>();
+                final userId = authProvider.currentUser?['id'];
+                if (userId != null) {
+                  await ApiClient().patch('/admin/users/$userId/status', body: {'is_active': false});
+                }
+                await authProvider.logout();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+                    (route) => false,
+                  );
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to deactivate account. Please try again.')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +264,24 @@ class ProfileScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Deactivate Account Button
+            SizedBox(
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: () => _showDeactivateDialog(context),
+                icon: const Icon(Icons.person_off_rounded, size: 18, color: AppColors.error),
+                label: const Text(
+                  'Deactivate Account',
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.error),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.error),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
