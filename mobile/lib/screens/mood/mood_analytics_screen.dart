@@ -11,10 +11,13 @@ class MoodAnalyticsScreen extends StatefulWidget {
   State<MoodAnalyticsScreen> createState() => _MoodAnalyticsScreenState();
 }
 
-class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
+class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   String? _error;
   List<Map<String, dynamic>> _entries = [];
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   // Mood label mapping
   static const Map<int, String> _moodLabels = {
@@ -36,7 +39,18 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
     _fetchMoodData();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchMoodData() async {
@@ -51,6 +65,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
           _entries = List<Map<String, dynamic>>.from(data as List);
           _isLoading = false;
         });
+        _fadeController.forward(from: 0);
       }
     } catch (e) {
       if (mounted) {
@@ -117,7 +132,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? _buildSkeletonLoader()
           : _error != null
               ? Center(
                   child: Column(
@@ -134,7 +149,10 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
                     ],
                   ),
                 )
-              : _buildBody(),
+              : FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: _buildBody(),
+                ),
     );
   }
 
@@ -412,6 +430,32 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
     );
   }
 
+  Widget _buildSkeletonLoader() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _buildSkeletonCard(height: 72),
+        const SizedBox(height: 20),
+        _buildSkeletonCard(height: 120),
+        const SizedBox(height: 20),
+        _buildSkeletonCard(height: 220),
+        const SizedBox(height: 20),
+        _buildSkeletonCard(height: 180),
+      ],
+    );
+  }
+
+  Widget _buildSkeletonCard({required double height}) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const _ShimmerEffect(),
+    );
+  }
+
   List<String> _generateInsights() {
     final insights = <String>[];
     if (_entries.isEmpty) return insights;
@@ -610,6 +654,51 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _ShimmerEffect extends StatefulWidget {
+  const _ShimmerEffect();
+
+  @override
+  State<_ShimmerEffect> createState() => _ShimmerEffectState();
+}
+
+class _ShimmerEffectState extends State<_ShimmerEffect>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (_, child) => Opacity(opacity: _animation.value, child: child),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFCBD5E0),
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
     );
   }
 }
