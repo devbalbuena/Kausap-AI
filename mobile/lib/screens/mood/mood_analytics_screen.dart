@@ -151,6 +151,10 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
           _buildSummaryRow(),
           const SizedBox(height: 20),
 
+          // ── AI Insights ───────────────────────────────────────────────────
+          if (_entries.isNotEmpty) _buildInsightsCard(),
+          if (_entries.isNotEmpty) const SizedBox(height: 20),
+
           // ── 7-Day Line Chart ──────────────────────────────────────────────
           _buildCard(
             child: Column(
@@ -405,6 +409,100 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
         boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4))],
       ),
       child: child,
+    );
+  }
+
+  List<String> _generateInsights() {
+    final insights = <String>[];
+    if (_entries.isEmpty) return insights;
+
+    final avg = _entries.map((e) => (e['mood_level'] as num).toDouble()).reduce((a, b) => a + b) / _entries.length;
+    final latest = (_entries.first['mood_level'] as num).toInt();
+
+    // Trend insight
+    if (_entries.length >= 2) {
+      final prev = (_entries[1]['mood_level'] as num).toDouble();
+      final curr = (_entries[0]['mood_level'] as num).toDouble();
+      if (curr > prev) {
+        insights.add('📈 Your mood improved compared to your last check-in. Keep it up!');
+      } else if (curr < prev) {
+        insights.add('📉 Your mood dipped since your last check-in. Consider talking to someone today.');
+      } else {
+        insights.add('➡️ Your mood has been steady. Consistency is a good sign!');
+      }
+    }
+
+    // Average insight
+    if (avg >= 4.0) {
+      insights.add('🌟 Your average mood this period is Great! You are thriving.');
+    } else if (avg >= 3.0) {
+      insights.add('😊 Your average mood is Neutral to Good. You are doing well overall.');
+    } else {
+      insights.add('💙 Your average mood has been low lately. Small steps matter — try a 5-minute walk or breathing exercise.');
+    }
+
+    // Frequency insight
+    if (_entries.length >= 7) {
+      insights.add('✅ You have logged ${_entries.length} check-ins. Great consistency building self-awareness!');
+    } else if (_entries.length >= 3) {
+      insights.add('📋 You have ${_entries.length} check-ins so far. Try to log daily for better insights.');
+    } else {
+      insights.add('🚀 You are just getting started! Log daily check-ins to unlock deeper patterns.');
+    }
+
+    // Latest mood tip
+    if (latest <= 2) {
+      insights.add('💬 When feeling low, try writing down 3 things you are grateful for. Small shifts help.');
+    } else if (latest == 5) {
+      insights.add('🎉 You are feeling great today! A great time to connect with someone or try something new.');
+    }
+
+    return insights;
+  }
+
+  Widget _buildInsightsCard() {
+    final insights = _generateInsights();
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary.withAlpha(20), AppColors.primaryLight.withAlpha(15)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withAlpha(40)),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Text('🤖', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: 8),
+            Text('AI Insights', style: AppTextStyles.heading2.copyWith(fontSize: 16, color: AppColors.primary)),
+          ]),
+          const SizedBox(height: 4),
+          Text(
+            'Personalized observations from your mood data',
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          ...insights.map((insight) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(180),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    insight,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textPrimary, height: 1.5),
+                  ),
+                ),
+              )),
+        ],
+      ),
     );
   }
 
