@@ -8,6 +8,7 @@ import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
 import '../settings/about_screen.dart';
 import '../../services/api_client.dart';
+import '../mood/mood_analytics_screen.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -191,7 +192,12 @@ class ProfileScreen extends StatelessWidget {
                 _buildListItem(
                   icon: Icons.show_chart_rounded,
                   title: 'Mood Trends',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MoodAnalyticsScreen()),
+                    );
+                  },
                 ),
                 _buildDivider(),
                 _buildListItem(
