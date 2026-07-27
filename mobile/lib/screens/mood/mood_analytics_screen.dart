@@ -267,6 +267,10 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
           ),
           const SizedBox(height: 20),
 
+          // ── Mood Distribution Pie Chart ───────────────────────────────────
+          _buildCard(child: _buildPieChartSection()),
+          const SizedBox(height: 20),
+
           // ── Recent Entries ────────────────────────────────────────────────
           _buildCard(
             child: Column(
@@ -401,6 +405,113 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
         boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4))],
       ),
       child: child,
+    );
+  }
+
+  Widget _buildPieChartSection() {
+    // Count occurrences of each mood level
+    final Map<int, int> counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+    for (final e in _entries) {
+      final level = (e['mood_level'] as num).toInt().clamp(1, 5);
+      counts[level] = (counts[level] ?? 0) + 1;
+    }
+    final total = _entries.length;
+    if (total == 0) {
+      return Column(
+        children: [
+          Row(children: [
+            const Icon(Icons.pie_chart_rounded, color: AppColors.primary, size: 22),
+            const SizedBox(width: 8),
+            Text('Mood Distribution', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+          ]),
+          const SizedBox(height: 24),
+          const Center(
+            child: Text('No data yet. Complete a check-in to see your distribution.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textSecondary, fontSize: 13)),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    }
+
+    const pieColors = [
+      Color(0xFFEF4444), // 1 - red
+      Color(0xFFF97316), // 2 - orange
+      Color(0xFFFACC15), // 3 - yellow
+      Color(0xFF34D399), // 4 - green
+      Color(0xFF3B82F6), // 5 - blue
+    ];
+
+    final sections = <PieChartSectionData>[];
+    for (int i = 1; i <= 5; i++) {
+      final count = counts[i] ?? 0;
+      if (count == 0) continue;
+      final pct = (count / total * 100);
+      sections.add(PieChartSectionData(
+        value: count.toDouble(),
+        color: pieColors[i - 1],
+        title: '${pct.round()}%',
+        radius: 60,
+        titleStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          const Icon(Icons.pie_chart_rounded, color: AppColors.primary, size: 22),
+          const SizedBox(width: 8),
+          Text('Mood Distribution', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+        ]),
+        const SizedBox(height: 4),
+        Text('All-time breakdown of your moods',
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 12)),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            SizedBox(
+              height: 150,
+              width: 150,
+              child: PieChart(
+                PieChartData(
+                  sections: sections,
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 36,
+                ),
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: List.generate(5, (i) {
+                  final level = i + 1;
+                  final count = counts[level] ?? 0;
+                  final pct = total > 0 ? (count / total * 100).round() : 0;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      children: [
+                        Container(width: 10, height: 10, decoration: BoxDecoration(color: pieColors[i], shape: BoxShape.circle)),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_moodLabels[level]} ${_moodNames[level]}',
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textPrimary),
+                        ),
+                        const Spacer(),
+                        Text('$pct%',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: pieColors[i])),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
