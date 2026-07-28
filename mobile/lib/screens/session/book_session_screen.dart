@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
+import 'booking_success_screen.dart';
 
 class BookSessionScreen extends StatefulWidget {
   const BookSessionScreen({super.key});
@@ -90,9 +91,8 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
       await ApiClient().post(ApiConfig.sessions, body: payload);
 
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session booked successfully!')),
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const BookingSuccessScreen()),
         );
       }
     } catch (e) {
