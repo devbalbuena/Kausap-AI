@@ -14,6 +14,8 @@ import '../activity/activity_start_screen.dart';
 import '../profile/profile_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../discover/discover_professionals_screen.dart';
+import '../../services/api_client.dart';
+import '../../config/api_config.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -150,7 +152,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             ),
                             const SizedBox(height: 16),
-                            _buildUpcomingSessionCard(),
+                            const SizedBox(height: 16),
+                            const UpcomingSessionWidget(),
                             const SizedBox(height: 16),
                             _buildQuoteCard(),
                             const SizedBox(height: 16),
@@ -392,85 +395,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Upcoming Session Card ─────────────────────────────────────────────────
-  Widget _buildUpcomingSessionCard() {
-    return Container(
-      height: 172,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.sessionCard,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.primary.withAlpha(20),
-              blurRadius: 24,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('UPCOMING SESSION',
-                    style: AppTextStyles.caption.copyWith(
-                        color: Colors.white,
-                        letterSpacing: 0.6,
-                        fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                Text('May 15, 2026 • 2:00 PM',
-                    style: AppTextStyles.body.copyWith(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Row(children: [
-                  CircleAvatar(
-                    radius: 12,
-                    backgroundColor: Colors.white.withAlpha(50),
-                    child: const Icon(Icons.person,
-                        color: Colors.white, size: 14),
-                  ),
-                  const SizedBox(width: 6),
-                  Text('with Ms. Maria Santos',
-                      style: AppTextStyles.caption
-                          .copyWith(color: Colors.white, fontSize: 12)),
-                ]),
-                const Spacer(),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.primary,
-                    minimumSize: const Size(0, 36),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    elevation: 1,
-                    textStyle: AppTextStyles.label.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const SessionTabsScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text('View Session'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Icon(Icons.spa_rounded,
-              color: Colors.white.withAlpha(70), size: 80),
-        ],
-      ),
-    );
-  }
 
   // ── Motivational Quote Card ───────────────────────────────────────────────
   Widget _buildQuoteCard() {
@@ -814,6 +738,175 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: child,
+    );
+  }
+}
+
+class UpcomingSessionWidget extends StatefulWidget {
+  const UpcomingSessionWidget({super.key});
+
+  @override
+  State<UpcomingSessionWidget> createState() => _UpcomingSessionWidgetState();
+}
+
+class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
+  bool _isLoading = true;
+  Map<String, dynamic>? _nextSession;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUpcomingSession();
+  }
+
+  Future<void> _fetchUpcomingSession() async {
+    try {
+      final data = await ApiClient().get(ApiConfig.sessions);
+      final List<dynamic> sessions = data as List<dynamic>;
+      // Filter for upcoming only
+      final now = DateTime.now();
+      final upcoming = sessions.where((s) {
+        final date = DateTime.parse(s['date_time']).toLocal();
+        return date.isAfter(now) && s['status'] != 'cancelled';
+      }).toList();
+
+      if (upcoming.isNotEmpty) {
+        // Sort by closest date
+        upcoming.sort((a, b) {
+          final dateA = DateTime.parse(a['date_time']);
+          final dateB = DateTime.parse(b['date_time']);
+          return dateA.compareTo(dateB);
+        });
+        setState(() {
+          _nextSession = upcoming.first as Map<String, dynamic>;
+        });
+      }
+    } catch (_) {
+      // Ignore errors for now
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Container(
+        height: 172,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE2E8F0),
+          borderRadius: BorderRadius.circular(16),
+        ),
+      );
+    }
+
+    if (_nextSession == null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('No upcoming sessions', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text('Book a session to talk to someone.', style: AppTextStyles.body.copyWith(fontSize: 13, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final date = DateTime.parse(_nextSession!['date_time']).toLocal();
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final timeStr = "${date.hour > 12 ? date.hour - 12 : date.hour == 0 ? 12 : date.hour}:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}";
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: const Color(0xFF3B82F6).withAlpha(60), blurRadius: 16, offset: const Offset(0, 8))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: Colors.white.withAlpha(50), borderRadius: BorderRadius.circular(999)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.videocam_rounded, color: Colors.white, size: 14),
+                    const SizedBox(width: 4),
+                    Text(_nextSession!['mode'] ?? 'Online', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF3B82F6), size: 18),
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SessionTabsScreen()));
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            '${months[date.month - 1]} ${date.day}, ${date.year} • $timeStr',
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: Colors.white.withAlpha(40),
+                child: const Icon(Icons.person_rounded, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Reason: ${_nextSession!['reason'] ?? 'Check-in'}',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
