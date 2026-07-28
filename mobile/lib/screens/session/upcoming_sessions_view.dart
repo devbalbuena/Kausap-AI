@@ -41,6 +41,48 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
     }
   }
 
+  Future<void> _cancelSession(String id) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Cancel Session', style: AppTextStyles.heading2),
+        content: Text('Are you sure you want to cancel this session?', style: AppTextStyles.body),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('No, keep it', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
+            ),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // In a real app, you would make an API call here:
+    // await ApiClient().delete('${ApiConfig.sessions}/$id');
+
+    // For now, mock the cancellation locally
+    setState(() {
+      _sessions.removeWhere((s) => s['id'] == id);
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session cancelled successfully.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -88,6 +130,7 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
         final formattedTime = DateFormat('h:mm a').format(dt);
 
         return _buildSessionCard(
+          id: session['id'] ?? '',
           date: formattedDate,
           time: formattedTime,
           professionalName: 'Dr. Jane Doe', // Mocked professional name
@@ -99,6 +142,7 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
   }
 
   Widget _buildSessionCard({
+    required String id,
     required String date,
     required String time,
     required String professionalName,
@@ -188,6 +232,13 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
                   ),
                 ],
               ),
+              const Spacer(),
+              if (id.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.cancel_rounded, color: Colors.white70),
+                  tooltip: 'Cancel Session',
+                  onPressed: () => _cancelSession(id),
+                ),
             ],
           ),
         ],
