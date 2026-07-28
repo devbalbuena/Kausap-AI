@@ -28,11 +28,17 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
 
   final List<String> _timeSlots = [
     '09:00 AM',
+    '09:30 AM',
     '10:00 AM',
+    '10:30 AM',
     '11:00 AM',
+    '11:30 AM',
     '01:00 PM',
+    '01:30 PM',
     '02:00 PM',
-    '04:00 PM',
+    '02:30 PM',
+    '03:00 PM',
+    '03:30 PM',
   ];
 
   final List<String> _reasons = [
@@ -143,32 +149,47 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
             const SizedBox(height: 24),
             Text('Time Slots', style: AppTextStyles.heading2),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: _timeSlots.map((time) {
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 2.2,
+              ),
+              itemCount: _timeSlots.length,
+              itemBuilder: (context, index) {
+                final time = _timeSlots[index];
                 final isSelected = _selectedTime == time;
                 return GestureDetector(
                   onTap: () => setState(() => _selectedTime = time),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
                     decoration: BoxDecoration(
                       color: isSelected ? AppColors.primary : Colors.white,
                       border: Border.all(
-                        color: isSelected ? AppColors.primary : AppColors.inputBorder,
+                        color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                        width: isSelected ? 0 : 1,
                       ),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: isSelected
+                          ? [BoxShadow(color: AppColors.primary.withAlpha(60), blurRadius: 6, offset: const Offset(0, 3))]
+                          : [],
                     ),
+                    alignment: Alignment.center,
                     child: Text(
                       time,
                       style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                         color: isSelected ? Colors.white : AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 );
-              }).toList(),
+              },
             ),
             const SizedBox(height: 24),
             Text('Session Details', style: AppTextStyles.heading2),
