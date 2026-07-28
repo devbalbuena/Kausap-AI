@@ -16,6 +16,15 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
   String? _selectedReason;
   String _selectedMode = 'Online';
   final TextEditingController _notesController = TextEditingController();
+  final ScrollController _dateScrollController = ScrollController();
+
+  // Generate 30 days starting from today
+  late final List<DateTime> _availableDates = List.generate(
+    30,
+    (i) => DateTime.now().add(Duration(days: i)),
+  );
+
+  static const _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   final List<String> _timeSlots = [
     '09:00 AM',
@@ -101,6 +110,7 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
   @override
   void dispose() {
     _notesController.dispose();
+    _dateScrollController.dispose();
     super.dispose();
   }
 
@@ -126,28 +136,10 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Calendar Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x0D000000), blurRadius: 10, offset: Offset(0, 4)),
-                ],
-              ),
-              child: CalendarDatePicker(
-                initialDate: _selectedDate,
-                firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(const Duration(days: 90)),
-                onDateChanged: (date) {
-                  setState(() {
-                    _selectedDate = date;
-                    _selectedTime = null; // reset time when date changes
-                  });
-                },
-              ),
-            ),
+            // ── Horizontal Date Picker ───────────────────────────────────
+            _buildMonthHeader(),
+            const SizedBox(height: 12),
+            _buildHorizontalDatePicker(),
             const SizedBox(height: 24),
             Text('Time Slots', style: AppTextStyles.heading2),
             const SizedBox(height: 12),
@@ -299,6 +291,116 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMonthHeader() {
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return Row(
+      children: [
+        Text(
+          '${months[_selectedDate.month - 1]} ${_selectedDate.year}',
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const Spacer(),
+        const Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 22),
+      ],
+    );
+  }
+
+  Widget _buildHorizontalDatePicker() {
+    return SizedBox(
+      height: 84,
+      child: ListView.builder(
+        controller: _dateScrollController,
+        scrollDirection: Axis.horizontal,
+        itemCount: _availableDates.length,
+        itemBuilder: (context, index) {
+          final date = _availableDates[index];
+          final isSelected = date.year == _selectedDate.year &&
+              date.month == _selectedDate.month &&
+              date.day == _selectedDate.day;
+          final isToday = date.day == DateTime.now().day &&
+              date.month == DateTime.now().month &&
+              date.year == DateTime.now().year;
+          final dayName = _dayNames[date.weekday - 1];
+          final isWeekend = date.weekday == 6 || date.weekday == 7;
+
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedDate = date;
+                _selectedTime = null;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 58,
+              margin: EdgeInsets.only(right: 10, left: index == 0 ? 0 : 0),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.primary
+                      : isToday
+                          ? AppColors.primaryLight
+                          : const Color(0xFFE2E8F0),
+                  width: isToday && !isSelected ? 2 : 1,
+                ),
+                boxShadow: isSelected
+                    ? [BoxShadow(color: AppColors.primary.withAlpha(60), blurRadius: 8, offset: const Offset(0, 4))]
+                    : [],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    dayName,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white.withAlpha(200)
+                          : isWeekend
+                              ? const Color(0xFFEF4444)
+                              : AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                  if (isToday && !isSelected)
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryLight,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
