@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -248,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showProfileMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -340,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   '$streak/$goal',
                   style: AppTextStyles.caption.copyWith(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       fontSize: 8,
                       fontWeight: FontWeight.w700),
                 ),
@@ -461,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentGreen,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.surface,
                   textStyle: AppTextStyles.button,
                 ),
                 onPressed: () {
@@ -517,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Spacer(),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                     foregroundColor: AppColors.accentOrange,
                     minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(
@@ -642,7 +642,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
         boxShadow: [
           BoxShadow(
@@ -728,7 +728,7 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       padding: padding ?? const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -794,7 +794,7 @@ class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
       return Container(
         height: 172,
         decoration: BoxDecoration(
-          color: const Color(0xFFE2E8F0),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
       );
@@ -804,9 +804,9 @@ class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           children: [

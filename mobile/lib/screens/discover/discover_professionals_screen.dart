@@ -112,7 +112,7 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4))],
                     ),
@@ -182,7 +182,7 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                             color: isSelected ? Colors.white : AppColors.textSecondary,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                           ),
-                          backgroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).colorScheme.surface,
                           selectedColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
@@ -246,7 +246,7 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 4))],
         ),
