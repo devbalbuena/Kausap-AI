@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../auth/role_selection_screen.dart';
 import '../settings/notification_settings_screen.dart';
 import '../settings/security_screen.dart';
@@ -235,6 +236,21 @@ class ProfileScreen extends StatelessWidget {
                   },
                 ),
                 _buildDivider(),
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                    return _buildListItem(
+                      icon: Icons.dark_mode_outlined,
+                      title: 'Dark Mode',
+                      onTap: () => themeProvider.toggleTheme(),
+                      trailing: Switch(
+                        value: themeProvider.isDarkMode,
+                        onChanged: (val) => themeProvider.toggleTheme(),
+                        activeTrackColor: AppColors.primaryLight,
+                      ),
+                    );
+                  },
+                ),
+                _buildDivider(),
                 _buildListItem(
                   icon: Icons.lock_outline_rounded,
                   title: 'Privacy',
@@ -395,7 +411,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildListItem({required IconData icon, required String title, required VoidCallback onTap}) {
+  Widget _buildListItem({required IconData icon, required String title, required VoidCallback onTap, Widget? trailing}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -428,7 +444,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(
+            if (trailing != null) trailing else const Icon(
               Icons.arrow_forward_ios_rounded,
               size: 14,
               color: Color(0xFFC0C9C2),
