@@ -12,6 +12,7 @@ class SecurityScreen extends StatefulWidget {
 
 class _SecurityScreenState extends State<SecurityScreen> {
   bool _twoFactorEnabled = false;
+  bool _appLockEnabled = false;
   final ApiClient _apiClient = ApiClient();
 
   void _showChangePasswordDialog() {
@@ -212,6 +213,21 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           subtitle: 'Add an extra layer of security',
                           value: _twoFactorEnabled,
                           onChanged: (v) => setState(() => _twoFactorEnabled = v),
+                        ),
+                      ]),
+
+                      const SizedBox(height: 20),
+
+                      // ── Device Privacy ───────────────────────────────────
+                      _sectionLabel('DEVICE PRIVACY'),
+                      _card([
+                        _buildToggleRow(
+                          icon: Icons.fingerprint_rounded,
+                          iconColor: const Color(0xFFE11D48),
+                          label: 'App Lock / Biometrics',
+                          subtitle: 'Require FaceID/PIN to open app',
+                          value: _appLockEnabled,
+                          onChanged: (v) => setState(() => _appLockEnabled = v),
                         ),
                       ]),
 
