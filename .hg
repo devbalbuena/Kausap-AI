@@ -1,0 +1,26 @@
+so in my contribution chart the green swquare dont appear yet today even though i already commited 4 commit now why is that i can see the commit in the repo page but in profile contributionp agse it is not listed bruh
+Short answer: the commits are visible in the repo but they won’t light up your contribution squares unless GitHub attributes them to your account and they meet GitHub’s contribution rules (right email, right branch/repo, verified email, not blocked by privacy or forks). Check the items below and I can help inspect a commit/URL if you paste it.
+
+Quick checklist (what to check and how to fix)
+
+Is the commit actually attributed to your GitHub account?
+On the commit page GitHub shows the author; it should say your username (or your name with a link to your account). If it shows a plain email/name that is not linked, it won’t count.
+Locally, run to see the author email: git show -s --format='%an <%ae>' <commit-sha>
+If the email is not one of the emails in Settings → Emails on GitHub (and verified), add that email to your GitHub account or change your local git config: git config --global user.email "your@verified.email"
+Fix already-pushed commits:
+
+Single most recent commit: git commit --amend --author="Your Name your@verified.email" --no-edit git push --force
+For many commits you’ll need an interactive rebase or a history rewrite (git rebase -i or git filter-repo); be careful — rewriting history requires force-push and affects collaborators.
+Are the commits on the repository’s default branch (or gh-pages) or merged into it?
+GitHub counts pushes to the repo’s default branch (and gh-pages). Commits on other branches usually don’t show on your profile until they’re merged into the default branch (or the PR gets merged).
+Check the branch you pushed to and whether the commits are merged.
+Is the repo a fork / archived / or does org policy affect it?
+Contributions from archived repos don’t count.
+Forks and upstreams can behave differently; contributions to a fork’s non-default branch may not show.
+Organization or repo visibility settings can affect how contributions appear.
+Is the email verified and is “Include private contributions” configured how you expect?
+Make sure the commit email is verified in GitHub Settings → Emails.
+If commits are in private repos and you have disabled showing private contributions, they will still count but appear as opaque boxes or may be hidden depending on your profile settings.
+Timing / caching
+Usually updates are quick but the contribution graph can lag a few minutes (rarely longer). Try refreshing after a little while. Also try logging out/in or clearing cache.
+If you want, I can check the exact reason for your 4 commits now — paste one commit SHA or the repo URL and branch name and I’ll confirm whether the commit author email matches your account and whether the branch will count.

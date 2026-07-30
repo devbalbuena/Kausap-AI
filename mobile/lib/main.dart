@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'theme/app_theme.dart';
+import 'widgets/privacy_wrapper.dart';
 import 'screens/auth/role_selection_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/signup/professional_pending_screen.dart';
@@ -34,6 +35,9 @@ class KausapApp extends StatelessWidget {
           theme: AppTheme.theme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
+          builder: (context, child) => PrivacyWrapper(
+            child: child ?? const SizedBox.shrink(),
+          ),
           home: const _AppStartup(),
         );
       },
