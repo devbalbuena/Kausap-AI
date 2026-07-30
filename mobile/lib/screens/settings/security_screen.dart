@@ -136,6 +136,91 @@ class _SecurityScreenState extends State<SecurityScreen> {
     );
   }
 
+  void _showDataExportDialog() {
+    bool exportChats = true;
+    bool exportMood = true;
+    bool isRequesting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text(
+                'Export Your Data',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Select the data you would like to download. A secure link will be sent to your email address.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  CheckboxListTile(
+                    title: const Text('Chat History', style: TextStyle(fontSize: 14)),
+                    value: exportChats,
+                    onChanged: (v) => setDialogState(() => exportChats = v ?? true),
+                    activeColor: AppColors.primary,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Mood Analytics', style: TextStyle(fontSize: 14)),
+                    value: exportMood,
+                    onChanged: (v) => setDialogState(() => exportMood = v ?? true),
+                    activeColor: AppColors.primary,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                ),
+                ElevatedButton(
+                  onPressed: isRequesting
+                      ? null
+                      : () async {
+                          if (!exportChats && !exportMood) return;
+                          setDialogState(() => isRequesting = true);
+                          // Simulating an API call
+                          await Future.delayed(const Duration(seconds: 2));
+                          if (mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Your data request has been received! The link will be emailed shortly.')),
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: isRequesting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Request Data'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildPasswordField(String label, TextEditingController ctrl, bool visible, VoidCallback toggle) {
     return TextField(
       controller: ctrl,
@@ -228,6 +313,14 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           subtitle: 'Require FaceID/PIN to open app',
                           value: _appLockEnabled,
                           onChanged: (v) => setState(() => _appLockEnabled = v),
+                        ),
+                        _divider(),
+                        _buildNavRow(
+                          icon: Icons.download_rounded,
+                          iconColor: const Color(0xFF0EA5E9),
+                          label: 'Export Data',
+                          subtitle: 'Request a copy of your personal data',
+                          onTap: _showDataExportDialog,
                         ),
                       ]),
 
