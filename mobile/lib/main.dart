@@ -10,6 +10,8 @@ import 'screens/signup/professional_pending_screen.dart';
 import 'screens/professional/professional_base_screen.dart';
 import 'screens/splash/splash_screen.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
   runApp(
     MultiProvider(
@@ -30,6 +32,7 @@ class KausapApp extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Kausap AI',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.theme,

@@ -1,6 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../main.dart';
+import '../screens/auth/role_selection_screen.dart';
 
 class PrivacyWrapper extends StatefulWidget {
   final Widget child;
@@ -12,6 +16,7 @@ class PrivacyWrapper extends StatefulWidget {
 
 class _PrivacyWrapperState extends State<PrivacyWrapper> with WidgetsBindingObserver {
   bool _isHidden = false;
+  DateTime? _backgroundTime;
 
   @override
   void initState() {
@@ -30,10 +35,32 @@ class _PrivacyWrapperState extends State<PrivacyWrapper> with WidgetsBindingObse
     if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
       if (!_isHidden) {
         setState(() => _isHidden = true);
+        _backgroundTime = DateTime.now();
       }
     } else if (state == AppLifecycleState.resumed) {
       if (_isHidden) {
         setState(() => _isHidden = false);
+      }
+      
+      if (_backgroundTime != null) {
+        final diff = DateTime.now().difference(_backgroundTime!);
+        if (diff.inMinutes >= 15) {
+          _handleSessionTimeout();
+        }
+        _backgroundTime = null;
+      }
+    }
+  }
+
+  Future<void> _handleSessionTimeout() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.isAuthenticated) {
+      await auth.logout();
+      if (navigatorKey.currentState != null) {
+        navigatorKey.currentState!.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+          (route) => false,
+        );
       }
     }
   }
