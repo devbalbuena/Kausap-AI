@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
+import '../../widgets/rate_app_dialog.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -120,7 +121,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             backgroundColor: Color(0xFF22C55E),
           ),
         );
-        Navigator.pop(context);
+        await RateAppDialog.show(context);
+        if (mounted) Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
