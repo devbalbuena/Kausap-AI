@@ -158,6 +158,56 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
     }
   }
 
+  Future<void> _logoutAllOtherDevices() async {
+    final otherDevices = _devices.where((d) => d['is_current'] != true).toList();
+    if (otherDevices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No other devices to log out.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Log Out All Other Devices',
+          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          'This will immediately log out ${otherDevices.length} other device${otherDevices.length > 1 ? 's' : ''}. Your current device will remain logged in.',
+          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Log Out All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() => _devices.removeWhere((d) => d['is_current'] != true));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${otherDevices.length} device${otherDevices.length > 1 ? 's' : ''} logged out successfully.'),
+          backgroundColor: const Color(0xFF22C55E),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -229,6 +279,31 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
                   const SizedBox(height: 10),
 
                   ..._devices.map((device) => _buildDeviceCard(device)),
+
+                  const SizedBox(height: 8),
+
+                  // Log out all other devices button
+                  if (_devices.any((d) => d['is_current'] != true))
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _logoutAllOtherDevices,
+                        icon: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFFEF4444)),
+                        label: const Text(
+                          'Log Out All Other Devices',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFEF4444),
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFEF4444)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
