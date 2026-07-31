@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'change_password_screen.dart';
+import 'active_devices_screen.dart';
 
 class SecurityScreen extends StatefulWidget {
   const SecurityScreen({super.key});
@@ -200,11 +201,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           iconColor: const Color(0xFF0077B6),
                           label: 'Active Sessions',
                           subtitle: 'Manage logged-in devices',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Coming soon!')),
-                            );
-                          },
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ActiveDevicesScreen()),
+                          ),
                         ),
                       ]),
 
