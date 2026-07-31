@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'change_password_screen.dart';
 import 'active_devices_screen.dart';
+import 'two_factor_auth_screen.dart';
 
 class SecurityScreen extends StatefulWidget {
   const SecurityScreen({super.key});
@@ -162,9 +163,19 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           icon: Icons.shield_outlined,
                           iconColor: const Color(0xFF2E9E6B),
                           label: 'Two-Factor Authentication',
-                          subtitle: 'Add an extra layer of security',
+                          subtitle: _twoFactorEnabled ? 'Enabled — tap to manage' : 'Add an extra layer of security',
                           value: _twoFactorEnabled,
-                          onChanged: (v) => setState(() => _twoFactorEnabled = v),
+                          onChanged: (v) async {
+                            if (v) {
+                              final result = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(builder: (_) => const TwoFactorAuthScreen()),
+                              );
+                              if (mounted) setState(() => _twoFactorEnabled = result ?? false);
+                            } else {
+                              setState(() => _twoFactorEnabled = false);
+                            }
+                          },
                         ),
                       ]),
 
