@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/skeleton_loading_widget.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../chat/chatbot_screen.dart';
@@ -792,13 +793,7 @@ class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Container(
-        height: 172,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-      );
+      return const UpcomingSessionSkeleton();
     }
 
     if (_nextSession == null) {

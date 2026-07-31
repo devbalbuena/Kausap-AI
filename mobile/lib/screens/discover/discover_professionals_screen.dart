@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../services/discover_service.dart';
 import 'professional_profile_screen.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/skeleton_loading_widget.dart';
 
 class DiscoverProfessionalsScreen extends StatefulWidget {
   const DiscoverProfessionalsScreen({super.key});
@@ -201,7 +202,11 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                 // List View
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                      ? ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          itemCount: 4,
+                          itemBuilder: (context, index) => const ProfessionalCardSkeleton(),
+                        )
                       : _error != null
                           ? Center(
                               child: Text(_error!,
