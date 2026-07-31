@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
-import '../../services/api_client.dart';
-import '../../config/api_config.dart';
+import 'change_password_screen.dart';
 
 class SecurityScreen extends StatefulWidget {
   const SecurityScreen({super.key});
@@ -13,128 +12,7 @@ class SecurityScreen extends StatefulWidget {
 class _SecurityScreenState extends State<SecurityScreen> {
   bool _twoFactorEnabled = false;
   bool _appLockEnabled = false;
-  final ApiClient _apiClient = ApiClient();
 
-  void _showChangePasswordDialog() {
-    final oldPasswordCtrl = TextEditingController();
-    final newPasswordCtrl = TextEditingController();
-    final confirmPasswordCtrl = TextEditingController();
-    bool oldVisible = false;
-    bool newVisible = false;
-    bool confirmVisible = false;
-    bool isSaving = false;
-    String? error;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text(
-                'Change Password',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (error != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(children: [
-                        const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(error!, style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444)))),
-                      ]),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  _buildPasswordField('Current Password', oldPasswordCtrl, oldVisible,
-                      () => setDialogState(() => oldVisible = !oldVisible)),
-                  const SizedBox(height: 12),
-                  _buildPasswordField('New Password', newPasswordCtrl, newVisible,
-                      () => setDialogState(() => newVisible = !newVisible)),
-                  const SizedBox(height: 12),
-                  _buildPasswordField('Confirm New Password', confirmPasswordCtrl, confirmVisible,
-                      () => setDialogState(() => confirmVisible = !confirmVisible)),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-                ),
-                ElevatedButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          final oldPwd = oldPasswordCtrl.text.trim();
-                          final newPwd = newPasswordCtrl.text.trim();
-                          final confirmPwd = confirmPasswordCtrl.text.trim();
-
-                          if (oldPwd.isEmpty || newPwd.isEmpty || confirmPwd.isEmpty) {
-                            setDialogState(() => error = 'All fields are required.');
-                            return;
-                          }
-                          if (newPwd != confirmPwd) {
-                            setDialogState(() => error = 'New passwords do not match.');
-                            return;
-                          }
-                          if (newPwd.length < 8) {
-                            setDialogState(() => error = 'Password must be at least 8 characters.');
-                            return;
-                          }
-
-                          setDialogState(() { isSaving = true; error = null; });
-                          try {
-                            await _apiClient.put(ApiConfig.changePassword, body: {
-                              'old_password': oldPwd,
-                              'new_password': newPwd,
-                            });
-                            if (ctx.mounted) {
-                              Navigator.pop(ctx);
-                            }
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Password changed successfully!'),
-                                  backgroundColor: Color(0xFF2E9E6B),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            setDialogState(() {
-                              isSaving = false;
-                              error = e.toString().replaceAll('ApiException: 400 - ', '');
-                            });
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: isSaving
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Update', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   void _showDataExportDialog() {
     bool exportChats = true;
@@ -198,7 +76,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           // Simulating an API call
                           await Future.delayed(const Duration(seconds: 2));
                           if (mounted) {
-                            Navigator.pop(ctx);
+                            if (ctx.mounted) Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Your data request has been received! The link will be emailed shortly.')),
                             );
@@ -221,22 +99,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
     );
   }
 
-  Widget _buildPasswordField(String label, TextEditingController ctrl, bool visible, VoidCallback toggle) {
-    return TextField(
-      controller: ctrl,
-      obscureText: !visible,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textSecondary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        suffixIcon: IconButton(
-          icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
-          onPressed: toggle,
-        ),
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +151,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           iconColor: const Color(0xFF6366F1),
                           label: 'Change Password',
                           subtitle: 'Update your login password',
-                          onTap: _showChangePasswordDialog,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                          ),
                         ),
                         _divider(),
                         _buildToggleRow(
