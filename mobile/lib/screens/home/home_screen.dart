@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/notification_service.dart';
+import '../../widgets/empty_state_widget.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../chat/chatbot_screen.dart';
@@ -802,34 +803,21 @@ class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
 
     if (_nextSession == null) {
       return Container(
-        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Theme.of(context).dividerColor),
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withAlpha(30),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.event_available_rounded, color: AppColors.primary, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('No upcoming sessions', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('Book a session to talk to someone.', style: AppTextStyles.body.copyWith(fontSize: 13, color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-          ],
+        child: EmptyStateWidget(
+          icon: Icons.event_available_rounded,
+          title: 'No upcoming sessions',
+          description: 'Book a session to talk to someone.',
+          buttonText: 'Book a Session',
+          onButtonPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const DiscoverProfessionalsScreen()),
+            );
+          },
         ),
       );
     }

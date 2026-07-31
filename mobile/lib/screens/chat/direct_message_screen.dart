@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/message_service.dart';
+import '../../widgets/empty_state_widget.dart';
 
 class DirectMessageScreen extends StatefulWidget {
   final String otherUserId;
@@ -192,15 +193,10 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
 
   Widget _buildChatList() {
     if (_messages.isEmpty) {
-      return Center(
-        child: Text(
-          'No messages yet.\nStart the conversation!',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            color: AppColors.textSecondary.withAlpha(150),
-          ),
-        ),
+      return const EmptyStateWidget(
+        icon: Icons.chat_bubble_outline_rounded,
+        title: 'No messages yet',
+        description: 'Start the conversation by sending a message below.',
       );
     }
     return ListView.builder(

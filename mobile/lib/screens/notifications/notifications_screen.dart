@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/notification_service.dart';
+import '../../widgets/empty_state_widget.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -188,33 +189,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.notifications_off_outlined,
-              size: 64, color: AppColors.textSecondary.withAlpha(100)),
-          const SizedBox(height: 16),
-          Text(
-            "You're all caught up!",
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: AppColors.textSecondary.withAlpha(180),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'No notifications yet.',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13,
-              color: AppColors.textSecondary.withAlpha(130),
-            ),
-          ),
-        ],
-      ),
+    return const EmptyStateWidget(
+      icon: Icons.notifications_off_rounded,
+      title: 'You\'re all caught up!',
+      description: 'No new notifications right now. Check back later.',
     );
   }
 
