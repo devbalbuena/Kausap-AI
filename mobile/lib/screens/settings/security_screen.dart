@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import 'change_password_screen.dart';
 import 'active_devices_screen.dart';
 import 'two_factor_auth_screen.dart';
+import '../../utils/haptic_service.dart';
 
 class SecurityScreen extends StatefulWidget {
   const SecurityScreen({super.key});
@@ -154,7 +155,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           iconColor: const Color(0xFF6366F1),
                           label: 'Change Password',
                           subtitle: 'Update your login password',
-                          onTap: () => Navigator.push(context, slideRoute(const ChangePasswordScreen()))
+                          onTap: () {
+                            HapticService.lightTap();
+                            Navigator.push(context, slideRoute(const ChangePasswordScreen()));
+                          }
                         ),
                         _divider(),
                         _buildToggleRow(
@@ -195,7 +199,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           iconColor: const Color(0xFF0EA5E9),
                           label: 'Export Data',
                           subtitle: 'Request a copy of your personal data',
-                          onTap: _showDataExportDialog,
+                          onTap: () {
+                            HapticService.lightTap();
+                            _showDataExportDialog();
+                          },
                         ),
                       ]),
 
@@ -209,7 +216,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           iconColor: const Color(0xFF0077B6),
                           label: 'Active Sessions',
                           subtitle: 'Manage logged-in devices',
-                          onTap: () => Navigator.push(context, slideRoute(const ActiveDevicesScreen()))
+                          onTap: () {
+                            HapticService.lightTap();
+                            Navigator.push(context, slideRoute(const ActiveDevicesScreen()));
+                          }
                         ),
                       ]),
 
@@ -279,25 +289,45 @@ class _SecurityScreenState extends State<SecurityScreen> {
     );
   }
 
-  Widget _buildToggleRow({required IconData icon, required Color iconColor, required String label, required String subtitle, required bool value, required ValueChanged<bool> onChanged}) {
+  Widget _buildToggleRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
       child: Row(
         children: [
           Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: iconColor.withAlpha(25), borderRadius: BorderRadius.circular(12)),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500, fontSize: 14, color: AppColors.textPrimary)),
-              const SizedBox(height: 2),
-              Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textSecondary)),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+                Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              ],
+            ),
           ),
-          Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AppColors.primary),
+          Switch(
+            value: value,
+            activeColor: AppColors.primary,
+            onChanged: (v) {
+              HapticService.mediumTap();
+              onChanged(v);
+            },
+          ),
         ],
       ),
     );

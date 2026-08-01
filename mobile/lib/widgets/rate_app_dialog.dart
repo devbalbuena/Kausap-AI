@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/haptic_service.dart';
 
 class RateAppDialog extends StatefulWidget {
   const RateAppDialog({super.key});
@@ -87,7 +88,10 @@ class _RateAppDialogState extends State<RateAppDialog> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
                 return GestureDetector(
-                  onTap: () => setState(() => _rating = index + 1),
+                  onTap: () {
+                    HapticService.selectionChanged();
+                    setState(() => _rating = index + 1);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Icon(
@@ -106,7 +110,7 @@ class _RateAppDialogState extends State<RateAppDialog> {
               child: ElevatedButton(
                 onPressed: _rating > 0
                     ? () {
-                        // Simulate sending feedback or opening app store
+                        HapticService.success();
                         setState(() => _submitted = true);
                       }
                     : null,

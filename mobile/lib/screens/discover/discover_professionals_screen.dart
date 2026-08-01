@@ -6,6 +6,7 @@ import '../../services/discover_service.dart';
 import 'professional_profile_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/skeleton_loading_widget.dart';
+import '../../utils/haptic_service.dart';
 
 class DiscoverProfessionalsScreen extends StatefulWidget {
   const DiscoverProfessionalsScreen({super.key});
@@ -252,6 +253,7 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
 
     return GestureDetector(
       onTap: () {
+        HapticService.lightTap();
         Navigator.push(
           context,
           slideRoute(ProfessionalProfileScreen(professionalData: prof, heroTag: heroTag))

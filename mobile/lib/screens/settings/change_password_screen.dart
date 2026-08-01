@@ -3,6 +3,7 @@ import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import '../../widgets/rate_app_dialog.dart';
+import '../../utils/haptic_service.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -115,6 +116,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         'new_password': newPwd,
       });
       if (mounted) {
+        HapticService.success();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Password changed successfully! 🎉'),
@@ -126,6 +128,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       }
     } catch (e) {
       if (mounted) {
+        HapticService.error();
         setState(() {
           _isSaving = false;
           _errorMessage = e.toString().replaceAll('ApiException: 400 - ', '');
