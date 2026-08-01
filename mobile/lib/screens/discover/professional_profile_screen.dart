@@ -5,8 +5,13 @@ import '../session/book_session_screen.dart';
 
 class ProfessionalProfileScreen extends StatelessWidget {
   final Map<String, dynamic> professionalData;
+  final String? heroTag;
 
-  const ProfessionalProfileScreen({super.key, required this.professionalData});
+  const ProfessionalProfileScreen({
+    super.key,
+    required this.professionalData,
+    this.heroTag,
+  });
 
   String _getInitials(String firstName, String lastName) {
     return '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}';
@@ -65,16 +70,19 @@ class ProfessionalProfileScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         // Avatar
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: AppColors.primary.withAlpha(20),
-                          child: Text(
-                            _getInitials(firstName, lastName),
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 32,
-                              color: AppColors.primary,
+                        Hero(
+                          tag: heroTag ?? 'avatar_${professionalData['user_id'] ?? fullName}',
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: AppColors.primary.withAlpha(20),
+                            child: Text(
+                              _getInitials(firstName, lastName),
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 32,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                         ),

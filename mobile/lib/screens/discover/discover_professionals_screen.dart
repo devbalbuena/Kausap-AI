@@ -248,12 +248,13 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
     final profession = prof['profession'] ?? 'Therapist';
     final specialization = prof['specialization'] ?? '';
     final experience = prof['years_of_experience'] ?? 0;
+    final heroTag = 'avatar_${prof['user_id'] ?? firstName}';
 
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          slideRoute(ProfessionalProfileScreen(professionalData: prof))
+          slideRoute(ProfessionalProfileScreen(professionalData: prof, heroTag: heroTag))
         );
       },
       child: Container(
@@ -266,16 +267,19 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: AppColors.primary.withAlpha(20),
-              child: Text(
-                _getInitials(firstName, lastName),
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 20,
-                  color: AppColors.primary,
+            Hero(
+              tag: heroTag,
+              child: CircleAvatar(
+                radius: 30,
+                backgroundColor: AppColors.primary.withAlpha(20),
+                child: Text(
+                  _getInitials(firstName, lastName),
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),
