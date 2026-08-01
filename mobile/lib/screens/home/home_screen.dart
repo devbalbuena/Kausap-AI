@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/skeleton_loading_widget.dart';
+import '../../widgets/branded_refresh_indicator.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../chat/chatbot_screen.dart';
@@ -51,6 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
+  Future<void> _onRefresh() async {
+    await _fetchUnreadCount();
+    // Give a small delay so the branded indicator is visible
+    await Future.delayed(const Duration(milliseconds: 400));
+  }
+
   String _greeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
@@ -78,7 +85,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
-                  child: CustomScrollView(
+                  child: BrandedRefreshIndicator(
+                    onRefresh: _onRefresh,
+                    child: CustomScrollView(
                     slivers: [
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -161,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ],
+                  ),
                   ),
                 ),
               ),

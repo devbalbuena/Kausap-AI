@@ -7,6 +7,7 @@ import 'professional_profile_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/skeleton_loading_widget.dart';
 import '../../utils/haptic_service.dart';
+import '../../widgets/branded_refresh_indicator.dart';
 
 class DiscoverProfessionalsScreen extends StatefulWidget {
   const DiscoverProfessionalsScreen({super.key});
@@ -203,37 +204,40 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
 
                 // List View
                 Expanded(
-                  child: _isLoading
-                      ? ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                          itemCount: 4,
-                          itemBuilder: (context, index) => const ProfessionalCardSkeleton(),
-                        )
-                      : _error != null
-                          ? Center(
-                              child: Text(_error!,
-                                  style: const TextStyle(fontFamily: 'Poppins', color: Color(0xFFEF4444))))
-                          : _professionals.isEmpty
-                              ? EmptyStateWidget(
-                                  icon: Icons.search_off_rounded,
-                                  title: 'No professionals found',
-                                  description: 'We couldn\'t find any professionals matching your criteria. Try clearing some filters.',
-                                  buttonText: _selectedSpecialty != 'All' ? 'Clear Filters' : null,
-                                  onButtonPressed: _selectedSpecialty != 'All'
-                                      ? () => setState(() {
-                                            _selectedSpecialty = 'All';
-                                            _fetchProfessionals();
-                                          })
-                                      : null,
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                                  itemCount: _professionals.length,
-                                  itemBuilder: (context, index) {
-                                    final prof = _professionals[index];
-                                    return _buildProfessionalCard(prof);
-                                  },
-                                ),
+                  child: BrandedRefreshIndicator(
+                    onRefresh: _fetchProfessionals,
+                    child: _isLoading
+                        ? ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                            itemCount: 4,
+                            itemBuilder: (context, index) => const ProfessionalCardSkeleton(),
+                          )
+                        : _error != null
+                            ? Center(
+                                child: Text(_error!,
+                                    style: const TextStyle(fontFamily: 'Poppins', color: Color(0xFFEF4444))))
+                            : _professionals.isEmpty
+                                ? EmptyStateWidget(
+                                    icon: Icons.search_off_rounded,
+                                    title: 'No professionals found',
+                                    description: 'We couldn\'t find any professionals matching your criteria. Try clearing some filters.',
+                                    buttonText: _selectedSpecialty != 'All' ? 'Clear Filters' : null,
+                                    onButtonPressed: _selectedSpecialty != 'All'
+                                        ? () => setState(() {
+                                              _selectedSpecialty = 'All';
+                                              _fetchProfessionals();
+                                            })
+                                        : null,
+                                  )
+                                : ListView.builder(
+                                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                                    itemCount: _professionals.length,
+                                    itemBuilder: (context, index) {
+                                      final prof = _professionals[index];
+                                      return _buildProfessionalCard(prof);
+                                    },
+                                  ),
+                  ),
                 ),
               ],
             ),
