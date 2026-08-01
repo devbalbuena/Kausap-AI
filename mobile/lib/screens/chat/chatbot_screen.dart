@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
@@ -184,9 +185,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Future<void> _openSelectAvatar() async {
     setState(() => _showMenu = false);
     final result = await Navigator.of(context).push<AvatarModel>(
-      MaterialPageRoute(
-        builder: (_) => SelectAvatarScreen(currentAvatar: _currentAvatar),
-      ),
+      slideRoute(SelectAvatarScreen(currentAvatar: _currentAvatar))
     );
     if (result != null && mounted) {
       setState(() {

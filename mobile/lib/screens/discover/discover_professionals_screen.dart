@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../services/discover_service.dart';
 import 'professional_profile_screen.dart';
@@ -252,9 +253,7 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => ProfessionalProfileScreen(professionalData: prof),
-          ),
+          slideRoute(ProfessionalProfileScreen(professionalData: prof))
         );
       },
       child: Container(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import 'upcoming_sessions_view.dart';
 import 'past_sessions_view.dart';
@@ -45,11 +46,9 @@ class SessionTabsScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.search_rounded, color: AppColors.textPrimary),
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const DiscoverProfessionalsScreen()),
+                Navigator.of(context).push(slideRoute(const DiscoverProfessionalsScreen()),
                 );
-              },
-            ),
+              })
             IconButton(
               icon: const Icon(Icons.notifications_none_rounded, color: AppColors.textPrimary),
               onPressed: () {},
@@ -83,16 +82,14 @@ class SessionTabsScreen extends StatelessWidget {
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const BookSessionScreen()),
+            Navigator.of(context).push(slideRoute(const BookSessionScreen()),
             );
           },
           backgroundColor: AppColors.primary,
           icon: const Icon(Icons.add, color: Colors.white),
           label: const Text(
             'Book Session',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
         ),
       ),
     );

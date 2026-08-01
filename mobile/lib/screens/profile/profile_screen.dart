@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -43,7 +44,7 @@ class ProfileScreen extends StatelessWidget {
                 await authProvider.logout();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+                    slideRoute(const RoleSelectionScreen()),
                     (route) => false,
                   );
                 }
@@ -56,8 +57,7 @@ class ProfileScreen extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: const Text('Deactivate'),
-          ),
+            child: const Text('Deactivate'))
         ],
       ),
     );
@@ -90,7 +90,7 @@ class ProfileScreen extends StatelessWidget {
                 await authProvider.logout();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+                    slideRoute(const RoleSelectionScreen()),
                     (route) => false,
                   );
                 }
@@ -103,8 +103,7 @@ class ProfileScreen extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: const Text('Delete'),
-          ),
+            child: const Text('Delete'))
         ],
       ),
     );
@@ -195,12 +194,9 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.show_chart_rounded,
                   title: 'Mood Trends',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MoodAnalyticsScreen()),
+                    Navigator.push(context, slideRoute(const MoodAnalyticsScreen()),
                     );
-                  },
-                ),
+                  })
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.history_rounded,
@@ -219,23 +215,17 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.person_outline_rounded,
                   title: 'Profile',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                    Navigator.push(context, slideRoute(const EditProfileScreen()),
                     );
-                  },
-                ),
+                  })
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.notifications_none_rounded,
                   title: 'Notifications',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
+                    Navigator.push(context, slideRoute(const NotificationSettingsScreen()),
                     );
-                  },
-                ),
+                  })
                 _buildDivider(),
                 Consumer<ThemeProvider>(
                   builder: (context, themeProvider, child) {
@@ -256,23 +246,17 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.lock_outline_rounded,
                   title: 'Privacy',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+                    Navigator.push(context, slideRoute(const PrivacyScreen()),
                     );
-                  },
-                ),
+                  })
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.security_rounded,
                   title: 'Security',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const SecurityScreen()),
+                    Navigator.push(context, slideRoute(const SecurityScreen()),
                     );
-                  },
-                ),
+                  })
               ],
             ),
             const SizedBox(height: 20),
@@ -291,23 +275,17 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.help_outline_rounded,
                   title: 'FAQ',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HelpFaqScreen()),
+                    Navigator.push(context, slideRoute(const HelpFaqScreen()),
                     );
-                  },
-                ),
+                  })
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.info_outline_rounded,
                   title: 'About Kausap AI',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AboutScreen()),
+                    Navigator.push(context, slideRoute(const AboutScreen()),
                     );
-                  },
-                ),
+                  })
               ],
             ),
             const SizedBox(height: 20),
@@ -319,7 +297,7 @@ class ProfileScreen extends StatelessWidget {
                 onPressed: () {
                   context.read<AuthProvider>().logout();
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+                    slideRoute(const RoleSelectionScreen()),
                     (route) => false,
                   );
                 },
@@ -329,8 +307,7 @@ class ProfileScreen extends StatelessWidget {
                   style: AppTextStyles.button.copyWith(
                     fontSize: 14,
                     letterSpacing: 0.14,
-                    color: Colors.white,
-                  ),
+                    color: Colors.white)
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF5858),

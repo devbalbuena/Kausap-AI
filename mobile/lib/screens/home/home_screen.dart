@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -61,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await context.read<AuthProvider>().logout();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+      slideRoute(const RoleSelectionScreen()),
       (route) => false,
     );
   }
@@ -98,9 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               subtitle: 'Tap to check-in',
                               onTap: () {
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const DailyCheckinStep1Screen(),
-                                  ),
+                                  slideRoute(const DailyCheckinStep1Screen())
                                 );
                               },
                             ),
@@ -113,9 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               subtitle: 'Need someone to talk to?',
                               onTap: () {
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const ChatbotScreen(),
-                                  ),
+                                  slideRoute(const ChatbotScreen())
                                 );
                               },
                             ),
@@ -128,9 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               subtitle: 'Discover therapists and counselors',
                               onTap: () {
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const DiscoverProfessionalsScreen(),
-                                  ),
+                                  slideRoute(const DiscoverProfessionalsScreen())
                                 );
                               },
                             ),
@@ -143,13 +138,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               subtitle: 'Directly contact your therapist',
                               onTap: () {
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const DirectMessageScreen(
+                                  slideRoute(const DirectMessageScreen(
                                       otherUserId: 'dummy-prof-id',
                                       otherUserName: 'Dr. Jane Smith',
-                                      otherUserRole: 'professional',
-                                    ),
-                                  ),
+                                      otherUserRole: 'professional',))
                                 );
                               },
                             ),
@@ -204,8 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(children: [
           GestureDetector(
             onTap: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              await Navigator.of(context).push(slideRoute(const NotificationsScreen()),
               );
               _fetchUnreadCount(); // refresh badge after returning
             },
@@ -222,8 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 9,
                       decoration: const BoxDecoration(
                         color: Color(0xFFEF4444),
-                        shape: BoxShape.circle,
-                      ),
+                        shape: BoxShape.circle)
                     ),
                   ),
               ],
@@ -468,11 +458,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ActivityStartScreen(
-                        activity: activityList[0],
-                      ),
-                    ),
+                    slideRoute(ActivityStartScreen(
+                        activity: activityList[0],))
                   );
                 },
                 child: const Text('Start Activity'),
@@ -533,9 +520,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const BookSessionScreen(),
-                      ),
+                      slideRoute(const BookSessionScreen())
                     );
                   },
                   child: const Text('Book a Session'),
@@ -667,21 +652,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     setState(() => _navIndex = i);
                     if (i == 1) {
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ActivityScreen(),
-                        ),
+                        slideRoute(const ActivityScreen())
                       );
                     } else if (i == 3) {
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SessionTabsScreen(),
-                        ),
+                        slideRoute(const SessionTabsScreen())
                       );
                     } else if (i == 4) {
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ProfileScreen(),
-                        ),
+                        slideRoute(const ProfileScreen())
                       );
                     }
                   },
@@ -809,11 +788,9 @@ class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
           description: 'Book a session to talk to someone.',
           buttonText: 'Book a Session',
           onButtonPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const DiscoverProfessionalsScreen()),
+            Navigator.of(context).push(slideRoute(const DiscoverProfessionalsScreen()),
             );
-          },
-        ),
+          })
       );
     }
 
@@ -858,9 +835,8 @@ class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF3B82F6), size: 18),
                   onPressed: () {
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SessionTabsScreen()));
-                  },
-                ),
+                    Navigator.of(context).push(slideRoute(const SessionTabsScreen()));
+                  })
               ),
             ],
           ),

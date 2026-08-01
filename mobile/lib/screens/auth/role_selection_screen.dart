@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import 'login_screen.dart';
@@ -40,9 +41,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         title: 'I need support',
                         subtitle: 'Client / Patient',
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(defaultRole: 'client'),
-                          ),
+                          slideRoute(const LoginScreen(defaultRole: 'client'))
                         ),
                       ),
 
@@ -54,9 +53,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         title: "I'm a Professional",
                         subtitle: 'Counselor / Psychologist / Social Worker',
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(defaultRole: 'professional'),
-                          ),
+                          slideRoute(const LoginScreen(defaultRole: 'professional'))
                         ),
                       ),
 
@@ -65,9 +62,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       // Sign In link
                       Center(
                         child: GestureDetector(
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const LoginScreen()),
-                          ),
+                          onTap: () => Navigator.of(context).push(slideRoute(const LoginScreen()))
                           child: RichText(
                             text: TextSpan(
                               style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
@@ -85,9 +80,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                       Center(
                         child: TextButton(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const LoginScreen(defaultRole: 'admin')),
-                          ),
+                          onPressed: () => Navigator.of(context).push(slideRoute(const LoginScreen(defaultRole: 'admin')))
                           child: const Text(
                             'Admin Login',
                             style: TextStyle(

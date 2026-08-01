@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
@@ -75,14 +76,14 @@ class _LoginScreenState extends State<LoginScreen> {
       if (user != null) {
         if (user['role'] == 'admin') {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+            slideRoute(const AdminDashboardScreen()),
             (route) => false,
           );
         } else if (user['role'] == 'professional') {
           final profile = user['professional_profile'];
           if (profile != null && profile['is_verified'] == true) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const ProfessionalBaseScreen()),
+              slideRoute(const ProfessionalBaseScreen()),
               (route) => false,
             );
           } else {
@@ -90,13 +91,13 @@ class _LoginScreenState extends State<LoginScreen> {
             // For now, if unverified, just let AuthWrapper decide by popping to root, or push pending screen directly.
             // Since login is pushed over AuthWrapper, we need to push to pending screen directly.
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const RoleSelectionScreen()), // A simple hack is to just pop and let main.dart rebuild
+              slideRoute(const RoleSelectionScreen()), // A simple hack is to just pop and let main.dart rebuild
               (route) => false,
             );
           }
         } else {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
+            slideRoute(HomeScreen(user: user)),
             (route) => false,
           );
         }
@@ -160,8 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Sign in to your Kausap AI account',
-                          style: AppTextStyles.subheading,
-                        ),
+                          style: AppTextStyles.subheading)
                         const SizedBox(height: 28),
 
                         // Email field
@@ -220,14 +220,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                              Navigator.of(context).push(slideRoute(const ForgotPasswordScreen()),
                               );
                             },
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 8),
-                              minimumSize: Size.zero,
-                            ),
+                              minimumSize: Size.zero)
                             child: Text(
                               'FORGOT PASSWORD?',
                               style: TextStyle(
@@ -333,7 +331,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 nextScreen = const RoleSelectionScreen();
                               }
                               Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(builder: (_) => nextScreen),
+                                slideRoute(nextScreen),
                                 (route) => false,
                               );
                             },
@@ -343,8 +341,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   const TextSpan(text: "Don't have an account? "),
                                   TextSpan(text: 'Sign Up', style: AppTextStyles.link),
-                                ],
-                              ),
+                                ])
                             ),
                           ),
                         ),

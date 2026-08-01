@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
@@ -92,7 +93,7 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const BookingSuccessScreen()),
+          slideRoute(const BookingSuccessScreen()),
         );
       }
     } catch (e) {
@@ -102,8 +103,7 @@ class _BookSessionScreenState extends State<BookSessionScreen> {
             content: Text(e.toString().contains('409') 
                 ? 'This time slot is already booked. Please select another.' 
                 : 'Failed to book session.'),
-            backgroundColor: AppColors.error,
-          ),
+            backgroundColor: AppColors.error)
         );
       }
     } finally {

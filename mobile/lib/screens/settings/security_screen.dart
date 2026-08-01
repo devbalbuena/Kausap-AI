@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import 'change_password_screen.dart';
 import 'active_devices_screen.dart';
@@ -153,10 +154,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           iconColor: const Color(0xFF6366F1),
                           label: 'Change Password',
                           subtitle: 'Update your login password',
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-                          ),
+                          onTap: () => Navigator.push(context, slideRoute(const ChangePasswordScreen()))
                         ),
                         _divider(),
                         _buildToggleRow(
@@ -169,14 +167,13 @@ class _SecurityScreenState extends State<SecurityScreen> {
                             if (v) {
                               final result = await Navigator.push<bool>(
                                 context,
-                                MaterialPageRoute(builder: (_) => const TwoFactorAuthScreen()),
+                                slideRoute(const TwoFactorAuthScreen()),
                               );
                               if (mounted) setState(() => _twoFactorEnabled = result ?? false);
                             } else {
                               setState(() => _twoFactorEnabled = false);
                             }
-                          },
-                        ),
+                          })
                       ]),
 
                       const SizedBox(height: 20),
@@ -212,10 +209,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                           iconColor: const Color(0xFF0077B6),
                           label: 'Active Sessions',
                           subtitle: 'Manage logged-in devices',
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ActiveDevicesScreen()),
-                          ),
+                          onTap: () => Navigator.push(context, slideRoute(const ActiveDevicesScreen()))
                         ),
                       ]),
 

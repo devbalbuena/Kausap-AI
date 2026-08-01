@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import 'daily_checkin_step2_screen.dart';
 
@@ -24,11 +25,8 @@ class _DailyCheckinStep1ScreenState extends State<DailyCheckinStep1Screen> {
     if (_selectedMood == null) return;
     
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DailyCheckinStep2Screen(
-          moodLevel: _selectedMood!,
-        ),
-      ),
+      slideRoute(DailyCheckinStep2Screen(
+          moodLevel: _selectedMood!,))
     );
   }
 

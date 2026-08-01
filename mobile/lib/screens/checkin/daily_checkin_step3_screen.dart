@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
@@ -46,7 +47,7 @@ class _DailyCheckinStep3ScreenState extends State<DailyCheckinStep3Screen> {
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DailyCheckinCompleteScreen()),
+        slideRoute(const DailyCheckinCompleteScreen()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -75,8 +76,7 @@ class _DailyCheckinStep3ScreenState extends State<DailyCheckinStep3Screen> {
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.of(context).pop(),
-                        child: const Icon(Icons.chevron_left, color: AppColors.textPrimary, size: 28),
-                      ),
+                        child: const Icon(Icons.chevron_left, color: AppColors.textPrimary, size: 28))
                       Text('3/3', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                       GestureDetector(
                         onTap: () => Navigator.of(context).popUntil((route) => route.isFirst),
