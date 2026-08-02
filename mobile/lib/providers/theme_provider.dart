@@ -3,15 +3,18 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'theme_mode';
+  static const String _textScaleKey = 'text_scale_factor';
   ThemeMode _themeMode = ThemeMode.system;
+  double _textScaleFactor = 1.0; // 1.0 = default, range: 0.8 to 1.6
 
   ThemeProvider() {
     _loadTheme();
+    _loadTextScale();
   }
 
   ThemeMode get themeMode => _themeMode;
-
   bool get isDarkMode => _themeMode == ThemeMode.dark;
+  double get textScaleFactor => _textScaleFactor;
 
   Future<void> _loadTheme() async {
     const storage = FlutterSecureStorage();
@@ -25,6 +28,18 @@ class ThemeProvider extends ChangeNotifier {
         _themeMode = ThemeMode.system;
       }
       notifyListeners();
+    }
+  }
+
+  Future<void> _loadTextScale() async {
+    const storage = FlutterSecureStorage();
+    final saved = await storage.read(key: _textScaleKey);
+    if (saved != null) {
+      final parsed = double.tryParse(saved);
+      if (parsed != null) {
+        _textScaleFactor = parsed.clamp(0.8, 1.6);
+        notifyListeners();
+      }
     }
   }
 
@@ -47,5 +62,12 @@ class ThemeProvider extends ChangeNotifier {
     } else {
       await setThemeMode(ThemeMode.light);
     }
+  }
+
+  Future<void> setTextScaleFactor(double value) async {
+    _textScaleFactor = value.clamp(0.8, 1.6);
+    notifyListeners();
+    const storage = FlutterSecureStorage();
+    await storage.write(key: _textScaleKey, value: _textScaleFactor.toString());
   }
 }

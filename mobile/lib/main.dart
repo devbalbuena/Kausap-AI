@@ -38,9 +38,15 @@ class KausapApp extends StatelessWidget {
           theme: AppTheme.theme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
-          builder: (context, child) => PrivacyWrapper(
-            child: child ?? const SizedBox.shrink(),
-          ),
+          builder: (context, child) {
+            final scaled = MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(themeProvider.textScaleFactor),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+            return PrivacyWrapper(child: scaled);
+          },
           home: const _AppStartup(),
         );
       },

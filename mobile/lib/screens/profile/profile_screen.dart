@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../auth/role_selection_screen.dart';
 import '../settings/help_faq_screen.dart';
+import '../settings/accessibility_settings_screen.dart';
 import '../settings/notification_settings_screen.dart';
 import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
@@ -254,9 +255,19 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.security_rounded,
                   title: 'Security',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const SecurityScreen()),
-                    );
+                    Navigator.push(context, slideRoute(const SecurityScreen()));
                   })
+                _buildDivider(),
+                _buildListItem(
+                  icon: Icons.text_fields_rounded,
+                  title: 'Accessibility',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      slideRoute(const AccessibilitySettingsScreen()),
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 20),
