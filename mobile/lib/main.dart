@@ -5,7 +5,9 @@ import 'providers/theme_provider.dart';
 import 'theme/app_theme.dart';
 import 'widgets/privacy_wrapper.dart';
 import 'widgets/connectivity_banner.dart';
+import 'widgets/retry_banner.dart';
 import 'services/connectivity_service.dart';
+import 'services/retry_service.dart';
 import 'screens/auth/role_selection_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/signup/professional_pending_screen.dart';
@@ -21,6 +23,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProvider(create: (_) => RetryService()),
       ],
       child: const KausapApp(),
     ),
@@ -55,7 +58,9 @@ class KausapApp extends StatelessWidget {
               child: child ?? const SizedBox.shrink(),
             );
             return ConnectivityBanner(
-              child: PrivacyWrapper(child: scaled),
+              child: RetryBanner(
+                child: PrivacyWrapper(child: scaled),
+              ),
             );
           },
           home: const _AppStartup(),
