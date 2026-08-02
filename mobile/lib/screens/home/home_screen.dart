@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/notification_service.dart';
+import '../../services/cache_service.dart';
+import '../../services/connectivity_service.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/skeleton_loading_widget.dart';
 import '../../widgets/branded_refresh_indicator.dart';
@@ -46,10 +48,31 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchUnreadCount() async {
+    final connectivity = ConnectivityService();
+    if (!connectivity.isOnline) {
+      // Serve cached count when offline
+      final cached = await CacheService.readMap('home_unread_count');
+      if (cached != null && mounted) {
+        setState(() => _unreadCount = (cached['count'] as int?) ?? 0);
+      }
+      return;
+    }
     try {
       final count = await _notificationService.getUnreadCount();
       if (mounted) setState(() => _unreadCount = count);
-    } catch (_) {}
+      // Cache the result
+      await CacheService.saveMap(
+        'home_unread_count',
+        {'count': count},
+        ttlMinutes: 30,
+      );
+    } catch (_) {
+      // Fallback to cache on error
+      final cached = await CacheService.readMap('home_unread_count');
+      if (cached != null && mounted) {
+        setState(() => _unreadCount = (cached['count'] as int?) ?? 0);
+      }
+    }
   }
 
   Future<void> _onRefresh() async {

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../services/discover_service.dart';
+import '../../services/connectivity_service.dart';
 import 'professional_profile_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/skeleton_loading_widget.dart';
@@ -110,6 +112,39 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                       const SizedBox(width: 48), // balance back button
                     ],
                   ),
+                  ),
+                ),
+                
+                // Offline Indicator
+                Consumer<ConnectivityService>(
+                  builder: (context, connectivity, _) {
+                    if (connectivity.isOnline) return const SizedBox.shrink();
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12, left: 20, right: 20),
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.cloud_off_rounded, size: 14, color: AppColors.textSecondary),
+                          SizedBox(width: 8),
+                          Text(
+                            'Showing cached data',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
 
                 // Search Bar

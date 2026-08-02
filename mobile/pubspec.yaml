@@ -44,6 +44,7 @@ dependencies:
   shimmer: ^3.0.0
   vibration: ^3.2.0
   connectivity_plus: ^7.3.1
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
