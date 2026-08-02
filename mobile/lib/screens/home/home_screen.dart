@@ -204,41 +204,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   .copyWith(color: AppColors.primary, fontSize: 20)),
         ]),
         Row(children: [
-          GestureDetector(
-            onTap: () async {
-              await Navigator.of(context).push(slideRoute(const NotificationsScreen()),
-              );
-              _fetchUnreadCount(); // refresh badge after returning
-            },
-            child: Stack(
-              children: [
-                const Icon(Icons.notifications_outlined,
-                    color: AppColors.textPrimary, size: 24),
-                if (_unreadCount > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        shape: BoxShape.circle)
+          Semantics(
+            label: _unreadCount > 0
+                ? 'Notifications, $_unreadCount unread'
+                : 'Notifications',
+            button: true,
+            child: GestureDetector(
+              onTap: () async {
+                await Navigator.of(context).push(slideRoute(const NotificationsScreen()));
+                _fetchUnreadCount();
+              },
+              child: Stack(
+                children: [
+                  const Icon(Icons.notifications_outlined,
+                      color: AppColors.textPrimary, size: 24),
+                  if (_unreadCount > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 9,
+                        height: 9,
+                        decoration: const BoxDecoration(
+                            color: Color(0xFFEF4444),
+                            shape: BoxShape.circle),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          GestureDetector(
-            onTap: _showProfileMenu,
-            child: CircleAvatar(
-              radius: 17,
-              backgroundColor: AppColors.primary.withAlpha(30),
-              child: Text(
-                _firstName.isNotEmpty ? _firstName[0].toUpperCase() : 'U',
-                style: AppTextStyles.label.copyWith(
-                    color: AppColors.primary, fontWeight: FontWeight.w700),
+          Semantics(
+            label: 'Open profile menu for $_firstName',
+            button: true,
+            child: GestureDetector(
+              onTap: _showProfileMenu,
+              child: CircleAvatar(
+                radius: 17,
+                backgroundColor: AppColors.primary.withAlpha(30),
+                child: Text(
+                  _firstName.isNotEmpty ? _firstName[0].toUpperCase() : 'U',
+                  style: AppTextStyles.label.copyWith(
+                      color: AppColors.primary, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ),
@@ -363,39 +372,45 @@ class _HomeScreenState extends State<HomeScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: _card(
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                  color: iconBg, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: iconColor, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: AppTextStyles.body
-                          .copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: AppTextStyles.caption),
-                ],
+    return Semantics(
+      label: '$title. $subtitle',
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: _card(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                    color: iconBg, borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: iconColor, size: 24, semanticLabel: title),
               ),
-            ),
-            const Icon(Icons.chevron_right,
-                color: AppColors.textSecondary, size: 24),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: AppTextStyles.body
+                            .copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: AppTextStyles.caption),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.textSecondary, size: 24,
+                  semanticLabel: 'navigate'),
+            ],
+          ),
         ),
       ),
     );
   }
+
 
 
   // ── Motivational Quote Card ───────────────────────────────────────────────
@@ -657,51 +672,57 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(items.length, (i) {
                 final selected = i == _navIndex;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _navIndex = i);
-                    if (i == 1) {
-                      Navigator.of(context).push(
-                        slideRoute(const ActivityScreen())
-                      );
-                    } else if (i == 3) {
-                      Navigator.of(context).push(
-                        slideRoute(const SessionTabsScreen())
-                      );
-                    } else if (i == 4) {
-                      Navigator.of(context).push(
-                        slideRoute(const ProfileScreen())
-                      );
-                    }
-                  },
-                  behavior: HitTestBehavior.opaque,
-                  child: SizedBox(
-                    width: 68,
-                    height: 65,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          items[i].$1,
-                          size: 24,
-                          color: selected
-                              ? AppColors.primary
-                              : AppColors.textPrimary,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          items[i].$2,
-                          style: AppTextStyles.caption.copyWith(
-                            fontSize: 10,
+                return Semantics(
+                  label: '${items[i].$2} tab${selected ? ', selected' : ''}',
+                  button: true,
+                  selected: selected,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _navIndex = i);
+                      if (i == 1) {
+                        Navigator.of(context).push(
+                          slideRoute(const ActivityScreen())
+                        );
+                      } else if (i == 3) {
+                        Navigator.of(context).push(
+                          slideRoute(const SessionTabsScreen())
+                        );
+                      } else if (i == 4) {
+                        Navigator.of(context).push(
+                          slideRoute(const ProfileScreen())
+                        );
+                      }
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: 68,
+                      height: 65,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            items[i].$1,
+                            size: 24,
                             color: selected
                                 ? AppColors.primary
                                 : AppColors.textPrimary,
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
+                            semanticLabel: items[i].$2,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            items[i].$2,
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 10,
+                              color: selected
+                                  ? AppColors.primary
+                                  : AppColors.textPrimary,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );

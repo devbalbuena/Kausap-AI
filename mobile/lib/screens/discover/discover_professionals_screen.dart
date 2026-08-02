@@ -255,14 +255,17 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
     final experience = prof['years_of_experience'] ?? 0;
     final heroTag = 'avatar_${prof['user_id'] ?? firstName}';
 
-    return GestureDetector(
-      onTap: () {
-        HapticService.lightTap();
-        Navigator.push(
-          context,
-          slideRoute(ProfessionalProfileScreen(professionalData: prof, heroTag: heroTag))
-        );
-      },
+    return Semantics(
+      label: '$firstName $lastName, $profession, $experience years experience. Tap to view profile.',
+      button: true,
+      child: GestureDetector(
+        onTap: () {
+          HapticService.lightTap();
+          Navigator.push(
+            context,
+            slideRoute(ProfessionalProfileScreen(professionalData: prof, heroTag: heroTag))
+          );
+        },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -350,9 +353,10 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, semanticLabel: 'View profile'),
           ],
         ),
+      ),
       ),
     );
   }
