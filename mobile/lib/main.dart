@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'widgets/privacy_wrapper.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/retry_banner.dart';
+import 'widgets/friendly_error_widget.dart';
 import 'services/connectivity_service.dart';
 import 'services/retry_service.dart';
 import 'screens/auth/role_selection_screen.dart';
@@ -17,6 +18,11 @@ import 'screens/splash/splash_screen.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
+  // Replace the default red screen of death with our custom friendly error widget
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return FriendlyErrorWidget(details: details);
+  };
+
   runApp(
     MultiProvider(
       providers: [
