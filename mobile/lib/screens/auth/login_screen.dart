@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../widgets/accessible_error_widget.dart';
 import 'role_selection_screen.dart';
 import '../home/home_screen.dart';
 import '../professional/professional_base_screen.dart';
@@ -238,10 +239,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
 
-                        // Error banner (Figma "Error Banner")
+                        // Error banner — accessible (icon + shape + text, not just color)
                         if (_bannerError != null) ...[
                           const SizedBox(height: 8),
-                          _ErrorBanner(message: _bannerError!),
+                          AccessibleErrorWidget(message: _bannerError!),
                         ],
 
                         const SizedBox(height: 8),
@@ -364,30 +365,3 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 /// Error banner — matches the "Error Banner" frame in Figma Login Error State.
-class _ErrorBanner extends StatelessWidget {
-  final String message;
-  const _ErrorBanner({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.errorBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.errorBorder),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.error_outline, color: AppColors.error, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(message, style: AppTextStyles.body.copyWith(color: AppColors.error)),
-          ),
-        ],
-      ),
-    );
-  }
-}

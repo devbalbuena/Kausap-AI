@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../widgets/accessible_error_widget.dart';
 import 'professional_pending_screen.dart';
 
 class ProfessionalSignupStep3Screen extends StatefulWidget {
@@ -146,28 +147,7 @@ class _ProfessionalSignupStep3ScreenState
 
                           if (_error != null) ...[
                             const SizedBox(height: 16),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.errorBackground,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                    color: AppColors.errorBorder),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.error_outline,
-                                      color: AppColors.error, size: 16),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(_error!,
-                                        style: AppTextStyles.body.copyWith(
-                                            color: AppColors.error)),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            AccessibleErrorWidget(message: _error!),
                           ],
 
                           const SizedBox(height: 24),

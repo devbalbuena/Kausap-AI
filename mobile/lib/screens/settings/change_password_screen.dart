@@ -4,6 +4,7 @@ import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import '../../widgets/rate_app_dialog.dart';
 import '../../utils/haptic_service.dart';
+import '../../widgets/accessible_error_widget.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -188,20 +189,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 28),
 
-              // Error banner
+              // Error banner — accessible (icon + shape, not just color)
               if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(_errorMessage!, style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444)))),
-                  ]),
-                ),
+                AccessibleErrorWidget(message: _errorMessage!),
                 const SizedBox(height: 16),
               ],
 
