@@ -267,4 +267,79 @@ class AppTheme {
         ),
         dividerColor: const Color(0xFF333333),
       );
+
+  /// High contrast theme — maximum legibility for low vision users.
+  /// Uses pitch-black text on white, no subtle grays, 2px borders.
+  static ThemeData get highContrastTheme => ThemeData(
+        useMaterial3: true,
+        textTheme: GoogleFonts.interTextTheme().copyWith(
+          bodyLarge: GoogleFonts.inter(
+            fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF000000)),
+          bodyMedium: GoogleFonts.inter(
+            fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF000000)),
+          bodySmall: GoogleFonts.inter(
+            fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF000000)),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF003F6B),       // deeper blue for contrast
+          surface: Color(0xFFFFFFFF),
+          onSurface: Color(0xFF000000),
+          error: Color(0xFFCC0000),
+          onError: Color(0xFFFFFFFF),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFFFFFFF),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF000000), width: 2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF000000), width: 2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF003F6B), width: 3),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFCC0000), width: 2),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFCC0000), width: 3),
+          ),
+          hintStyle: const TextStyle(color: Color(0xFF444444), fontSize: 14),
+          labelStyle: const TextStyle(color: Color(0xFF000000), fontWeight: FontWeight.w700, fontSize: 14),
+          errorStyle: const TextStyle(color: Color(0xFFCC0000), fontWeight: FontWeight.w700, fontSize: 13),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF003F6B),
+            foregroundColor: const Color(0xFFFFFFFF),
+            minimumSize: const Size(double.infinity, 52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: const BorderSide(color: Color(0xFF000000), width: 2),
+            ),
+            elevation: 0,
+            textStyle: const TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFFFFFFFF),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF000000), width: 1.5),
+          ),
+        ),
+        dividerColor: const Color(0xFF000000),
+        iconTheme: const IconThemeData(color: Color(0xFF000000)),
+      );
 }
+

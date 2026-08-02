@@ -40,10 +40,12 @@ class AccessibilitySettingsScreen extends StatelessWidget {
       body: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           final scale = themeProvider.textScaleFactor;
+          final highContrast = themeProvider.highContrast;
+
           return ListView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             children: [
-              // Header banner
+              // Info banner
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -52,11 +54,11 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                   border: Border.all(color: AppColors.primary.withAlpha(40)),
                 ),
                 child: Row(
-                  children: [
-                    const Icon(Icons.accessibility_new_rounded,
+                  children: const [
+                    Icon(Icons.accessibility_new_rounded,
                         color: AppColors.primary, size: 28),
-                    const SizedBox(width: 12),
-                    const Expanded(
+                    SizedBox(width: 12),
+                    Expanded(
                       child: Text(
                         'Adjust these settings to make Kausap AI easier to use for you.',
                         style: TextStyle(
@@ -71,7 +73,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
 
-              // Text Size Section
+              // ── Text Size ─────────────────────────────────────────────────
               Text('Text Size',
                   style: AppTextStyles.heading2.copyWith(fontSize: 15)),
               const SizedBox(height: 8),
@@ -102,10 +104,11 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 16 * scale,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 )),
                             const SizedBox(height: 4),
-                            Text('This is how your text will appear across the app.',
+                            Text(
+                                'This is how your text will appear across the app.',
                                 style: TextStyle(
                                   fontSize: 13 * scale,
                                   color: AppColors.textSecondary,
@@ -118,10 +121,14 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('A', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        const Text('A',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary)),
                         Expanded(
                           child: Semantics(
-                            label: 'Text size slider, current: ${_scaleLabel(scale)}',
+                            label:
+                                'Text size slider, current: ${_scaleLabel(scale)}',
                             slider: true,
                             child: Slider(
                               value: scale,
@@ -137,12 +144,17 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Text('A', style: TextStyle(fontSize: 22, color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
+                        const Text('A',
+                            style: TextStyle(
+                                fontSize: 22,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w700)),
                       ],
                     ),
                     Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withAlpha(20),
                           borderRadius: BorderRadius.circular(20),
@@ -161,25 +173,116 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Reset button
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
                   onPressed: () {
                     HapticService.mediumTap();
                     themeProvider.setTextScaleFactor(1.0);
                   },
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
                   label: const Text('Reset to Default'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── High Contrast Mode ────────────────────────────────────────
+              Text('Display',
+                  style: AppTextStyles.heading2.copyWith(fontSize: 15)),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Theme.of(context).dividerColor),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF000000).withAlpha(12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: const Color(0xFF000000).withAlpha(30)),
+                        ),
+                        child: const Icon(Icons.contrast_rounded,
+                            color: Color(0xFF000000), size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text('High Contrast Mode',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: AppColors.textPrimary,
+                                )),
+                            SizedBox(height: 3),
+                            Text(
+                              'Increases contrast of text and borders for low vision users.',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                  height: 1.4),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Semantics(
+                        label:
+                            'High Contrast Mode toggle, currently ${highContrast ? "on" : "off"}',
+                        child: Switch(
+                          value: highContrast,
+                          activeColor: AppColors.primary,
+                          onChanged: (val) {
+                            HapticService.mediumTap();
+                            themeProvider.setHighContrast(val);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+
+              // High contrast preview
+              if (highContrast) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF000000), width: 2),
+                  ),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.check_circle_rounded,
+                          color: Color(0xFF003F6B), size: 22),
+                      SizedBox(width: 10),
+                      Text(
+                        'High Contrast is ON',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Color(0xFF000000),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 40),
             ],
           );
