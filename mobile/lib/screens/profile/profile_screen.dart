@@ -10,6 +10,7 @@ import '../settings/accessibility_settings_screen.dart';
 import '../settings/notification_settings_screen.dart';
 import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
+import '../settings/privacy_center_screen.dart';
 import '../settings/about_screen.dart';
 import '../../services/api_client.dart';
 import '../mood/mood_analytics_screen.dart';
@@ -248,6 +249,14 @@ class ProfileScreen extends StatelessWidget {
                   title: 'Privacy',
                   onTap: () {
                     Navigator.push(context, slideRoute(const PrivacyScreen()),
+                    );
+                  })
+                _buildDivider(),
+                _buildListItem(
+                  icon: Icons.shield_outlined,
+                  title: 'Privacy Center',
+                  onTap: () {
+                    Navigator.push(context, slideRoute(const PrivacyCenterScreen()),
                     );
                   })
                 _buildDivider(),
