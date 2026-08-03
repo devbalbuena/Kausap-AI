@@ -6,6 +6,7 @@ import 'active_devices_screen.dart';
 import 'two_factor_auth_screen.dart';
 import 'app_lock_setup_screen.dart';
 import '../../services/pin_service.dart';
+import '../../services/privacy_settings_service.dart';
 import '../../utils/haptic_service.dart';
 
 class SecurityScreen extends StatefulWidget {
@@ -18,16 +19,23 @@ class SecurityScreen extends StatefulWidget {
 class _SecurityScreenState extends State<SecurityScreen> {
   bool _twoFactorEnabled = false;
   bool _appLockEnabled = false;
+  bool _privacyScreenEnabled = true;
 
   @override
   void initState() {
     super.initState();
     _loadPinState();
+    _loadPrivacyState();
   }
 
   Future<void> _loadPinState() async {
     final enabled = await PinService.isEnabled();
     if (mounted) setState(() => _appLockEnabled = enabled);
+  }
+
+  Future<void> _loadPrivacyState() async {
+    final enabled = await PrivacySettingsService.isPrivacyScreenEnabled();
+    if (mounted) setState(() => _privacyScreenEnabled = enabled);
   }
 
 
@@ -225,6 +233,21 @@ class _SecurityScreenState extends State<SecurityScreen> {
                               }
                             }
                           })
+                         _divider(),
+                        _buildToggleRow(
+                          icon: Icons.blur_on_rounded,
+                          iconColor: const Color(0xFF7C3AED),
+                          label: 'Privacy Screen',
+                          subtitle: _privacyScreenEnabled
+                              ? 'Blurs app in recent apps switcher'
+                              : 'Content visible in recent apps',
+                          value: _privacyScreenEnabled,
+                          onChanged: (v) async {
+                            HapticService.mediumTap();
+                            await PrivacySettingsService.setPrivacyScreen(v);
+                            if (mounted) setState(() => _privacyScreenEnabled = v);
+                          },
+                        ),
                         _divider(),
                         _buildNavRow(
                           icon: Icons.download_rounded,
