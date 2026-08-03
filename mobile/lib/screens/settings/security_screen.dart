@@ -5,6 +5,7 @@ import 'change_password_screen.dart';
 import 'active_devices_screen.dart';
 import 'two_factor_auth_screen.dart';
 import 'app_lock_setup_screen.dart';
+import 'download_data_screen.dart';
 import '../../services/pin_service.dart';
 import '../../services/privacy_settings_service.dart';
 import '../../utils/haptic_service.dart';
@@ -252,11 +253,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
                         _buildNavRow(
                           icon: Icons.download_rounded,
                           iconColor: const Color(0xFF0EA5E9),
-                          label: 'Export Data',
-                          subtitle: 'Request a copy of your personal data',
+                          label: 'Download My Data',
+                          subtitle: 'Export your data as a JSON file',
                           onTap: () {
                             HapticService.lightTap();
-                            _showDataExportDialog();
+                            Navigator.push(context, slideRoute(const DownloadDataScreen()));
                           },
                         ),
                       ]),
