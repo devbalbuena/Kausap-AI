@@ -4,6 +4,8 @@ import '../../theme/app_theme.dart';
 import 'change_password_screen.dart';
 import 'active_devices_screen.dart';
 import 'two_factor_auth_screen.dart';
+import 'app_lock_setup_screen.dart';
+import '../../services/pin_service.dart';
 import '../../utils/haptic_service.dart';
 
 class SecurityScreen extends StatefulWidget {
@@ -16,6 +18,17 @@ class SecurityScreen extends StatefulWidget {
 class _SecurityScreenState extends State<SecurityScreen> {
   bool _twoFactorEnabled = false;
   bool _appLockEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPinState();
+  }
+
+  Future<void> _loadPinState() async {
+    final enabled = await PinService.isEnabled();
+    if (mounted) setState(() => _appLockEnabled = enabled);
+  }
 
 
   void _showDataExportDialog() {
@@ -188,11 +201,30 @@ class _SecurityScreenState extends State<SecurityScreen> {
                         _buildToggleRow(
                           icon: Icons.fingerprint_rounded,
                           iconColor: const Color(0xFFE11D48),
-                          label: 'App Lock / Biometrics',
-                          subtitle: 'Require FaceID/PIN to open app',
+                          label: 'App Lock (PIN)',
+                          subtitle: _appLockEnabled ? 'Enabled — tap to manage PIN' : 'Require PIN to open app',
                           value: _appLockEnabled,
-                          onChanged: (v) => setState(() => _appLockEnabled = v),
-                        ),
+                          onChanged: (v) async {
+                            HapticService.mediumTap();
+                            if (v) {
+                              // Open setup screen
+                              final result = await Navigator.push<bool>(
+                                context,
+                                slideRoute(const AppLockSetupScreen(mode: AppLockMode.setup)),
+                              );
+                              if (mounted) setState(() => _appLockEnabled = result ?? false);
+                            } else {
+                              // Verify current PIN before disabling
+                              final verified = await Navigator.push<bool>(
+                                context,
+                                slideRoute(const AppLockSetupScreen(mode: AppLockMode.verify)),
+                              );
+                              if (verified == true) {
+                                await PinService.disablePin();
+                                if (mounted) setState(() => _appLockEnabled = false);
+                              }
+                            }
+                          })
                         _divider(),
                         _buildNavRow(
                           icon: Icons.download_rounded,

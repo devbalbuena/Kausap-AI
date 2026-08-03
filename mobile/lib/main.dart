@@ -7,6 +7,7 @@ import 'widgets/privacy_wrapper.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/retry_banner.dart';
 import 'widgets/friendly_error_widget.dart';
+import 'widgets/pin_lock_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/retry_service.dart';
 import 'screens/auth/role_selection_screen.dart';
@@ -94,14 +95,19 @@ class _AppStartup extends StatelessWidget {
 
     if (auth.isAuthenticated && auth.currentUser != null) {
       final user = auth.currentUser!;
+      Widget home;
       if (user['role'] == 'professional') {
         final profile = user['professional_profile'];
         if (profile == null || profile['is_verified'] != true) {
-          return const ProfessionalPendingScreen();
+          home = const ProfessionalPendingScreen();
+        } else {
+          home = const ProfessionalBaseScreen();
         }
-        return const ProfessionalBaseScreen();
+      } else {
+        home = HomeScreen(user: user);
       }
-      return HomeScreen(user: user);
+      // Wrap with PIN lock — only blocks if user has set a PIN
+      return PinLockScreen(child: home);
     }
 
     return const RoleSelectionScreen();
