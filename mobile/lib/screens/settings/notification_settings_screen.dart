@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/notification_prefs_service.dart';
 import '../../utils/haptic_service.dart';
+import '../../widgets/in_app_notification.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -266,6 +267,30 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                         ]
                       ]),
 
+                      const SizedBox(height: 32),
+
+                      // ── Test Toast ─────────────────────────────────────────
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            InAppNotificationService.show(
+                              title: 'Dr. Kim Seokjin',
+                              message: 'Hi there! Just checking in on how you are feeling today.',
+                              icon: Icons.chat_bubble_rounded,
+                              iconColor: const Color(0xFF2563EB),
+                            );
+                          },
+                          icon: const Icon(Icons.notifications_active_rounded, size: 20, color: Colors.white),
+                          label: const Text('Test In-App Notification', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6366F1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 32),
                     ],
                   ),
