@@ -22,6 +22,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   bool _newMessages = true;
   bool _dailyCheckins = true;
 
+  // Quiet Hours (persisted)
+  bool _quietHoursEnabled = false;
+  String _quietHoursStart = '22:00';
+  String _quietHoursEnd = '07:00';
+
   @override
   void initState() {
     super.initState();
@@ -33,14 +38,70 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final session = await NotificationPrefsService.getSessionReminders();
     final messages = await NotificationPrefsService.getNewMessages();
     final daily = await NotificationPrefsService.getDailyCheckins();
+    final quietHours = await NotificationPrefsService.getQuietHoursEnabled();
+    final quietStart = await NotificationPrefsService.getQuietHoursStart();
+    final quietEnd = await NotificationPrefsService.getQuietHoursEnd();
+    
     if (mounted) {
       setState(() {
         _pushNotifications = push;
         _sessionReminders = session;
         _newMessages = messages;
         _dailyCheckins = daily;
+        _quietHoursEnabled = quietHours;
+        _quietHoursStart = quietStart;
+        _quietHoursEnd = quietEnd;
       });
     }
+  }
+
+  Future<void> _selectTime(BuildContext context, bool isStart) async {
+    final initialStr = isStart ? _quietHoursStart : _quietHoursEnd;
+    final parts = initialStr.split(':');
+    final initialTime = TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 0, 
+      minute: int.tryParse(parts[1]) ?? 0
+    );
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary, 
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final timeStr = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      if (isStart) {
+        await NotificationPrefsService.setQuietHoursStart(timeStr);
+        setState(() => _quietHoursStart = timeStr);
+      } else {
+        await NotificationPrefsService.setQuietHoursEnd(timeStr);
+        setState(() => _quietHoursEnd = timeStr);
+      }
+    }
+  }
+
+  String _formatTime(String timeStr) {
+    final parts = timeStr.split(':');
+    if (parts.length != 2) return timeStr;
+    final hour = int.tryParse(parts[0]) ?? 0;
+    final minute = int.tryParse(parts[1]) ?? 0;
+    final tod = TimeOfDay(hour: hour, minute: minute);
+    // Use manual formatting since we don't have access to BuildContext's material localizations easily here without context
+    final period = tod.hour >= 12 ? 'PM' : 'AM';
+    final formattedHour = tod.hour == 0 ? 12 : (tod.hour > 12 ? tod.hour - 12 : tod.hour);
+    final formattedMinute = tod.minute.toString().padLeft(2, '0');
+    return '$formattedHour:$formattedMinute $period';
   }
   Widget build(BuildContext context) {
     return Scaffold(
@@ -172,6 +233,39 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                         ),
                       ]),
 
+                      const SizedBox(height: 20),
+
+                      // ── Quiet Hours ────────────────────────────────────────
+                      _buildSectionLabel('QUIET HOURS'),
+                      _buildSettingsCard([
+                        _buildToggleRow(
+                          icon: Icons.do_not_disturb_on_rounded,
+                          iconColor: const Color(0xFF6B7280),
+                          label: 'Do Not Disturb',
+                          subtitle: 'Pause notifications during these hours',
+                          value: _quietHoursEnabled,
+                          onChanged: (v) async {
+                            HapticService.lightTap();
+                            await NotificationPrefsService.setQuietHoursEnabled(v);
+                            setState(() => _quietHoursEnabled = v);
+                          },
+                        ),
+                        if (_quietHoursEnabled) ...[
+                          _buildDivider(),
+                          _buildTimePickerRow(
+                            label: 'From',
+                            timeStr: _quietHoursStart,
+                            onTap: () => _selectTime(context, true),
+                          ),
+                          _buildDivider(),
+                          _buildTimePickerRow(
+                            label: 'To',
+                            timeStr: _quietHoursEnd,
+                            onTap: () => _selectTime(context, false),
+                          ),
+                        ]
+                      ]),
+
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -268,5 +362,50 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   Widget _buildDivider() {
     return Container(height: 1, color: const Color(0x18000000), margin: const EdgeInsets.symmetric(horizontal: 16));
+  }
+
+  Widget _buildTimePickerRow({
+    required String label,
+    required String timeStr,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            const SizedBox(width: 54), // align with toggles
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: 500,
+                  fontSize: 14,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _formatTime(timeStr),
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

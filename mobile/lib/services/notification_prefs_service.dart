@@ -7,6 +7,10 @@ class NotificationPrefsService {
   static const String _keySessionReminders = 'pref_session_reminders';
   static const String _keyNewMessages = 'pref_new_messages';
   static const String _keyDailyCheckins = 'pref_daily_checkins';
+  
+  static const String _keyQuietHoursEnabled = 'pref_quiet_hours_enabled';
+  static const String _keyQuietHoursStart = 'pref_quiet_hours_start'; // e.g. "22:00"
+  static const String _keyQuietHoursEnd = 'pref_quiet_hours_end'; // e.g. "07:00"
 
   static Future<bool> _getBool(String key, {bool defaultValue = true}) async {
     final val = await _storage.read(key: key);
@@ -29,4 +33,21 @@ class NotificationPrefsService {
 
   static Future<bool> getDailyCheckins() => _getBool(_keyDailyCheckins, defaultValue: true);
   static Future<void> setDailyCheckins(bool val) => _setBool(_keyDailyCheckins, val);
+
+  static Future<bool> getQuietHoursEnabled() => _getBool(_keyQuietHoursEnabled, defaultValue: false);
+  static Future<void> setQuietHoursEnabled(bool val) => _setBool(_keyQuietHoursEnabled, val);
+
+  static Future<String> getQuietHoursStart() async {
+    return await _storage.read(key: _keyQuietHoursStart) ?? "22:00";
+  }
+  static Future<void> setQuietHoursStart(String val) async {
+    await _storage.write(key: _keyQuietHoursStart, value: val);
+  }
+
+  static Future<String> getQuietHoursEnd() async {
+    return await _storage.read(key: _keyQuietHoursEnd) ?? "07:00";
+  }
+  static Future<void> setQuietHoursEnd(String val) async {
+    await _storage.write(key: _keyQuietHoursEnd, value: val);
+  }
 }
