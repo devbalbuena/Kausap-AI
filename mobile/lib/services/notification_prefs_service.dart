@@ -7,6 +7,7 @@ class NotificationPrefsService {
   static const String _keySessionReminders = 'pref_session_reminders';
   static const String _keyNewMessages = 'pref_new_messages';
   static const String _keyDailyCheckins = 'pref_daily_checkins';
+  static const String _keyDailyCheckinsTime = 'pref_daily_checkins_time'; // e.g. "20:00"
   
   static const String _keyQuietHoursEnabled = 'pref_quiet_hours_enabled';
   static const String _keyQuietHoursStart = 'pref_quiet_hours_start'; // e.g. "22:00"
@@ -33,6 +34,13 @@ class NotificationPrefsService {
 
   static Future<bool> getDailyCheckins() => _getBool(_keyDailyCheckins, defaultValue: true);
   static Future<void> setDailyCheckins(bool val) => _setBool(_keyDailyCheckins, val);
+
+  static Future<String> getDailyCheckinsTime() async {
+    return await _storage.read(key: _keyDailyCheckinsTime) ?? "20:00";
+  }
+  static Future<void> setDailyCheckinsTime(String val) async {
+    await _storage.write(key: _keyDailyCheckinsTime, value: val);
+  }
 
   static Future<bool> getQuietHoursEnabled() => _getBool(_keyQuietHoursEnabled, defaultValue: false);
   static Future<void> setQuietHoursEnabled(bool val) => _setBool(_keyQuietHoursEnabled, val);

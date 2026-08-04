@@ -22,6 +22,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   bool _sessionReminders = true;
   bool _newMessages = true;
   bool _dailyCheckins = true;
+  String _dailyCheckinsTime = '20:00';
 
   // Quiet Hours (persisted)
   bool _quietHoursEnabled = false;
@@ -39,6 +40,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final session = await NotificationPrefsService.getSessionReminders();
     final messages = await NotificationPrefsService.getNewMessages();
     final daily = await NotificationPrefsService.getDailyCheckins();
+    final dailyTime = await NotificationPrefsService.getDailyCheckinsTime();
     final quietHours = await NotificationPrefsService.getQuietHoursEnabled();
     final quietStart = await NotificationPrefsService.getQuietHoursStart();
     final quietEnd = await NotificationPrefsService.getQuietHoursEnd();
@@ -49,6 +51,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         _sessionReminders = session;
         _newMessages = messages;
         _dailyCheckins = daily;
+        _dailyCheckinsTime = dailyTime;
         _quietHoursEnabled = quietHours;
         _quietHoursStart = quietStart;
         _quietHoursEnd = quietEnd;
@@ -89,6 +92,36 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         await NotificationPrefsService.setQuietHoursEnd(timeStr);
         setState(() => _quietHoursEnd = timeStr);
       }
+    }
+  }
+
+  Future<void> _selectCheckinTime(BuildContext context) async {
+    final parts = _dailyCheckinsTime.split(':');
+    final initialTime = TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 20, 
+      minute: int.tryParse(parts[1]) ?? 0
+    );
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary, 
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final timeStr = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      await NotificationPrefsService.setDailyCheckinsTime(timeStr);
+      setState(() => _dailyCheckinsTime = timeStr);
     }
   }
 
@@ -232,6 +265,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                             setState(() => _dailyCheckins = v);
                           },
                         ),
+                        if (_dailyCheckins) ...[
+                          _buildDivider(),
+                          _buildTimePickerRow(
+                            label: 'Reminder Time',
+                            timeStr: _dailyCheckinsTime,
+                            onTap: () => _selectCheckinTime(context),
+                          ),
+                        ]
                       ]),
 
                       const SizedBox(height: 20),
