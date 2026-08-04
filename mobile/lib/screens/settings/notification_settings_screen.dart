@@ -137,6 +137,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final formattedMinute = tod.minute.toString().padLeft(2, '0');
     return '$formattedHour:$formattedMinute $period';
   }
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
@@ -447,7 +448,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 label,
                 style: const TextStyle(
                   fontFamily: 'Poppins',
-                  fontWeight: 500,
+                  fontWeight: FontWeight.w500,
                   fontSize: 14,
                   color: AppColors.textPrimary,
                 ),
@@ -463,7 +464,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 _formatTime(timeStr),
                 style: const TextStyle(
                   fontFamily: 'Poppins',
-                  fontWeight: 600,
+                  fontWeight: FontWeight.w600,
                   fontSize: 13,
                   color: AppColors.primary,
                 ),

@@ -244,7 +244,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                             'High Contrast Mode toggle, currently ${highContrast ? "on" : "off"}',
                         child: Switch(
                           value: highContrast,
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                           onChanged: (val) {
                             HapticService.mediumTap();
                             themeProvider.setHighContrast(val);

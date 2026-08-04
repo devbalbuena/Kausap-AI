@@ -55,7 +55,7 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
 
   void _addDigit(String digit) {
     if (_enteredPin.length >= 4) return;
-    HapticService.light();
+    HapticService.lightTap();
     setState(() {
       _enteredPin += digit;
       _errorMessage = null;
@@ -68,7 +68,7 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
 
   void _removeDigit() {
     if (_enteredPin.isEmpty) return;
-    HapticService.light();
+    HapticService.lightTap();
     setState(() => _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1));
   }
 

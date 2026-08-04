@@ -76,7 +76,7 @@ class _DailyCheckinStep3ScreenState extends State<DailyCheckinStep3Screen> {
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.of(context).pop(),
-                        child: const Icon(Icons.chevron_left, color: AppColors.textPrimary, size: 28))
+                        child: const Icon(Icons.chevron_left, color: AppColors.textPrimary, size: 28)),
                       Text('3/3', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
                       GestureDetector(
                         onTap: () => Navigator.of(context).popUntil((route) => route.isFirst),

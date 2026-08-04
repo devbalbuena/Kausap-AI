@@ -52,7 +52,7 @@ class _PinLockScreenState extends State<PinLockScreen>
 
   void _addDigit(String digit) {
     if (_enteredPin.length >= 4) return;
-    HapticService.light();
+    HapticService.lightTap();
     setState(() {
       _enteredPin += digit;
       _errorMessage = null;
@@ -64,7 +64,7 @@ class _PinLockScreenState extends State<PinLockScreen>
 
   void _removeDigit() {
     if (_enteredPin.isEmpty) return;
-    HapticService.light();
+    HapticService.lightTap();
     setState(() => _enteredPin = _enteredPin.substring(0, _enteredPin.length - 1));
   }
 

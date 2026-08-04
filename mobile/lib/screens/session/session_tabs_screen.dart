@@ -48,7 +48,7 @@ class SessionTabsScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(slideRoute(const DiscoverProfessionalsScreen()),
                 );
-              })
+              }),
             IconButton(
               icon: const Icon(Icons.notifications_none_rounded, color: AppColors.textPrimary),
               onPressed: () {},

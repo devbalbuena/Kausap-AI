@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/privacy_settings_service.dart';
-import '../../utils/app_routes.dart';
+
 import '../../utils/haptic_service.dart';
 
 /// Privacy Center — enterprise-grade screen explaining how Kausap AI
@@ -332,7 +332,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
           ),
           Switch(
             value: value,
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
             onChanged: onChanged,
           ),
         ],

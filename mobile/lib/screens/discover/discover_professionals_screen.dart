@@ -112,7 +112,6 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                       const SizedBox(width: 48), // balance back button
                     ],
                   ),
-                  ),
                 ),
                 
                 // Offline Indicator

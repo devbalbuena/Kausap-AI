@@ -439,7 +439,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Widget _buildActivityCard(ActivityItem activity) {
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
-        slideRoute(ActivityStartScreen(activity: activity)))
+        slideRoute(ActivityStartScreen(activity: activity))),
       child: Container(
         margin: const EdgeInsets.only(top: 10),
         padding: const EdgeInsets.all(25),
@@ -513,7 +513,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 // Start button
                 GestureDetector(
                   onTap: () => Navigator.of(context).push(
-                    slideRoute(ActivityStartScreen(activity: activity)))
+                    slideRoute(ActivityStartScreen(activity: activity))),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(

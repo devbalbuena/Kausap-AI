@@ -62,7 +62,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       // Sign In link
                       Center(
                         child: GestureDetector(
-                          onTap: () => Navigator.of(context).push(slideRoute(const LoginScreen()))
+                          onTap: () => Navigator.of(context).push(slideRoute(const LoginScreen())),
                           child: RichText(
                             text: TextSpan(
                               style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
@@ -80,7 +80,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                       Center(
                         child: TextButton(
-                          onPressed: () => Navigator.of(context).push(slideRoute(const LoginScreen(defaultRole: 'admin')))
+                          onPressed: () => Navigator.of(context).push(slideRoute(const LoginScreen(defaultRole: 'admin'))),
                           child: const Text(
                             'Admin Login',
                             style: TextStyle(

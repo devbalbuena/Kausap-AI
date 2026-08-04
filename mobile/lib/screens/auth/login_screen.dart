@@ -162,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Sign in to your Kausap AI account',
-                          style: AppTextStyles.subheading)
+                          style: AppTextStyles.subheading),
                         const SizedBox(height: 28),
 
                         // Email field
@@ -226,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 8),
-                              minimumSize: Size.zero)
+                              minimumSize: Size.zero),
                             child: Text(
                               'FORGOT PASSWORD?',
                               style: TextStyle(
