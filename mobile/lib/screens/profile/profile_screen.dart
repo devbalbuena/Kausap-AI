@@ -198,7 +198,7 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(context, slideRoute(const MoodAnalyticsScreen()),
                     );
-                  })
+                  }),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.history_rounded,
@@ -219,7 +219,7 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(context, slideRoute(const EditProfileScreen()),
                     );
-                  })
+                  }),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.notifications_none_rounded,
@@ -227,7 +227,7 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(context, slideRoute(const NotificationSettingsScreen()),
                     );
-                  })
+                  }),
                 _buildDivider(),
                 Consumer<ThemeProvider>(
                   builder: (context, themeProvider, child) {
@@ -250,7 +250,7 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(context, slideRoute(const PrivacyScreen()),
                     );
-                  })
+                  }),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.shield_outlined,
@@ -258,14 +258,14 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(context, slideRoute(const PrivacyCenterScreen()),
                     );
-                  })
+                  }),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.security_rounded,
                   title: 'Security',
                   onTap: () {
                     Navigator.push(context, slideRoute(const SecurityScreen()));
-                  })
+                  }),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.text_fields_rounded,
@@ -297,7 +297,7 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(context, slideRoute(const HelpFaqScreen()),
                     );
-                  })
+                  }),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.info_outline_rounded,
@@ -305,7 +305,7 @@ class ProfileScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(context, slideRoute(const AboutScreen()),
                     );
-                  })
+                  }),
               ],
             ),
             const SizedBox(height: 20),

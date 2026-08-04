@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../services/notification_prefs_service.dart';
+import '../../utils/haptic_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -9,18 +11,37 @@ class NotificationSettingsScreen extends StatefulWidget {
 }
 
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
-  // Permissions
-  bool _pushNotifications = true;
+  // Permissions (mocked)
   bool _microphoneAccess = false;
   bool _photoLibrary = true;
   bool _cameraAccess = false;
 
-  // Preferences
+  // Preferences (persisted)
+  bool _pushNotifications = true;
   bool _sessionReminders = true;
   bool _newMessages = true;
-  bool _weeklyProgress = false;
+  bool _dailyCheckins = true;
 
   @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final push = await NotificationPrefsService.getPushEnabled();
+    final session = await NotificationPrefsService.getSessionReminders();
+    final messages = await NotificationPrefsService.getNewMessages();
+    final daily = await NotificationPrefsService.getDailyCheckins();
+    if (mounted) {
+      setState(() {
+        _pushNotifications = push;
+        _sessionReminders = session;
+        _newMessages = messages;
+        _dailyCheckins = daily;
+      });
+    }
+  }
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
@@ -71,7 +92,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                           label: 'Push Notifications',
                           subtitle: 'Receive alerts and reminders',
                           value: _pushNotifications,
-                          onChanged: (v) => setState(() => _pushNotifications = v),
+                          onChanged: (v) async {
+                            HapticService.lightTap();
+                            await NotificationPrefsService.setPushEnabled(v);
+                            setState(() => _pushNotifications = v);
+                          },
                         ),
                         _buildDivider(),
                         _buildToggleRow(
@@ -113,7 +138,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                           label: 'Session Reminders',
                           subtitle: 'Get notified before sessions',
                           value: _sessionReminders,
-                          onChanged: (v) => setState(() => _sessionReminders = v),
+                          onChanged: (v) async {
+                            HapticService.lightTap();
+                            await NotificationPrefsService.setSessionReminders(v);
+                            setState(() => _sessionReminders = v);
+                          },
                         ),
                         _buildDivider(),
                         _buildToggleRow(
@@ -122,16 +151,24 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                           label: 'New Messages',
                           subtitle: 'Direct messages from professionals',
                           value: _newMessages,
-                          onChanged: (v) => setState(() => _newMessages = v),
+                          onChanged: (v) async {
+                            HapticService.lightTap();
+                            await NotificationPrefsService.setNewMessages(v);
+                            setState(() => _newMessages = v);
+                          },
                         ),
                         _buildDivider(),
                         _buildToggleRow(
-                          icon: Icons.bar_chart_rounded,
-                          iconColor: const Color(0xFF2E9E6B),
-                          label: 'Weekly Progress',
-                          subtitle: 'Your weekly mental wellness summary',
-                          value: _weeklyProgress,
-                          onChanged: (v) => setState(() => _weeklyProgress = v),
+                          icon: Icons.favorite_border_rounded,
+                          iconColor: const Color(0xFFE11D48),
+                          label: 'Daily Check-ins',
+                          subtitle: 'Reminder to log your mood',
+                          value: _dailyCheckins,
+                          onChanged: (v) async {
+                            HapticService.lightTap();
+                            await NotificationPrefsService.setDailyCheckins(v);
+                            setState(() => _dailyCheckins = v);
+                          },
                         ),
                       ]),
 
