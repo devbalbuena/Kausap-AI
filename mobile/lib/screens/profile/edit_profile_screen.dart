@@ -16,6 +16,7 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final ImagePicker _picker = ImagePicker();
   File? _imageFile;
+  String? _avatarUrl;
   
   late String _firstName;
   late String _lastName;
@@ -38,15 +39,102 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _birthday = DateTime(2000, 1, 1);
     }
     _gender = user?['gender'] ?? 'Prefer not to say';
+    _avatarUrl = user?['avatar_url'];
   }
 
-  Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _imageFile = File(image.path);
-      });
-    }
+  Future<void> _showImagePickerOptions() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                title: const Text('Choose from Gallery', style: TextStyle(fontFamily: 'Poppins')),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                  if (image != null) {
+                    setState(() {
+                      _imageFile = File(image.path);
+                      _avatarUrl = null;
+                    });
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.face_retouching_natural_rounded, color: AppColors.primary),
+                title: const Text('Choose an Avatar', style: TextStyle(fontFamily: 'Poppins')),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAvatarGrid();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAvatarGrid() {
+    final avatars = [
+      'https://api.dicebear.com/7.x/notionists/png?seed=Felix&backgroundColor=e2e8f0',
+      'https://api.dicebear.com/7.x/notionists/png?seed=Aneka&backgroundColor=e2e8f0',
+      'https://api.dicebear.com/7.x/notionists/png?seed=Jasper&backgroundColor=e2e8f0',
+      'https://api.dicebear.com/7.x/notionists/png?seed=Mia&backgroundColor=e2e8f0',
+      'https://api.dicebear.com/7.x/notionists/png?seed=Leo&backgroundColor=e2e8f0',
+      'https://api.dicebear.com/7.x/notionists/png?seed=Zoe&backgroundColor=e2e8f0',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Choose an Avatar', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 18)),
+                const SizedBox(height: 20),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: avatars.length,
+                  itemBuilder: (context, index) {
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _avatarUrl = avatars[index];
+                          _imageFile = null;
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.primary.withAlpha(50), width: 2),
+                          image: DecorationImage(image: NetworkImage(avatars[index]), fit: BoxFit.cover),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showEditDialog(String title, String initialValue, Function(String) onSave) {
@@ -151,6 +239,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'last_name': _lastName,
         'birthday': DateFormat('yyyy-MM-dd').format(_birthday),
         'gender': _gender,
+        'avatar_url': _avatarUrl,
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -213,7 +302,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       // Profile Image
                       Center(
                         child: GestureDetector(
-                          onTap: _pickImage,
+                          onTap: _showImagePickerOptions,
                           child: Stack(
                             children: [
                               Container(
@@ -231,7 +320,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   image: DecorationImage(
                                     image: _imageFile != null
                                         ? FileImage(_imageFile!)
-                                        : const NetworkImage('https://i.pravatar.cc/150?img=11') as ImageProvider,
+                                        : NetworkImage(_avatarUrl ?? 'https://i.pravatar.cc/150?img=11') as ImageProvider,
                                     fit: BoxFit.cover,
                                   ),
                                 ),

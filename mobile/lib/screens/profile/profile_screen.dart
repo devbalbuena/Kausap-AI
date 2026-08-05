@@ -130,61 +130,70 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Profile Card (Blue)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x140078D4),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 57,
-                    height: 57,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withAlpha(50), width: 2),
-                      image: const DecorationImage(
-                        image: NetworkImage('https://i.pravatar.cc/150?img=11'),
-                        fit: BoxFit.cover,
+            Consumer<AuthProvider>(
+              builder: (context, auth, _) {
+                final user = auth.currentUser ?? {};
+                final firstName = user['first_name'] ?? 'Kausap';
+                final lastName = user['last_name'] ?? 'AI';
+                final email = user['email'] ?? 'kausap.ai@gmail.com';
+                final avatarUrl = user['avatar_url'] ?? 'https://i.pravatar.cc/150?img=11';
+                
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x140078D4),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Kausap AI',
-                          style: AppTextStyles.heading2.copyWith(
-                            fontSize: 14,
-                            color: Colors.white,
-                            letterSpacing: 0,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 57,
+                        height: 57,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withAlpha(50), width: 2),
+                          image: DecorationImage(
+                            image: NetworkImage(avatarUrl),
+                            fit: BoxFit.cover,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'kausap.ai@gmail.com',
-                          style: AppTextStyles.body.copyWith(
-                            fontSize: 12,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$firstName $lastName',
+                              style: AppTextStyles.heading2.copyWith(
+                                fontSize: 14,
+                                color: Colors.white,
+                                letterSpacing: 0,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              email,
+                              style: AppTextStyles.body.copyWith(
+                                fontSize: 12,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              }
             ),
             const SizedBox(height: 20),
 
