@@ -288,5 +288,6 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
         ],
       ),
     );
+    );
   }
 }
