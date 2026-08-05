@@ -45,11 +45,11 @@ class KausapApp extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         final activeTheme = themeProvider.highContrast
-            ? AppTheme.highContrastTheme
-            : AppTheme.theme;
+            ? AppTheme.getHighContrastTheme(themeProvider.accentColor)
+            : AppTheme.getTheme(themeProvider.accentColor);
         final activeDarkTheme = themeProvider.highContrast
-            ? AppTheme.highContrastTheme
-            : AppTheme.darkTheme;
+            ? AppTheme.getHighContrastTheme(themeProvider.accentColor)
+            : AppTheme.getDarkTheme(themeProvider.accentColor);
         return MaterialApp(
           navigatorKey: navigatorKey,
           title: 'Kausap AI',

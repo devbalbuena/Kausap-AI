@@ -151,12 +151,12 @@ class AppTextStyles {
 }
 
 class AppTheme {
-  static ThemeData get theme => ThemeData(
+  static ThemeData getTheme(Color accentColor) => ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.interTextTheme(),
         scaffoldBackgroundColor: AppColors.background,
-        colorScheme: const ColorScheme.light(
-          primary: AppColors.primary,
+        colorScheme: ColorScheme.light(
+          primary: accentColor,
           surface: AppColors.surface,
           error: AppColors.error,
         ),
@@ -190,7 +190,7 @@ class AppTheme {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
+            backgroundColor: accentColor,
             foregroundColor: AppColors.textOnPrimary,
             minimumSize: const Size(double.infinity, 48),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -200,16 +200,16 @@ class AppTheme {
         ),
       );
 
-  static ThemeData get darkTheme => ThemeData(
+  static ThemeData getDarkTheme(Color accentColor) => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
         textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
           // Ensure we override specific styles for dark mode if needed
         ),
         scaffoldBackgroundColor: const Color(0xFF121212),
-        colorScheme: const ColorScheme.dark(
-          primary: AppColors.primaryLight,
-          surface: Color(0xFF1E1E1E),
+        colorScheme: ColorScheme.dark(
+          primary: accentColor,
+          surface: const Color(0xFF1E1E1E),
           error: AppColors.error,
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -226,7 +226,7 @@ class AppTheme {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.primaryLight, width: 1.5),
+            borderSide: BorderSide(color: accentColor, width: 1.5),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -242,7 +242,7 @@ class AppTheme {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryLight,
+            backgroundColor: accentColor,
             foregroundColor: const Color(0xFF121212),
             minimumSize: const Size(double.infinity, 48),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -255,10 +255,10 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
         ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Color(0xFF1E1E1E),
-          selectedItemColor: AppColors.primaryLight,
-          unselectedItemColor: Color(0xFF9CA3AF),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: const Color(0xFF1E1E1E),
+          selectedItemColor: accentColor,
+          unselectedItemColor: const Color(0xFF9CA3AF),
         ),
         cardTheme: CardThemeData(
           color: const Color(0xFF1E1E1E),
@@ -270,7 +270,7 @@ class AppTheme {
 
   /// High contrast theme — maximum legibility for low vision users.
   /// Uses pitch-black text on white, no subtle grays, 2px borders.
-  static ThemeData get highContrastTheme => ThemeData(
+  static ThemeData getHighContrastTheme(Color accentColor) => ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.interTextTheme().copyWith(
           bodyLarge: GoogleFonts.inter(

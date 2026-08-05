@@ -5,21 +5,25 @@ class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'theme_mode';
   static const String _textScaleKey = 'text_scale_factor';
   static const String _highContrastKey = 'high_contrast';
+  static const String _accentColorKey = 'accent_color';
 
   ThemeMode _themeMode = ThemeMode.system;
   double _textScaleFactor = 1.0; // range: 0.8 to 1.6
   bool _highContrast = false;
+  Color _accentColor = const Color(0xFF0077B6); // Default Blue
 
   ThemeProvider() {
     _loadTheme();
     _loadTextScale();
     _loadHighContrast();
+    _loadAccentColor();
   }
 
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
   double get textScaleFactor => _textScaleFactor;
   bool get highContrast => _highContrast;
+  Color get accentColor => _accentColor;
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +63,18 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadAccentColor() async {
+    const storage = FlutterSecureStorage();
+    final saved = await storage.read(key: _accentColorKey);
+    if (saved != null) {
+      final val = int.tryParse(saved);
+      if (val != null) {
+        _accentColor = Color(val);
+        notifyListeners();
+      }
+    }
+  }
+
   // ── Setters ───────────────────────────────────────────────────────────────
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -94,5 +110,12 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     const storage = FlutterSecureStorage();
     await storage.write(key: _highContrastKey, value: value.toString());
+  }
+
+  Future<void> setAccentColor(Color color) async {
+    _accentColor = color;
+    notifyListeners();
+    const storage = FlutterSecureStorage();
+    await storage.write(key: _accentColorKey, value: color.value.toString());
   }
 }
