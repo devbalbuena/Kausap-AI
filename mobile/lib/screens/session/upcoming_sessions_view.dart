@@ -46,7 +46,12 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
     }
   }
 
-  Future<void> _cancelSession(String id, String date, String time, String professionalName) async {
+  Future<void> _cancelSession(
+    String id,
+    String date,
+    String time,
+    String professionalName,
+  ) async {
     final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
@@ -60,7 +65,7 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
     );
 
     if (result == null) return;
-    
+
     if (result == true) {
       // Confirmed cancellation
       // await ApiClient().delete('${ApiConfig.sessions}/$id');
@@ -144,7 +149,9 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
           Center(
             child: Text(
               'No upcoming sessions.',
-              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           )
         else
@@ -179,115 +186,124 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
         Navigator.push(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => SessionDetailsScreen(
-              sessionId: id,
-              date: date,
-              time: time,
-              professionalName: professionalName,
-              reason: reason,
-              mode: mode,
-            ),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                SessionDetailsScreen(
+                  sessionId: id,
+                  date: date,
+                  time: time,
+                  professionalName: professionalName,
+                  reason: reason,
+                  mode: mode,
+                ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
           ),
         );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.sessionCard, // Teal/light blue from Figma
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                date,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  mode,
+        decoration: BoxDecoration(
+          color: AppColors.sessionCard, // Teal/light blue from Figma
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0D000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  date,
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            time,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: AppColors.primary, size: 20),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    professionalName,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    mode,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
                   ),
-                  Text(
-                    reason,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              if (id.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.cancel_rounded, color: Colors.white70),
-                  tooltip: 'Cancel or Reschedule Session',
-                  onPressed: () => _cancelSession(id, date, time, professionalName),
                 ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              time,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, color: AppColors.primary, size: 20),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      professionalName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      reason,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                if (id.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.cancel_rounded,
+                      color: Colors.white70,
+                    ),
+                    tooltip: 'Cancel or Reschedule Session',
+                    onPressed: () =>
+                        _cancelSession(id, date, time, professionalName),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
-    );
     );
   }
 }
