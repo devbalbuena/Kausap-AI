@@ -116,6 +116,6 @@ class ThemeProvider extends ChangeNotifier {
     _accentColor = color;
     notifyListeners();
     const storage = FlutterSecureStorage();
-    await storage.write(key: _accentColorKey, value: color.value.toString());
+    await storage.write(key: _accentColorKey, value: color.toARGB32().toString());
   }
 }

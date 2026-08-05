@@ -62,7 +62,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
               final option = colorOptions[index];
               final color = option['color'] as Color;
               final name = option['name'] as String;
-              final isSelected = currentAccent.value == color.value;
+              final isSelected = currentAccent.toARGB32() == color.toARGB32();
 
               return GestureDetector(
                 onTap: () {

@@ -8,6 +8,7 @@ import '../auth/role_selection_screen.dart';
 import '../settings/help_faq_screen.dart';
 import '../settings/accessibility_settings_screen.dart';
 import '../settings/appearance_settings_screen.dart';
+import '../settings/language_settings_screen.dart';
 import '../settings/notification_settings_screen.dart';
 import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
@@ -298,6 +299,17 @@ class ProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       slideRoute(const AppearanceSettingsScreen()),
+                    );
+                  },
+                ),
+                _buildDivider(),
+                _buildListItem(
+                  icon: Icons.language_rounded,
+                  title: 'Language & Region',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      slideRoute(const LanguageSettingsScreen()),
                     );
                   },
                 ),
