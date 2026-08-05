@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
+import 'session_details_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -178,9 +179,28 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
     required String reason,
     required String mode,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => SessionDetailsScreen(
+              sessionId: id,
+              date: date,
+              time: time,
+              professionalName: professionalName,
+              reason: reason,
+              mode: mode,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.sessionCard, // Teal/light blue from Figma
         borderRadius: BorderRadius.circular(20),
