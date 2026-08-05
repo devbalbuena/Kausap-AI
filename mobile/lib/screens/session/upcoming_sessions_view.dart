@@ -3,6 +3,7 @@ import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class UpcomingSessionsView extends StatefulWidget {
   const UpcomingSessionsView({super.key});
@@ -15,6 +16,8 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
   bool _isLoading = true;
   List<dynamic> _sessions = [];
   String? _error;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
 
   @override
   void initState() {
@@ -111,33 +114,59 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
       );
     }
 
-    if (_sessions.isEmpty) {
-      return Center(
-        child: Text(
-          'No upcoming sessions.',
-          style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-        ),
-      );
-    }
-
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.all(24.0),
-      itemCount: _sessions.length,
-      itemBuilder: (context, index) {
-        final session = _sessions[index];
-        final dt = DateTime.parse(session['date_time']).toLocal();
-        final formattedDate = DateFormat('EEEE, MMM d').format(dt);
-        final formattedTime = DateFormat('h:mm a').format(dt);
+      children: [
+        TableCalendar(
+          firstDay: DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.utc(2030, 12, 31),
+          focusedDay: _focusedDay,
+          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+          onDaySelected: (selectedDay, focusedDay) {
+            setState(() {
+              _selectedDay = selectedDay;
+              _focusedDay = focusedDay;
+            });
+          },
+          calendarStyle: CalendarStyle(
+            todayDecoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(50),
+              shape: BoxShape.circle,
+            ),
+            selectedDecoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          headerStyle: const HeaderStyle(
+            formatButtonVisible: false,
+            titleCentered: true,
+          ),
+        ),
+        const SizedBox(height: 24),
+        if (_sessions.isEmpty)
+          Center(
+            child: Text(
+              'No upcoming sessions.',
+              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            ),
+          )
+        else
+          ..._sessions.map((session) {
+            final dt = DateTime.parse(session['date_time']).toLocal();
+            final formattedDate = DateFormat('EEEE, MMM d').format(dt);
+            final formattedTime = DateFormat('h:mm a').format(dt);
 
-        return _buildSessionCard(
-          id: session['id'] ?? '',
-          date: formattedDate,
-          time: formattedTime,
-          professionalName: 'Dr. Jane Doe', // Mocked professional name
-          reason: session['reason'] ?? '',
-          mode: session['mode'] ?? '',
-        );
-      },
+            return _buildSessionCard(
+              id: session['id'] ?? '',
+              date: formattedDate,
+              time: formattedTime,
+              professionalName: 'Dr. Jane Doe', // Mocked professional name
+              reason: session['reason'] ?? '',
+              mode: session['mode'] ?? '',
+            );
+          }),
+      ],
     );
   }
 
