@@ -4,6 +4,7 @@ import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import 'package:intl/intl.dart';
 import 'widgets/rate_session_bottom_sheet.dart';
+import 'widgets/session_notes_bottom_sheet.dart';
 
 class PastSessionsView extends StatefulWidget {
   const PastSessionsView({super.key});
@@ -224,6 +225,29 @@ class _PastSessionsViewState extends State<PastSessionsView> {
                   child: const Text('Rate Session', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                 ),
               ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => SessionNotesBottomSheet(
+                      sessionId: sessionId,
+                      professionalName: professionalName,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.edit_note_rounded, size: 18),
+                label: const Text('Private Session Notes', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
           ],
         ],
       ),
