@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
+import 'widgets/audio_journal_bottom_sheet.dart';
 
 class DailyJournalScreen extends StatefulWidget {
   const DailyJournalScreen({super.key});
@@ -210,6 +211,25 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                               borderSide: BorderSide.none,
                             ),
                             contentPadding: const EdgeInsets.all(20),
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.only(top: 8, right: 8),
+                              child: IconButton(
+                                icon: const Icon(Icons.mic_rounded, color: AppColors.primary),
+                                onPressed: () async {
+                                  final result = await showModalBottomSheet<bool>(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) => const AudioJournalBottomSheet(),
+                                  );
+                                  if (result == true && mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Audio journal saved successfully.')),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
                           ),
                         ),
                       ),
