@@ -11,6 +11,7 @@ import '../../widgets/skeleton_loading_widget.dart';
 import '../../widgets/branded_refresh_indicator.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
+import '../journal/daily_journal_screen.dart';
 import '../chat/chatbot_screen.dart';
 import '../chat/direct_message_screen.dart';
 import '../session/session_tabs_screen.dart';
@@ -132,6 +133,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               onTap: () {
                                 Navigator.of(context).push(
                                   slideRoute(const DailyCheckinStep1Screen())
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildQuickActionCard(
+                              iconBg: const Color(0xFFFEF3C7),
+                              icon: Icons.edit_note_rounded,
+                              iconColor: const Color(0xFFD97706),
+                              title: 'Daily Journal',
+                              subtitle: 'Write your thoughts and reflect',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  slideRoute(const DailyJournalScreen())
                                 );
                               },
                             ),
