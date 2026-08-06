@@ -14,6 +14,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
   final TextEditingController _journalController = TextEditingController();
   final _storage = const FlutterSecureStorage();
   DateTime _selectedDate = DateTime.now();
+  double _moodValue = 5;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -30,6 +31,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     
     final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
     final savedJournal = await _storage.read(key: 'journal_$dateKey');
+    final savedMood = await _storage.read(key: 'mood_$dateKey');
     
     if (mounted) {
       setState(() {
@@ -37,6 +39,12 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
           _journalController.text = savedJournal;
         } else {
           _journalController.clear();
+        }
+        
+        if (savedMood != null) {
+          _moodValue = double.tryParse(savedMood) ?? 5;
+        } else {
+          _moodValue = 5;
         }
         _isLoading = false;
       });
@@ -50,6 +58,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     
     final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
     await _storage.write(key: 'journal_$dateKey', value: _journalController.text);
+    await _storage.write(key: 'mood_$dateKey', value: _moodValue.toString());
     
     if (mounted) {
       setState(() {
@@ -142,6 +151,24 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
+                    Text(
+                      'Mood: ${_getMoodEmoji(_moodValue)}',
+                      style: AppTextStyles.heading2,
+                    ),
+                    Slider(
+                      value: _moodValue,
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      activeColor: AppColors.primary,
+                      label: _moodValue.round().toString(),
+                      onChanged: (value) {
+                        setState(() {
+                          _moodValue = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     const Text(
                       'How was your day?',
                       style: AppTextStyles.heading2,
@@ -206,5 +233,13 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
               ),
       ),
     );
+  }
+
+  String _getMoodEmoji(double value) {
+    if (value <= 2) return '😢 (Very Bad)';
+    if (value <= 4) return '😕 (Bad)';
+    if (value <= 6) return '😐 (Okay)';
+    if (value <= 8) return '🙂 (Good)';
+    return '😁 (Awesome)';
   }
 }
