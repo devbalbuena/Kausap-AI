@@ -12,6 +12,7 @@ import '../../widgets/branded_refresh_indicator.dart';
 import '../auth/role_selection_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../journal/daily_journal_screen.dart';
+import '../journal/mindfulness_exercises_screen.dart';
 import '../chat/chatbot_screen.dart';
 import '../chat/direct_message_screen.dart';
 import '../session/session_tabs_screen.dart';
@@ -159,6 +160,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               onTap: () {
                                 Navigator.of(context).push(
                                   slideRoute(const ChatbotScreen())
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildQuickActionCard(
+                              iconBg: const Color(0xFFD1FAE5),
+                              icon: Icons.self_improvement_rounded,
+                              iconColor: const Color(0xFF059669),
+                              title: 'Mindfulness Exercises',
+                              subtitle: 'Breathe and relax',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  slideRoute(const MindfulnessExercisesScreen())
                                 );
                               },
                             ),
