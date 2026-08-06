@@ -89,7 +89,7 @@ class _MindfulnessExercisesScreenState extends State<MindfulnessExercisesScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Mindfulness Exercises', style: AppTextStyles.heading3),
+        title: Text('Mindfulness Exercises', style: AppTextStyles.heading2),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,

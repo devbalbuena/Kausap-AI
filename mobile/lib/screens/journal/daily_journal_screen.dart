@@ -113,7 +113,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Daily Journal', style: AppTextStyles.heading3),
+        title: Text('Daily Journal', style: AppTextStyles.heading2),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -170,7 +170,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'How was your day?',
                       style: AppTextStyles.heading2,
                     ),
@@ -222,7 +222,8 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                                     backgroundColor: Colors.transparent,
                                     builder: (context) => const AudioJournalBottomSheet(),
                                   );
-                                  if (result == true && mounted) {
+                                  if (result == true) {
+                                    if (!context.mounted) return;
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('Audio journal saved successfully.')),
                                     );
