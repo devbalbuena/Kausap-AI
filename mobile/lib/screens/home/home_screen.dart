@@ -39,6 +39,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _navIndex = 0;
   int _unreadCount = 0;
+  int _streak = 0;
+  int _goal = 30;
   final NotificationService _notificationService = NotificationService();
 
   String get _firstName => widget.user['first_name'] ?? 'User';
@@ -47,6 +49,19 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchUnreadCount();
+    _fetchStreak();
+  }
+
+  Future<void> _fetchStreak() async {
+    // Mocking an API call to fetch streak data dynamically
+    await Future.delayed(const Duration(milliseconds: 500));
+    final cached = await CacheService.readMap('wellness_streak');
+    if (mounted) {
+      setState(() {
+        _streak = cached?['streak'] ?? 5; // dynamic mock data
+        _goal = cached?['goal'] ?? 30;
+      });
+    }
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -369,16 +384,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Streak Card ────────────────────────────────────────────────────────────
   Widget _buildStreakCard() {
-    const streak = 7;
-    const goal = 30;
-    const progress = streak / goal;
+    final progress = _goal > 0 ? _streak / _goal : 0.0;
     return _card(
       child: Column(
         children: [
           Row(children: [
             const Text('🔥', style: TextStyle(fontSize: 20)),
             const SizedBox(width: 6),
-            Text('$streak Day Streak!', style: AppTextStyles.heading2),
+            Text('$_streak Day Check-in Streak!', style: AppTextStyles.heading2),
           ]),
           const SizedBox(height: 4),
           Text('Keep your wellness journey going',
@@ -400,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(99)),
                 alignment: Alignment.center,
                 child: Text(
-                  '$streak/$goal',
+                  '$_streak/$_goal',
                   style: AppTextStyles.caption.copyWith(
                       color: Theme.of(context).colorScheme.surface,
                       fontSize: 8,
