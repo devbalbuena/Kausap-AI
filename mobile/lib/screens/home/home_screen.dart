@@ -41,6 +41,13 @@ class _HomeScreenState extends State<HomeScreen> {
   int _unreadCount = 0;
   int _streak = 0;
   int _goal = 30;
+  
+  final List<Map<String, dynamic>> _dailyQuests = [
+    {'title': 'Log your mood', 'completed': false},
+    {'title': 'Write a journal entry', 'completed': false},
+    {'title': 'Complete a mindfulness exercise', 'completed': false},
+  ];
+  
   final NotificationService _notificationService = NotificationService();
 
   String get _firstName => widget.user['first_name'] ?? 'User';
@@ -139,6 +146,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             _buildGreeting(),
                             const SizedBox(height: 20),
                             _buildStreakCard(),
+                            const SizedBox(height: 16),
+                            _buildDailyQuestsCard(),
                             const SizedBox(height: 16),
                             _buildQuickActionCard(
                               iconBg: AppColors.checkinIcon,
@@ -422,6 +431,87 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ]),
+        ],
+      ),
+    );
+  }
+
+  // ── Daily Quests Card ──────────────────────────────────────────────────────
+  Widget _buildDailyQuestsCard() {
+    final completedCount = _dailyQuests.where((q) => q['completed'] as bool).length;
+    final totalQuests = _dailyQuests.length;
+    final progress = totalQuests > 0 ? completedCount / totalQuests : 0.0;
+    
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Daily Quests', style: AppTextStyles.heading2),
+              Text(
+                '$completedCount/$totalQuests completed',
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: AppColors.streakTrack,
+              color: AppColors.primary,
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ..._dailyQuests.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final quest = entry.value;
+            final isCompleted = quest['completed'] as bool;
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _dailyQuests[idx]['completed'] = !isCompleted;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isCompleted ? AppColors.primary : AppColors.divider,
+                          width: 2,
+                        ),
+                        color: isCompleted ? AppColors.primary : Colors.transparent,
+                      ),
+                      child: isCompleted
+                          ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      quest['title'] as String,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: isCompleted ? AppColors.textSecondary : AppColors.textPrimary,
+                        decoration: isCompleted ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ],
       ),
     );
