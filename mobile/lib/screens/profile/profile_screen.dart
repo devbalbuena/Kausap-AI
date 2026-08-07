@@ -18,6 +18,7 @@ import '../settings/about_screen.dart';
 import '../../services/api_client.dart';
 import '../mood/mood_analytics_screen.dart';
 import 'edit_profile_screen.dart';
+import 'achievements_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -197,6 +198,21 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 );
               }
+            ),
+            const SizedBox(height: 20),
+
+            // ACHIEVEMENTS Section
+            _buildSectionContainer(
+              title: 'PROGRESS & ACHIEVEMENTS',
+              children: [
+                _buildListItem(
+                  icon: Icons.emoji_events_rounded,
+                  title: 'Achievements & Badges',
+                  onTap: () {
+                    Navigator.push(context, slideRoute(const AchievementsScreen()));
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 20),
 
