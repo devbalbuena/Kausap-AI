@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'dart:convert';
+import 'widgets/badge_unlocked_dialog.dart';
 
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({super.key});
@@ -85,8 +86,10 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             final badge = _badges[index];
             final bool isUnlocked = badge['unlocked'] as bool;
             
-            return Container(
-              padding: const EdgeInsets.all(16),
+            return GestureDetector(
+              onTap: isUnlocked ? () => _showBadgeDialog(badge) : null,
+              child: Container(
+                padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isUnlocked ? Colors.white : const Color(0xFFF3F4F6),
                 borderRadius: BorderRadius.circular(16),
@@ -144,9 +147,21 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                   ),
                 ],
               ),
-            );
+            ));
           },
         ),
+      ),
+    );
+  }
+
+  void _showBadgeDialog(Map<String, dynamic> badge) {
+    showDialog(
+      context: context,
+      builder: (context) => BadgeUnlockedDialog(
+        title: badge['title'] as String,
+        description: badge['description'] as String,
+        icon: badge['icon'] as IconData,
+        color: badge['color'] as Color,
       ),
     );
   }
