@@ -25,6 +25,7 @@ import '../discover/discover_professionals_screen.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import '../crisis/sos_screen.dart';
+import '../crisis/quick_escape_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -282,6 +283,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   .copyWith(color: AppColors.primary, fontSize: 20)),
         ]),
         Row(children: [
+          // Quick Escape panic button
+          Semantics(
+            label: 'Quick escape',
+            button: true,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const QuickEscapeScreen(),
+                  fullscreenDialog: true,
+                ),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.shield_outlined, color: Colors.red.shade400, size: 20),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           Semantics(
             label: _unreadCount > 0
                 ? 'Notifications, $_unreadCount unread'
