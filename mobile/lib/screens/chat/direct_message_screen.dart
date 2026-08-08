@@ -7,6 +7,7 @@ import '../../services/message_service.dart';
 import '../../widgets/empty_state_widget.dart';
 import 'widgets/attachment_menu_sheet.dart';
 import 'widgets/typing_indicator.dart';
+import 'widgets/therapist_profile_sheet.dart';
 
 class DirectMessageScreen extends StatefulWidget {
   final String otherUserId;
@@ -314,8 +315,24 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
-            onPressed: () {},
+            icon: const Icon(Icons.info_outline_rounded, color: AppColors.textSecondary),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => TherapistProfileSheet(
+                  name: widget.otherUserName,
+                  role: widget.otherUserRole,
+                  specialty: widget.otherUserSpecialty ?? 'Licensed Therapist',
+                  isOnline: _isOnline,
+                  bio: 'Helping individuals navigate life\'s challenges with compassion and evidence-based therapy.',
+                  languages: const ['English', 'Filipino'],
+                  sessionCount: 128,
+                  rating: 4.9,
+                ),
+              );
+            },
           ),
         ],
       ),
