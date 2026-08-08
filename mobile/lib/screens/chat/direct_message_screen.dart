@@ -1,20 +1,27 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../theme/app_theme.dart';
 import '../../services/message_service.dart';
 import '../../widgets/empty_state_widget.dart';
+import 'widgets/attachment_menu_sheet.dart';
+import 'widgets/typing_indicator.dart';
 
 class DirectMessageScreen extends StatefulWidget {
   final String otherUserId;
   final String otherUserName;
-  final String? otherUserRole; // 'client' or 'professional'
+  final String? otherUserRole;
+  final String? otherUserSpecialty;
+  final bool? otherUserOnline;
 
   const DirectMessageScreen({
     super.key,
     required this.otherUserId,
     required this.otherUserName,
     this.otherUserRole,
+    this.otherUserSpecialty,
+    this.otherUserOnline,
   });
 
   @override
@@ -25,28 +32,60 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final MessageService _messageService = MessageService();
+  final FocusNode _inputFocusNode = FocusNode();
 
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
   bool _isSending = false;
+  bool _isTyping = false;
+  bool _otherUserTyping = false;
   Timer? _pollingTimer;
+  Timer? _typingTimer;
+
+  // Dynamic online status
+  late bool _isOnline;
 
   @override
   void initState() {
     super.initState();
+    _isOnline = widget.otherUserOnline ?? false;
     _fetchMessages();
     // Poll every 3 seconds
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       _fetchMessages(isBackground: true);
     });
+    _inputController.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _typingTimer?.cancel();
     _inputController.dispose();
     _scrollController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onTextChanged() {
+    if (_inputController.text.isNotEmpty && !_isTyping) {
+      setState(() => _isTyping = true);
+      // Simulate the other user typing after a small delay
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) setState(() => _otherUserTyping = true);
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) setState(() => _otherUserTyping = false);
+        });
+      });
+    }
+    if (_inputController.text.isEmpty) {
+      setState(() => _isTyping = false);
+    }
+    // Reset typing debounce
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _isTyping = false);
+    });
   }
 
   Future<void> _fetchMessages({bool isBackground = false}) async {
@@ -73,10 +112,13 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
 
-    setState(() => _isSending = true);
+    setState(() {
+      _isSending = true;
+      _isTyping = false;
+      _otherUserTyping = false;
+    });
     _inputController.clear();
 
-    // Optimistic UI update
     final tempMsg = {
       'sender_id': 'me',
       'receiver_id': widget.otherUserId,
@@ -90,18 +132,15 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
 
     try {
       await _messageService.sendMessage(widget.otherUserId, text);
-      await _fetchMessages(isBackground: true); // sync with server
+      await _fetchMessages(isBackground: true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send message: $e')),
         );
-        // Optionally remove tempMsg
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSending = false);
-      }
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
@@ -117,10 +156,47 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     });
   }
 
+  String _formatTime(String? isoString) {
+    if (isoString == null) return '';
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      return DateFormat('h:mm a').format(dt);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  bool _shouldShowDateDivider(int index) {
+    if (index == 0) return true;
+    final curr = _messages[index]['created_at'];
+    final prev = _messages[index - 1]['created_at'];
+    if (curr == null || prev == null) return false;
+    try {
+      final currDate = DateTime.parse(curr).toLocal();
+      final prevDate = DateTime.parse(prev).toLocal();
+      return !DateUtils.isSameDay(currDate, prevDate);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _formatDateDivider(String? isoString) {
+    if (isoString == null) return '';
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      final now = DateTime.now();
+      if (DateUtils.isSameDay(dt, now)) return 'Today';
+      if (DateUtils.isSameDay(dt, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+      return DateFormat('MMMM d, yyyy').format(dt);
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: const Color(0xFFF0F4F8),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -133,6 +209,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                       ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                       : _buildChatList(),
                 ),
+                if (_otherUserTyping) const TypingIndicator(),
                 _buildInputArea(),
               ],
             ),
@@ -144,21 +221,47 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded, size: 28),
             onPressed: () => Navigator.pop(context),
           ),
-          const SizedBox(width: 8),
-          CircleAvatar(
-            backgroundColor: const Color(0xFFE2E8F0),
-            child: Text(
-              widget.otherUserName.isNotEmpty ? widget.otherUserName[0].toUpperCase() : '?',
-              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-            ),
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primary.withAlpha(30),
+                child: Text(
+                  widget.otherUserName.isNotEmpty ? widget.otherUserName[0].toUpperCase() : '?',
+                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+              Positioned(
+                bottom: 1,
+                right: 1,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: _isOnline ? const Color(0xFF22C55E) : const Color(0xFF9CA3AF),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -168,24 +271,51 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                 Text(
                   widget.otherUserName,
                   style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
                     fontSize: 16,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                if (widget.otherUserRole != null)
-                  Text(
-                    widget.otherUserRole!.toUpperCase(),
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w500,
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _isOnline ? const Color(0xFF22C55E) : const Color(0xFF9CA3AF),
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _isOnline ? 'Online' : 'Offline',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: _isOnline ? const Color(0xFF22C55E) : const Color(0xFF9CA3AF),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (widget.otherUserSpecialty != null) ...[
+                      const Text(' · ', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      Text(
+                        widget.otherUserSpecialty!,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
+            onPressed: () {},
           ),
         ],
       ),
@@ -207,45 +337,86 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
       itemBuilder: (context, index) {
         final msg = _messages[index];
         final bool isMe = msg['sender_id'] == 'me' || msg['receiver_id'] == widget.otherUserId;
-        // In real backend response, current_user.id is the sender if it matches our ID.
-        // But since we don't have our ID here, we can infer: if receiver is them, sender is me.
-        return _buildBubble(msg['content'] ?? '', isMe);
+        return Column(
+          children: [
+            if (_shouldShowDateDivider(index))
+              _buildDateDivider(_formatDateDivider(msg['created_at'])),
+            _buildBubble(msg['content'] ?? '', isMe, _formatTime(msg['created_at'])),
+          ],
+        );
       },
     );
   }
 
-  Widget _buildBubble(String text, bool isMe) {
+  Widget _buildDateDivider(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBubble(String text, bool isMe, String time) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        constraints: const BoxConstraints(maxWidth: 280),
-        decoration: BoxDecoration(
-          color: isMe ? const Color(0xFFE2E8F0) : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: Radius.circular(isMe ? 20 : 0),
-            bottomRight: Radius.circular(isMe ? 0 : 20),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 10,
-              offset: Offset(0, 4),
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            constraints: const BoxConstraints(maxWidth: 280),
+            decoration: BoxDecoration(
+              color: isMe ? AppColors.primary : Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isMe ? 20 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 20),
+              ),
+              boxShadow: const [
+                BoxShadow(color: Color(0x0A000000), blurRadius: 8, offset: Offset(0, 2)),
+              ],
             ),
-          ],
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w400,
-            fontSize: 14,
-            color: isMe ? const Color(0xFF1E293B) : AppColors.textPrimary,
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+                fontSize: 14,
+                height: 1.4,
+                color: isMe ? Colors.white : AppColors.textPrimary,
+              ),
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4, right: 4),
+            child: Text(
+              time,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -253,9 +424,24 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   Widget _buildInputArea() {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.only(
+        left: 8,
+        right: 8,
+        top: 10,
+        bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 10 : 16,
+      ),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 28),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const AttachmentMenuSheet(),
+              );
+            },
+          ),
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -265,23 +451,25 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
               ),
               child: TextField(
                 controller: _inputController,
+                focusNode: _inputFocusNode,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendMessage(),
+                maxLines: 4,
+                minLines: 1,
                 decoration: const InputDecoration(
                   hintText: 'Type a message...',
                   border: InputBorder.none,
-                  hintStyle: TextStyle(
-                    color: Color(0xFF94A3B8),
-                    fontSize: 14,
-                  ),
+                  hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           GestureDetector(
             onTap: _isSending ? null : _sendMessage,
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: _isSending ? const Color(0xFFCBD5E1) : AppColors.primary,
