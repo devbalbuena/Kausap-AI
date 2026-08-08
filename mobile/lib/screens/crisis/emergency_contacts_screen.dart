@@ -151,7 +151,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                 : ListView.separated(
                     padding: const EdgeInsets.all(24),
                     itemCount: _contacts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final contact = _contacts[index];
                       return Container(

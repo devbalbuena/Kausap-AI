@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
-import 'dart:convert';
 import 'widgets/badge_unlocked_dialog.dart';
 
 class AchievementsScreen extends StatefulWidget {

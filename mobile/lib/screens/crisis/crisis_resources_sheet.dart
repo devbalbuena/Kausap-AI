@@ -93,7 +93,7 @@ class CrisisResourcesSheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 shrinkWrap: true,
                 itemCount: _hotlines.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final hotline = _hotlines[index];
                   final isSms = hotline['type'] == 'sms';

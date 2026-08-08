@@ -41,9 +41,9 @@ class _QuickEscapeScreenState extends State<QuickEscapeScreen> {
       ),
     );
 
-    return WillPopScope(
+    return PopScope(
       // Block back button in panic mode
-      onWillPop: () async => false,
+      canPop: false,
       child: GestureDetector(
         onTap: _handleTap,
         child: Scaffold(
