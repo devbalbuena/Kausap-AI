@@ -24,6 +24,7 @@ import '../notifications/notifications_screen.dart';
 import '../discover/discover_professionals_screen.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
+import '../crisis/sos_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -146,6 +147,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             _buildGreeting(),
                             const SizedBox(height: 20),
                             _buildStreakCard(),
+                            const SizedBox(height: 16),
+                            _buildSosBanner(),
                             const SizedBox(height: 16),
                             _buildDailyQuestsCard(),
                             const SizedBox(height: 16),
@@ -432,6 +435,70 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ]),
         ],
+      ),
+    );
+  }
+
+  // ── SOS / Get Help Banner ────────────────────────────────────────────────────
+  Widget _buildSosBanner() {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(slideRoute(const SosScreen())),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.red.shade600, Colors.red.shade400],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withAlpha(60),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(40),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.sos_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Need immediate help?',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Tap to access crisis support & hotlines',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+          ],
+        ),
       ),
     );
   }
