@@ -19,6 +19,16 @@ class _PastSessionsViewState extends State<PastSessionsView> {
   List<dynamic> _sessions = [];
   String? _error;
 
+  // Pagination
+  static const int _pageSize = 10;
+  int _currentPage = 1;
+  bool _isLoadingMore = false;
+
+  List<dynamic> get _displayedSessions =>
+      _sessions.take(_currentPage * _pageSize).toList();
+
+  bool get _hasMore => _sessions.length > _currentPage * _pageSize;
+
   @override
   void initState() {
     super.initState();
@@ -92,24 +102,53 @@ class _PastSessionsViewState extends State<PastSessionsView> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(24.0),
-      itemCount: _sessions.length,
-      itemBuilder: (context, index) {
-        final session = _sessions[index];
-        final dt = DateTime.parse(session['date_time']).toLocal();
-        final formattedDate = DateFormat('MMM d, yyyy').format(dt);
-        final formattedTime = DateFormat('h:mm a').format(dt);
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(24.0),
+            itemCount: _displayedSessions.length,
+            itemBuilder: (context, index) {
+              final session = _displayedSessions[index];
+              final dt = DateTime.parse(session['date_time']).toLocal();
+              final formattedDate = DateFormat('MMM d, yyyy').format(dt);
+              final formattedTime = DateFormat('h:mm a').format(dt);
 
-        return _buildPastSessionCard(
-          sessionId: session['id'],
-          date: formattedDate,
-          time: formattedTime,
-          professionalName: 'Dr. Jane Doe', // Mocked
-          status: session['status'] ?? 'completed',
-          rating: session['rating'],
-        );
-      },
+              return _buildPastSessionCard(
+                sessionId: session['id'],
+                date: formattedDate,
+                time: formattedTime,
+                professionalName: 'Dr. Jane Doe', // Mocked
+                status: session['status'] ?? 'completed',
+                rating: session['rating'],
+              );
+            },
+          ),
+        ),
+        if (_hasMore)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: _isLoadingMore
+                ? const CircularProgressIndicator()
+                : OutlinedButton.icon(
+                    onPressed: () async {
+                      setState(() => _isLoadingMore = true);
+                      await Future.delayed(const Duration(milliseconds: 300));
+                      setState(() {
+                        _currentPage++;
+                        _isLoadingMore = false;
+                      });
+                    },
+                    icon: const Icon(Icons.expand_more_rounded),
+                    label: Text(
+                      'Load more (${_sessions.length - _currentPage * _pageSize} remaining)',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+          ),
+      ],
     );
   }
 
