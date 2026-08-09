@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
+import '../../services/cache_service.dart';
 import '../../config/api_config.dart';
 import 'package:intl/intl.dart';
 import 'widgets/rate_session_bottom_sheet.dart';
@@ -24,12 +25,23 @@ class _PastSessionsViewState extends State<PastSessionsView> {
     _fetchPastSessions();
   }
 
-  Future<void> _fetchPastSessions() async {
+  Future<void> _fetchPastSessions({bool forceRefresh = false}) async {
     try {
-      final data = await ApiClient().get(ApiConfig.sessionsPast);
+      // Past sessions cached for 10 minutes (they don't change often)
+      final data = await CacheService.cachedFetchList(
+        key: CacheKeys.pastSessions,
+        ttlMinutes: 10,
+        forceRefresh: forceRefresh,
+        fetch: () async {
+          final result = await ApiClient().get(ApiConfig.sessionsPast);
+          return (result as List)
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+        },
+      );
       if (mounted) {
         setState(() {
-          _sessions = data as List<dynamic>;
+          _sessions = data ?? [];
           _isLoading = false;
         });
       }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
+import '../../services/cache_service.dart';
 import '../../config/api_config.dart';
 import 'session_details_screen.dart';
 import 'widgets/cancel_session_bottom_sheet.dart';
@@ -27,12 +28,23 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
     _fetchUpcomingSessions();
   }
 
-  Future<void> _fetchUpcomingSessions() async {
+  Future<void> _fetchUpcomingSessions({bool forceRefresh = false}) async {
     try {
-      final data = await ApiClient().get(ApiConfig.sessionsUpcoming);
+      // Use cachedFetchList: serve from cache (5 min TTL) or fetch fresh
+      final data = await CacheService.cachedFetchList(
+        key: CacheKeys.upcomingSessions,
+        ttlMinutes: 5,
+        forceRefresh: forceRefresh,
+        fetch: () async {
+          final result = await ApiClient().get(ApiConfig.sessionsUpcoming);
+          return (result as List)
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+        },
+      );
       if (mounted) {
         setState(() {
-          _sessions = data as List<dynamic>;
+          _sessions = data ?? [];
           _isLoading = false;
         });
       }

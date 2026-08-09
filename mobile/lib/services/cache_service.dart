@@ -108,11 +108,111 @@ class CacheService {
       await prefs.remove(k);
     }
   }
+
+  /// Save a raw string to cache.
+  static Future<void> saveString(
+    String key,
+    String value, {
+    int ttlMinutes = 60,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_prefix$key', value);
+    await prefs.setInt(
+      '$_prefix$key$_tsSuffix',
+      DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  /// Read a cached raw string. Returns null if expired or missing.
+  static Future<String?> readString(
+    String key, {
+    int ttlMinutes = 60,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ts = prefs.getInt('$_prefix$key$_tsSuffix');
+    if (ts == null) return null;
+    final age = DateTime.now().millisecondsSinceEpoch - ts;
+    if (age > ttlMinutes * 60 * 1000) return null;
+    return prefs.getString('$_prefix$key');
+  }
+
+  /// Generic cached API fetch for List responses.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final sessions = await CacheService.cachedFetchList(
+  ///   key: CacheKeys.sessions,
+  ///   ttlMinutes: 5,
+  ///   fetch: () => apiClient.getSessions(),
+  /// );
+  /// ```
+  static Future<List<Map<String, dynamic>>?> cachedFetchList({
+    required String key,
+    required Future<List<Map<String, dynamic>>> Function() fetch,
+    int ttlMinutes = 10,
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh) {
+      final cached = await readList(key, ttlMinutes: ttlMinutes);
+      if (cached != null) return cached;
+    }
+    try {
+      final fresh = await fetch();
+      await saveList(key, fresh, ttlMinutes: ttlMinutes);
+      return fresh;
+    } catch (_) {
+      // On error, return stale cache if available (any TTL)
+      return await readList(key, ttlMinutes: 999999);
+    }
+  }
+
+  /// Generic cached API fetch for Map responses.
+  static Future<Map<String, dynamic>?> cachedFetchMap({
+    required String key,
+    required Future<Map<String, dynamic>> Function() fetch,
+    int ttlMinutes = 10,
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh) {
+      final cached = await readMap(key, ttlMinutes: ttlMinutes);
+      if (cached != null) return cached;
+    }
+    try {
+      final fresh = await fetch();
+      await saveMap(key, fresh, ttlMinutes: ttlMinutes);
+      return fresh;
+    } catch (_) {
+      return await readMap(key, ttlMinutes: 999999);
+    }
+  }
 }
 
-/// Cache keys used across the app
+/// Cache keys used across the app — centralized for scalability.
 class CacheKeys {
+  // Home
   static const String professionals = 'professionals';
   static const String homeData = 'home_data';
   static const String notifications = 'notifications';
+
+  // Sessions
+  static const String sessions = 'sessions';
+  static const String upcomingSessions = 'upcoming_sessions';
+  static const String pastSessions = 'past_sessions';
+
+  // Profile
+  static const String userProfile = 'user_profile';
+  static const String moodTrends = 'mood_trends';
+
+  // Streak & Quests
+  static const String wellnessStreak = 'wellness_streak';
+  static const String dailyQuests = 'daily_quests';
+
+  // Messages
+  static const String messagesList = 'messages_list';
+
+  // Discover
+  static const String discoverProfessionals = 'discover_professionals';
+
+  // Emergency
+  static const String emergencyContacts = 'emergency_contacts';
 }
