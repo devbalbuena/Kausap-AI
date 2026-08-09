@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/api_client.dart';
@@ -117,7 +118,7 @@ class _ProfessionalDashboardScreenState extends State<ProfessionalDashboardScree
                 const SizedBox(width: 16),
                 const CircleAvatar(
                   radius: 16,
-                  backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                  backgroundImage: CachedNetworkImageProvider('https://i.pravatar.cc/150?img=11'),
                 ),
               ],
             ),

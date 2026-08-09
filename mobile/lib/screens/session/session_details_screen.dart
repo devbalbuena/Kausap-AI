@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -110,7 +111,7 @@ class _SessionDetailsScreenState extends State<SessionDetailsScreen> with Single
                     children: [
                       const CircleAvatar(
                         radius: 24,
-                        backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                        backgroundImage: CachedNetworkImageProvider('https://i.pravatar.cc/150?img=11'),
                       ),
                       const SizedBox(width: 16),
                       Column(

@@ -19,6 +19,7 @@ import '../../services/api_client.dart';
 import '../mood/mood_analytics_screen.dart';
 import 'edit_profile_screen.dart';
 import 'achievements_screen.dart';
+import '../../widgets/cached_avatar.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -157,17 +158,12 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 57,
-                        height: 57,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withAlpha(50), width: 2),
-                          image: DecorationImage(
-                            image: NetworkImage(avatarUrl),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
+                      CachedAvatar(
+                        imageUrl: avatarUrl,
+                        radius: 28.5,
+                        fallbackInitial: displayName,
+                        backgroundColor: Colors.white.withAlpha(40),
+                        foregroundColor: Colors.white,
                       ),
                       const SizedBox(width: 12),
                       Expanded(

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -123,7 +124,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColors.primary.withAlpha(50), width: 2),
-                          image: DecorationImage(image: NetworkImage(avatars[index]), fit: BoxFit.cover),
+                          image: DecorationImage(image: CachedNetworkImageProvider(avatars[index]), fit: BoxFit.cover),
                         ),
                       ),
                     );
@@ -320,7 +321,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   image: DecorationImage(
                                     image: _imageFile != null
                                         ? FileImage(_imageFile!)
-                                        : NetworkImage(_avatarUrl ?? 'https://i.pravatar.cc/150?img=11') as ImageProvider,
+                                        : CachedNetworkImageProvider(_avatarUrl ?? 'https://i.pravatar.cc/150?img=11') as ImageProvider,
                                     fit: BoxFit.cover,
                                   ),
                                 ),
