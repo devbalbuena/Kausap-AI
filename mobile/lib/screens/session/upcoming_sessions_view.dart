@@ -3,6 +3,7 @@ import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../services/cache_service.dart';
 import '../../config/api_config.dart';
+import '../../widgets/skeleton_widgets.dart';
 import 'session_details_screen.dart';
 import 'widgets/cancel_session_bottom_sheet.dart';
 import 'package:intl/intl.dart';
@@ -102,7 +103,7 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonSessionList(count: 5);
     }
 
     if (_error != null) {

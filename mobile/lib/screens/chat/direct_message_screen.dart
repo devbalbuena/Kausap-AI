@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/message_service.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/skeleton_widgets.dart';
 import 'widgets/attachment_menu_sheet.dart';
 import 'widgets/typing_indicator.dart';
 import 'widgets/therapist_profile_sheet.dart';
@@ -207,8 +208,8 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                 _buildHeader(),
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                      : _buildChatList(),
+                    ? const SkeletonChatList()
+                    : _buildChatList(),
                 ),
                 if (_otherUserTyping) const TypingIndicator(),
                 _buildInputArea(),

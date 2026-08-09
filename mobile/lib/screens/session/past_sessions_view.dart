@@ -3,6 +3,7 @@ import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../services/cache_service.dart';
 import '../../config/api_config.dart';
+import '../../widgets/skeleton_widgets.dart';
 import 'package:intl/intl.dart';
 import 'widgets/rate_session_bottom_sheet.dart';
 import 'widgets/session_notes_bottom_sheet.dart';
@@ -68,7 +69,7 @@ class _PastSessionsViewState extends State<PastSessionsView> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonSessionList(count: 5);
     }
 
     if (_error != null) {
