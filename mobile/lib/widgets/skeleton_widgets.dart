@@ -108,7 +108,7 @@ class SkeletonSessionList extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: count,
-      itemBuilder: (_, __) => const SkeletonSessionCard(),
+      itemBuilder: (_, _) => const SkeletonSessionCard(),
     );
   }
 }

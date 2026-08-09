@@ -161,7 +161,7 @@ class ProfileScreen extends StatelessWidget {
                       CachedAvatar(
                         imageUrl: avatarUrl,
                         radius: 28.5,
-                        fallbackInitial: displayName,
+                        fallbackInitial: firstName,
                         backgroundColor: Colors.white.withAlpha(40),
                         foregroundColor: Colors.white,
                       ),
