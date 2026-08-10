@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
@@ -19,9 +20,22 @@ import 'screens/splash/splash_screen.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  // Replace the default red screen of death with our custom friendly error widget
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Replace the default red screen of death with our custom friendly error widget
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return FriendlyErrorWidget(details: details);
+  };
+
+  // 2. Catch Flutter framework errors (widget build failures, etc.)
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+  };
+
+  // 3. Catch unhandled async / platform-level errors (outside Flutter zones)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Unhandled async error: $error\n$stack');
+    return true; // Mark as handled to prevent app crash
   };
 
   runApp(
