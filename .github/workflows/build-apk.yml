@@ -46,6 +46,12 @@ jobs:
         working-directory: mobile
         continue-on-error: true  # Don't fail the build on lint warnings
 
+      # ── 6.5 Generate Debug Keystore (Required for CI Release Build) ───────
+      - name: 🔑 Generate Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug"
+
       # ── 7. Build the APK ──────────────────────────────────────────────────
       - name: 🔨 Build Release APK
         run: flutter build apk --release --split-per-abi -v > flutter_build_log.txt 2>&1
