@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
+import '../../utils/app_validators.dart';
 import '../auth/login_screen.dart';
 import 'client_signup_step2_screen.dart';
 
@@ -131,9 +132,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               style: AppTextStyles.inputText,
                               decoration: const InputDecoration(hintText: 'John'),
                               textCapitalization: TextCapitalization.words,
-                              validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'First name is required'
-                                  : null,
+                              validator: (v) => AppValidators.requiredName(v, label: 'First name'),
                             ),
                             const SizedBox(height: 16),
 
@@ -145,9 +144,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               style: AppTextStyles.inputText,
                               decoration: const InputDecoration(hintText: 'Doe'),
                               textCapitalization: TextCapitalization.words,
-                              validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'Last name is required'
-                                  : null,
+                              validator: (v) => AppValidators.requiredName(v, label: 'Last name'),
                             ),
                             const SizedBox(height: 16),
 
@@ -161,15 +158,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               autocorrect: false,
                               decoration:
                                   const InputDecoration(hintText: 'john.doe@gmail.com'),
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'Email is required';
-                                }
-                                if (!v.contains('@')) {
-                                  return 'Enter a valid email';
-                                }
-                                return null;
-                              },
+                              validator: AppValidators.email,
                             ),
                             const SizedBox(height: 16),
 
@@ -182,9 +171,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               keyboardType: TextInputType.phone,
                               decoration: const InputDecoration(
                                   hintText: '+63 0123 456 7890'),
-                              validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'Phone number is required'
-                                  : null,
+                              validator: AppValidators.phone,
                             ),
                             const SizedBox(height: 16),
 
@@ -247,15 +234,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                                       () => _obscurePassword = !_obscurePassword),
                                 ),
                               ),
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return 'Password is required';
-                                }
-                                if (v.length < 8) {
-                                  return 'Password must be at least 8 characters';
-                                }
-                                return null;
-                              },
+                              validator: AppValidators.passwordStrong,
                             ),
                             const SizedBox(height: 16),
 
@@ -280,14 +259,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                                       () => _obscureConfirm = !_obscureConfirm),
                                 ),
                               ),
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return 'Please confirm your password';
-                                }
-                                if (v != _passwordController.text) {
-                                  return 'Passwords do not match';
-                                }
-                                return null;
+                              validator: (v) => AppValidators.confirmPassword(v, _passwordController.text),
                               },
                             ),
                             const SizedBox(height: 28),

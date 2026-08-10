@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../utils/app_validators.dart';
 import 'login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -126,11 +127,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                                 ),
                               ),
-                              validator: (v) {
-                                if (v == null || v.isEmpty) return 'Password is required';
-                                if (v.length < 8) return 'Password must be at least 8 characters';
-                                return null;
-                              },
+                              validator: AppValidators.passwordStrong,
                             ),
                             const SizedBox(height: 16),
 
@@ -152,11 +149,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                                 ),
                               ),
-                              validator: (v) {
-                                if (v == null || v.isEmpty) return 'Please confirm your password';
-                                if (v != _passwordController.text) return 'Passwords do not match';
-                                return null;
-                              },
+                              validator: (v) => AppValidators.confirmPassword(v, _passwordController.text),
                             ),
                             const SizedBox(height: 32),
 

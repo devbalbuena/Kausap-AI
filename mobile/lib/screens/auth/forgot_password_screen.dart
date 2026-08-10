@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../utils/app_validators.dart';
 import 'verify_code_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -114,11 +115,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               decoration: const InputDecoration(
                                 hintText: 'Enter your email',
                               ),
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) return 'Email is required';
-                                if (!v.contains('@')) return 'Enter a valid email';
-                                return null;
-                              },
+                              validator: AppValidators.email,
                             ),
                             const SizedBox(height: 32),
 

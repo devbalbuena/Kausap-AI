@@ -6,6 +6,7 @@ import '../../widgets/auth_widgets.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../widgets/accessible_error_widget.dart';
+import '../../utils/app_validators.dart';
 import 'role_selection_screen.dart';
 import '../home/home_screen.dart';
 import '../professional/professional_base_screen.dart';
@@ -177,11 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: 'you@example.com',
                             errorText: _emailError,
                           ),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) return 'Email is required';
-                            if (!v.contains('@')) return 'Enter a valid email';
-                            return null;
-                          },
+                          validator: AppValidators.email,
                           onChanged: (_) => _clearErrors(),
                         ),
 
@@ -209,10 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   setState(() => _obscurePassword = !_obscurePassword),
                             ),
                           ),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Password is required';
-                            return null;
-                          },
+                          validator: AppValidators.password,
                           onChanged: (_) => _clearErrors(),
                         ),
 
