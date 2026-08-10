@@ -4,6 +4,7 @@ import '../../services/api_client.dart';
 import '../../services/cache_service.dart';
 import '../../config/api_config.dart';
 import '../../widgets/skeleton_widgets.dart';
+import '../../widgets/retry_widget.dart';
 import 'package:intl/intl.dart';
 import 'widgets/rate_session_bottom_sheet.dart';
 import 'widgets/session_notes_bottom_sheet.dart';
@@ -73,24 +74,15 @@ class _PastSessionsViewState extends State<PastSessionsView> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_error!, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _isLoading = true;
-                  _error = null;
-                });
-                _fetchPastSessions();
-              },
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+      return RetryWidget(
+        message: _error!,
+        onRetry: () {
+          setState(() {
+            _isLoading = true;
+            _error = null;
+          });
+          _fetchPastSessions(forceRefresh: true);
+        },
       );
     }
 

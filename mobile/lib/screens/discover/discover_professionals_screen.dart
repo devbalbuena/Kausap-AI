@@ -5,6 +5,7 @@ import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../services/discover_service.dart';
 import '../../services/connectivity_service.dart';
+import '../../widgets/retry_widget.dart';
 import 'professional_profile_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/skeleton_loading_widget.dart';
@@ -247,9 +248,14 @@ class _DiscoverProfessionalsScreenState extends State<DiscoverProfessionalsScree
                             itemBuilder: (context, index) => const ProfessionalCardSkeleton(),
                           )
                         : _error != null
-                            ? Center(
-                                child: Text(_error!,
-                                    style: const TextStyle(fontFamily: 'Poppins', color: Color(0xFFEF4444))))
+                            ? RetryWidget(
+                                compact: true,
+                                message: _error!,
+                                onRetry: () {
+                                  setState(() => _error = null);
+                                  _fetchProfessionals();
+                                },
+                              )
                             : _professionals.isEmpty
                                 ? EmptyStateWidget(
                                     icon: Icons.search_off_rounded,

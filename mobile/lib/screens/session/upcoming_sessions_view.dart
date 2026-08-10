@@ -4,6 +4,7 @@ import '../../services/api_client.dart';
 import '../../services/cache_service.dart';
 import '../../config/api_config.dart';
 import '../../widgets/skeleton_widgets.dart';
+import '../../widgets/retry_widget.dart';
 import 'session_details_screen.dart';
 import 'widgets/cancel_session_bottom_sheet.dart';
 import 'package:intl/intl.dart';
@@ -107,24 +108,15 @@ class _UpcomingSessionsViewState extends State<UpcomingSessionsView> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_error!, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _isLoading = true;
-                  _error = null;
-                });
-                _fetchUpcomingSessions();
-              },
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+      return RetryWidget(
+        message: _error!,
+        onRetry: () {
+          setState(() {
+            _isLoading = true;
+            _error = null;
+          });
+          _fetchUpcomingSessions(forceRefresh: true);
+        },
       );
     }
 
