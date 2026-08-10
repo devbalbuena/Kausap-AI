@@ -260,7 +260,6 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                                 ),
                               ),
                               validator: (v) => AppValidators.confirmPassword(v, _passwordController.text),
-                              },
                             ),
                             const SizedBox(height: 28),
 
