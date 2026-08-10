@@ -48,10 +48,18 @@ jobs:
 
       # ── 7. Build the APK ──────────────────────────────────────────────────
       - name: 🔨 Build Release APK
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi -v > flutter_build_log.txt 2>&1
         working-directory: mobile
         # --split-per-abi creates smaller APKs per CPU architecture
         # arm64-v8a = works on all modern Android phones (2017+)
+
+      # ── 7.1 Upload Build Log (for debugging) ─────────────────────────────
+      - name: 📤 Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-build-log-${{ github.run_number }}
+          path: mobile/flutter_build_log.txt
 
       # ── 8. List built APKs (for debugging) ────────────────────────────────
       - name: 📋 List built APK files
