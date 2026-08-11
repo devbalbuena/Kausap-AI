@@ -1,7 +1,7 @@
 class ApiConfig {
   // Use 10.0.2.2 for Android Emulator connecting to localhost
   // Use your local IP (e.g. 192.168.x.x) if testing on physical device
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  static const String baseUrl = 'https://kausap-ai.onrender.com';
 
   // Auth endpoints
   static const String register = '/auth/register';
