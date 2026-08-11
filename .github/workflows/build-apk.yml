@@ -82,7 +82,9 @@ jobs:
 
           for apk in mobile/build/app/outputs/flutter-apk/*.apk; do
             filename=$(basename "$apk" .apk)
-            arch="${filename##*-}"
+            # Extract architecture from names like 'app-arm64-v8a-release'
+            arch=${filename#app-}
+            arch=${arch%-release}
             cp "$apk" "release-apks/KausapAI-beta-build${BUILD_NUM}-${DATE}-${arch}.apk"
           done
 
