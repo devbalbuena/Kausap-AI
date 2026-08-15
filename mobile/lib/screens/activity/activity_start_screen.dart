@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import 'activity_screen.dart';
 
@@ -296,17 +298,24 @@ class ActivityStartScreen extends StatelessWidget {
             width: double.infinity,
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
+                // Save mindfulness completion for today's quest
+                final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                await const FlutterSecureStorage().write(key: 'mindfulness_$today', value: 'completed');
+
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Activity started! 🎉'),
+                    content: Text('Activity completed! 🎉 Quest updated.'),
                     duration: Duration(seconds: 2),
+                    backgroundColor: Colors.green,
                   ),
                 );
+                Navigator.pop(context); // Go back after completing
               },
-              icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+              icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
               label: const Text(
-                'Start Activity',
+                'Complete Activity',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,

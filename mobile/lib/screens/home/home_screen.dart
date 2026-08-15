@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/intl.dart';
 import '../../utils/app_routes.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
@@ -60,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _fetchUnreadCount();
     _fetchStreak();
+    _fetchQuests();
   }
 
   @override
@@ -80,6 +83,47 @@ class _HomeScreenState extends State<HomeScreen> {
     // Re-fetch data
     _fetchUnreadCount();
     _fetchStreak();
+    _fetchQuests();
+  }
+
+  Future<void> _fetchQuests() async {
+    bool moodCompleted = false;
+    bool journalCompleted = false;
+    bool mindfulnessCompleted = false;
+
+    try {
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      // 1. Check mood
+      try {
+        final moodData = await ApiClient().get(ApiConfig.mood);
+        if (moodData is List) {
+          moodCompleted = moodData.any((e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false);
+        }
+      } catch (_) {}
+
+      // 2. Check journal
+      final storage = const FlutterSecureStorage();
+      final savedJournal = await storage.read(key: 'journal_$todayStr');
+      if (savedJournal != null && savedJournal.trim().isNotEmpty) {
+        journalCompleted = true;
+      }
+
+      // 3. Check mindfulness
+      final savedMindfulness = await storage.read(key: 'mindfulness_$todayStr');
+      if (savedMindfulness == 'completed') {
+        mindfulnessCompleted = true;
+      }
+
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _dailyQuests[0]['completed'] = moodCompleted;
+        _dailyQuests[1]['completed'] = journalCompleted;
+        _dailyQuests[2]['completed'] = mindfulnessCompleted;
+      });
+    }
   }
 
   Future<void> _fetchStreak() async {
@@ -587,20 +631,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          ..._dailyQuests.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final quest = entry.value;
+          ..._dailyQuests.map((quest) {
             final isCompleted = quest['completed'] as bool;
             
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _dailyQuests[idx]['completed'] = !isCompleted;
-                  });
-                },
-                borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   children: [
                     Container(
