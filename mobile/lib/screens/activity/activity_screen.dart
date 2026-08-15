@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/auth_provider.dart';
 import 'activity_start_screen.dart';
 
 // ── Data model for an activity ──────────────────────────────────────────────
@@ -258,13 +260,27 @@ class _ActivityScreenState extends State<ActivityScreen> {
           children: [
             const Icon(Icons.notifications_outlined, color: AppColors.textPrimary, size: 24),
             const SizedBox(width: 12),
-            CircleAvatar(
-              radius: 17,
-              backgroundColor: AppColors.primary.withAlpha(30),
-              child: Text(
-                'U',
-                style: AppTextStyles.label.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
-              ),
+            Consumer<AuthProvider>(
+              builder: (context, auth, _) {
+                final user = auth.currentUser ?? {};
+                final name = user['first_name'] ?? 'U';
+                final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+                final avatarUrl = user['avatar_url'] as String?;
+                return CircleAvatar(
+                  radius: 17,
+                  backgroundColor: AppColors.primary.withAlpha(30),
+                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                      ? NetworkImage(avatarUrl)
+                      : null,
+                  child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                      ? Text(
+                          initial,
+                          style: AppTextStyles.label.copyWith(
+                              color: AppColors.primary, fontWeight: FontWeight.w700),
+                        )
+                      : null,
+                );
+              },
             ),
           ],
         ),

@@ -285,7 +285,27 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Image.network('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg', width: 24, height: 24),
+                              // Google 'G' logo — painted inline to avoid broken SVG network loading
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: const Color(0xFFDDDDDD)),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'G',
+                                    style: TextStyle(
+                                      fontFamily: 'Arial',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF4285F4), // Google blue
+                                    ),
+                                  ),
+                                ),
+                              ),
                               const SizedBox(width: 12),
                               Text('Sign in with Google', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                             ],
@@ -304,7 +324,26 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Image.network('https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png', width: 24, height: 24),
+                              // Facebook 'f' logo — painted inline to avoid broken network loading
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1877F2), // Facebook blue
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'f',
+                                    style: TextStyle(
+                                      fontFamily: 'Arial',
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
                               const SizedBox(width: 12),
                               Text('Sign in with Facebook', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                             ],
