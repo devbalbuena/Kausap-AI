@@ -43,7 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _unreadCount = 0;
   int _streak = 0;
   int _goal = 30;
-  
+  final ScrollController _scrollController = ScrollController();
+
   final List<Map<String, dynamic>> _dailyQuests = [
     {'title': 'Log your mood', 'completed': false},
     {'title': 'Write a journal entry', 'completed': false},
@@ -57,6 +58,26 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchUnreadCount();
+    _fetchStreak();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _refreshHome() {
+    // Scroll back to top
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+      );
+    }
+    // Re-fetch data
     _fetchUnreadCount();
     _fetchStreak();
   }
@@ -123,135 +144,131 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Builds the home tab content (the main scrollable dashboard)
+  Widget _buildHomeTab() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: BrandedRefreshIndicator(
+          onRefresh: _onRefresh,
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const SizedBox(height: 20),
+                    _buildHeader(),
+                    const SizedBox(height: 20),
+                    _buildGreeting(),
+                    const SizedBox(height: 20),
+                    _buildStreakCard(),
+                    const SizedBox(height: 16),
+                    _buildSosBanner(),
+                    const SizedBox(height: 16),
+                    _buildDailyQuestsCard(),
+                    const SizedBox(height: 16),
+                    _buildQuickActionCard(
+                      iconBg: AppColors.checkinIcon,
+                      icon: Icons.favorite_rounded,
+                      iconColor: const Color(0xFFE74C3C),
+                      title: 'How are you feeling today?',
+                      subtitle: 'Tap to check-in',
+                      onTap: () => Navigator.of(context).push(slideRoute(const DailyCheckinStep1Screen())),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildQuickActionCard(
+                      iconBg: const Color(0xFFFEF3C7),
+                      icon: Icons.edit_note_rounded,
+                      iconColor: const Color(0xFFD97706),
+                      title: 'Daily Journal',
+                      subtitle: 'Write your thoughts and reflect',
+                      onTap: () => Navigator.of(context).push(slideRoute(const DailyJournalScreen())),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildQuickActionCard(
+                      iconBg: AppColors.chatbotIcon,
+                      icon: Icons.smart_toy_rounded,
+                      iconColor: const Color(0xFF0077B6),
+                      title: 'Chat with Kausap AI',
+                      subtitle: 'Need someone to talk to?',
+                      onTap: () => Navigator.of(context).push(slideRoute(const ChatbotScreen())),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildQuickActionCard(
+                      iconBg: const Color(0xFFD1FAE5),
+                      icon: Icons.self_improvement_rounded,
+                      iconColor: const Color(0xFF059669),
+                      title: 'Mindfulness Exercises',
+                      subtitle: 'Breathe and relax',
+                      onTap: () => Navigator.of(context).push(slideRoute(const MindfulnessExercisesScreen())),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildQuickActionCard(
+                      iconBg: const Color(0xFFF1F5F9),
+                      icon: Icons.search_rounded,
+                      iconColor: const Color(0xFF3B82F6),
+                      title: 'Find a Professional',
+                      subtitle: 'Discover therapists and counselors',
+                      onTap: () => Navigator.of(context).push(slideRoute(const DiscoverProfessionalsScreen())),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildQuickActionCard(
+                      iconBg: const Color(0xFFE2E8F0),
+                      icon: Icons.person_rounded,
+                      iconColor: const Color(0xFF1E293B),
+                      title: 'Message Professional',
+                      subtitle: 'Directly contact your therapist',
+                      onTap: () => Navigator.of(context).push(
+                        slideRoute(const DirectMessageScreen(
+                          otherUserId: 'dummy-prof-id',
+                          otherUserName: 'Dr. Jane Smith',
+                          otherUserRole: 'professional',
+                        ))
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const UpcomingSessionWidget(),
+                    const SizedBox(height: 16),
+                    _buildQuoteCard(),
+                    const SizedBox(height: 16),
+                    _buildSuggestedActivity(),
+                    const SizedBox(height: 16),
+                    _buildBookSessionCard(),
+                    const SizedBox(height: 16),
+                    _buildMoodTrends(),
+                    const SizedBox(height: 20),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Define the 5 tabs as inline widgets (keeps bottom nav always visible)
+    final List<Widget> tabs = [
+      _buildHomeTab(),                                      // 0 – Home
+      const ActivityScreen(),                              // 1 – Activity
+      const ChatbotScreen(),                               // 2 – Kausap AI
+      const SessionTabsScreen(),                           // 3 – Sessions
+      const ProfileScreen(),                               // 4 – Profile
+    ];
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: BrandedRefreshIndicator(
-                    onRefresh: _onRefresh,
-                    child: CustomScrollView(
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        sliver: SliverList(
-                          delegate: SliverChildListDelegate([
-                            const SizedBox(height: 20),
-                            _buildHeader(),
-                            const SizedBox(height: 20),
-                            _buildGreeting(),
-                            const SizedBox(height: 20),
-                            _buildStreakCard(),
-                            const SizedBox(height: 16),
-                            _buildSosBanner(),
-                            const SizedBox(height: 16),
-                            _buildDailyQuestsCard(),
-                            const SizedBox(height: 16),
-                            _buildQuickActionCard(
-                              iconBg: AppColors.checkinIcon,
-                              icon: Icons.favorite_rounded,
-                              iconColor: const Color(0xFFE74C3C),
-                              title: 'How are you feeling today?',
-                              subtitle: 'Tap to check-in',
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  slideRoute(const DailyCheckinStep1Screen())
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildQuickActionCard(
-                              iconBg: const Color(0xFFFEF3C7),
-                              icon: Icons.edit_note_rounded,
-                              iconColor: const Color(0xFFD97706),
-                              title: 'Daily Journal',
-                              subtitle: 'Write your thoughts and reflect',
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  slideRoute(const DailyJournalScreen())
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildQuickActionCard(
-                              iconBg: AppColors.chatbotIcon,
-                              icon: Icons.smart_toy_rounded,
-                              iconColor: const Color(0xFF0077B6),
-                              title: 'Chat with Kausap AI',
-                              subtitle: 'Need someone to talk to?',
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  slideRoute(const ChatbotScreen())
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildQuickActionCard(
-                              iconBg: const Color(0xFFD1FAE5),
-                              icon: Icons.self_improvement_rounded,
-                              iconColor: const Color(0xFF059669),
-                              title: 'Mindfulness Exercises',
-                              subtitle: 'Breathe and relax',
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  slideRoute(const MindfulnessExercisesScreen())
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildQuickActionCard(
-                              iconBg: const Color(0xFFF1F5F9),
-                              icon: Icons.search_rounded,
-                              iconColor: const Color(0xFF3B82F6),
-                              title: 'Find a Professional',
-                              subtitle: 'Discover therapists and counselors',
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  slideRoute(const DiscoverProfessionalsScreen())
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildQuickActionCard(
-                              iconBg: const Color(0xFFE2E8F0),
-                              icon: Icons.person_rounded,
-                              iconColor: const Color(0xFF1E293B),
-                              title: 'Message Professional',
-                              subtitle: 'Directly contact your therapist',
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  slideRoute(const DirectMessageScreen(
-                                      otherUserId: 'dummy-prof-id',
-                                      otherUserName: 'Dr. Jane Smith',
-                                      otherUserRole: 'professional',))
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            const SizedBox(height: 16),
-                            const UpcomingSessionWidget(),
-                            const SizedBox(height: 16),
-                            _buildQuoteCard(),
-                            const SizedBox(height: 16),
-                            _buildSuggestedActivity(),
-                            const SizedBox(height: 16),
-                            _buildBookSessionCard(),
-                            const SizedBox(height: 16),
-                            _buildMoodTrends(),
-                            const SizedBox(height: 20),
-                          ]),
-                        ),
-                      ),
-                    ],
-                  ),
-                  ),
-                ),
+              child: IndexedStack(
+                index: _navIndex,
+                children: tabs,
               ),
             ),
             _buildBottomNav(),
@@ -922,19 +939,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   selected: selected,
                   child: GestureDetector(
                     onTap: () {
-                      setState(() => _navIndex = i);
-                      if (i == 1) {
-                        Navigator.of(context).push(
-                          slideRoute(const ActivityScreen())
-                        );
-                      } else if (i == 3) {
-                        Navigator.of(context).push(
-                          slideRoute(const SessionTabsScreen())
-                        );
-                      } else if (i == 4) {
-                        Navigator.of(context).push(
-                          slideRoute(const ProfileScreen())
-                        );
+                      if (i == 0 && _navIndex == 0) {
+                        // Already on Home — scroll to top and refresh
+                        _refreshHome();
+                      } else {
+                        setState(() => _navIndex = i);
                       }
                     },
                     behavior: HitTestBehavior.opaque,

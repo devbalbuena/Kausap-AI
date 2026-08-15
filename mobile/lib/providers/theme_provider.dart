@@ -7,7 +7,7 @@ class ThemeProvider extends ChangeNotifier {
   static const String _highContrastKey = 'high_contrast';
   static const String _accentColorKey = 'accent_color';
 
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.light; // Default to light for first-time users
   double _textScaleFactor = 1.0; // range: 0.8 to 1.6
   bool _highContrast = false;
   Color _accentColor = const Color(0xFF0077B6); // Default Blue

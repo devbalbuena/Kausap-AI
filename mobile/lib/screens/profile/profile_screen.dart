@@ -124,14 +124,28 @@ class ProfileScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           children: [
-            // Title
-            Text(
-              'Profile',
-              style: AppTextStyles.heading1.copyWith(
-                fontSize: 24,
-                letterSpacing: -0.64,
-                color: const Color(0xFF3D405B),
-              ),
+            // Title row with optional back button
+            Row(
+              children: [
+                if (Navigator.of(context).canPop())
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    onPressed: () => Navigator.of(context).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    color: const Color(0xFF3D405B),
+                  ),
+                if (Navigator.of(context).canPop())
+                  const SizedBox(width: 8),
+                Text(
+                  'Profile',
+                  style: AppTextStyles.heading1.copyWith(
+                    fontSize: 24,
+                    letterSpacing: -0.64,
+                    color: const Color(0xFF3D405B),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
 
