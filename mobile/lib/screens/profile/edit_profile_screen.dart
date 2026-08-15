@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -235,16 +236,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isSaving = true);
     try {
       final authProvider = context.read<AuthProvider>();
+
+      // Determine the avatar value to send:
+      // - If user picked from gallery → convert to base64 data URI
+      // - If user picked a preset avatar URL → send the URL
+      // - Otherwise keep the existing avatar_url from the server
+      String? avatarValue = _avatarUrl;
+      if (_imageFile != null) {
+        final bytes = await _imageFile!.readAsBytes();
+        final base64Str = base64Encode(bytes);
+        final ext = _imageFile!.path.split('.').last.toLowerCase();
+        final mime = ext == 'png' ? 'image/png' : 'image/jpeg';
+        avatarValue = 'data:$mime;base64,$base64Str';
+      }
+
       await authProvider.updateProfile({
         'first_name': _firstName,
         'last_name': _lastName,
         'birthday': DateFormat('yyyy-MM-dd').format(_birthday),
         'gender': _gender,
-        'avatar_url': _avatarUrl,
+        'avatar_url': avatarValue,
       });
+
+      // Refresh user data so every screen that reads AuthProvider updates
+      await authProvider.refreshUser();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
+          const SnackBar(
+            content: Text('Profile updated successfully! ✅'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(context);
       }

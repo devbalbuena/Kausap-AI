@@ -358,14 +358,27 @@ class _HomeScreenState extends State<HomeScreen> {
             button: true,
             child: GestureDetector(
               onTap: _showProfileMenu,
-              child: CircleAvatar(
-                radius: 17,
-                backgroundColor: AppColors.primary.withAlpha(30),
-                child: Text(
-                  _firstName.isNotEmpty ? _firstName[0].toUpperCase() : 'U',
-                  style: AppTextStyles.label.copyWith(
-                      color: AppColors.primary, fontWeight: FontWeight.w700),
-                ),
+              child: Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  final user = auth.currentUser ?? widget.user;
+                  final name = user['first_name'] ?? 'U';
+                  final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+                  final avatarUrl = user['avatar_url'] as String?;
+                  return CircleAvatar(
+                    radius: 17,
+                    backgroundColor: AppColors.primary.withAlpha(30),
+                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                        ? NetworkImage(avatarUrl)
+                        : null,
+                    child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                        ? Text(
+                            initial,
+                            style: AppTextStyles.label.copyWith(
+                                color: AppColors.primary, fontWeight: FontWeight.w700),
+                          )
+                        : null,
+                  );
+                },
               ),
             ),
           ),

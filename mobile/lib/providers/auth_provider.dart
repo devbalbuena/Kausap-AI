@@ -119,4 +119,16 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Re-fetches the current user from the server and notifies all listeners.
+  /// Call this after any profile update to sync the UI immediately.
+  Future<void> refreshUser() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      _currentUser = user;
+      notifyListeners();
+    } catch (_) {
+      // Silently ignore refresh errors
+    }
+  }
 }
