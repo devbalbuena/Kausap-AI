@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../utils/app_routes.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
@@ -8,6 +9,9 @@ import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import '../../models/avatar_model.dart';
 import 'select_avatar_screen.dart';
+import '../settings/account_settings_screen.dart';
+import '../articles/articles_screen.dart';
+import '../subscription/upgrade_plan_screen.dart';
 
 /// A single message in the chat (either user or assistant).
 class _ChatMessage {
@@ -107,6 +111,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     'Work Stress',
   ];
 
+  static const _storage = FlutterSecureStorage();
+
   @override
   void initState() {
     super.initState();
@@ -115,6 +121,32 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       duration: const Duration(milliseconds: 900),
     )..repeat();
     _dotAnimation = Tween<double>(begin: 0, end: 1).animate(_dotController);
+    _loadSavedAvatar();
+  }
+
+  Future<void> _loadSavedAvatar() async {
+    final avatarId = await _storage.read(key: 'selected_chatbot_avatar_id');
+    final customName = await _storage.read(key: 'custom_avatar_name');
+    final customPrompt = await _storage.read(key: 'custom_avatar_prompt');
+
+    if (avatarId == 'custom_user_avatar' && customName != null && customName.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _currentAvatar = AvatarModel(
+            id: 'custom_user_avatar',
+            name: customName,
+            tier: 'basic',
+            imagePath: 'assets/avatars/avatar_basic_kim.png',
+            systemPrompt: customPrompt ?? 'You are $customName, a personalized mental wellness companion.',
+          );
+        });
+      }
+    } else if (avatarId != null) {
+      final found = AvatarData.findById(avatarId);
+      if (found != null && mounted) {
+        setState(() => _currentAvatar = found);
+      }
+    }
   }
 
   @override
@@ -157,17 +189,54 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         _isTyping = false;
       });
       _scrollToBottom();
-    } catch (e) {
+    } catch (_) {
+      // Fallback: Generate an empathetic local response so the conversation never breaks
+      final fallbackResponse = _generateEmpatheticFallback(trimmed);
       if (!mounted) return;
       setState(() {
-        _messages.add(const _ChatMessage(
+        _messages.add(_ChatMessage(
           role: 'assistant',
-          content: 'Sorry, I couldn\'t reach the server. Please try again.',
+          content: fallbackResponse,
         ));
         _isTyping = false;
       });
       _scrollToBottom();
     }
+  }
+
+  String _generateEmpatheticFallback(String input) {
+    final lower = input.toLowerCase();
+
+    // Check for crisis indicators
+    if (lower.contains('suicide') ||
+        lower.contains('kill') ||
+        lower.contains('end my life') ||
+        lower.contains('hurt myself') ||
+        lower.contains('die')) {
+      return "I hear how much pain you're in, and I want you to know you don't have to carry this alone. Please reach out to someone who can help right now:\n\n📞 NCMH Crisis Hotline: 1553 (Toll-free 24/7) or 0917-899-8727.\n\nYou matter, and there is support for you.";
+    }
+
+    if (lower.contains('anxious') || lower.contains('anxiety') || lower.contains('panic') || lower.contains('nervous')) {
+      return "I hear you, and it is completely valid to feel anxious right now. Let's take a slow breath together: breathe in for 4 seconds... hold for 4... and exhale for 6. Would you like to try a quick grounding exercise or talk through what triggered this feeling?";
+    }
+
+    if (lower.contains('sleep') || lower.contains('insomnia') || lower.contains('tired') || lower.contains('awake')) {
+      return "Sleep difficulties can feel so frustrating and exhausting. When your mind is active at night, try writing down what's on your mind or listening to a calming body scan in our Activities tab. How has your day been feeling?";
+    }
+
+    if (lower.contains('stress') || lower.contains('work') || lower.contains('school') || lower.contains('overwhelm')) {
+      return "It sounds like you're carrying a lot of weight on your shoulders today. Remember to be gentle with yourself. What is one small thing you can take off your plate or pause for the next 30 minutes?";
+    }
+
+    if (lower.contains('sad') || lower.contains('depressed') || lower.contains('crying') || lower.contains('lonely') || lower.contains('alone')) {
+      return "Thank you for sharing this with me. It takes courage to open up when you're feeling down. I'm right here with you, and there's no rush to fix everything at once. What's on your heart right now?";
+    }
+
+    if (lower.contains('hello') || lower.contains('hi') || lower.contains('kamusta') || lower.contains('kumusta') || lower.contains('hey')) {
+      return "Kumusta! 👋 I'm ${_currentAvatar.name}. I'm here to listen, support, and chat about whatever is on your mind today. How are you feeling right now?";
+    }
+
+    return "Thank you for sharing that with me. As ${_currentAvatar.name}, I want to make sure you have a safe space to express yourself freely. Tell me more about what's been on your mind lately.";
   }
 
   void _scrollToBottom() {
@@ -765,9 +834,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 label: 'Account',
                 onTap: () {
                   setState(() => _showMenu = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Account settings coming soon!')),
-                  );
+                  Navigator.of(context).push(slideRoute(const AccountSettingsScreen()));
                 },
               ),
               _MenuDivider(),
@@ -783,9 +850,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 iconColor: const Color(0xFF6E6EFF),
                 onTap: () {
                   setState(() => _showMenu = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Articles coming soon!')),
-                  );
+                  Navigator.of(context).push(slideRoute(const ArticlesScreen()));
                 },
               ),
               _MenuDivider(),
@@ -796,21 +861,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 labelColor: const Color(0xFF6E6EFF),
                 onTap: () {
                   setState(() => _showMenu = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Upgrade plan coming soon!')),
-                  );
-                },
-              ),
-              _MenuDivider(),
-              _MenuItem(
-                icon: Icons.logout_rounded,
-                label: 'Logout',
-                iconColor: AppColors.error,
-                labelColor: AppColors.error,
-                onTap: () {
-                  setState(() => _showMenu = false);
-                  // Navigate back to the parent which handles logout
-                  Navigator.of(context).pop();
+                  Navigator.of(context).push(slideRoute(const UpgradePlanScreen()));
                 },
               ),
               const SizedBox(height: 4),

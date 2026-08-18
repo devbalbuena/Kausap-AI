@@ -28,6 +28,9 @@ import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import '../crisis/sos_screen.dart';
 import '../crisis/quick_escape_screen.dart';
+import '../articles/articles_data.dart';
+import '../articles/articles_screen.dart';
+import '../articles/article_detail_screen.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -360,6 +363,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildSuggestedActivity(),
                     const SizedBox(height: 16),
                     _buildBookSessionCard(),
+                    const SizedBox(height: 16),
+                    _buildArticlesSection(),
                     const SizedBox(height: 16),
                     _buildMoodTrends(),
                     const SizedBox(height: 20),
@@ -951,6 +956,152 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.accentOrange.withAlpha(100), size: 80),
         ],
       ),
+    );
+  }
+
+  // ── Articles & Wellness Insights Section ─────────────────────────────────
+  Widget _buildArticlesSection() {
+    final previewArticles = ArticlesData.all.take(4).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.article_outlined, color: AppColors.primary, size: 22),
+                const SizedBox(width: 8),
+                Text('Articles & Insights', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+              ],
+            ),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(slideRoute(const ArticlesScreen())),
+              child: Text(
+                'See All',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text('Curated reads for your mental wellness', style: AppTextStyles.subheading),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 175,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: previewArticles.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final article = previewArticles[index];
+              return GestureDetector(
+                onTap: () => Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article))),
+                child: Container(
+                  width: 240,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0x1AC0C9C2)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: article.themeColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              article.category,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: article.themeColor,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            article.readTime,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        article.title,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1F2937),
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 10,
+                            backgroundColor: article.themeColor.withAlpha(30),
+                            child: Text(
+                              article.author[0],
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: article.themeColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              article.author,
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                color: Color(0xFF4B5563),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 

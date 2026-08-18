@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/avatar_model.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/app_routes.dart';
+import '../subscription/upgrade_plan_screen.dart';
 
-/// Phase 21 — Select Avatar Screen
-/// Figma: "Premium/Select Avatar"
-/// 
-/// Shows a grid of Basic (free) avatars and Premium (locked) avatars.
-/// Tapping a free avatar selects it and pops back.
-/// Tapping a premium avatar shows an "Upgrade Plan" nudge.
 class SelectAvatarScreen extends StatefulWidget {
   final AvatarModel currentAvatar;
   const SelectAvatarScreen({super.key, required this.currentAvatar});
@@ -17,27 +14,57 @@ class SelectAvatarScreen extends StatefulWidget {
 }
 
 class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
+  static const _storage = FlutterSecureStorage();
   late AvatarModel _selected;
+  List<AvatarModel> _customAvatars = [];
+  bool _isPro = false;
 
   @override
   void initState() {
     super.initState();
     _selected = widget.currentAvatar;
+    _loadCustomAvatars();
   }
 
-  void _onTapAvatar(AvatarModel avatar) {
-    if (avatar.isPremium) {
+  Future<void> _loadCustomAvatars() async {
+    final pro = await _storage.read(key: 'is_pro_member');
+    final customName = await _storage.read(key: 'custom_avatar_name');
+    final customPrompt = await _storage.read(key: 'custom_avatar_prompt');
+
+    if (mounted) {
+      setState(() {
+        _isPro = pro == 'true';
+        if (customName != null && customName.isNotEmpty) {
+          _customAvatars = [
+            AvatarModel(
+              id: 'custom_user_avatar',
+              name: customName,
+              tier: 'basic',
+              imagePath: 'assets/avatars/avatar_basic_kim.png',
+              systemPrompt: customPrompt ?? 'You are $customName, a personalized mental wellness AI companion.',
+            ),
+          ];
+        }
+      });
+    }
+  }
+
+  Future<void> _onTapAvatar(AvatarModel avatar) async {
+    if (avatar.isPremium && !_isPro) {
       _showUpgradeDialog();
       return;
     }
     setState(() => _selected = avatar);
-    Navigator.of(context).pop(avatar);
+    await _storage.write(key: 'selected_chatbot_avatar_id', value: avatar.id);
+    if (mounted) {
+      Navigator.of(context).pop(avatar);
+    }
   }
 
   void _showUpgradeDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
@@ -47,16 +74,24 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
           ],
         ),
         content: Text(
-          'This avatar is available with Kausap AI Premium. Upgrade your plan to unlock all premium avatars and exclusive features.',
+          'This specialist avatar is available with Kausap AI Pro. Upgrade your plan to unlock all premium AI personas and exclusive features.',
           style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Maybe Later'),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Maybe Later', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.of(context).push(slideRoute(const UpgradePlanScreen()));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             child: const Text('Upgrade Plan'),
           ),
         ],
@@ -64,9 +99,148 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
     );
   }
 
+  void _showCreateCustomAvatarSheet() {
+    final nameController = TextEditingController();
+    String selectedPersona = 'Empathetic & Nurturing';
+    final personas = [
+      'Empathetic & Nurturing',
+      'Cognitive & Solution-Focused',
+      'Casual & Sibling/Friend Vibe',
+      'Mindful & Zen Coach',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('✨', style: TextStyle(fontSize: 22)),
+                  const SizedBox(width: 8),
+                  Text('Create Custom Companion', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              Text('Companion Name', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: nameController,
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Maya, Coach Leo, Ate Sarah',
+                  hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.textSecondary),
+                  filled: true,
+                  fillColor: const Color(0xFFF3F4F6),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Text('Personality & Tone', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: personas.map((p) {
+                  final isSel = selectedPersona == p;
+                  return GestureDetector(
+                    onTap: () => setSheetState(() => selectedPersona = p),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSel ? AppColors.primary : const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isSel ? AppColors.primary : const Color(0x22000000)),
+                      ),
+                      child: Text(
+                        p,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isSel ? Colors.white : const Color(0xFF374151),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) return;
+
+                    final prompt = 'You are $name, a $selectedPersona mental wellness companion for the user. Always be warm, safe, and helpful.';
+                    await _storage.write(key: 'custom_avatar_name', value: name);
+                    await _storage.write(key: 'custom_avatar_prompt', value: prompt);
+
+                    final custom = AvatarModel(
+                      id: 'custom_user_avatar',
+                      name: name,
+                      tier: 'basic',
+                      imagePath: 'assets/avatars/avatar_basic_kim.png',
+                      systemPrompt: prompt,
+                    );
+
+                    if (mounted) {
+                      setState(() {
+                        _customAvatars = [custom];
+                      });
+                    }
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    await _onTapAvatar(custom);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Save & Select Companion', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final basicAvatars = AvatarData.all.where((a) => !a.isPremium).toList();
+    final basicAvatars = [
+      ...AvatarData.all.where((a) => !a.isPremium),
+      ..._customAvatars,
+    ];
     final premiumAvatars = AvatarData.all.where((a) => a.isPremium).toList();
 
     return Scaffold(
@@ -108,11 +282,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Custom avatar creation coming soon!')),
-                  );
-                },
+                onTap: _showCreateCustomAvatarSheet,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
@@ -124,10 +294,10 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add, size: 18, color: AppColors.primary),
+                      const Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text(
-                        'Create Custom Avatar',
+                        'Create Custom Companion Avatar',
                         style: AppTextStyles.body.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
@@ -145,7 +315,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 children: [
                   // Basic Section
-                  Text('Basic', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+                  Text('Basic Personas', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
                   const SizedBox(height: 12),
                   GridView.builder(
                     shrinkWrap: true,
@@ -169,7 +339,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   // Premium Section
                   Row(
                     children: [
-                      Text('Premium', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+                      Text('Specialist Personas', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
                       const SizedBox(width: 8),
                       const Text('👑', style: TextStyle(fontSize: 14)),
                     ],
@@ -188,6 +358,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                     itemBuilder: (_, i) => _AvatarCard(
                       avatar: premiumAvatars[i],
                       isSelected: _selected.id == premiumAvatars[i].id,
+                      isProUnlocked: _isPro,
                       onTap: () => _onTapAvatar(premiumAvatars[i]),
                     ),
                   ),
@@ -204,11 +375,13 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
 class _AvatarCard extends StatelessWidget {
   final AvatarModel avatar;
   final bool isSelected;
+  final bool isProUnlocked;
   final VoidCallback onTap;
 
   const _AvatarCard({
     required this.avatar,
     required this.isSelected,
+    this.isProUnlocked = false,
     required this.onTap,
   });
 
@@ -258,12 +431,12 @@ class _AvatarCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => Container(
                         color: const Color(0xFFEEF2FF),
-                        child: Icon(Icons.person, color: AppColors.primary, size: 40),
+                        child: const Icon(Icons.person, color: AppColors.primary, size: 40),
                       ),
                     ),
                   ),
                 ),
-                if (avatar.isPremium)
+                if (avatar.isPremium && !isProUnlocked)
                   Positioned(
                     top: 0,
                     right: 0,
@@ -288,10 +461,10 @@ class _AvatarCard extends StatelessWidget {
             ),
             if (avatar.isPremium)
               Text(
-                'Premium',
+                isProUnlocked ? 'Unlocked' : 'Pro Specialist',
                 style: AppTextStyles.body.copyWith(
                   fontSize: 11,
-                  color: const Color(0xFFFFC107),
+                  color: isProUnlocked ? const Color(0xFF10B981) : const Color(0xFFFFC107),
                   fontWeight: FontWeight.w500,
                 ),
               ),
