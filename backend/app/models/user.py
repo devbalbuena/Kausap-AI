@@ -48,6 +48,7 @@ class User(SQLModel, table=True):
     # Optional extras
     address: Optional[str] = Field(default=None)
     bio: Optional[str] = Field(default=None)
+    avatar_url: Optional[str] = Field(default=None)
 
     # For clients only — occupation dropdown
     occupation: Optional[OccupationEnum] = Field(default=None)

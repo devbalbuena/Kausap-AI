@@ -153,59 +153,70 @@ class ProfileScreen extends StatelessWidget {
             Consumer<AuthProvider>(
               builder: (context, auth, _) {
                 final user = auth.currentUser ?? {};
-                final firstName = user['first_name'] ?? 'Kausap';
-                final lastName = user['last_name'] ?? 'AI';
-                final email = user['email'] ?? 'kausap.ai@gmail.com';
-                final avatarUrl = user['avatar_url'] ?? 'https://i.pravatar.cc/150?img=11';
+                final firstName = user['first_name'] ?? 'User';
+                final lastName = user['last_name'] ?? '';
+                final email = user['email'] ?? '';
+                final avatarUrl = user['avatar_url'] as String?;
                 
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x140078D4),
-                        blurRadius: 12,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      CachedAvatar(
-                        imageUrl: avatarUrl,
-                        radius: 28.5,
-                        fallbackInitial: firstName,
-                        backgroundColor: Colors.white.withAlpha(40),
-                        foregroundColor: Colors.white,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$firstName $lastName',
-                              style: AppTextStyles.heading2.copyWith(
-                                fontSize: 14,
-                                color: Colors.white,
-                                letterSpacing: 0,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              email,
-                              style: AppTextStyles.body.copyWith(
-                                fontSize: 12,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).push(slideRoute(const EditProfileScreen())),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x140078D4),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        CachedAvatar(
+                          imageUrl: avatarUrl,
+                          radius: 28.5,
+                          fallbackInitial: firstName,
+                          backgroundColor: Colors.white.withAlpha(40),
+                          foregroundColor: Colors.white,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$firstName $lastName'.trim(),
+                                style: AppTextStyles.heading2.copyWith(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  letterSpacing: 0,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                email,
+                                style: AppTextStyles.body.copyWith(
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.edit_rounded, color: Colors.white, size: 16),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }

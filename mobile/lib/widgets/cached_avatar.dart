@@ -1,9 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 
-/// A reusable cached avatar widget that replaces NetworkImage throughout the app.
-/// Shows a shimmer placeholder while loading and a fallback initial letter on error.
+/// A robust, reusable cached avatar widget.
+/// Supports network URLs, base64 data URIs, local file paths, and fallback letter initials.
 class CachedAvatar extends StatelessWidget {
   final String? imageUrl;
   final double radius;
@@ -29,15 +31,56 @@ class CachedAvatar extends StatelessWidget {
     final size = radius * 2;
     final initial = (fallbackInitial?.isNotEmpty == true)
         ? fallbackInitial![0].toUpperCase()
-        : '?';
+        : 'U';
 
     if (imageUrl == null || imageUrl!.isEmpty) {
       return _buildFallback(size, bg, fg, initial);
     }
 
+    final url = imageUrl!;
+
+    // 1. Base64 Data URI
+    if (url.startsWith('data:image')) {
+      try {
+        final commaIdx = url.indexOf(',');
+        if (commaIdx != -1) {
+          final base64Data = url.substring(commaIdx + 1);
+          final bytes = base64Decode(base64Data);
+          return ClipOval(
+            child: Image.memory(
+              bytes,
+              width: size,
+              height: size,
+              fit: fit,
+              errorBuilder: (context, error, stackTrace) => _buildFallback(size, bg, fg, initial),
+            ),
+          );
+        }
+      } catch (_) {
+        return _buildFallback(size, bg, fg, initial);
+      }
+    }
+
+    // 2. Local File
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      final file = File(url);
+      if (file.existsSync()) {
+        return ClipOval(
+          child: Image.file(
+            file,
+            width: size,
+            height: size,
+            fit: fit,
+            errorBuilder: (context, error, stackTrace) => _buildFallback(size, bg, fg, initial),
+          ),
+        );
+      }
+    }
+
+    // 3. Network URL
     return ClipOval(
       child: CachedNetworkImage(
-        imageUrl: imageUrl!,
+        imageUrl: url,
         width: size,
         height: size,
         fit: fit,
@@ -79,7 +122,7 @@ class CachedAvatar extends StatelessWidget {
           style: TextStyle(
             color: fg,
             fontWeight: FontWeight.bold,
-            fontSize: size * 0.35,
+            fontSize: size * 0.4,
             fontFamily: 'Inter',
           ),
         ),
@@ -88,17 +131,24 @@ class CachedAvatar extends StatelessWidget {
   }
 }
 
-/// A reusable cached decoration image for containers (replaces NetworkImage in BoxDecoration).
-/// Returns a [DecorationImage] backed by [CachedNetworkImageProvider].
-DecorationImage cachedDecorationImage(
-  String? url, {
-  BoxFit fit = BoxFit.cover,
-  String fallback = 'https://i.pravatar.cc/150?img=11',
-}) {
-  return DecorationImage(
-    image: CachedNetworkImageProvider(
-      (url != null && url.isNotEmpty) ? url : fallback,
-    ),
-    fit: fit,
-  );
+/// Helper function to create an ImageProvider for any URL / Base64 / File / Asset.
+ImageProvider getAvatarImageProvider(String? url) {
+  if (url == null || url.isEmpty) {
+    return const AssetImage('assets/avatars/avatar_basic_kim.png');
+  }
+  if (url.startsWith('data:image')) {
+    try {
+      final commaIdx = url.indexOf(',');
+      if (commaIdx != -1) {
+        return MemoryImage(base64Decode(url.substring(commaIdx + 1)));
+      }
+    } catch (_) {}
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    final file = File(url);
+    if (file.existsSync()) {
+      return FileImage(file);
+    }
+  }
+  return CachedNetworkImageProvider(url);
 }

@@ -1,6 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/cached_avatar.dart';
 
 class SessionDetailsScreen extends StatefulWidget {
   final String sessionId;
@@ -109,9 +109,9 @@ class _SessionDetailsScreenState extends State<SessionDetailsScreen> with Single
                 children: [
                   Row(
                     children: [
-                      const CircleAvatar(
+                      CachedAvatar(
                         radius: 24,
-                        backgroundImage: CachedNetworkImageProvider('https://i.pravatar.cc/150?img=11'),
+                        fallbackInitial: widget.professionalName,
                       ),
                       const SizedBox(width: 16),
                       Column(

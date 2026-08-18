@@ -1,7 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/api_client.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../widgets/cached_avatar.dart';
 import '../../chat/direct_message_screen.dart';
 
 class DashboardData {
@@ -116,9 +118,15 @@ class _ProfessionalDashboardScreenState extends State<ProfessionalDashboardScree
                 const SizedBox(width: 16),
                 const Icon(Icons.notifications_none_rounded, color: Color(0xFF3D405B)),
                 const SizedBox(width: 16),
-                const CircleAvatar(
-                  radius: 16,
-                  backgroundImage: CachedNetworkImageProvider('https://i.pravatar.cc/150?img=11'),
+                Consumer<AuthProvider>(
+                  builder: (context, auth, _) {
+                    final user = auth.currentUser ?? {};
+                    return CachedAvatar(
+                      imageUrl: user['avatar_url'] as String?,
+                      radius: 16,
+                      fallbackInitial: user['first_name'] ?? 'P',
+                    );
+                  },
                 ),
               ],
             ),

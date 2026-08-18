@@ -21,6 +21,7 @@ class UserCreate(BaseModel):
     # Optional extras for all users
     address: Optional[str] = None
     bio: Optional[str] = None
+    avatar_url: Optional[str] = None
 
     # Client-only
     occupation: Optional[OccupationEnum] = None
@@ -74,6 +75,7 @@ class UserRead(BaseModel):
     gender: GenderEnum
     address: Optional[str]
     bio: Optional[str]
+    avatar_url: Optional[str] = None
     occupation: Optional[OccupationEnum]
     created_at: datetime
     professional_profile: Optional[ProfessionalProfileRead] = None
@@ -95,6 +97,7 @@ class RegisterRequest(BaseModel):
     gender: GenderEnum
     address: Optional[str] = None
     bio: Optional[str] = None
+    avatar_url: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
 
     # Professional profile fields — required when role == professional
@@ -122,3 +125,4 @@ class UserUpdate(BaseModel):
     birthday: Optional[date] = None
     gender: Optional[GenderEnum] = None
     bio: Optional[str] = None
+    avatar_url: Optional[str] = None
