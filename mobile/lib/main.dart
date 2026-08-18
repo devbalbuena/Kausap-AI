@@ -15,6 +15,7 @@ import 'screens/auth/role_selection_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/signup/professional_pending_screen.dart';
 import 'screens/professional/professional_base_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/splash/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -110,7 +111,9 @@ class _AppStartup extends StatelessWidget {
     if (auth.isAuthenticated && auth.currentUser != null) {
       final user = auth.currentUser!;
       Widget home;
-      if (user['role'] == 'professional') {
+      if (user['role'] == 'admin') {
+        home = const AdminDashboardScreen();
+      } else if (user['role'] == 'professional') {
         final profile = user['professional_profile'];
         if (profile == null || profile['is_verified'] != true) {
           home = const ProfessionalPendingScreen();
