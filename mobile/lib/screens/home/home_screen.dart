@@ -63,6 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUnreadCount();
     _fetchStreak();
     _fetchQuests();
+    // Show mood popup after first frame if mood not yet logged today
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMoodPopup());
   }
 
   @override
@@ -84,6 +86,58 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUnreadCount();
     _fetchStreak();
     _fetchQuests();
+  }
+
+  /// Show a friendly mood check-in pop-up if the user hasn't logged mood today.
+  Future<void> _maybeShowMoodPopup() async {
+    if (!mounted) return;
+    try {
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final moodData = await ApiClient().get(ApiConfig.mood);
+      if (moodData is List) {
+        final loggedToday = moodData.any(
+          (e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false,
+        );
+        if (loggedToday) return; // Already logged — skip popup
+      }
+    } catch (_) {
+      return; // On error, don't bother the user
+    }
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MoodPopupSheet(
+        firstName: _firstName,
+        onMoodSelected: (level) async {
+          try {
+            await ApiClient().post(ApiConfig.mood, body: {
+              'mood_level': level,
+              'emotions': null,
+              'intensity': level,
+            });
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Mood logged! ✅ Daily quest updated.'),
+                  backgroundColor: Color(0xFF22C55E),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              _fetchStreak();
+              _fetchQuests();
+            }
+          } catch (_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not save mood. Try again.')),
+              );
+            }
+          }
+        },
+      ),
+    );
   }
 
   Future<void> _fetchQuests() async {
@@ -127,14 +181,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchStreak() async {
-    // Mocking an API call to fetch streak data dynamically
-    await Future.delayed(const Duration(milliseconds: 500));
-    final cached = await CacheService.readMap('wellness_streak');
-    if (mounted) {
-      setState(() {
-        _streak = cached?['streak'] ?? 5; // dynamic mock data
-        _goal = cached?['goal'] ?? 30;
-      });
+    try {
+      final moodData = await ApiClient().get(ApiConfig.mood);
+      if (moodData is! List || !mounted) return;
+
+      // Collect unique calendar days that have at least one mood entry
+      final Set<String> daysWithMood = {};
+      for (final entry in moodData) {
+        final created = entry['created_at'] as String?;
+        if (created != null && created.length >= 10) {
+          daysWithMood.add(created.substring(0, 10)); // 'yyyy-MM-dd'
+        }
+      }
+
+      // Count consecutive days ending today (or yesterday if today not yet logged)
+      int streak = 0;
+      final today = DateTime.now();
+      for (int i = 0; i < 365; i++) {
+        final checkDay = today.subtract(Duration(days: i));
+        final dayStr = DateFormat('yyyy-MM-dd').format(checkDay);
+        if (daysWithMood.contains(dayStr)) {
+          streak++;
+        } else {
+          break; // First gap ends the streak
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _streak = streak;
+          _goal = 30; // 30-day wellness goal
+        });
+      }
+    } catch (_) {
+      // On error keep _streak = 0
     }
   }
 
@@ -493,18 +573,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Streak Card ────────────────────────────────────────────────────────────
   Widget _buildStreakCard() {
-    final progress = _goal > 0 ? _streak / _goal : 0.0;
+    final clampedStreak = _streak.clamp(0, _goal);
+    final progress = _goal > 0 ? clampedStreak / _goal : 0.0;
+    final streakLabel = _streak == 0
+        ? 'Start your streak today! 🌱'
+        : '$_streak Day${_streak == 1 ? '' : 's'} Streak 🔥';
+    final subLabel = _streak == 0
+        ? 'Log your mood to begin'
+        : '$clampedStreak / $_goal days to your goal';
     return _card(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Text('🔥', style: TextStyle(fontSize: 20)),
+            Text(_streak == 0 ? '🌱' : '🔥',
+                style: const TextStyle(fontSize: 20)),
             const SizedBox(width: 6),
-            Text('$_streak Day Check-in Streak!', style: AppTextStyles.heading2),
+            Expanded(
+              child: Text(streakLabel, style: AppTextStyles.heading2),
+            ),
           ]),
           const SizedBox(height: 4),
-          Text('Keep your wellness journey going',
-              style: AppTextStyles.subheading),
+          Text(subLabel, style: AppTextStyles.subheading),
           const SizedBox(height: 12),
           Stack(children: [
             Container(
@@ -514,20 +604,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(99)),
             ),
             FractionallySizedBox(
-              widthFactor: progress,
+              widthFactor: progress.clamp(0.0, 1.0),
               child: Container(
                 height: 12,
                 decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(99)),
-                alignment: Alignment.center,
-                child: Text(
-                  '$_streak/$_goal',
-                  style: AppTextStyles.caption.copyWith(
-                      color: Theme.of(context).colorScheme.surface,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w700),
-                ),
               ),
             ),
           ]),
@@ -1199,6 +1281,166 @@ class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Mood Quick-Check Pop-up Sheet ─────────────────────────────────────────────
+class _MoodPopupSheet extends StatefulWidget {
+  final String firstName;
+  final Future<void> Function(int level) onMoodSelected;
+
+  const _MoodPopupSheet({
+    required this.firstName,
+    required this.onMoodSelected,
+  });
+
+  @override
+  State<_MoodPopupSheet> createState() => _MoodPopupSheetState();
+}
+
+class _MoodPopupSheetState extends State<_MoodPopupSheet>
+    with SingleTickerProviderStateMixin {
+  bool _isSaving = false;
+  late final AnimationController _bounceController;
+  late final Animation<double> _bounceAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+    _bounceAnimation = Tween<double>(begin: 0, end: -10).animate(
+      CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _select(int level) async {
+    setState(() => _isSaving = true);
+    Navigator.of(context).pop(); // Dismiss sheet first
+    await widget.onMoodSelected(level);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const emojis = [
+      {'emoji': '😞', 'label': 'Rough', 'level': 1},
+      {'emoji': '😟', 'label': 'Low', 'level': 2},
+      {'emoji': '😐', 'label': 'Okay', 'level': 3},
+      {'emoji': '🙂', 'label': 'Good', 'level': 4},
+      {'emoji': '😄', 'label': 'Great', 'level': 5},
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(30),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Bouncing emoji mascot
+            AnimatedBuilder(
+              animation: _bounceAnimation,
+              builder: (context, child) => Transform.translate(
+                offset: Offset(0, _bounceAnimation.value),
+                child: child,
+              ),
+              child: const Text('🌿', style: TextStyle(fontSize: 52)),
+            ),
+            const SizedBox(height: 12),
+
+            Text(
+              'Hey ${widget.firstName.isNotEmpty ? widget.firstName[0].toUpperCase() + widget.firstName.substring(1) : ''}! 👋',
+              style: AppTextStyles.heading2.copyWith(fontSize: 20),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'How are you feeling today?',
+              style: AppTextStyles.body.copyWith(
+                  color: AppColors.textSecondary, fontSize: 15),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            // Emoji mood picker row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: emojis.map((item) {
+                return GestureDetector(
+                  onTap: _isSaving ? null : () => _select(item['level'] as int),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withAlpha(15),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: AppColors.primary.withAlpha(40), width: 1),
+                        ),
+                        child: Center(
+                          child: Text(item['emoji'] as String,
+                              style: const TextStyle(fontSize: 28)),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        item['label'] as String,
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+
+            // Skip link
+            GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Text(
+                'Skip for now',
+                style: AppTextStyles.body.copyWith(
+                    color: AppColors.textSecondary,
+                    decoration: TextDecoration.underline),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import '../services/api_client.dart';
 import '../config/api_config.dart';
+import 'package:intl/intl.dart';
 
 class MoodTrendsChart extends StatefulWidget {
   const MoodTrendsChart({super.key});
@@ -41,25 +42,39 @@ class _MoodTrendsChartState extends State<MoodTrendsChart> {
     }
   }
 
+  /// Build spots only for the past 7 days that actually have data.
+  /// X-axis index 0 = 6 days ago, index 6 = today.
   List<FlSpot> _getLast7DaySpots() {
     final now = DateTime.now();
     final spots = <FlSpot>[];
 
     for (int i = 6; i >= 0; i--) {
       final day = now.subtract(Duration(days: i));
-      final dayStr = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      final dayStr = DateFormat('yyyy-MM-dd').format(day);
 
       final dayEntries = _entries.where((e) {
-        final created = e['created_at'] ?? '';
+        final created = e['created_at'] as String? ?? '';
         return created.startsWith(dayStr);
       }).toList();
 
       if (dayEntries.isNotEmpty) {
-        final avg = dayEntries.map((e) => (e['mood_level'] as num).toDouble()).reduce((a, b) => a + b) / dayEntries.length;
+        final avg = dayEntries
+                .map((e) => (e['mood_level'] as num).toDouble())
+                .reduce((a, b) => a + b) /
+            dayEntries.length;
+        // x = position (0 = oldest shown, 6 = today)
         spots.add(FlSpot((6 - i).toDouble(), avg));
       }
+      // Days with no data simply have no spot — no line drawn
     }
     return spots;
+  }
+
+  /// Short label for each of the 7 x-axis positions anchored to real dates.
+  String _dayLabel(int xIndex) {
+    final day = DateTime.now().subtract(Duration(days: 6 - xIndex));
+    const short = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return short[day.weekday - 1];
   }
 
   @override
@@ -79,12 +94,21 @@ class _MoodTrendsChartState extends State<MoodTrendsChart> {
 
     final spots = _getLast7DaySpots();
     if (spots.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 150,
         child: Center(
-          child: Text(
-            'No mood data for the past week.',
-            style: TextStyle(fontFamily: 'Poppins', color: AppColors.textSecondary),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('📊', style: TextStyle(fontSize: 32)),
+              const SizedBox(height: 8),
+              Text(
+                'Log your mood to see your trend here 😊',
+                style: AppTextStyles.subheading
+                    .copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       );
@@ -114,17 +138,20 @@ class _MoodTrendsChartState extends State<MoodTrendsChart> {
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
-                  final now = DateTime.now();
-                  final day = now.subtract(Duration(days: 6 - value.toInt()));
-                  final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                  final idx = value.toInt();
+                  if (idx < 0 || idx > 6) return const SizedBox.shrink();
+                  final isToday = idx == 6;
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
-                      days[day.weekday - 1],
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
+                      isToday ? 'Today' : _dayLabel(idx),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
                         fontSize: 10,
-                        color: AppColors.textSecondary,
+                        fontWeight: isToday ? FontWeight.w700 : FontWeight.normal,
+                        color: isToday
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
                       ),
                     ),
                   );
@@ -159,3 +186,4 @@ class _MoodTrendsChartState extends State<MoodTrendsChart> {
     );
   }
 }
+
