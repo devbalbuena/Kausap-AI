@@ -169,23 +169,39 @@ class _ProfessionalReportsScreenState extends State<ProfessionalReportsScreen> {
   }
 
   // ─── Page Header ────────────────────────────────────────────────────────────
+  String _selectedDateRange = "Last 30 Days";
+
   Widget _buildPageHeader({required bool isMobile}) {
     return isMobile
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (Navigator.canPop(context))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.arrow_back_rounded, size: 18, color: Color(0xFF2C3E50)),
+                        SizedBox(width: 6),
+                        Text("Practice Hub", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50))),
+                      ],
+                    ),
+                  ),
+                ),
               Text("Outcome Analytics & Reports",
-                  style: AppTextStyles.heading1.copyWith(fontSize: 20, color: const Color(0xFF3D405B))),
+                  style: AppTextStyles.heading1.copyWith(fontSize: 22, color: const Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
               Text("Monitor patient progress metrics, crisis response times, and generate compliance-ready documentation.",
-                  style: AppTextStyles.body.copyWith(color: const Color(0xFF707974))),
+                  style: AppTextStyles.body.copyWith(color: const Color(0xFF707974), fontSize: 13)),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildDateFilterButton()),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildCompliancePDFButton()),
-                ],
+              _buildDateFilterButton(),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: _buildCompliancePDFButton(),
               ),
             ],
           )
@@ -197,7 +213,7 @@ class _ProfessionalReportsScreenState extends State<ProfessionalReportsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text("Outcome Analytics & Reports",
-                        style: AppTextStyles.heading1.copyWith(color: const Color(0xFF3D405B))),
+                        style: AppTextStyles.heading1.copyWith(color: const Color(0xFF2C3E50))),
                     const SizedBox(height: 8),
                     Text("Monitor patient progress metrics, crisis response times, and generate compliance-ready documentation.",
                         style: AppTextStyles.body.copyWith(color: const Color(0xFF707974))),
@@ -213,27 +229,64 @@ class _ProfessionalReportsScreenState extends State<ProfessionalReportsScreen> {
   }
 
   Widget _buildDateFilterButton() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8EAED)),
+    return InkWell(
+      onTap: () => _showDateFilterModal(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE8EAED)),
+          boxShadow: const [
+            BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(_selectedDateRange,
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF2C3E50), fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF707974)),
+          ],
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF3D405B)),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text("Last 30 Days (Oct - Nov 2026)",
-                style: const TextStyle(fontSize: 13, color: Color(0xFF3D405B), fontWeight: FontWeight.w500),
-                overflow: TextOverflow.ellipsis),
+    );
+  }
+
+  void _showDateFilterModal() {
+    final ranges = ["Last 7 Days", "Last 30 Days", "Last 90 Days", "Year-to-Date (2026)"];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Select Reporting Period", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2C3E50))),
+              const SizedBox(height: 12),
+              ...ranges.map((r) => ListTile(
+                    title: Text(r, style: TextStyle(fontWeight: _selectedDateRange == r ? FontWeight.bold : FontWeight.normal)),
+                    trailing: _selectedDateRange == r ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
+                    onTap: () {
+                      setState(() => _selectedDateRange = r);
+                      Navigator.pop(context);
+                      _fetchReports();
+                    },
+                  )),
+            ],
           ),
-          const SizedBox(width: 6),
-          const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF3D405B)),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -241,14 +294,25 @@ class _ProfessionalReportsScreenState extends State<ProfessionalReportsScreen> {
     return ElevatedButton.icon(
       onPressed: () {
         setState(() => _showComplianceModal = true);
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) setState(() => _showComplianceModal = false);
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() => _showComplianceModal = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("RA 11036 Compliance PDF Audit report generated and downloaded!"),
+                backgroundColor: AppColors.primary,
+              ),
+            );
+          }
         });
       },
       icon: const Icon(Icons.file_download_outlined, size: 16),
-      label: const Text("RA 11036 Compliance PDF"),
+      label: const Text("Export RA 11036 Compliance PDF"),
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

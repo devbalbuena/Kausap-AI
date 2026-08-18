@@ -29,16 +29,31 @@ class _ProfessionalSettingsScreenState extends State<ProfessionalSettingsScreen>
         builder: (context, constraints) {
           final isMobile = constraints.maxWidth < 800;
           return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(24, isMobile ? 60 : 32, 24, 40),
+            padding: EdgeInsets.fromLTRB(24, isMobile ? (Navigator.canPop(context) ? 48 : 60) : 32, 24, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Settings",
-                    style: AppTextStyles.heading1.copyWith(color: const Color(0xFF3D405B))),
-                const SizedBox(height: 8),
-                Text("Manage your account preferences.",
-                    style: AppTextStyles.body.copyWith(color: const Color(0xFF707974))),
-                const SizedBox(height: 32),
+                if (Navigator.canPop(context))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: InkWell(
+                      onTap: () => Navigator.pop(context),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.arrow_back_rounded, size: 18, color: Color(0xFF2C3E50)),
+                          SizedBox(width: 6),
+                          Text("Practice Hub", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50))),
+                        ],
+                      ),
+                    ),
+                  ),
+                Text("Settings & Preferences",
+                    style: AppTextStyles.heading1.copyWith(color: const Color(0xFF2C3E50), fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text("Manage notifications, telehealth room & account preferences.",
+                    style: AppTextStyles.body.copyWith(color: const Color(0xFF707974), fontSize: 13)),
+                const SizedBox(height: 24),
 
                 // ── Profile Section ───────────────────────────────────────────
                 _buildSectionCard(

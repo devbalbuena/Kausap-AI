@@ -83,7 +83,6 @@ class ProfessionalAppointmentsScreen extends StatefulWidget {
 class _ProfessionalAppointmentsScreenState extends State<ProfessionalAppointmentsScreen>
     with SingleTickerProviderStateMixin {
   final ApiClient _apiClient = ApiClient();
-  bool _isLoading = true;
   late TabController _tabController;
 
   DateTime _selectedDate = DateTime.now();
@@ -184,21 +183,22 @@ class _ProfessionalAppointmentsScreenState extends State<ProfessionalAppointment
   }
 
   Future<void> _fetchAppointments() async {
-    setState(() => _isLoading = true);
     try {
       final res = await _apiClient.get('/professional/appointments');
       if (res != null) {
         if (res['appointments'] != null && (res['appointments'] as List).isNotEmpty) {
-          _appointments = (res['appointments'] as List).map((a) => AppointmentItem.fromJson(a)).toList();
+          setState(() {
+            _appointments = (res['appointments'] as List).map((a) => AppointmentItem.fromJson(a)).toList();
+          });
         }
         if (res['pending_requests'] != null && (res['pending_requests'] as List).isNotEmpty) {
-          _pendingRequests = (res['pending_requests'] as List).map((p) => PendingRequest.fromJson(p)).toList();
+          setState(() {
+            _pendingRequests = (res['pending_requests'] as List).map((p) => PendingRequest.fromJson(p)).toList();
+          });
         }
       }
     } catch (e) {
       debugPrint("Info: Using initialized appointment state: $e");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
