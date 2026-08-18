@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
@@ -156,15 +159,54 @@ class ActivityScreen extends StatefulWidget {
 }
 
 class _ActivityScreenState extends State<ActivityScreen> {
+  static const _storage = FlutterSecureStorage();
   int _selectedCategory = 0;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Map<String, bool> _completedToday = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompletions();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
+
+  /// Reads per-activity completion keys for today and updates [_completedToday].
+  Future<void> _loadCompletions() async {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final Map<String, bool> result = {};
+    for (final a in activityList) {
+      final id = a.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-');
+      final val = await _storage.read(key: 'activity_${id}_$today');
+      result[id] = val == 'completed';
+    }
+    if (mounted) setState(() => _completedToday = result);
+  }
+
+  /// Navigate to ActivityStartScreen then reload completions when returning.
+  Future<void> _openActivity(ActivityItem activity) async {
+    await Navigator.of(context).push(slideRoute(ActivityStartScreen(activity: activity)));
+    _loadCompletions();
+  }
+
+  /// Show the activity history bottom sheet.
+  void _showHistory() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const ActivityHistorySheet(),
+    );
+  }
+
+  String _activityId(ActivityItem a) =>
+      a.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-');
 
   List<ActivityItem> get _filteredActivities {
     final category = _categories[_selectedCategory];
@@ -258,6 +300,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
         ),
         Row(
           children: [
+            // History button
+            Semantics(
+              label: 'View activity history',
+              button: true,
+              child: GestureDetector(
+                onTap: _showHistory,
+                child: const Icon(Icons.history_rounded,
+                    color: AppColors.textPrimary, size: 24),
+              ),
+            ),
+            const SizedBox(width: 12),
             const Icon(Icons.notifications_outlined, color: AppColors.textPrimary, size: 24),
             const SizedBox(width: 12),
             Consumer<AuthProvider>(
@@ -453,105 +506,308 @@ class _ActivityScreenState extends State<ActivityScreen> {
   }
 
   Widget _buildActivityCard(ActivityItem activity) {
+    final id = _activityId(activity);
+    final isDone = _completedToday[id] ?? false;
+
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        slideRoute(ActivityStartScreen(activity: activity))),
-      child: Container(
-        margin: const EdgeInsets.only(top: 10),
-        padding: const EdgeInsets.all(25),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0x1AC0C9C2)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x140078D4),
-              blurRadius: 24,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title
-            Text(
-              activity.title,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF3D405B),
+      onTap: () => _openActivity(activity),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.all(25),
+            decoration: BoxDecoration(
+              color: isDone ? const Color(0xFFF0FDF4) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDone
+                    ? const Color(0xFF22C55E).withAlpha(80)
+                    : const Color(0x1AC0C9C2),
               ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x140078D4),
+                  blurRadius: 24,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            // Description
-            Text(
-              activity.description,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF3D405B),
-                height: 1.43,
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Duration, difficulty, Start button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Title row
                 Row(
                   children: [
-                    const Icon(Icons.access_time_rounded, size: 13, color: Color(0xFF707479)),
-                    const SizedBox(width: 4),
-                    Text(
-                      activity.duration,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF707479),
+                    Expanded(
+                      child: Text(
+                        activity.title,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF3D405B),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      activity.difficulty,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF707479),
+                    if (isDone)
+                      const Icon(Icons.check_circle_rounded,
+                          color: Color(0xFF22C55E), size: 22),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  activity.description,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF3D405B),
+                    height: 1.43,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded,
+                            size: 13, color: Color(0xFF707479)),
+                        const SizedBox(width: 4),
+                        Text(
+                          activity.duration,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF707479),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          activity.difficulty,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF707479),
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Start / Done button
+                    GestureDetector(
+                      onTap: () => _openActivity(activity),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDone
+                              ? const Color(0xFFDCFCE7)
+                              : AppColors.categoryChipBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isDone ? 'Done ✓' : 'Start',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDone
+                                ? const Color(0xFF16A34A)
+                                : AppColors.primary,
+                            letterSpacing: 0.14,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                // Start button
-                GestureDetector(
-                  onTap: () => Navigator.of(context).push(
-                    slideRoute(ActivityStartScreen(activity: activity))),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.categoryChipBg,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Start',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                        letterSpacing: 0.14,
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Activity History Bottom Sheet ─────────────────────────────────────────────
+class ActivityHistorySheet extends StatefulWidget {
+  const ActivityHistorySheet({super.key});
+
+  @override
+  State<ActivityHistorySheet> createState() => _ActivityHistorySheetState();
+}
+
+class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
+  static const _storage = FlutterSecureStorage();
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _history = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final raw = await _storage.read(key: 'activity_history');
+    if (mounted) {
+      setState(() {
+        _history = raw != null
+            ? List<Map<String, dynamic>>.from(
+                (jsonDecode(raw) as List).cast<Map<String, dynamic>>())
+            : [];
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatDate(String dateStr) {
+    try {
+      final d = DateTime.parse(dateStr);
+      final today = DateTime.now();
+      final yesterday = today.subtract(const Duration(days: 1));
+      if (d.year == today.year && d.month == today.month && d.day == today.day) {
+        return 'Today';
+      }
+      if (d.year == yesterday.year &&
+          d.month == yesterday.month &&
+          d.day == yesterday.day) {
+        return 'Yesterday';
+      }
+      return DateFormat('MMM d, yyyy').format(d);
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    if (seconds < 60) return '${seconds}s';
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return s > 0 ? '${m}m ${s}s' : '${m}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
+      ),
+      child: Column(
+        children: [
+          // Handle
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.divider,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Title
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                const Icon(Icons.history_rounded,
+                    color: AppColors.primary, size: 22),
+                const SizedBox(width: 8),
+                Text('Activity History', style: AppTextStyles.heading2),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          // Content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _history.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('🌱',
+                                style: TextStyle(fontSize: 40)),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No activities completed yet.\nStart one now!',
+                              style: AppTextStyles.subheading.copyWith(
+                                  color: AppColors.textSecondary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                        itemCount: _history.length,
+                        separatorBuilder: (context, index) =>
+                            const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final entry = _history[index];
+                          final dateLabel = _formatDate(
+                              entry['date'] as String? ?? '');
+                          final duration = _formatDuration(
+                              (entry['durationSeconds'] as num?)?.toInt() ?? 0);
+                          return ListTile(
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 8),
+                            leading: Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withAlpha(20),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.self_improvement_rounded,
+                                color: AppColors.primary,
+                                size: 22,
+                              ),
+                            ),
+                            title: Text(
+                              entry['title'] as String? ?? 'Activity',
+                              style: AppTextStyles.body.copyWith(
+                                  fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(
+                              dateLabel,
+                              style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondary),
+                            ),
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                duration,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF16A34A),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
       ),
     );
   }
