@@ -58,6 +58,10 @@ class User(SQLModel, table=True):
     # Relationship to professional profile
     professional_profile: Optional["ProfessionalProfile"] = Relationship(back_populates="user")
 
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
+
 
 class ProfessionalProfile(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

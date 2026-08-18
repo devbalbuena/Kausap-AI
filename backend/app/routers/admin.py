@@ -25,8 +25,8 @@ def list_users(
     admin: Annotated[User, Depends(get_current_admin)],
     session: Annotated[Session, Depends(get_session)],
     email: Optional[str] = None,
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    limit: Annotated[int, Query(ge=1, le=200)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ):
     """List users with optional email search and activity counts."""
     query = select(User)
@@ -54,7 +54,7 @@ def list_users(
             UserSummary(
                 id=u.id,
                 email=u.email,
-                full_name=u.full_name,
+                full_name=f"{u.first_name} {u.last_name}".strip(),
                 role=u.role,
                 is_active=u.is_active,
                 created_at=u.created_at,
@@ -84,7 +84,7 @@ def get_user_detail(
     return UserDetail(
         id=u.id,
         email=u.email,
-        full_name=u.full_name,
+        full_name=f"{u.first_name} {u.last_name}".strip(),
         role=u.role,
         is_active=u.is_active,
         created_at=u.created_at,
@@ -143,8 +143,8 @@ def verify_professional(
 def list_flagged_messages(
     admin: Annotated[User, Depends(get_current_admin)],
     session: Annotated[Session, Depends(get_session)],
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ):
     """List all risk-flagged messages joined with user info."""
     # Join ChatMessage -> ChatSession -> User
