@@ -126,7 +126,9 @@ class _MoodTrendsChartState extends State<MoodTrendsChart> {
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   if (value == 1) return const Text('😞', style: TextStyle(fontSize: 12));
+                  if (value == 2) return const Text('😟', style: TextStyle(fontSize: 12));
                   if (value == 3) return const Text('😐', style: TextStyle(fontSize: 12));
+                  if (value == 4) return const Text('🙂', style: TextStyle(fontSize: 12));
                   if (value == 5) return const Text('😄', style: TextStyle(fontSize: 12));
                   return const SizedBox.shrink();
                 },

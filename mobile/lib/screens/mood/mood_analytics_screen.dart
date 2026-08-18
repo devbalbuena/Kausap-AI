@@ -19,19 +19,19 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
-  // Mood label mapping
+  // Mood label mapping (Consistent with Home check-in: 1: 😞 Rough, 2: 😟 Low, 3: 😐 Okay, 4: 🙂 Good, 5: 😄 Great)
   static const Map<int, String> _moodLabels = {
     1: '😞',
-    2: '😕',
+    2: '😟',
     3: '😐',
     4: '🙂',
     5: '😄',
   };
 
   static const Map<int, String> _moodNames = {
-    1: 'Very Low',
+    1: 'Rough',
     2: 'Low',
-    3: 'Neutral',
+    3: 'Okay',
     4: 'Good',
     5: 'Great',
   };

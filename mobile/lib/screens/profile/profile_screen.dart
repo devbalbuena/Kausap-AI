@@ -19,6 +19,7 @@ import '../../services/api_client.dart';
 import '../mood/mood_analytics_screen.dart';
 import 'edit_profile_screen.dart';
 import 'achievements_screen.dart';
+import 'assessment_history_screen.dart';
 import '../../widgets/cached_avatar.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -243,7 +244,9 @@ class ProfileScreen extends StatelessWidget {
                 _buildListItem(
                   icon: Icons.history_rounded,
                   title: 'Assessment History',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(context, slideRoute(const AssessmentHistoryScreen()));
+                  },
                 ),
               ],
             ),
