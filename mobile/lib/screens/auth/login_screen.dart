@@ -7,24 +7,15 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../widgets/accessible_error_widget.dart';
 import '../../utils/app_validators.dart';
-import 'role_selection_screen.dart';
 import '../home/home_screen.dart';
-import '../professional/professional_base_screen.dart';
 import '../signup/client_signup_step1_screen.dart';
-import '../signup/professional_signup_step1_screen.dart';
 import 'forgot_password_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
-/// Unified Login Screen — matches Figma "Unified Login" + "Login Error State" frames.
-///
-/// Error states from Figma:
-///   - Field-level: "No account found with this email." under email field
-///   - Field-level: "Incorrect password. Try again." under password field
-///   - Banner: "Unable to sign in. Please check your credentials and try again, or reset your password."
-///     (shown when the backend doesn't distinguish which field failed)
+/// Clean, Generic Login Screen for Students and Users.
+/// Automatically detects Admin accounts on successful login.
 class LoginScreen extends StatefulWidget {
-  final String? defaultRole;
-  const LoginScreen({super.key, this.defaultRole});
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -38,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
-  // Error state — mirrors Figma "Login Error State" frame
+  // Error state
   String? _emailError;
   String? _passwordError;
   String? _bannerError;
@@ -73,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // Navigate based on role
+      // Auto-detect role and route
       final user = authProvider.currentUser;
       if (user != null) {
         if (user['role'] == 'admin') {
@@ -81,22 +72,6 @@ class _LoginScreenState extends State<LoginScreen> {
             slideRoute(const AdminDashboardScreen()),
             (route) => false,
           );
-        } else if (user['role'] == 'professional') {
-          final profile = user['professional_profile'];
-          if (profile != null && profile['is_verified'] == true) {
-            Navigator.of(context).pushAndRemoveUntil(
-              slideRoute(const ProfessionalBaseScreen()),
-              (route) => false,
-            );
-          } else {
-            // Unverified professional — let main.dart AuthWrapper handle it or route directly
-            // For now, if unverified, just let AuthWrapper decide by popping to root, or push pending screen directly.
-            // Since login is pushed over AuthWrapper, we need to push to pending screen directly.
-            Navigator.of(context).pushAndRemoveUntil(
-              slideRoute(const RoleSelectionScreen()), // A simple hack is to just pop and let main.dart rebuild
-              (route) => false,
-            );
-          }
         } else {
           Navigator.of(context).pushAndRemoveUntil(
             slideRoute(HomeScreen(user: user)),
@@ -118,13 +93,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final detail = e.message.toLowerCase();
 
     if (e.statusCode == 401 || e.statusCode == 400) {
-      // Try to match field-level errors from Figma
       if (detail.contains('email') || detail.contains('not found') || detail.contains('no account')) {
         setState(() => _emailError = 'No account found with this email.');
       } else if (detail.contains('password') || detail.contains('incorrect')) {
         setState(() => _passwordError = 'Incorrect password. Try again.');
       } else {
-        // Generic banner from Figma "Error Banner"
         setState(() => _bannerError =
             'Unable to sign in. Please check your credentials and try again, or reset your password.');
       }
@@ -143,258 +116,255 @@ class _LoginScreenState extends State<LoginScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-                const KausapHeader(),
-                const SizedBox(height: 24),
-                AuthCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Text('Welcome back!', style: AppTextStyles.heading1),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Sign in to your Kausap AI account',
-                          style: AppTextStyles.subheading),
-                        const SizedBox(height: 28),
-
-                        // Email field
-                        Text('Email', style: AppTextStyles.label),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          autocorrect: false,
-                          style: AppTextStyles.inputText,
-                          decoration: InputDecoration(
-                            hintText: 'you@example.com',
-                            errorText: _emailError,
-                          ),
-                          validator: AppValidators.email,
-                          onChanged: (_) => _clearErrors(),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Password field
-                        Text('Password', style: AppTextStyles.label),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          style: AppTextStyles.inputText,
-                          decoration: InputDecoration(
-                            hintText: '••••••••',
-                            errorText: _passwordError,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 18,
-                                color: AppColors.textSecondary,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _obscurePassword = !_obscurePassword),
-                            ),
-                          ),
-                          validator: AppValidators.password,
-                          onChanged: (_) => _clearErrors(),
-                        ),
-
-                        // Forgot password link
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.of(context).push(slideRoute(const ForgotPasswordScreen()),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              minimumSize: Size.zero),
-                            child: Text(
-                              'FORGOT PASSWORD?',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Error banner — accessible (icon + shape + text, not just color)
-                        if (_bannerError != null) ...[
-                          const SizedBox(height: 8),
-                          AccessibleErrorWidget(message: _bannerError!),
-                        ],
-
-                        const SizedBox(height: 8),
-
-                        // Divider — "or" section from Figma
-                        Row(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 40),
+                    const KausapHeader(),
+                    const SizedBox(height: 24),
+                    AuthCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: Divider(color: AppColors.divider)),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text('or', style: AppTextStyles.subheading),
+                            // Header
+                            Text('Welcome to Kausap AI', style: AppTextStyles.heading1),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Sign in to continue',
+                              style: AppTextStyles.subheading,
                             ),
-                            Expanded(child: Divider(color: AppColors.divider)),
+                            const SizedBox(height: 28),
+
+                            // Email field
+                            Text('Email', style: AppTextStyles.label),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              autocorrect: false,
+                              style: AppTextStyles.inputText,
+                              decoration: InputDecoration(
+                                hintText: 'you@example.com',
+                                errorText: _emailError,
+                              ),
+                              validator: AppValidators.email,
+                              onChanged: (_) => _clearErrors(),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Password field
+                            Text('Password', style: AppTextStyles.label),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              style: AppTextStyles.inputText,
+                              decoration: InputDecoration(
+                                hintText: '••••••••',
+                                errorText: _passwordError,
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    size: 18,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  onPressed: () =>
+                                      setState(() => _obscurePassword = !_obscurePassword),
+                                ),
+                              ),
+                              validator: AppValidators.password,
+                              onChanged: (_) => _clearErrors(),
+                            ),
+
+                            // Forgot password link
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    slideRoute(const ForgotPasswordScreen()),
+                                  );
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  minimumSize: Size.zero,
+                                ),
+                                child: const Text(
+                                  'FORGOT PASSWORD?',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textSecondary,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Error banner
+                            if (_bannerError != null) ...[
+                              const SizedBox(height: 8),
+                              AccessibleErrorWidget(message: _bannerError!),
+                            ],
+
+                            const SizedBox(height: 8),
+
+                            // Divider
+                            const Row(
+                              children: [
+                                Expanded(child: Divider(color: AppColors.divider)),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text('or', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                ),
+                                Expanded(child: Divider(color: AppColors.divider)),
+                              ],
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Sign In button
+                            ElevatedButton(
+                              onPressed: _isLoading ? null : _handleLogin,
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : const Text('Sign In'),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Social Sign-in Buttons
+                            OutlinedButton(
+                              onPressed: () {},
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 50),
+                                side: const BorderSide(color: AppColors.inputBorder),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFDDDDDD)),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'G',
+                                        style: TextStyle(
+                                          fontFamily: 'Arial',
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF4285F4),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Sign in with Google',
+                                    style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              onPressed: () {},
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 50),
+                                side: const BorderSide(color: AppColors.inputBorder),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1877F2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'f',
+                                        style: TextStyle(
+                                          fontFamily: 'Arial',
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Sign in with Facebook',
+                                    style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Sign Up link
+                            Center(
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    slideRoute(const ClientSignupStep1Screen()),
+                                  );
+                                },
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                                    children: [
+                                      const TextSpan(text: "Don't have an account? "),
+                                      TextSpan(text: 'Sign Up', style: AppTextStyles.link),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-
-                        const SizedBox(height: 16),
-
-                        // Sign In button
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _handleLogin,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : const Text('Sign In'),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Social Sign-in Buttons
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 50),
-                            side: BorderSide(color: AppColors.inputBorder),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Google 'G' logo — painted inline to avoid broken SVG network loading
-                              Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: const Color(0xFFDDDDDD)),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'G',
-                                    style: TextStyle(
-                                      fontFamily: 'Arial',
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF4285F4), // Google blue
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text('Sign in with Google', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 50),
-                            side: BorderSide(color: AppColors.inputBorder),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Facebook 'f' logo — painted inline to avoid broken network loading
-                              Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1877F2), // Facebook blue
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'f',
-                                    style: TextStyle(
-                                      fontFamily: 'Arial',
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text('Sign in with Facebook', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Sign Up link
-                        Center(
-                          child: GestureDetector(
-                            onTap: () {
-                              Widget nextScreen;
-                              if (widget.defaultRole == 'client') {
-                                nextScreen = const ClientSignupStep1Screen();
-                              } else if (widget.defaultRole == 'professional') {
-                                nextScreen = const ProfessionalSignupStep1Screen();
-                              } else {
-                                nextScreen = const RoleSelectionScreen();
-                              }
-                              Navigator.of(context).pushAndRemoveUntil(
-                                slideRoute(nextScreen),
-                                (route) => false,
-                              );
-                            },
-                            child: RichText(
-                              text: TextSpan(
-                                style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-                                children: [
-                                  const TextSpan(text: "Don't have an account? "),
-                                  TextSpan(text: 'Sign Up', style: AppTextStyles.link),
-                                ])
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 32),
+                    const AuthFooter(),
+                    const SizedBox(height: 24),
+                  ],
                 ),
-                const SizedBox(height: 32),
-                const AuthFooter(),
-                const SizedBox(height: 24),
-              ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  ),
-);
+    );
+  }
 }
-}
-
-/// Error banner — matches the "Error Banner" frame in Figma Login Error State.

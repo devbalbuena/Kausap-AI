@@ -11,10 +11,8 @@ import 'widgets/friendly_error_widget.dart';
 import 'widgets/pin_lock_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/retry_service.dart';
-import 'screens/auth/role_selection_screen.dart';
+import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
-import 'screens/signup/professional_pending_screen.dart';
-import 'screens/professional/professional_base_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/splash/splash_screen.dart';
 
@@ -113,13 +111,6 @@ class _AppStartup extends StatelessWidget {
       Widget home;
       if (user['role'] == 'admin') {
         home = const AdminDashboardScreen();
-      } else if (user['role'] == 'professional') {
-        final profile = user['professional_profile'];
-        if (profile == null || profile['is_verified'] != true) {
-          home = const ProfessionalPendingScreen();
-        } else {
-          home = const ProfessionalBaseScreen();
-        }
       } else {
         home = HomeScreen(user: user);
       }
@@ -127,6 +118,6 @@ class _AppStartup extends StatelessWidget {
       return PinLockScreen(child: home);
     }
 
-    return const RoleSelectionScreen();
+    return const LoginScreen();
   }
 }

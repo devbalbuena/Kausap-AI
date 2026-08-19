@@ -276,7 +276,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                                 onTap: () => Navigator.of(context)
                                     .pushAndRemoveUntil(
                                   MaterialPageRoute(
-                                      builder: (_) => const LoginScreen(defaultRole: 'client')),
+                                      builder: (_) => const LoginScreen()),
                                   (r) => false,
                                 ),
                                 child: RichText(
