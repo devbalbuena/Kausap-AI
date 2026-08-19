@@ -351,7 +351,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Patient Account: ${incident.userEmail}",
+                  "Student Account: ${incident.userEmail}",
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50)),
                 ),
                 const SizedBox(height: 8),

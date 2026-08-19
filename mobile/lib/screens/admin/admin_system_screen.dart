@@ -172,7 +172,7 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  "All patient interactions, mood logs, and clinical records are stored with AES-256 encryption compliant with DOH clinical confidentiality mandates.",
+                  "All student interactions, mood logs, and screener records are stored with AES-256 encryption compliant with DOH clinical confidentiality mandates.",
                   style: TextStyle(fontSize: 12, height: 1.4, color: Color(0xFF64748B)),
                 ),
                 const SizedBox(height: 14),
@@ -213,7 +213,7 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
                 const Divider(height: 20, color: Color(0xFFF1F3F4)),
                 _buildSystemRow("Kausap AI Engine", "Online (Gemini 2.5)", const Color(0xFF10B981)),
                 const Divider(height: 20, color: Color(0xFFF1F3F4)),
-                _buildSystemRow("Telehealth Video WebSockets", "Ready (Secure Room)", const Color(0xFF10B981)),
+                _buildSystemRow("Real-Time Crisis Triage Hub", "Active (Zero Delay)", const Color(0xFF10B981)),
                 const Divider(height: 20, color: Color(0xFFF1F3F4)),
                 _buildSystemRow("Firebase Push Service", "Active", const Color(0xFF10B981)),
                 const SizedBox(height: 14),
