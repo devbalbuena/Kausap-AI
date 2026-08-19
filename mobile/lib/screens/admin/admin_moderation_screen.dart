@@ -154,56 +154,37 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
     );
   }
 
-  void _assignToDoctor(FlaggedIncidentItem item) {
-    showModalBottomSheet(
+  void _dispatchCrisisHotline(FlaggedIncidentItem item) {
+    showDialog(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Assign Patient to Clinical Therapist", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2C3E50))),
-              const SizedBox(height: 6),
-              Text("Dispatch emergency clinical case to an approved specialist:", style: const TextStyle(fontSize: 13, color: Color(0xFF707974))),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFFD6F1FC), child: Text("M", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))),
-                title: const Text("Dr. Mark Perez, MD", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: const Text("Clinical Psychologist • Active Now", style: TextStyle(fontSize: 12)),
-                trailing: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Emergency case dispatched to Dr. Mark Perez for ${item.userEmail}!"), backgroundColor: AppColors.primary),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                  child: const Text("Assign"),
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.phone_forwarded_rounded, color: Color(0xFFC62828), size: 20),
+            SizedBox(width: 8),
+            Text("Dispatch Crisis Helpline", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
+        content: Text(
+          "Send 24/7 National Center for Mental Health (NCMH 1553) and Hopeline emergency hotline resources directly to ${item.userEmail}?",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Emergency Crisis Hotline alert dispatched to ${item.userEmail}!"),
+                  backgroundColor: AppColors.primary,
                 ),
-              ),
-              ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFFE8F5E9), child: Text("J", style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold))),
-                title: const Text("Dr. Jane Smith", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: const Text("CBT Specialist • Verified", style: TextStyle(fontSize: 12)),
-                trailing: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Emergency case dispatched to Dr. Jane Smith for ${item.userEmail}!"), backgroundColor: AppColors.primary),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                  child: const Text("Assign"),
-                ),
-              ),
-            ],
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            child: const Text("Dispatch Helpline"),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -411,12 +392,12 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => _assignToDoctor(incident),
-                        icon: const Icon(Icons.person_add_rounded, size: 14),
-                        label: const Text("Assign Doctor", style: TextStyle(fontSize: 11)),
+                        onPressed: () => _dispatchCrisisHotline(incident),
+                        icon: const Icon(Icons.phone_forwarded_rounded, size: 14),
+                        label: const Text("Dispatch Helpline", style: TextStyle(fontSize: 11)),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: Color(0xFFD6F1FC)),
+                          foregroundColor: const Color(0xFFC62828),
+                          side: const BorderSide(color: Color(0xFFFFCDD2)),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),

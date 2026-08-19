@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
@@ -18,7 +18,6 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _stats;
-  int _pendingCount = 0;
   String? _error;
 
   @override
@@ -33,24 +32,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _error = null;
     });
     try {
-      final results = await Future.wait([
-        ApiClient().get('/admin/stats'),
-        ApiClient().get('/admin/users?limit=200'),
-      ]);
-      final stats = results[0] as Map<String, dynamic>;
-      final users = results[1] as List<dynamic>;
-      final pending = users.where((u) => u['role'] == 'professional' && u['is_verified'] == false).length;
+      final data = await ApiClient().get('/admin/stats');
       if (mounted) {
         setState(() {
-          _stats = stats;
-          _pendingCount = pending;
+          _stats = data as Map<String, dynamic>;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Failed to load admin stats';
+          _error = 'Failed to load platform statistics';
           _isLoading = false;
         });
       }
@@ -71,7 +63,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               await context.read<AuthProvider>().logout();
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (route) => false,
               );
             },
@@ -105,7 +97,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Admin Control Center', style: AppTextStyles.heading2.copyWith(fontSize: 16, color: const Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-                const Text('Kausap AI Platform', style: TextStyle(fontSize: 11, color: Color(0xFF707974))),
+                const Text('Kausap AI Student Platform', style: TextStyle(fontSize: 11, color: Color(0xFF707974))),
               ],
             ),
           ],
@@ -139,112 +131,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _fetchStats,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
+                icon: const Icon(Icons.refresh_rounded),
                 label: const Text('Retry Connection'),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
               ),
             ],
           ),
         ),
       );
     }
-    if (_stats == null) return const SizedBox.shrink();
+
+    final flaggedCount = _stats!['total_flagged_messages'] ?? 0;
 
     return RefreshIndicator(
       onRefresh: _fetchStats,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          // ── System Status Pill ──────────────────────────────────────────
+          // ── Health Header Pill ───────────────────────────────────────────
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE8EAED)),
-              boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+              color: const Color(0xFFECFDF5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFA7F3D0)),
             ),
-            child: Row(
+            child: const Row(
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF10B981),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
+                Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
+                SizedBox(width: 8),
+                Expanded(
                   child: Text(
-                    "All Systems Operational • Live Neon Postgres",
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF065F46)),
+                    "All Systems Operational • Live Neon Postgres (v1.14 Simplified)",
+                    style: TextStyle(color: Color(0xFF065F46), fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
-                const Text("v1.13 Beta", style: TextStyle(fontSize: 11, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w500)),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // ── Actionable Pending Verification Alert ───────────────────────
-          if (_pendingCount > 0)
-            GestureDetector(
-              onTap: () => Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
-              ),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFB923C)),
-                  boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 8, offset: Offset(0, 3))],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF97316),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.pending_actions_rounded, color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$_pendingCount Professional${_pendingCount > 1 ? 's' : ''} Pending Licensure Verification',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF9A3412)),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text('Tap to review credentials and approve practice license.', style: TextStyle(fontSize: 11, color: Color(0xFFC2410C))),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFEA580C), size: 14),
-                  ],
-                ),
-              ),
-            ),
-
-          // ── System Overview Grid ─────────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('System Overview', style: AppTextStyles.heading2.copyWith(fontSize: 18, color: const Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-              const Text('Live Metrics', style: TextStyle(fontSize: 12, color: Color(0xFF707974))),
-            ],
-          ),
-          const SizedBox(height: 12),
+          // ── Platform Metrics Grid ─────────────────────────────────────────
+          Text('Platform Metrics & Engagement', style: AppTextStyles.heading2.copyWith(fontSize: 16, color: const Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -275,9 +208,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               _buildStatCard(
                 'Flagged Crisis',
-                _stats!['total_flagged_messages']?.toString() ?? '0',
+                '$flaggedCount',
                 Icons.flag_rounded,
-                AppColors.error,
+                flaggedCount > 0 ? AppColors.error : const Color(0xFF10B981),
                 onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminModerationScreen())),
               ),
               _buildStatCard(
@@ -287,10 +220,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 const Color(0xFFF59E0B),
               ),
               _buildStatCard(
-                'Referrals',
-                _stats!['total_referrals']?.toString() ?? '0',
-                Icons.local_hospital_rounded,
-                const Color(0xFFEC4899),
+                'Safety Status',
+                'Active 24/7',
+                Icons.shield_rounded,
+                const Color(0xFF0077B6),
+                onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminModerationScreen())),
               ),
             ],
           ),
@@ -303,17 +237,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: Icons.person_search_rounded,
             iconColor: const Color(0xFF3B82F6),
             iconBg: const Color(0xFFEFF6FF),
-            title: 'User Management & Roles',
-            subtitle: 'Search accounts, change roles & manage client permissions',
-            onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminUsersScreen())),
-          ),
-          const SizedBox(height: 10),
-          _buildQuickActionTile(
-            icon: Icons.verified_user_rounded,
-            iconColor: const Color(0xFF10B981),
-            iconBg: const Color(0xFFECFDF5),
-            title: 'Therapist Licensure Queue',
-            subtitle: 'Review PRC license credentials and approve doctors',
+            title: 'User Management Directory',
+            subtitle: 'Search accounts, monitor engagement & manage permissions',
             onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminUsersScreen())),
           ),
           const SizedBox(height: 10),
@@ -322,8 +247,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             iconColor: const Color(0xFFEF4444),
             iconBg: const Color(0xFFFEF2F2),
             title: 'Crisis Triage & Moderation',
-            subtitle: 'Review flagged messages and emergency safety protocols',
+            subtitle: 'Review risk-flagged messages and dispatch emergency hotlines',
             onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminModerationScreen())),
+          ),
+          const SizedBox(height: 10),
+          _buildQuickActionTile(
+            icon: Icons.verified_user_rounded,
+            iconColor: const Color(0xFF10B981),
+            iconBg: const Color(0xFFECFDF5),
+            title: 'RA 11036 Data Governance',
+            subtitle: 'Export platform compliance audits and cloud health logs',
+            onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminSystemScreen())),
           ),
           const SizedBox(height: 22),
 
@@ -368,7 +302,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE8EAED)),
-          boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+          boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,28 +312,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(20),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                   child: Icon(icon, color: color, size: 20),
                 ),
                 if (onTap != null)
-                  const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFCBD5E1), size: 12),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFFCBD5E1)),
               ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-                ),
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF707974), fontWeight: FontWeight.w500),
-                ),
+                Text(value, style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+                const SizedBox(height: 2),
+                Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF707974), fontWeight: FontWeight.w500)),
               ],
             ),
           ],
@@ -421,33 +347,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE8EAED)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, color: iconColor, size: 20),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: iconColor, size: 22),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50))),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF707974))),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF9E9E9E), size: 18),
+        trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1)),
         onTap: onTap,
       ),
     );
   }
 
-  Widget _buildHealthRow(String label, String status, Color statusColor) {
+  Widget _buildHealthRow(String label, String status, Color color) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
         Row(
           children: [
-            Container(width: 6, height: 6, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+            Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
             const SizedBox(width: 6),
-            Text(status, style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600)),
+            Text(status, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
           ],
         ),
       ],
