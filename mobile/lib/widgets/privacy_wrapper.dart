@@ -6,7 +6,7 @@ import '../providers/auth_provider.dart';
 import '../services/pin_service.dart';
 import '../services/privacy_settings_service.dart';
 import '../main.dart';
-import '../screens/auth/role_selection_screen.dart';
+import '../screens/auth/login_screen.dart';
 
 /// Wraps the entire app and:
 /// 1. Blurs app content when backgrounded (if Privacy Screen is enabled)
@@ -75,7 +75,7 @@ class _PrivacyWrapperState extends State<PrivacyWrapper> with WidgetsBindingObse
       await PinService.disablePin();
       if (navigatorKey.currentState != null) {
         navigatorKey.currentState!.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
           (route) => false,
         );
       }

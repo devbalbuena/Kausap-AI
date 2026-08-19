@@ -104,11 +104,12 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   // Quick-reply chips shown in the empty state
   static const List<String> _quickReplies = [
-    'Academic Stress',
-    'Anxiety',
-    "Can't Sleep",
+    'Academic & Exam Stress',
+    'Anxiety & Overwhelm',
+    "Can't Sleep / Insomnia",
     'Feeling Lonely',
-    'Work Stress',
+    'CBT Thought Reframing',
+    '5-4-3-2-1 Grounding',
   ];
 
   static const _storage = FlutterSecureStorage();

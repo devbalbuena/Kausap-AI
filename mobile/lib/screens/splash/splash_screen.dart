@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import 'onboarding_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -71,7 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
         pageBuilder: (_, _, _) =>
-            seenOnboarding == 'true' ? const RoleSelectionScreen() : const OnboardingScreen(),
+            seenOnboarding == 'true' ? const LoginScreen() : const OnboardingScreen(),
         transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
       ),

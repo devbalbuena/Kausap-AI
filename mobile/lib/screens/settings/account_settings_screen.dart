@@ -4,7 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_routes.dart';
 import '../../services/api_client.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import '../profile/edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'two_factor_auth_screen.dart';
@@ -42,7 +42,7 @@ class AccountSettingsScreen extends StatelessWidget {
                 await authProvider.logout();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    slideRoute(const RoleSelectionScreen()),
+                    slideRoute(const LoginScreen()),
                     (route) => false,
                   );
                 }
@@ -93,7 +93,7 @@ class AccountSettingsScreen extends StatelessWidget {
                 await authProvider.logout();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    slideRoute(const RoleSelectionScreen()),
+                    slideRoute(const LoginScreen()),
                     (route) => false,
                   );
                 }

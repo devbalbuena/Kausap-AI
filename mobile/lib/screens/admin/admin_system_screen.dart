@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_moderation_screen.dart';
@@ -60,7 +60,7 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
               await context.read<AuthProvider>().logout();
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (route) => false,
               );
             },

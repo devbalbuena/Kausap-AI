@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import '../settings/help_faq_screen.dart';
 import '../settings/accessibility_settings_screen.dart';
 import '../settings/appearance_settings_screen.dart';
@@ -52,7 +52,7 @@ class ProfileScreen extends StatelessWidget {
                 await authProvider.logout();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    slideRoute(const RoleSelectionScreen()),
+                    slideRoute(const LoginScreen()),
                     (route) => false,
                   );
                 }
@@ -98,7 +98,7 @@ class ProfileScreen extends StatelessWidget {
                 await authProvider.logout();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    slideRoute(const RoleSelectionScreen()),
+                    slideRoute(const LoginScreen()),
                     (route) => false,
                   );
                 }
@@ -393,7 +393,7 @@ class ProfileScreen extends StatelessWidget {
                 onPressed: () {
                   context.read<AuthProvider>().logout();
                   Navigator.of(context).pushAndRemoveUntil(
-                    slideRoute(const RoleSelectionScreen()),
+                    slideRoute(const LoginScreen()),
                     (route) => false,
                   );
                 },
