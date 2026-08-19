@@ -8,22 +8,17 @@ import '../../providers/auth_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/cache_service.dart';
 import '../../services/connectivity_service.dart';
-import '../../widgets/empty_state_widget.dart';
-import '../../widgets/skeleton_loading_widget.dart';
 import '../../widgets/branded_refresh_indicator.dart';
-import '../auth/role_selection_screen.dart';
+import '../auth/login_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../journal/daily_journal_screen.dart';
 import '../journal/mindfulness_exercises_screen.dart';
 import '../chat/chatbot_screen.dart';
-import '../chat/direct_message_screen.dart';
-import '../session/session_tabs_screen.dart';
-import '../session/book_session_screen.dart';
+import '../insights/student_insights_screen.dart';
 import '../activity/activity_screen.dart';
 import '../activity/activity_start_screen.dart';
 import '../profile/profile_screen.dart';
 import '../notifications/notifications_screen.dart';
-import '../discover/discover_professionals_screen.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import '../crisis/sos_screen.dart';
@@ -266,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await context.read<AuthProvider>().logout();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      slideRoute(const RoleSelectionScreen()),
+      slideRoute(const LoginScreen()),
       (route) => false,
     );
   }
@@ -333,36 +328,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildQuickActionCard(
-                      iconBg: const Color(0xFFF1F5F9),
-                      icon: Icons.search_rounded,
+                      iconBg: const Color(0xFFEFF6FF),
+                      icon: Icons.analytics_rounded,
                       iconColor: const Color(0xFF3B82F6),
-                      title: 'Find a Professional',
-                      subtitle: 'Discover therapists and counselors',
-                      onTap: () => Navigator.of(context).push(slideRoute(const DiscoverProfessionalsScreen())),
+                      title: 'Self-Assessments',
+                      subtitle: 'PHQ-9 Depression & GAD-7 Anxiety Screeners',
+                      onTap: () => setState(() => _navIndex = 3),
                     ),
                     const SizedBox(height: 12),
                     _buildQuickActionCard(
-                      iconBg: const Color(0xFFE2E8F0),
-                      icon: Icons.person_rounded,
-                      iconColor: const Color(0xFF1E293B),
-                      title: 'Message Professional',
-                      subtitle: 'Directly contact your therapist',
-                      onTap: () => Navigator.of(context).push(
-                        slideRoute(const DirectMessageScreen(
-                          otherUserId: 'dummy-prof-id',
-                          otherUserName: 'Dr. Jane Smith',
-                          otherUserRole: 'professional',
-                        ))
-                      ),
+                      iconBg: const Color(0xFFECFDF5),
+                      icon: Icons.chat_bubble_outline_rounded,
+                      iconColor: const Color(0xFF10B981),
+                      title: 'Talk to Kausap AI',
+                      subtitle: '24/7 confidential CBT companion',
+                      onTap: () => setState(() => _navIndex = 2),
                     ),
-                    const SizedBox(height: 16),
-                    const UpcomingSessionWidget(),
                     const SizedBox(height: 16),
                     _buildQuoteCard(),
                     const SizedBox(height: 16),
                     _buildSuggestedActivity(),
                     const SizedBox(height: 16),
-                    _buildBookSessionCard(),
+                    _buildScreenerPromoCard(),
                     const SizedBox(height: 16),
                     _buildArticlesSection(),
                     const SizedBox(height: 16),
@@ -385,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _buildHomeTab(),                                      // 0 – Home
       const ActivityScreen(),                              // 1 – Activity
       const ChatbotScreen(),                               // 2 – Kausap AI
-      const SessionTabsScreen(),                           // 3 – Sessions
+      const StudentInsightsScreen(),                       // 3 – Insights & Screeners
       const ProfileScreen(),                               // 4 – Profile
     ];
 
@@ -894,18 +881,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Book Session Card ─────────────────────────────────────────────────────
-  Widget _buildBookSessionCard() {
+  // ── Screener Promo Card ───────────────────────────────────────────────────
+  Widget _buildScreenerPromoCard() {
     return Container(
-      height: 172,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.bookSessionCard,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0077B6), Color(0xFF0096C7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: AppColors.primary.withAlpha(20),
-              blurRadius: 24,
+              color: const Color(0xFF0077B6).withAlpha(40),
+              blurRadius: 16,
               offset: const Offset(0, 4))
         ],
       ),
@@ -915,45 +905,44 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('1 ON 1 SESSIONS',
-                    style: AppTextStyles.body.copyWith(
-                        color: AppColors.bookSessionText,
-                        fontSize: 22,
+                const Text('MENTAL HEALTH SCREENERS',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        color: Colors.white,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text(
-                  'Let\'s open up to the things that matter the most',
-                  style: AppTextStyles.caption
-                      .copyWith(color: AppColors.bookSessionText, fontSize: 12),
+                const SizedBox(height: 6),
+                const Text(
+                  'Take evidence-based PHQ-9 & GAD-7 screeners to track depression and anxiety trends.',
+                  style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.3),
                 ),
-                const Spacer(),
+                const SizedBox(height: 14),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    foregroundColor: AppColors.accentOrange,
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0077B6),
                     minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 8),
+                        horizontal: 16, vertical: 8),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(10)),
                     elevation: 1,
-                    textStyle: AppTextStyles.label.copyWith(
-                        color: AppColors.accentOrange,
+                    textStyle: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
                         fontWeight: FontWeight.w700),
                   ),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      slideRoute(const BookSessionScreen())
-                    );
+                    setState(() => _navIndex = 3);
                   },
-                  child: const Text('Book a Session'),
+                  child: const Text('Take Assessment'),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          Icon(Icons.content_paste_rounded,
-              color: AppColors.accentOrange.withAlpha(100), size: 80),
+          const Icon(Icons.analytics_rounded,
+              color: Colors.white24, size: 70),
         ],
       ),
     );
@@ -1192,7 +1181,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (Icons.home_rounded, 'Home'),
       (Icons.fitness_center_rounded, 'Activity'),
       (Icons.chat_bubble_rounded, 'Kausap'),
-      (Icons.calendar_today_rounded, 'Session'),
+      (Icons.analytics_rounded, 'Insights'),
       (Icons.person_rounded, 'Profile'),
     ];
 
@@ -1286,153 +1275,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: child,
-    );
-  }
-}
-
-class UpcomingSessionWidget extends StatefulWidget {
-  const UpcomingSessionWidget({super.key});
-
-  @override
-  State<UpcomingSessionWidget> createState() => _UpcomingSessionWidgetState();
-}
-
-class _UpcomingSessionWidgetState extends State<UpcomingSessionWidget> {
-  bool _isLoading = true;
-  Map<String, dynamic>? _nextSession;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchUpcomingSession();
-  }
-
-  Future<void> _fetchUpcomingSession() async {
-    try {
-      final data = await ApiClient().get(ApiConfig.sessions);
-      final List<dynamic> sessions = data as List<dynamic>;
-      // Filter for upcoming only
-      final now = DateTime.now();
-      final upcoming = sessions.where((s) {
-        final date = DateTime.parse(s['date_time']).toLocal();
-        return date.isAfter(now) && s['status'] != 'cancelled';
-      }).toList();
-
-      if (upcoming.isNotEmpty) {
-        // Sort by closest date
-        upcoming.sort((a, b) {
-          final dateA = DateTime.parse(a['date_time']);
-          final dateB = DateTime.parse(b['date_time']);
-          return dateA.compareTo(dateB);
-        });
-        setState(() {
-          _nextSession = upcoming.first as Map<String, dynamic>;
-        });
-      }
-    } catch (_) {
-      // Ignore errors for now
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const UpcomingSessionSkeleton();
-    }
-
-    if (_nextSession == null) {
-      return Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Theme.of(context).dividerColor),
-        ),
-        child: EmptyStateWidget(
-          icon: Icons.event_available_rounded,
-          title: 'No upcoming sessions',
-          description: 'Book a session to talk to someone.',
-          buttonText: 'Book a Session',
-          onButtonPressed: () {
-            Navigator.of(context).push(slideRoute(const DiscoverProfessionalsScreen()),
-            );
-          })
-      );
-    }
-
-    final date = DateTime.parse(_nextSession!['date_time']).toLocal();
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final timeStr = "${date.hour > 12 ? date.hour - 12 : date.hour == 0 ? 12 : date.hour}:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}";
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: const Color(0xFF3B82F6).withAlpha(60), blurRadius: 16, offset: const Offset(0, 8))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.white.withAlpha(50), borderRadius: BorderRadius.circular(999)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.videocam_rounded, color: Colors.white, size: 14),
-                    const SizedBox(width: 4),
-                    Text(_nextSession!['mode'] ?? 'Online', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF3B82F6), size: 18),
-                  onPressed: () {
-                    Navigator.of(context).push(slideRoute(const SessionTabsScreen()));
-                  })
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            '${months[date.month - 1]} ${date.day}, ${date.year} • $timeStr',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: Colors.white.withAlpha(40),
-                child: const Icon(Icons.person_rounded, color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Reason: ${_nextSession!['reason'] ?? 'Check-in'}',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
