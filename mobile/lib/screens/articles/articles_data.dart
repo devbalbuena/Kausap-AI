@@ -11,7 +11,6 @@ class ArticleModel {
   final IconData categoryIcon;
   final Color themeColor;
   final List<ArticleSection> sections;
-  final String? relatedActivityTitle;
 
   const ArticleModel({
     required this.id,
@@ -24,7 +23,6 @@ class ArticleModel {
     required this.categoryIcon,
     required this.themeColor,
     required this.sections,
-    this.relatedActivityTitle,
   });
 }
 
@@ -43,166 +41,173 @@ class ArticleSection {
 class ArticlesData {
   static const List<String> categories = [
     'All',
-    'Anxiety & Stress',
-    'Sleep & Rest',
-    'Mindfulness',
-    'Relationships',
-    'Student Life',
+    'Mental Awareness',
+    'Student Burnout',
+    'Anxiety & Coping',
+    'Family & Relations',
+    'Crisis Prevention',
   ];
 
   static const List<ArticleModel> all = [
     ArticleModel(
-      id: 'grounding-techniques-for-anxiety',
-      title: '5 Grounding Techniques When Anxiety Hits',
-      subtitle: 'Simple somatic tools to regain your calm in under 3 minutes.',
-      category: 'Anxiety & Stress',
-      readTime: '3 min read',
-      author: 'Dr. Kim Vance',
-      authorRole: 'Clinical Psychologist',
-      categoryIcon: Icons.spa_rounded,
-      themeColor: Color(0xFF10B981),
-      relatedActivityTitle: '4-7-8 Breathing',
-      sections: [
-        ArticleSection(
-          heading: 'What is Grounding?',
-          content:
-              'Grounding is a set of somatic strategies that help detach you from emotional pain (like racing thoughts, panic, or overwhelm) by anchoring you directly into the physical present moment.',
-        ),
-        ArticleSection(
-          heading: 'The 5-4-3-2-1 Sensory Method',
-          content:
-              'Look around your immediate environment and consciously identify:',
-          keyPoints: [
-            '5 things you can see (a leaf, a shadow, a pen, your shoes)',
-            '4 things you can physically feel (the chair beneath you, your shirt texture)',
-            '3 things you can hear (clock ticking, ambient traffic, your breath)',
-            '2 things you can smell (coffee, fresh air, clean clothes)',
-            '1 thing you can taste (or a single deep sip of cold water)',
-          ],
-        ),
-        ArticleSection(
-          heading: 'Why This Works',
-          content:
-              'When you direct cognitive bandwidth toward sensory observation, you signal safety to your amygdala (the brain\'s alarm center), lowering heart rate and activating your parasympathetic nervous system.',
-        ),
-      ],
-    ),
-    ArticleModel(
-      id: 'building-better-sleep-habits',
-      title: 'The Science of Restorative Sleep & Nighttime Routine',
-      subtitle: 'How to calm a busy mind before bed and wake up truly refreshed.',
-      category: 'Sleep & Rest',
-      readTime: '4 min read',
-      author: 'Dr. Min Santos',
-      authorRole: 'Sleep & Wellness Specialist',
-      categoryIcon: Icons.nightlight_round,
-      themeColor: Color(0xFF6366F1),
-      relatedActivityTitle: 'Guided Meditation',
-      sections: [
-        ArticleSection(
-          heading: 'Why Sleep Quality Beats Quantity',
-          content:
-              'Deep slow-wave sleep and REM sleep are vital for cognitive repair and emotional regulation. Going to bed with an activated nervous system keeps cortisol elevated, preventing deep sleep cycles.',
-        ),
-        ArticleSection(
-          heading: '3 Habits for Better Sleep Tonight',
-          content:
-              'Small adjustments to your evening routine can transform your rest:',
-          keyPoints: [
-            'Dim lights 60 minutes before bed to stimulate natural melatonin release.',
-            'Do a "Brain Dump" journal session: write down tomorrow\'s tasks to close cognitive loops.',
-            'Keep your room cool (between 18°C–21°C) to facilitate your body\'s natural core temperature drop.',
-          ],
-        ),
-        ArticleSection(
-          heading: 'Evening Wind-Down Prompt',
-          content:
-              'Take 5 slow breaths, relax your jaw, unclench your shoulders, and remind yourself: "I have done enough for today. Tomorrow is a fresh start."',
-        ),
-      ],
-    ),
-    ArticleModel(
-      id: 'daily-mindfulness-in-busy-life',
-      title: 'Mindfulness for People Who Are Too Busy to Meditate',
-      subtitle: 'How to integrate micro-mindfulness into your daily Filipino lifestyle.',
-      category: 'Mindfulness',
-      readTime: '3 min read',
-      author: 'Coach Jeon',
-      authorRole: 'Mindfulness Practitioner',
-      categoryIcon: Icons.self_improvement_rounded,
-      themeColor: Color(0xFF0EA5E9),
-      relatedActivityTitle: 'Mindful Walking',
-      sections: [
-        ArticleSection(
-          heading: 'Meditation Doesn’t Require an Hour',
-          content:
-              'You do not need to sit cross-legged on a cushion for 45 minutes to enjoy the benefits of mindfulness. Micro-mindfulness practices throughout your day take less than 60 seconds each.',
-        ),
-        ArticleSection(
-          heading: '3 Micro-Moments to Try Today',
-          content:
-              'Transform everyday routines into calming anchors:',
-          keyPoints: [
-            'Mindful Morning Sip: Focus purely on the warmth, aroma, and taste of your first cup of coffee or tea.',
-            'Traffic/Commute Breath: When stopped at a red light or riding a jeep/train, take three deep belly breaths instead of checking notifications.',
-            'Transition Pauses: Before opening a new meeting or class, pause and do one full conscious inhale and exhale.',
-          ],
-        ),
-      ],
-    ),
-    ArticleModel(
-      id: 'dealing-with-academic-burnout',
+      id: 'student-burnout-awareness',
       title: 'Overcoming Academic and Work Burnout',
-      subtitle: 'Recognize the signs of cognitive fatigue and recharge sustainably.',
-      category: 'Student Life',
-      readTime: '5 min read',
+      subtitle: 'Recognize the clinical signs of cognitive exhaustion and recover sustainably.',
+      category: 'Student Burnout',
+      readTime: '4 min read',
       author: 'Dr. Kim Vance',
       authorRole: 'Clinical Psychologist',
       categoryIcon: Icons.school_rounded,
-      themeColor: Color(0xFFF59E0B),
-      relatedActivityTitle: 'Gratitude Journal',
+      themeColor: Color(0xFF0284C7),
       sections: [
         ArticleSection(
-          heading: 'Burnout vs Normal Tiredness',
+          heading: 'What is Student Burnout?',
           content:
-              'Tiredness goes away with a weekend of rest. Burnout is a chronic state of physical, emotional, and mental exhaustion accompanied by cynicism and feeling ineffective.',
+              'Academic burnout is a state of chronic physical, cognitive, and emotional exhaustion caused by prolonged study overload, perfectionism, and inadequate rest periods.',
         ),
         ArticleSection(
-          heading: 'Steps to Recover and Protect Your Energy',
+          heading: 'Core Warning Signs',
           content:
-              'Protecting your mental health during intense academic or work periods:',
+              'Watch for these four primary indicators before exhaustion turns into severe mental health crises:',
           keyPoints: [
-            'Implement strict digital boundaries: Turn off non-essential work notifications after 7 PM.',
-            'Use the 50/10 Pomodoro Rhythm: Work focused for 50 minutes, then stand up and stretch for 10 minutes.',
-            'Celebrate small wins: Acknowledge what you completed today rather than fixating exclusively on what remains on your to-do list.',
+            'Emotional Detachment: Feeling cynical or indifferent toward subjects you once enjoyed.',
+            'Brain Fog: Inability to retain lecture material or focus for more than 5 minutes.',
+            'Physical Manifestations: Chronic tension headaches, digestive issues, and disrupted sleep.',
+            'Imposter Syndrome: Believing that you do not deserve your spot or accomplishments.',
           ],
+        ),
+        ArticleSection(
+          heading: 'Evidence-Based Recovery Protocol',
+          content:
+              'Implement the "Rule of Thirds": Divide your daily waking hours into 1/3 Focused Study, 1/3 Restorative Rest/Socializing, and 1/3 Physical Health (sleep, nutrition, movement).',
         ),
       ],
     ),
     ArticleModel(
-      id: 'healthy-boundaries-with-family',
-      title: 'Setting Healthy Boundaries in Filipino Families',
-      subtitle: 'How to communicate personal limits with empathy and respect.',
-      category: 'Relationships',
-      readTime: '4 min read',
-      author: 'Dr. Min Santos',
-      authorRole: 'Family & Relationship Counselor',
-      categoryIcon: Icons.favorite_border_rounded,
-      themeColor: Color(0xFFEC4899),
+      id: 'cbt-cognitive-distortions',
+      title: 'Untangling Cognitive Distortions in College Life',
+      subtitle: 'Identify and reframe automatic negative thought traps that fuel daily anxiety.',
+      category: 'Anxiety & Coping',
+      readTime: '5 min read',
+      author: 'Coach Jeon',
+      authorRole: 'CBT Wellness Coach',
+      categoryIcon: Icons.psychology_rounded,
+      themeColor: Color(0xFF7C3AED),
       sections: [
         ArticleSection(
-          heading: 'The Cultural Context',
+          heading: 'Understanding Thought Distortions',
           content:
-              'In Filipino culture, family closeness (pakikisama, utang na loob) is cherished. However, without healthy boundaries, it can lead to emotional exhaustion and resentment.',
+              'Cognitive distortions are habitual, exaggerated ways of thinking that distort reality, convincing your brain of worst-case scenarios without factual evidence.',
         ),
         ArticleSection(
-          heading: 'How to Say "No" with Malasakit',
+          heading: 'The 3 Most Common Student Traps',
           content:
-              'Phrases that set clear boundaries without creating conflict:',
+              'Notice if you catch yourself falling into these common cognitive patterns:',
           keyPoints: [
-            '"I love being here for family, but right now I need to rest so I can show up well for everyone tomorrow."',
-            '"I appreciate your advice, and I\'d like to think through this decision on my own pace."',
-            '"I won\'t be able to commit to that this week, but let\'s catch up when my schedule clears."',
+            'Catastrophizing: "If I fail this midterm, my whole degree is ruined and I have no future."',
+            'All-or-Nothing Thinking: "If I didn\'t get the highest grade, I am a total failure."',
+            'Mind Reading: "The professor looked at me weirdly; they definitely think I am dumb."',
+          ],
+        ),
+        ArticleSection(
+          heading: 'The CBT "Triple-Column" Technique',
+          content:
+              'Whenever a distressing thought surfaces: 1) Write down the automatic thought, 2) Identify the distortion label, and 3) Write a rational, balanced alternative based on objective reality.',
+        ),
+      ],
+    ),
+    ArticleModel(
+      id: 'filipino-family-boundaries',
+      title: 'Setting Healthy Boundaries in Filipino Families',
+      subtitle: 'How to communicate personal limits with empathy, pakikiramay, and mutual respect.',
+      category: 'Family & Relations',
+      readTime: '4 min read',
+      author: 'Dr. Min Santos',
+      authorRole: 'Family & Youth Counselor',
+      categoryIcon: Icons.diversity_3_rounded,
+      themeColor: Color(0xFF059669),
+      sections: [
+        ArticleSection(
+          heading: 'The Cultural Context of Boundaries',
+          content:
+              'In collectivistic Filipino culture, family closeness (*bayanihan* and *utang na loob*) is a profound strength. However, without clear personal boundaries, expectations can lead to emotional enmeshment and suppressed resentment.',
+        ),
+        ArticleSection(
+          heading: 'Respectful Communication Framework',
+          content:
+              'You can honor your family while maintaining your mental sanity by applying the "Affirm + State Limit + Reassure" formula:',
+          keyPoints: [
+            'Affirm: "Ma/Pa, I love and appreciate how much you care about my grades."',
+            'State Limit: "Right now, I need 2 hours of quiet time without interruptions to finish my project."',
+            'Reassure: "I will join everyone for dinner right at 7:00 PM and catch up then."',
+          ],
+        ),
+        ArticleSection(
+          heading: 'Remember: Boundaries Are Not Disrespect',
+          content:
+              'Healthy boundaries do not divide families; they preserve relationships by preventing burnout and passive-aggressive conflict.',
+        ),
+      ],
+    ),
+    ArticleModel(
+      id: 'crisis-prevention-awareness',
+      title: 'Crisis & Suicide Awareness: How to Help a Friend',
+      subtitle: 'Recognizing silent cries for help and connecting peers to Philippine 24/7 hotlines.',
+      category: 'Crisis Prevention',
+      readTime: '3 min read',
+      author: 'Kausap Clinical Team',
+      authorRole: 'Crisis Intervention Specialists',
+      categoryIcon: Icons.emergency_rounded,
+      themeColor: Color(0xFFDC2626),
+      sections: [
+        ArticleSection(
+          heading: 'Why Awareness Saves Lives',
+          content:
+              'Most individuals experiencing acute mental distress or suicidal thoughts do not want to end their lives; they want to end an unbearable pain that feels inescapable.',
+        ),
+        ArticleSection(
+          heading: 'Warning Signs to Notice',
+          content:
+              'Reach out with immediate compassion if a friend or classmate shows these signs:',
+          keyPoints: [
+            'Verbal Cues: Saying things like "I wish I could go to sleep and never wake up" or "You\'d be better off without me."',
+            'Giving Away Possessions: Distributing valued books, accounts, or personal items.',
+            'Sudden Withdrawal: Disappearing from group chats and social gatherings completely.',
+            'Drastic Mood Shift: A sudden, unexpected calmness after a deep depression (often a signal of a decided plan).',
+          ],
+        ),
+        ArticleSection(
+          heading: 'Immediate 24/7 Support Resources in the Philippines',
+          content:
+              'Never hesitate to call or share these free confidential resources:\n• NCMH Crisis Helpline: 1553 (Toll-free 24/7) or 0917-899-8727\n• Hopeline Philippines: (02) 8804-4673 / 0917-558-4673\n• In Touch Community: 0917-800-1123\n• National Emergency Services: 911',
+        ),
+      ],
+    ),
+    ArticleModel(
+      id: 'circadian-health-sleep-hygiene',
+      title: 'Sleep Hygiene & Circadian Health for Students',
+      subtitle: 'The physiological foundations of deep restorative REM sleep for memory and mood.',
+      category: 'Mental Awareness',
+      readTime: '4 min read',
+      author: 'Dr. Min Santos',
+      authorRole: 'Sleep Specialist',
+      categoryIcon: Icons.bedtime_rounded,
+      themeColor: Color(0xFF4F46E5),
+      sections: [
+        ArticleSection(
+          heading: 'Sleep and Memory Consolidation',
+          content:
+              'During Slow-Wave and REM sleep stages, the brain\'s glymphatic system clears metabolic toxins, while the hippocampus transfers facts learned during study sessions into permanent long-term memory.',
+        ),
+        ArticleSection(
+          heading: 'Actionable Night Pacing Habits',
+          content:
+              'Adopt these four proven habits to dramatically improve sleep quality:',
+          keyPoints: [
+            'Morning Sunlight: View 10-15 minutes of natural sunlight within an hour of waking to set your circadian timer.',
+            'Digital Wind-Down: Stop looking at high-energy blue screens 45 minutes before sleep.',
+            'Consistent Wake Time: Wake up at the same time every morning (even on weekends) to anchor your biological clock.',
+            'Bedroom Association: Use your bed exclusively for sleeping, never for working on laptops or doing homework.',
           ],
         ),
       ],

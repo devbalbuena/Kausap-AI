@@ -68,9 +68,23 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    'Mental Health Articles',
-                    style: AppTextStyles.heading2.copyWith(fontSize: 18),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Mental Wellness Articles',
+                        style: AppTextStyles.heading2.copyWith(fontSize: 18),
+                      ),
+                      const Text(
+                        'Psychoeducation & Awareness Factsheets',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
