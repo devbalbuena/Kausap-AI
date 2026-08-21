@@ -1,10 +1,10 @@
 name: 🚀 Build Android APK (Beta Testing)
 
 on:
+  workflow_dispatch: # Allows manual triggering from GitHub UI anytime
   push:
-    branches:
-      - main
-  workflow_dispatch: # Also allows manual triggering from GitHub UI
+    tags:
+      - 'v*' # Only triggers when a release tag is pushed (e.g., v1.0.0-beta.4)
 
 jobs:
   build-apk:

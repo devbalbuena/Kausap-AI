@@ -6,11 +6,10 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/notification_service.dart';
+import '../../services/privacy_settings_service.dart';
 import '../../services/cache_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../widgets/branded_refresh_indicator.dart';
-import '../auth/login_screen.dart';
-import '../checkin/daily_checkin_step1_screen.dart';
 import '../journal/daily_journal_screen.dart';
 import '../chat/chatbot_screen.dart';
 import '../insights/student_insights_screen.dart';
@@ -50,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
     {'title': 'Complete a mindfulness exercise', 'completed': false},
   ];
 
+  int? _todayMoodLevel;
+  bool _showQuickEscape = false;
   List<double?> _weeklyMoods = List.filled(7, null);
   double? _weeklyAverage;
   int _totalLogsThisWeek = 0;
@@ -61,12 +62,22 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchQuickEscapePref();
     _fetchUnreadCount();
     _fetchStreak();
     _fetchQuests();
     _fetchMoodTrends();
     // Show mood popup after first frame if mood not yet logged today
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMoodPopup());
+  }
+
+  Future<void> _fetchQuickEscapePref() async {
+    final enabled = await PrivacySettingsService.isQuickEscapeEnabled();
+    if (mounted) {
+      setState(() {
+        _showQuickEscape = enabled;
+      });
+    }
   }
 
   @override
@@ -85,28 +96,32 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     // Re-fetch data
+    _fetchQuickEscapePref();
     _fetchUnreadCount();
     _fetchStreak();
     _fetchQuests();
     _fetchMoodTrends();
   }
 
-  /// Show a friendly mood check-in pop-up if the user hasn't logged mood today.
-  Future<void> _maybeShowMoodPopup() async {
-    if (!mounted) return;
-    try {
-      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final moodData = await ApiClient().get(ApiConfig.mood);
-      if (moodData is List) {
-        final loggedToday = moodData.any(
-          (e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false,
-        );
-        if (loggedToday) return; // Already logged — skip popup
-      }
-    } catch (_) {
-      return; // On error, don't bother the user
+  String _getMoodEmojiAndLabel(int level) {
+    switch (level) {
+      case 5:
+        return '😄 Great';
+      case 4:
+        return '🙂 Good';
+      case 3:
+        return '😐 Okay';
+      case 2:
+        return '😟 Low';
+      case 1:
+        return '😞 Rough';
+      default:
+        return '🙂 Good';
     }
-    if (!mounted) return;
+  }
+
+  /// Show unified friendly 1-tap mood check-in sheet
+  Future<void> _openMoodPickerSheet() async {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -121,6 +136,10 @@ class _HomeScreenState extends State<HomeScreen> {
               'intensity': level,
             });
             if (mounted) {
+              setState(() {
+                _todayMoodLevel = level;
+                _dailyQuests[0]['completed'] = true;
+              });
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Mood logged! ✅ Daily quest updated.'),
@@ -144,10 +163,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Show a friendly mood check-in pop-up on app start if not yet logged today.
+  Future<void> _maybeShowMoodPopup() async {
+    if (!mounted) return;
+    try {
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final moodData = await ApiClient().get(ApiConfig.mood);
+      if (moodData is List) {
+        final loggedToday = moodData.any(
+          (e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false,
+        );
+        if (loggedToday) return; // Already logged — skip popup
+      }
+    } catch (_) {
+      return; // On error, don't bother the user
+    }
+    if (!mounted) return;
+    await _openMoodPickerSheet();
+  }
+
   Future<void> _fetchQuests() async {
     bool moodCompleted = false;
     bool journalCompleted = false;
     bool mindfulnessCompleted = false;
+    int? todayLevel;
 
     try {
       final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -156,7 +195,13 @@ class _HomeScreenState extends State<HomeScreen> {
       try {
         final moodData = await ApiClient().get(ApiConfig.mood);
         if (moodData is List) {
-          moodCompleted = moodData.any((e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false);
+          final todayEntries = moodData.where(
+            (e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false,
+          ).toList();
+          if (todayEntries.isNotEmpty) {
+            moodCompleted = true;
+            todayLevel = (todayEntries.last['mood_level'] as num?)?.toInt();
+          }
         }
       } catch (_) {}
 
@@ -177,6 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (mounted) {
       setState(() {
+        _todayMoodLevel = todayLevel;
         _dailyQuests[0]['completed'] = moodCompleted;
         _dailyQuests[1]['completed'] = journalCompleted;
         _dailyQuests[2]['completed'] = mindfulnessCompleted;
@@ -326,15 +372,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good evening';
   }
 
-  void _logout() async {
-    await context.read<AuthProvider>().logout();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      slideRoute(const LoginScreen()),
-      (route) => false,
-    );
-  }
-
   /// Builds the home tab content (the main scrollable dashboard)
   Widget _buildHomeTab() {
     return Center(
@@ -360,14 +397,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 16),
                     _buildDailyQuestsCard(),
                     const SizedBox(height: 16),
-                    _buildQuickActionCard(
-                      iconBg: AppColors.checkinIcon,
-                      icon: Icons.favorite_rounded,
-                      iconColor: const Color(0xFFE74C3C),
-                      title: 'How are you feeling today?',
-                      subtitle: 'Tap to check-in',
-                      onTap: () => Navigator.of(context).push(slideRoute(const DailyCheckinStep1Screen())),
-                    ),
+                    _todayMoodLevel == null
+                        ? _buildQuickActionCard(
+                            iconBg: AppColors.checkinIcon,
+                            icon: Icons.favorite_rounded,
+                            iconColor: const Color(0xFFE74C3C),
+                            title: 'How are you feeling today?',
+                            subtitle: 'Tap to check-in your mood',
+                            onTap: _openMoodPickerSheet,
+                          )
+                        : _buildQuickActionCard(
+                            iconBg: const Color(0xFFE0F2FE),
+                            icon: Icons.sentiment_satisfied_alt_rounded,
+                            iconColor: const Color(0xFF0284C7),
+                            title: "Today's Mood: ${_getMoodEmojiAndLabel(_todayMoodLevel!)}",
+                            subtitle: 'Logged today ✅ • Tap to view trends & insights',
+                            onTap: () => setState(() => _navIndex = 3),
+                          ),
                     const SizedBox(height: 12),
                     _buildQuickActionCard(
                       iconBg: const Color(0xFFFEF3C7),
@@ -375,7 +421,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       iconColor: const Color(0xFFD97706),
                       title: 'Daily Journal',
                       subtitle: 'Write your thoughts and reflect',
-                      onTap: () => Navigator.of(context).push(slideRoute(const DailyJournalScreen())),
+                      onTap: () async {
+                        final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
+                        if (res == true) {
+                          _fetchQuests();
+                          _fetchStreak();
+                        }
+                      },
                     ),
                     const SizedBox(height: 12),
                     _buildQuickActionCard(
@@ -476,28 +528,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   .copyWith(color: AppColors.primary, fontSize: 20)),
         ]),
         Row(children: [
-          // Quick Escape panic button
-          Semantics(
-            label: 'Quick escape',
-            button: true,
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const QuickEscapeScreen(),
-                  fullscreenDialog: true,
+          // Quick Escape panic button (Shown only if enabled in Settings)
+          if (_showQuickEscape) ...[
+            Semantics(
+              label: 'Quick escape',
+              button: true,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const QuickEscapeScreen(),
+                    fullscreenDialog: true,
+                  ),
                 ),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.shield_outlined, color: Colors.red.shade400, size: 20),
                 ),
-                child: Icon(Icons.shield_outlined, color: Colors.red.shade400, size: 20),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
           Semantics(
             label: _unreadCount > 0
                 ? 'Notifications, $_unreadCount unread'
@@ -530,10 +584,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 12),
           Semantics(
-            label: 'Open profile menu for $_firstName',
+            label: 'Open profile tab for $_firstName',
             button: true,
             child: GestureDetector(
-              onTap: _showProfileMenu,
+              onTap: () => setState(() => _navIndex = 4),
               child: Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   final user = auth.currentUser ?? widget.user;
@@ -560,46 +614,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ]),
       ],
-    );
-  }
-
-  void _showProfileMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.divider,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text('$_firstName\'s Account',
-                  style: AppTextStyles.heading2),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.logout, color: AppColors.error),
-              title: Text('Sign Out',
-                  style: AppTextStyles.body.copyWith(color: AppColors.error)),
-              onTap: () {
-                Navigator.pop(context);
-                _logout();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
     );
   }
 
@@ -765,40 +779,69 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          ..._dailyQuests.map((quest) {
+          ..._dailyQuests.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final quest = entry.value;
             final isCompleted = quest['completed'] as bool;
             
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isCompleted ? AppColors.primary : AppColors.divider,
-                          width: 2,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () async {
+                  if (idx == 0) {
+                    if (isCompleted) {
+                      setState(() => _navIndex = 3);
+                    } else {
+                      _openMoodPickerSheet();
+                    }
+                  } else if (idx == 1) {
+                    final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
+                    if (res == true) {
+                      _fetchQuests();
+                      _fetchStreak();
+                    }
+                  } else if (idx == 2) {
+                    setState(() => _navIndex = 1);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isCompleted ? AppColors.primary : AppColors.divider,
+                            width: 2,
+                          ),
+                          color: isCompleted ? AppColors.primary : Colors.transparent,
                         ),
-                        color: isCompleted ? AppColors.primary : Colors.transparent,
+                        child: isCompleted
+                            ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                            : null,
                       ),
-                      child: isCompleted
-                          ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      quest['title'] as String,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        color: isCompleted ? AppColors.textSecondary : AppColors.textPrimary,
-                        decoration: isCompleted ? TextDecoration.lineThrough : null,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          quest['title'] as String,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            color: isCompleted ? AppColors.textSecondary : AppColors.textPrimary,
+                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: isCompleted ? Colors.grey.shade400 : AppColors.primary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

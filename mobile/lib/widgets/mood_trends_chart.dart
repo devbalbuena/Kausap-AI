@@ -119,6 +119,7 @@ class _MoodTrendsChartState extends State<MoodTrendsChart> {
       padding: const EdgeInsets.only(top: 24, right: 24, left: 0, bottom: 0),
       child: LineChart(
         LineChartData(
+          lineTouchData: const LineTouchData(enabled: false),
           gridData: const FlGridData(show: false),
           titlesData: FlTitlesData(
             leftTitles: AxisTitles(

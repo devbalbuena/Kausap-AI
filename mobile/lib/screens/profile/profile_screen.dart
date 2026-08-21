@@ -16,7 +16,7 @@ import '../settings/privacy_center_screen.dart';
 import '../../widgets/mood_trends_chart.dart';
 import '../settings/about_screen.dart';
 import '../../services/api_client.dart';
-import '../mood/mood_analytics_screen.dart';
+import '../insights/student_insights_screen.dart';
 import 'edit_profile_screen.dart';
 import 'achievements_screen.dart';
 import 'assessment_history_screen.dart';
@@ -238,19 +238,19 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // MY MENTAL HEALTH Section
+            // MY MOOD TRACKER Section
             _buildSectionContainer(
-              title: 'MY MENTAL HEALTH',
+              title: 'MY MOOD TRACKER',
               children: [
                 const MoodTrendsChart(),
                 _buildDivider(),
                 _buildListItem(
-                  icon: Icons.show_chart_rounded,
-                  title: 'Detailed Mood Analytics',
+                  icon: Icons.insights_rounded,
+                  title: 'Detailed Trends & Insights',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const MoodAnalyticsScreen()),
-                    );
-                  }),
+                    Navigator.push(context, slideRoute(const StudentInsightsScreen()));
+                  },
+                ),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.history_rounded,

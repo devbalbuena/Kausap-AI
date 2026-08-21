@@ -15,6 +15,7 @@ class PrivacyCenterScreen extends StatefulWidget {
 
 class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
   bool _privacyScreenEnabled = true;
+  bool _quickEscapeEnabled = false;
   bool _analyticsEnabled = true;
   bool _marketingEnabled = false;
 
@@ -26,9 +27,11 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
 
   Future<void> _loadSettings() async {
     final privacy = await PrivacySettingsService.isPrivacyScreenEnabled();
+    final quickEscape = await PrivacySettingsService.isQuickEscapeEnabled();
     if (mounted) {
       setState(() {
         _privacyScreenEnabled = privacy;
+        _quickEscapeEnabled = quickEscape;
       });
     }
   }
@@ -268,6 +271,19 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               HapticService.mediumTap();
               await PrivacySettingsService.setPrivacyScreen(v);
               if (mounted) setState(() => _privacyScreenEnabled = v);
+            },
+          ),
+          const Divider(height: 1, indent: 72),
+          _buildControlTile(
+            icon: Icons.shield_outlined,
+            color: const Color(0xFFEF4444),
+            label: 'Quick Escape Button',
+            subtitle: 'Show panic button on Home to instantly disguise app as weather',
+            value: _quickEscapeEnabled,
+            onChanged: (v) async {
+              HapticService.mediumTap();
+              await PrivacySettingsService.setQuickEscape(v);
+              if (mounted) setState(() => _quickEscapeEnabled = v);
             },
           ),
           const Divider(height: 1, indent: 72),

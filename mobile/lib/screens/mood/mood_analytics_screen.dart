@@ -194,6 +194,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
                         height: 180,
                         child: LineChart(
                           LineChartData(
+                            lineTouchData: const LineTouchData(enabled: false),
                             gridData: FlGridData(
                               show: true,
                               drawVerticalLine: false,
@@ -618,6 +619,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
               width: 150,
               child: PieChart(
                 PieChartData(
+                  pieTouchData: PieTouchData(enabled: false),
                   sections: sections,
                   sectionsSpace: 2,
                   centerSpaceRadius: 36,

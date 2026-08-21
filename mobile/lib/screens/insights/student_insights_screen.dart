@@ -594,25 +594,67 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     );
   }
 
-  // ── Tab 2: Trends & Analytics (Unified with Home Screen Mood Data) ──────────
+  // ── Tab 2: Trends & Analytics (Unified Real-Time Dynamic Mood & Health Data) ──
   Widget _buildTrendsTab() {
-    final weeklyBars = _computeWeeklyBars();
     final emotionCounts = _computeEmotionCounts();
     final totalEmotions = emotionCounts.values.fold(0, (a, b) => a + b);
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final avgScore = _computeAverageMoodScore();
+    final topEmotion = _getDominantEmotion(emotionCounts);
+    final weeklySpots = _computeWeeklySpots();
+    final monthlySpots = _computeMonthlySpots();
 
     return RefreshIndicator(
+      color: AppColors.primary,
       onRefresh: _loadData,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          // ── Mood & Emotional Trajectory with Toggle ──────────────────────
+          // ── 1. Top Key Stat Metrics Cards ──────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricCard(
+                  emoji: _getMoodEmoji(avgScore > 0 ? avgScore : 3.0),
+                  value: avgScore > 0 ? "${avgScore.toStringAsFixed(1)} / 5.0" : "3.0 / 5.0",
+                  label: "Average Mood",
+                  bgGradient: const [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+                  accentColor: const Color(0xFF0284C7),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetricCard(
+                  emoji: "🌿",
+                  value: topEmotion,
+                  label: "Top Emotion",
+                  bgGradient: const [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+                  accentColor: const Color(0xFF16A34A),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetricCard(
+                  emoji: "📋",
+                  value: "${_moodEntries.length}",
+                  label: "Total Logs",
+                  bgGradient: const [Color(0xFFFAF5FF), Color(0xFFF3E8FF)],
+                  accentColor: const Color(0xFF7C3AED),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── 2. Emotional Trajectory Chart (Weekly vs Monthly Line Curve) ───
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE8EAED)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: const [
+                BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4)),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,14 +664,22 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.show_chart_rounded, color: AppColors.primary, size: 18),
+                        Icon(Icons.show_chart_rounded, color: AppColors.primary, size: 20),
                         SizedBox(width: 8),
-                        Text("Mood Trajectory", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2C3E50))),
+                        Text(
+                          "Mood Trajectory",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
                       ],
                     ),
-                    // Time Range Toggle
+                    // Weekly / Monthly Toggle Pill
                     Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(8),
@@ -639,16 +689,20 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           GestureDetector(
                             onTap: () => setState(() => _isMonthlyView = false),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
                                 color: !_isMonthlyView ? Colors.white : Colors.transparent,
                                 borderRadius: BorderRadius.circular(6),
+                                boxShadow: !_isMonthlyView
+                                    ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))]
+                                    : null,
                               ),
                               child: Text(
                                 'Weekly',
                                 style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                   color: !_isMonthlyView ? AppColors.primary : const Color(0xFF64748B),
                                 ),
                               ),
@@ -657,16 +711,20 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           GestureDetector(
                             onTap: () => setState(() => _isMonthlyView = true),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
                                 color: _isMonthlyView ? Colors.white : Colors.transparent,
                                 borderRadius: BorderRadius.circular(6),
+                                boxShadow: _isMonthlyView
+                                    ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))]
+                                    : null,
                               ),
                               child: Text(
                                 'Monthly',
                                 style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                   color: _isMonthlyView ? AppColors.primary : const Color(0xFF64748B),
                                 ),
                               ),
@@ -677,86 +735,173 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
-                  _moodEntries.isEmpty
-                      ? "No mood entries logged yet. Track your daily feeling on the Home tab!"
-                      : "Emotional wellness trajectory tracked across ${_moodEntries.length} logged check-ins.",
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF707974)),
+                  _isMonthlyView
+                      ? "30-day emotional wellness progression over 4 weeks."
+                      : "7-day day-by-day emotional progression for this week.",
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
 
-                if (_moodEntries.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Column(
-                      children: const [
-                        Icon(Icons.mood_rounded, color: Color(0xFF94A3B8), size: 36),
-                        SizedBox(height: 8),
-                        Text(
-                          "No mood check-ins logged yet",
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                // Beautiful Smooth Line Chart
+                SizedBox(
+                  height: 180,
+                  child: Row(
+                    children: [
+                      // Y-Axis Mood Emojis
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text("😄", style: TextStyle(fontSize: 14)),
+                          Text("🙂", style: TextStyle(fontSize: 14)),
+                          Text("😐", style: TextStyle(fontSize: 14)),
+                          Text("😟", style: TextStyle(fontSize: 14)),
+                          Text("😞", style: TextStyle(fontSize: 14)),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      // Chart Canvas
+                      Expanded(
+                        child: LineChart(
+                          LineChartData(
+                            minY: 1.0,
+                            maxY: 5.0,
+                            minX: 0,
+                            maxX: _isMonthlyView ? 3 : 6,
+                            gridData: FlGridData(
+                              show: true,
+                              drawVerticalLine: false,
+                              horizontalInterval: 1.0,
+                              getDrawingHorizontalLine: (value) => FlLine(
+                                color: const Color(0xFFF1F5F9),
+                                strokeWidth: 1,
+                              ),
+                            ),
+                            titlesData: FlTitlesData(
+                              leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 22,
+                                  interval: 1,
+                                  getTitlesWidget: (value, meta) {
+                                    final idx = value.toInt();
+                                    if (_isMonthlyView) {
+                                      const labels = ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'];
+                                      if (idx >= 0 && idx < labels.length) {
+                                        return Text(
+                                          labels[idx],
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                                      if (idx >= 0 && idx < days.length) {
+                                        return Text(
+                                          days[idx],
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 10,
+                                            fontWeight: idx == (DateTime.now().weekday - 1)
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                            color: idx == (DateTime.now().weekday - 1)
+                                                ? AppColors.primary
+                                                : const Color(0xFF64748B),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                ),
+                              ),
+                            ),
+                            borderData: FlBorderData(show: false),
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: _isMonthlyView ? monthlySpots : weeklySpots,
+                                isCurved: true,
+                                curveSmoothness: 0.35,
+                                color: AppColors.primary,
+                                barWidth: 3.5,
+                                isStrokeCapRound: true,
+                                dotData: FlDotData(
+                                  show: true,
+                                  getDotPainter: (spot, percent, barData, index) {
+                                    return FlDotCirclePainter(
+                                      radius: 4.5,
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                      strokeColor: AppColors.primary,
+                                    );
+                                  },
+                                ),
+                                belowBarData: BarAreaData(
+                                  show: true,
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppColors.primary.withAlpha(50),
+                                      AppColors.primary.withAlpha(2),
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  )
-                else
-                  // Dynamic Daily Bars
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: List.generate(7, (index) {
-                      final val = weeklyBars[index];
-                      final dayLabel = days[index];
-
-                      if (val == null) {
-                        return _buildEmptyDayBar(dayLabel);
-                      }
-
-                      Color barColor = const Color(0xFF10B981);
-                      if (val >= 4.5) {
-                        barColor = const Color(0xFF0284C7);
-                      } else if (val >= 3.5) {
-                        barColor = const Color(0xFF10B981);
-                      } else if (val >= 2.5) {
-                        barColor = const Color(0xFFF59E0B);
-                      } else {
-                        barColor = const Color(0xFFEF4444);
-                      }
-
-                      return _buildTrendBar(dayLabel, val.round(), barColor);
-                    }),
+                      ),
+                    ],
                   ),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // ── 🥧 Dynamic Emotion Breakdown (Interactive Pie / Donut Chart) ───
+          // ── 3. Emotion Frequency Breakdown (Interactive Donut Chart) ──────
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE8EAED)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: const [
+                BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4)),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.pie_chart_rounded, color: AppColors.primary, size: 18),
+                    Icon(Icons.pie_chart_rounded, color: AppColors.primary, size: 20),
                     SizedBox(width: 8),
-                    Text("Emotion Breakdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2C3E50))),
+                    Text(
+                      "Emotion Breakdown",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _moodEntries.isEmpty
-                      ? "Distribution of feelings from your logged check-ins."
-                      : "Breakdown of feelings recorded across all check-ins",
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF707974)),
+                  "All-time breakdown of recorded feelings (${totalEmotions > 0 ? totalEmotions : _moodEntries.length} data points)",
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
                 ),
                 const SizedBox(height: 16),
 
@@ -773,21 +918,21 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 else
                   Row(
                     children: [
-                      // Pie / Donut Chart
+                      // Donut Chart
                       SizedBox(
-                        height: 130,
-                        width: 130,
+                        height: 135,
+                        width: 135,
                         child: PieChart(
                           PieChartData(
-                            sectionsSpace: 2,
-                            centerSpaceRadius: 30,
+                            pieTouchData: PieTouchData(enabled: false),
+                            sectionsSpace: 3,
+                            centerSpaceRadius: 32,
                             sections: _buildDynamicPieSections(emotionCounts, totalEmotions),
                           ),
                         ),
                       ),
                       const SizedBox(width: 16),
-
-                      // Emotion Legend Chips
+                      // Legend Items
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,7 +946,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           ),
           const SizedBox(height: 16),
 
-          // ── AI Wellness & Correlational Insights ───────────────────────────
+          // ── 4. Real-Time Dynamic AI Insights ──────────────────────────────
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -816,51 +961,115 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   children: [
                     Icon(Icons.auto_awesome_rounded, color: Color(0xFF16A34A), size: 18),
                     SizedBox(width: 8),
-                    Text("AI Correlational Insights", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534))),
+                    Text(
+                      "AI Wellness Observations",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                        color: Color(0xFF166534),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _moodEntries.isEmpty
-                      ? "• 💡 Getting Started: Log your first mood check-in and complete a PHQ-9 screener to unlock personalized emotional patterns.\n"
-                        "• 🌿 Wellness Tip: Mindful breathing and daily grounding exercises build lifelong emotional resilience."
-                      : "• 🎯 Wellness Impact: Mood ratings correlate positively with completed guided activities (breathing & journaling).\n"
-                        "• 🌙 Evening Reset: Evening check-ins show lower tension after 4-7-8 breathing sessions.\n"
-                        "• 📈 Clinical Stability: Standardized screeners remain within the safe baseline range.",
-                  style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF14532D)),
-                ),
+                const SizedBox(height: 10),
+                ..._generateDynamicObservations(avgScore, topEmotion, _moodEntries.length),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // ── 24/7 Emergency Support ─────────────────────────────────────────
+          // ── 5. Chronological Recent Mood Check-ins Log ─────────────────────
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE8EAED)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: const [
+                BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.history_rounded, color: AppColors.primary, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          "Recent Check-ins",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      "${_moodEntries.length} logs",
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (_moodEntries.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: Text(
+                        "No check-in history yet. Log your feeling today!",
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                      ),
+                    ),
+                  )
+                else
+                  ..._buildRecentCheckinRows(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ── 6. 24/7 Crisis Support ─────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.support_agent_rounded, color: Color(0xFFC62828), size: 18),
+                    Icon(Icons.support_agent_rounded, color: Color(0xFFDC2626), size: 18),
                     SizedBox(width: 8),
-                    Text("24/7 Crisis Assistance", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50))),
+                    Text(
+                      "24/7 Crisis Support",
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                    ),
                   ],
                 ),
                 SizedBox(height: 6),
                 Text(
-                  "If you or a fellow student are experiencing severe emotional distress, free professional hotlines are available 24/7:",
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  "If you need immediate confidential support, free hotlines are available 24/7:",
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
                 ),
-                SizedBox(height: 10),
-                Text("• NCMH Toll-Free: 1553 / 0917-899-8727", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFC62828))),
+                SizedBox(height: 8),
+                Text("• NCMH Toll-Free: 1553 / 0917-899-8727", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
                 SizedBox(height: 4),
-                Text("• Hopeline PH: 0917-558-4673", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0077B6))),
+                Text("• Hopeline PH: 0917-558-4673", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
               ],
             ),
           ),
@@ -869,14 +1078,313 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     );
   }
 
+  Widget _buildMetricCard({
+    required String emoji,
+    required String value,
+    required String label,
+    required List<Color> bgGradient,
+    required Color accentColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: bgGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accentColor.withAlpha(40)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 22)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: accentColor,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+              color: accentColor.withAlpha(190),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getDominantEmotion(Map<String, int> counts) {
+    if (counts.isEmpty) return "Balanced";
+    String dominant = "Balanced";
+    int maxCount = 0;
+    counts.forEach((k, v) {
+      if (v > maxCount) {
+        maxCount = v;
+        dominant = k;
+      }
+    });
+    return dominant;
+  }
+
+  String _getMoodEmoji(double level) {
+    if (level >= 4.5) return "😄";
+    if (level >= 3.5) return "🙂";
+    if (level >= 2.5) return "😐";
+    if (level >= 1.5) return "😟";
+    return "😞";
+  }
+
+  List<FlSpot> _computeWeeklySpots() {
+    final weeklyBars = _computeWeeklyBars();
+    final List<FlSpot> spots = [];
+    double lastKnown = _computeAverageMoodScore() > 0 ? _computeAverageMoodScore() : 3.0;
+
+    for (int i = 0; i < 7; i++) {
+      final val = weeklyBars[i];
+      if (val != null) {
+        lastKnown = val;
+        spots.add(FlSpot(i.toDouble(), val));
+      } else {
+        spots.add(FlSpot(i.toDouble(), lastKnown));
+      }
+    }
+    return spots;
+  }
+
+  List<FlSpot> _computeMonthlySpots() {
+    final now = DateTime.now();
+    final List<FlSpot> spots = [];
+    for (int week = 3; week >= 0; week--) {
+      final start = now.subtract(Duration(days: (week + 1) * 7));
+      final end = now.subtract(Duration(days: week * 7));
+
+      final matching = _moodEntries.where((e) {
+        final created = e['created_at'] as String?;
+        if (created == null) return false;
+        try {
+          final dt = DateTime.parse(created);
+          return dt.isAfter(start) && dt.isBefore(end.add(const Duration(days: 1)));
+        } catch (_) {
+          return false;
+        }
+      }).toList();
+
+      double avg = 3.0;
+      if (matching.isNotEmpty) {
+        double sum = 0;
+        for (final m in matching) {
+          sum += (m['mood_level'] as num?)?.toDouble() ?? 3.0;
+        }
+        avg = sum / matching.length;
+      } else if (_moodEntries.isNotEmpty) {
+        avg = _computeAverageMoodScore();
+      }
+      spots.add(FlSpot((3 - week).toDouble(), avg.clamp(1.0, 5.0)));
+    }
+    return spots;
+  }
+
+  List<Widget> _generateDynamicObservations(double avg, String topEmotion, int count) {
+    if (count == 0) {
+      return [
+        const Text(
+          "• 💡 Getting Started: Log your first mood check-in to generate personalized AI trends.\n"
+          "• 🌿 Wellness Tip: Mindful breathing and daily grounding exercises build lifelong resilience.",
+          style: TextStyle(fontFamily: 'Inter', fontSize: 12, height: 1.5, color: Color(0xFF14532D)),
+        )
+      ];
+    }
+
+    final List<Widget> items = [];
+
+    // 1. Dominant state observation
+    items.add(Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("• ", style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              "Primary Emotion: Your most frequent feeling is $topEmotion across your logged check-ins.",
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, height: 1.4, color: Color(0xFF14532D)),
+            ),
+          ),
+        ],
+      ),
+    ));
+
+    // 2. Average trajectory observation
+    final statusText = avg >= 3.5
+        ? "Positive Stability: Your average mood score is ${avg.toStringAsFixed(1)}/5.0, reflecting strong emotional health."
+        : (avg >= 2.5
+            ? "Moderate Rhythm: Your average mood is ${avg.toStringAsFixed(1)}/5.0 with normal weekly fluctuations."
+            : "Self-Care Advisory: Your average score is ${avg.toStringAsFixed(1)}/5.0. Consider taking extra breaks and using guided breathing.");
+
+    items.add(Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("• ", style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              statusText,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, height: 1.4, color: Color(0xFF14532D)),
+            ),
+          ),
+        ],
+      ),
+    ));
+
+    // 3. Consistency habit
+    items.add(Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("• ", style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold)),
+        Expanded(
+          child: Text(
+            "Tracking Habit: You have accumulated $count total check-ins. Consistent tracking enhances self-awareness.",
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, height: 1.4, color: Color(0xFF14532D)),
+          ),
+        ),
+      ],
+    ));
+
+    return items;
+  }
+
+  List<Widget> _buildRecentCheckinRows() {
+    final sorted = List<Map<String, dynamic>>.from(_moodEntries);
+    sorted.sort((a, b) {
+      final aDate = a['created_at']?.toString() ?? '';
+      final bDate = b['created_at']?.toString() ?? '';
+      return bDate.compareTo(aDate);
+    });
+
+    final top5 = sorted.take(5).toList();
+
+    return top5.map((item) {
+      final level = (item['mood_level'] as num?)?.toInt() ?? 3;
+      final emoji = _getMoodEmoji(level.toDouble());
+      final feelings = (item['feelings'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final dateStr = item['created_at']?.toString() ?? '';
+      String formattedDate = dateStr;
+      try {
+        final dt = DateTime.parse(dateStr).toLocal();
+        final diff = DateTime.now().difference(dt);
+        if (diff.inHours < 24 && dt.day == DateTime.now().day) {
+          formattedDate = "Today, ${DateFormat('h:mm a').format(dt)}";
+        } else if (diff.inHours < 48 && dt.day == DateTime.now().subtract(const Duration(days: 1)).day) {
+          formattedDate = "Yesterday, ${DateFormat('h:mm a').format(dt)}";
+        } else {
+          formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(dt);
+        }
+      } catch (_) {}
+
+      final moodName = level == 5
+          ? "Great"
+          : (level == 4 ? "Good" : (level == 3 ? "Okay" : (level == 2 ? "Low" : "Rough")));
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Center(child: Text(emoji, style: const TextStyle(fontSize: 18))),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        moodName,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        formattedDate,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 10.5,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (feelings.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Wrap(
+                      spacing: 4,
+                      children: feelings.map((f) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            f,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
   List<PieChartSectionData> _buildDynamicPieSections(Map<String, int> counts, int total) {
     const colors = [
+      Color(0xFF0284C7),
       Color(0xFF10B981),
       Color(0xFFF59E0B),
-      Color(0xFF6366F1),
-      Color(0xFFEA580C),
-      Color(0xFF64748B),
-      Color(0xFF0284C7),
+      Color(0xFF8B5CF6),
+      Color(0xFFEF4444),
+      Color(0xFF06B6D4),
     ];
     int colorIdx = 0;
     final sections = <PieChartSectionData>[];
@@ -887,7 +1395,12 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
         final color = colors[colorIdx % colors.length];
         colorIdx++;
         sections.add(
-          PieChartSectionData(value: pct, color: color, radius: 32, showTitle: false),
+          PieChartSectionData(
+            value: pct,
+            color: color,
+            radius: 34,
+            showTitle: false,
+          ),
         );
       }
     });
@@ -897,12 +1410,12 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
 
   List<Widget> _buildDynamicLegend(Map<String, int> counts, int total) {
     const colors = [
+      Color(0xFF0284C7),
       Color(0xFF10B981),
       Color(0xFFF59E0B),
-      Color(0xFF6366F1),
-      Color(0xFFEA580C),
-      Color(0xFF64748B),
-      Color(0xFF0284C7),
+      Color(0xFF8B5CF6),
+      Color(0xFFEF4444),
+      Color(0xFF06B6D4),
     ];
     int colorIdx = 0;
     final list = <Widget>[];
@@ -919,49 +1432,20 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
 
   Widget _buildEmotionLegend(String label, String pct, Color color) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         children: [
           Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 6),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF475569), fontWeight: FontWeight.w500))),
-          Text(pct, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+            ),
+          ),
+          Text(pct, style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
         ],
       ),
-    );
-  }
-
-  Widget _buildTrendBar(String day, int level, Color color) {
-    return Column(
-      children: [
-        Container(
-          width: 24,
-          height: (level.clamp(1, 5) * 18).toDouble(),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(6),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(day, style: const TextStyle(fontSize: 10, color: Color(0xFF707974), fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  Widget _buildEmptyDayBar(String day) {
-    return Column(
-      children: [
-        Container(
-          width: 24,
-          height: 12,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE2E8F0),
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(day, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-      ],
     );
   }
 }
