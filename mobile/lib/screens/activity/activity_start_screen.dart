@@ -5,6 +5,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import 'activity_screen.dart';
+import 'widgets/breathing_player_widget.dart';
+import 'widgets/meditation_player_widget.dart';
+import 'widgets/gratitude_journal_widget.dart';
+import 'widgets/mindful_walking_widget.dart';
 
 // ── Activity Start Screen ─────────────────────────────────────────────────────
 // Phases: idle → active (countdown) → done
@@ -237,8 +241,34 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     );
   }
 
-  // ── Active Phase (timer overlay) ───────────────────────────────────────────
+  // ── Active Phase (smart player routing) ──────────────────────────────────
   Widget _buildActivePhase() {
+    final cat = widget.activity.category.toLowerCase();
+    final title = widget.activity.title.toLowerCase();
+
+    if (cat == 'breathing' || title.contains('breathing')) {
+      return BreathingPlayerWidget(
+        activity: widget.activity,
+        onComplete: _completeActivity,
+      );
+    } else if (cat == 'meditation' || title.contains('meditation')) {
+      return MeditationPlayerWidget(
+        activity: widget.activity,
+        onComplete: _completeActivity,
+      );
+    } else if (cat == 'journaling' || title.contains('journal')) {
+      return GratitudeJournalWidget(
+        activity: widget.activity,
+        onComplete: _completeActivity,
+      );
+    } else if (cat == 'exercise' || title.contains('walking')) {
+      return MindfulWalkingWidget(
+        activity: widget.activity,
+        onComplete: _completeActivity,
+      );
+    }
+
+    // Fallback countdown timer
     final progress = _totalSeconds > 0
         ? (_totalSeconds - _secondsRemaining) / _totalSeconds
         : 1.0;
@@ -248,7 +278,6 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     return SafeArea(
       child: Column(
         children: [
-          // Top bar
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
             child: Row(
@@ -258,26 +287,19 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
                   onPressed: () => Navigator.maybePop(context),
                 ),
                 const Spacer(),
-                Text(
-                  widget.activity.title,
-                  style: AppTextStyles.heading2,
-                ),
+                Text(widget.activity.title, style: AppTextStyles.heading2),
                 const Spacer(),
-                const SizedBox(width: 48), // balance close button
+                const SizedBox(width: 48),
               ],
             ),
           ),
-
           const Spacer(),
-
-          // Circular countdown ring
           SizedBox(
             width: 220,
             height: 220,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Background ring
                 SizedBox(
                   width: 220,
                   height: 220,
@@ -287,7 +309,6 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
                     color: AppColors.primary.withAlpha(25),
                   ),
                 ),
-                // Foreground progress
                 SizedBox(
                   width: 220,
                   height: 220,
@@ -298,7 +319,6 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
                     strokeCap: StrokeCap.round,
                   ),
                 ),
-                // Countdown text
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -312,39 +332,24 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
                         letterSpacing: -1,
                       ),
                     ),
-                    Text(
-                      'remaining',
-                      style: AppTextStyles.subheading,
-                    ),
+                    Text('remaining', style: AppTextStyles.subheading),
                   ],
                 ),
               ],
             ),
           ),
-
           const SizedBox(height: 32),
-
-          // Activity name + step hint
-          Text(
-            widget.activity.title,
-            style: AppTextStyles.heading1.copyWith(fontSize: 22),
-            textAlign: TextAlign.center,
-          ),
+          Text(widget.activity.title, style: AppTextStyles.heading1.copyWith(fontSize: 22), textAlign: TextAlign.center),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              widget.activity.steps.isNotEmpty
-                  ? widget.activity.steps.first.description
-                  : 'Follow the steps and breathe.',
+              widget.activity.steps.isNotEmpty ? widget.activity.steps.first.description : 'Follow the steps and breathe.',
               style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
           ),
-
           const Spacer(),
-
-          // Unlock notice / I'm Done button
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
             child: AnimatedOpacity(
@@ -352,8 +357,7 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
               duration: const Duration(milliseconds: 400),
               child: Text(
                 'You can finish after 30 seconds…',
-                style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary),
+                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ),
             ),

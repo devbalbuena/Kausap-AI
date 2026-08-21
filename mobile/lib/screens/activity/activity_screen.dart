@@ -164,6 +164,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   Map<String, bool> _completedToday = {};
+  int _activityStreak = 0;
 
   @override
   void initState() {
@@ -177,7 +178,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     super.dispose();
   }
 
-  /// Reads per-activity completion keys for today and updates [_completedToday].
+  /// Reads per-activity completion keys for today and updates [_completedToday] and [_activityStreak].
   Future<void> _loadCompletions() async {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final Map<String, bool> result = {};
@@ -186,7 +187,48 @@ class _ActivityScreenState extends State<ActivityScreen> {
       final val = await _storage.read(key: 'activity_${id}_$today');
       result[id] = val == 'completed';
     }
-    if (mounted) setState(() => _completedToday = result);
+
+    // Calculate dynamic activity streak from activity_history
+    int streak = 0;
+    try {
+      final rawHistory = await _storage.read(key: 'activity_history');
+      if (rawHistory != null) {
+        final history = jsonDecode(rawHistory) as List;
+        final Set<String> activeDates = {};
+        for (final item in history) {
+          final date = item['date'] as String?;
+          if (date != null && date.length >= 10) {
+            activeDates.add(date.substring(0, 10));
+          }
+        }
+
+        final now = DateTime.now();
+        final todayStr = DateFormat('yyyy-MM-dd').format(now);
+        final yesterdayStr = DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 1)));
+
+        final startDay = activeDates.contains(todayStr)
+            ? now
+            : (activeDates.contains(yesterdayStr) ? now.subtract(const Duration(days: 1)) : null);
+
+        if (startDay != null) {
+          for (int i = 0; i < 365; i++) {
+            final check = DateFormat('yyyy-MM-dd').format(startDay.subtract(Duration(days: i)));
+            if (activeDates.contains(check)) {
+              streak++;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _completedToday = result;
+        _activityStreak = streak;
+      });
+    }
   }
 
   /// Navigate to ActivityStartScreen then reload completions when returning.
@@ -482,7 +524,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '3-day activity streak!',
+            _activityStreak == 0
+                ? 'Start your activity streak!'
+                : (_activityStreak == 1
+                    ? '1-day activity streak!'
+                    : '$_activityStreak-day activity streak!'),
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 20,
@@ -492,7 +538,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            "Keep nurturing your mind. You're doing great.",
+            _activityStreak == 0
+                ? 'Complete an exercise today to build your daily habit.'
+                : "Keep nurturing your mind. You're doing great.",
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
