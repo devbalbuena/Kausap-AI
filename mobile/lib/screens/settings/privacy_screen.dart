@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../services/api_client.dart';
+import '../../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+import '../auth/login_screen.dart';
 
 class PrivacyScreen extends StatefulWidget {
   const PrivacyScreen({super.key});
@@ -8,63 +12,77 @@ class PrivacyScreen extends StatefulWidget {
   State<PrivacyScreen> createState() => _PrivacyScreenState();
 }
 
-class _PrivacyScreenState extends State<PrivacyScreen> {
-  final List<_PrivacySection> _sections = [
-    _PrivacySection(
-      title: 'Terms of Service',
-      content:
-          'By using Kausap AI, you agree to these terms. Kausap AI is a mental health support platform that provides AI-powered companionship, mood tracking, and student wellness tools. This service is not a substitute for professional medical advice. You must be at least 13 years old to use this platform.',
-    ),
-    _PrivacySection(
-      title: 'Data Collection',
-      content:
-          'We collect information you provide directly, such as name, email, mood entries, and messages. We also collect usage data to improve the platform. All data is encrypted in transit and at rest. You can request a copy of your data at any time.',
-    ),
-    _PrivacySection(
-      title: 'Data Usage',
-      content:
-          'Your data is used to personalize your experience, improve our AI models, and connect you with appropriate mental health resources. We do not sell your personal information to third parties. Anonymized, aggregated data may be used for research purposes.',
-    ),
-    _PrivacySection(
-      title: 'Data Access',
-      content:
-          'Only you can view your personal journal and mood information. Our support team may access technical data only when necessary to resolve issues, with your consent. All access is logged and audited.',
-    ),
-    _PrivacySection(
-      title: 'Your Legal Rights',
-      content:
-          'You have the right to access, correct, or delete your data at any time. You can withdraw consent for data processing, request data portability, and lodge a complaint with a supervisory authority. Contact privacy@kausap.ai for any data-related requests.',
-    ),
-  ];
+class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   void _showDeleteAccountDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: Color(0xFFEF4444))),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Delete Account',
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFFEF4444)),
+            ),
+          ],
+        ),
         content: const Text(
-          'This action is permanent and cannot be undone. All your data, mood history, conversations, and session records will be permanently deleted.',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+          'This action is irreversible. All your personal information, mood logs, journal entries, screener history, and AI conversations will be permanently deleted.',
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF475569), height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Account deletion request submitted. You will receive an email confirmation.')),
-              );
+              try {
+                final authProvider = context.read<AuthProvider>();
+                final userId = authProvider.currentUser?['id'];
+                if (userId != null) {
+                  await ApiClient().delete('/admin/users/$userId');
+                }
+                await authProvider.logout();
+                if (!mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              } catch (_) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Account deletion requested. If you encounter issues, contact support@kausap.ai'),
+                    backgroundColor: Color(0xFFEF4444),
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
+              elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            child: const Text('Delete Permanently', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -74,185 +92,350 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Privacy & Legal Terms',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: const Color(0xFF64748B),
+          labelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13),
+          unselectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500, fontSize: 13),
+          indicatorColor: AppColors.primary,
+          indicatorWeight: 3,
+          tabs: const [
+            Tab(text: 'Terms'),
+            Tab(text: 'Privacy'),
+            Tab(text: 'Rights & Safety'),
+          ],
+        ),
+      ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: SafeArea(
-            child: Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left_rounded, size: 28, color: AppColors.textPrimary),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'Privacy & Terms',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 20,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                ),
-
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: [
-                      const SizedBox(height: 8),
-
-                      // Intro banner
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withAlpha(15),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.primary.withAlpha(40)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 22),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Your privacy is our priority. Tap each section to learn more.',
-                                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.primary, height: 1.4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Accordion sections
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4))],
-                        ),
-                        child: Column(
-                          children: _sections.asMap().entries.map((entry) {
-                            final i = entry.key;
-                            final section = entry.value;
-                            final isLast = i == _sections.length - 1;
-                            return _buildAccordionItem(section, isLast);
-                          }).toList(),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Danger zone
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF5F5),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFFECACA)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 20),
-                                SizedBox(width: 8),
-                                Text('Danger Zone',
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                      color: Color(0xFFEF4444),
-                                    )),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Deleting your account is permanent. All data will be erased.',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textSecondary, height: 1.4),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: _showDeleteAccountDialog,
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Color(0xFFEF4444)),
-                                  foregroundColor: const Color(0xFFEF4444),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                child: const Text('Delete My Account',
-                                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildTermsTab(),
+              _buildPrivacyTab(),
+              _buildRightsTab(),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAccordionItem(_PrivacySection section, bool isLast) {
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isLast ? 0 : 0)),
-        collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
-        iconColor: AppColors.primary,
-        collapsedIconColor: AppColors.textSecondary,
-        title: Text(section.title,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-              color: AppColors.textPrimary,
-            )),
+  // ── Tab 1: Terms of Service ────────────────────────────────────────────────
+  Widget _buildTermsTab() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      children: [
+        _buildHighlightCard(
+          icon: Icons.gavel_rounded,
+          color: const Color(0xFF0284C7),
+          title: "Student Terms of Service",
+          subtitle: "Last Updated: August 2026 • Version 2.4",
+        ),
+        const SizedBox(height: 16),
+
+        _buildLegalCard(
+          title: "1. Agreement & Purpose",
+          content:
+              "Welcome to Kausap AI. By accessing or using our mobile application and services, you agree to comply with and be bound by these Terms of Service. Kausap AI is designed to provide AI-powered conversational emotional support, mood tracking, daily journaling, and mental wellness tools for students.",
+        ),
+        const SizedBox(height: 12),
+
+        _buildLegalCard(
+          title: "2. Medical & Clinical Disclaimer",
+          isAlert: true,
+          content:
+              "IMPORTANT: Kausap AI is an AI wellness and emotional support companion, NOT a licensed healthcare provider, medical professional, or clinical psychiatric service.\n\n"
+              "• Kausap AI does not provide medical diagnoses, treatment prescriptions, or psychotherapy.\n"
+              "• The platform is NOT a substitute for professional mental health therapy or emergency services.\n"
+              "• If you are experiencing an acute mental health crisis or suicidal thoughts, immediately call 1553 (NCMH 24/7 Toll-Free), Hopeline PH (0917-558-4673), or dial 911.",
+        ),
+        const SizedBox(height: 12),
+
+        _buildLegalCard(
+          title: "3. User Eligibility & Student Accounts",
+          content:
+              "You must be at least 13 years of age to use Kausap AI. You agree to provide accurate registration information and maintain the security of your login credentials. You are responsible for all activities occurring under your account.",
+        ),
+        const SizedBox(height: 12),
+
+        _buildLegalCard(
+          title: "4. Acceptable Conduct & AI Usage",
+          content:
+              "You agree to use Kausap AI respectfully and solely for lawful self-care purposes. You must not attempt to reverse engineer the AI model, harvest data, or input abusive, threatening, or illegal content.",
+        ),
+        const SizedBox(height: 12),
+
+        _buildLegalCard(
+          title: "5. Limitation of Liability",
+          content:
+              "Kausap AI and its developers provide this platform on an 'as-is' and 'as-available' basis. To the maximum extent permitted by law, Kausap AI disclaims liability for any indirect, incidental, or consequential damages resulting from platform usage.",
+        ),
+      ],
+    );
+  }
+
+  // ── Tab 2: Privacy Policy ──────────────────────────────────────────────────
+  Widget _buildPrivacyTab() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      children: [
+        _buildHighlightCard(
+          icon: Icons.shield_rounded,
+          color: const Color(0xFF16A34A),
+          title: "Student Privacy Policy",
+          subtitle: "Your mental health data belongs strictly to you.",
+        ),
+        const SizedBox(height: 16),
+
+        _buildLegalCard(
+          title: "1. Information We Collect",
+          content:
+              "We collect only the information necessary to provide supportive wellness features:\n\n"
+              "• Account Information: Name, email address, student/occupation status.\n"
+              "• Mood & Wellness Logs: Daily mood levels, feeling tags, journal reflections, and clinical screener scores (PHQ-9 & GAD-7).\n"
+              "• Chat Interactions: Messages shared with Kausap AI to generate empathetic context.",
+        ),
+        const SizedBox(height: 12),
+
+        _buildLegalCard(
+          title: "2. AES-256 Encryption & Zero Data Selling",
+          content:
+              "• Zero Advertising & No Data Selling: We NEVER sell, rent, or monetize your personal mental health data, journals, or chat conversations to any third party or advertiser.\n"
+              "• Encryption at Rest & In Transit: All data transfers use TLS 1.3 encryption, and sensitive wellness entries are encrypted with AES-256 database protection.",
+        ),
+        const SizedBox(height: 12),
+
+        _buildLegalCard(
+          title: "3. How We Use Your Data",
+          content:
+              "Your information is strictly used to:\n"
+              "• Provide personalized mood analytics and wellness insights.\n"
+              "• Power empathetic AI chatbot responses.\n"
+              "• Calculate weekly/monthly health trends and streak milestones.",
+        ),
+        const SizedBox(height: 12),
+
+        _buildLegalCard(
+          title: "4. Data Retention & Erasure",
+          content:
+              "Your data is retained only while your account remains active. You have the right at any time to request complete data export or immediate permanent erasure of all stored logs.",
+        ),
+      ],
+    );
+  }
+
+  // ── Tab 3: Rights & Safety ─────────────────────────────────────────────────
+  Widget _buildRightsTab() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      children: [
+        _buildHighlightCard(
+          icon: Icons.verified_user_rounded,
+          color: const Color(0xFF7C3AED),
+          title: "Your Rights & Emergency Safety",
+          subtitle: "Student protections and crisis response protocols.",
+        ),
+        const SizedBox(height: 16),
+
+        _buildLegalCard(
+          title: "1. Your Data Rights",
+          content:
+              "Under applicable privacy regulations (including GDPR and Philippine Data Privacy Act standards), you have full rights over your data:\n\n"
+              "• Right to Access: View all your mood records, screeners, and journals anytime.\n"
+              "• Right to Portability: Download your Personal Wellness Report directly to your device.\n"
+              "• Right to Erasure: Permanently delete your account and all associated records.",
+        ),
+        const SizedBox(height: 16),
+
+        // 24/7 Crisis Box
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFFECACA)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Row(
+                children: [
+                  Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    "24/7 Crisis Hotline Directory",
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF991B1B)),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              Text(
+                "If you are ever in severe emotional distress or require urgent human help, please contact:\n"
+                "• NCMH Toll-Free (24/7): 1553 / 0917-899-8727\n"
+                "• Hopeline Philippines: 0917-558-4673\n"
+                "• National Emergency: 911",
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, height: 1.5, color: Color(0xFF7F1D1D)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Danger zone
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFFCA5A5)),
+            boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4))],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Danger Zone',
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14.5, color: Color(0xFFEF4444)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Permanently delete your account and all stored mental health records. This action cannot be reversed.',
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _showDeleteAccountDialog,
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Delete My Account Permanently'),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFEF4444)),
+                    foregroundColor: const Color(0xFFEF4444),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHighlightCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 3))],
+      ),
+      child: Row(
         children: [
-          if (!isLast)
-            Container(height: 1, color: const Color(0x18000000)),
-          const SizedBox(height: 12),
-          Text(section.content,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.6,
-              )),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14.5, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
-}
 
-class _PrivacySection {
-  final String title;
-  final String content;
-
-  _PrivacySection({required this.title, required this.content});
+  Widget _buildLegalCard({
+    required String title,
+    required String content,
+    bool isAlert = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isAlert ? const Color(0xFFFFFBEB) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isAlert ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
+        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+              color: isAlert ? const Color(0xFF92400E) : const Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.5,
+              height: 1.5,
+              color: isAlert ? const Color(0xFF78350F) : const Color(0xFF334155),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -12,16 +12,16 @@ class NotificationSettingsScreen extends StatefulWidget {
 
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
   // Permissions (persisted)
-  bool _microphoneAccess = false;
+  bool _microphoneAccess = true;
   bool _photoLibrary = true;
-  bool _cameraAccess = false;
+  bool _cameraAccess = true;
 
   // Preferences (persisted)
   bool _pushNotifications = true;
-  bool _sessionReminders = true;
-  bool _newMessages = true;
   bool _dailyCheckins = true;
   String _dailyCheckinsTime = '20:00';
+  bool _mindfulnessReminders = true;
+  bool _streakAlerts = true;
 
   // Quiet Hours (persisted)
   bool _quietHoursEnabled = false;
@@ -42,10 +42,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final cam = await NotificationPrefsService.getCameraEnabled();
 
     final push = await NotificationPrefsService.getPushEnabled();
-    final session = await NotificationPrefsService.getSessionReminders();
-    final messages = await NotificationPrefsService.getNewMessages();
     final daily = await NotificationPrefsService.getDailyCheckins();
     final dailyTime = await NotificationPrefsService.getDailyCheckinsTime();
+    final mindful = await NotificationPrefsService.getMindfulnessReminders();
+    final streak = await NotificationPrefsService.getStreakAlerts();
+
     final quietHours = await NotificationPrefsService.getQuietHoursEnabled();
     final quietStart = await NotificationPrefsService.getQuietHoursStart();
     final quietEnd = await NotificationPrefsService.getQuietHoursEnd();
@@ -57,10 +58,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         _cameraAccess = cam;
 
         _pushNotifications = push;
-        _sessionReminders = session;
-        _newMessages = messages;
         _dailyCheckins = daily;
         _dailyCheckinsTime = dailyTime;
+        _mindfulnessReminders = mindful;
+        _streakAlerts = streak;
+
         _quietHoursEnabled = quietHours;
         _quietHoursStart = quietStart;
         _quietHoursEnd = quietEnd;
@@ -73,7 +75,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final initialStr = isStart ? _quietHoursStart : _quietHoursEnd;
     final parts = initialStr.split(':');
     final initialTime = TimeOfDay(
-      hour: int.tryParse(parts[0]) ?? 0,
+      hour: int.tryParse(parts[0]) ?? (isStart ? 22 : 7),
       minute: int.tryParse(parts[1]) ?? 0,
     );
 
@@ -216,7 +218,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                 icon: Icons.mic_outlined,
                                 iconColor: const Color(0xFF0077B6),
                                 label: 'Microphone Access',
-                                subtitle: 'Allow voice messages and audio notes',
+                                subtitle: 'Allow voice dictation, audio notes & calls',
                                 value: _microphoneAccess,
                                 onChanged: (v) async {
                                   HapticService.lightTap();
@@ -242,7 +244,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                 icon: Icons.camera_alt_outlined,
                                 iconColor: const Color(0xFFE07B39),
                                 label: 'Camera',
-                                subtitle: 'Take profile photos and document uploads',
+                                subtitle: 'Take profile photos and video sessions',
                                 value: _cameraAccess,
                                 onChanged: (v) async {
                                   HapticService.lightTap();
@@ -255,34 +257,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                             const SizedBox(height: 24),
 
                             // ── Notification Preferences ─────────────────────
-                            _buildSectionLabel('NOTIFICATION PREFERENCES'),
+                            _buildSectionLabel('WELLNESS NOTIFICATIONS'),
                             _buildSettingsCard([
-                              _buildToggleRow(
-                                icon: Icons.calendar_today_rounded,
-                                iconColor: const Color(0xFF9B5DE5),
-                                label: 'Session Reminders',
-                                subtitle: 'Get notified 30 mins before sessions',
-                                value: _sessionReminders,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setSessionReminders(v);
-                                  setState(() => _sessionReminders = v);
-                                },
-                              ),
-                              _buildDivider(),
-                              _buildToggleRow(
-                                icon: Icons.chat_bubble_outline_rounded,
-                                iconColor: const Color(0xFF0077B6),
-                                label: 'New Messages',
-                                subtitle: 'Direct messages from therapists & care team',
-                                value: _newMessages,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setNewMessages(v);
-                                  setState(() => _newMessages = v);
-                                },
-                              ),
-                              _buildDivider(),
                               _buildToggleRow(
                                 icon: Icons.favorite_border_rounded,
                                 iconColor: const Color(0xFFE11D48),
@@ -303,6 +279,32 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   onTap: () => _selectCheckinTime(context),
                                 ),
                               ],
+                              _buildDivider(),
+                              _buildToggleRow(
+                                icon: Icons.spa_outlined,
+                                iconColor: const Color(0xFF2E9E6B),
+                                label: 'Mindfulness & Reflection',
+                                subtitle: 'Reminders for daily journaling & breathing',
+                                value: _mindfulnessReminders,
+                                onChanged: (v) async {
+                                  HapticService.lightTap();
+                                  await NotificationPrefsService.setMindfulnessReminders(v);
+                                  setState(() => _mindfulnessReminders = v);
+                                },
+                              ),
+                              _buildDivider(),
+                              _buildToggleRow(
+                                icon: Icons.local_fire_department_outlined,
+                                iconColor: const Color(0xFFF59E0B),
+                                label: 'Streak & Milestones',
+                                subtitle: 'Celebrate consecutive wellness habits',
+                                value: _streakAlerts,
+                                onChanged: (v) async {
+                                  HapticService.lightTap();
+                                  await NotificationPrefsService.setStreakAlerts(v);
+                                  setState(() => _streakAlerts = v);
+                                },
+                              ),
                             ]),
 
                             const SizedBox(height: 24),
@@ -431,7 +433,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.primary,
+            activeTrackColor: AppColors.primaryLight,
           ),
         ],
       ),

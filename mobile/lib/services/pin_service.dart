@@ -1,11 +1,14 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Manages the 4-digit App Lock PIN.
-/// Stores PIN securely using flutter_secure_storage.
+/// Manages the 4-digit App Lock PIN, Biometrics, and Auto-Lock timeout.
+/// Stores settings securely using flutter_secure_storage.
 class PinService {
   static const String _pinKey = 'app_lock_pin';
   static const String _pinEnabledKey = 'app_lock_enabled';
-  static final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static const String _autoLockKey = 'app_lock_autolock_timeout';
+  static const String _biometricsKey = 'app_lock_biometrics_enabled';
+
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   /// Returns whether the App Lock feature is enabled.
   static Future<bool> isEnabled() async {
@@ -43,5 +46,24 @@ class PinService {
     if (!valid) return false;
     await setPin(newPin);
     return true;
+  }
+
+  /// Auto-lock timeout getter & setter ('Immediately', '1 Minute', '5 Minutes')
+  static Future<String> getAutoLockTimeout() async {
+    return await _storage.read(key: _autoLockKey) ?? 'Immediately';
+  }
+
+  static Future<void> setAutoLockTimeout(String timeout) async {
+    await _storage.write(key: _autoLockKey, value: timeout);
+  }
+
+  /// Biometric toggle
+  static Future<bool> isBiometricsEnabled() async {
+    final val = await _storage.read(key: _biometricsKey);
+    return val == 'true';
+  }
+
+  static Future<void> setBiometrics(bool val) async {
+    await _storage.write(key: _biometricsKey, value: val.toString());
   }
 }

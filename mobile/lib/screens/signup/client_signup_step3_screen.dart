@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
@@ -6,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../widgets/accessible_error_widget.dart';
 import '../home/home_screen.dart';
+import '../settings/privacy_screen.dart';
 
 /// Client Signup — Step 3: Summary & Submit
 /// Figma: "Client Signup - Step 3"
@@ -21,9 +23,15 @@ class ClientSignupStep3Screen extends StatefulWidget {
 
 class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
   bool _isLoading = false;
+  bool _agreedToTerms = false;
   String? _error;
 
   Future<void> _submit() async {
+    if (!_agreedToTerms) {
+      setState(() => _error = 'Please accept the Terms of Service & Privacy Policy to create your account.');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -137,6 +145,79 @@ class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
                                 if (d['bio'] != null)
                                   _SummaryRow('Bio', d['bio']),
                               ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Terms of Service & Privacy Policy Consent
+                          InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: Checkbox(
+                                      value: _agreedToTerms,
+                                      activeColor: AppColors.primary,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      onChanged: (val) => setState(() => _agreedToTerms = val ?? false),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text.rich(
+                                      TextSpan(
+                                        text: 'I agree to the ',
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12,
+                                          color: Color(0xFF475569),
+                                          height: 1.4,
+                                        ),
+                                        children: [
+                                          TextSpan(
+                                            text: 'Terms of Service',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                            recognizer: TapGestureRecognizer()
+                                              ..onTap = () => Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                                                  ),
+                                          ),
+                                          const TextSpan(text: ' and '),
+                                          TextSpan(
+                                            text: 'Privacy Policy',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                            recognizer: TapGestureRecognizer()
+                                              ..onTap = () => Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                                                  ),
+                                          ),
+                                          const TextSpan(
+                                            text: ', and understand that Kausap AI is an AI wellness companion, not a clinical psychiatric or emergency medical service.',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
 

@@ -3,7 +3,6 @@ import '../../utils/app_routes.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
 import '../settings/help_faq_screen.dart';
 import '../settings/accessibility_settings_screen.dart';
@@ -15,7 +14,6 @@ import '../settings/privacy_screen.dart';
 import '../settings/privacy_center_screen.dart';
 import '../../widgets/mood_trends_chart.dart';
 import '../settings/about_screen.dart';
-import '../../services/api_client.dart';
 import '../insights/student_insights_screen.dart';
 import 'edit_profile_screen.dart';
 import 'achievements_screen.dart';
@@ -25,60 +23,147 @@ import '../../widgets/cached_avatar.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  void _showDeactivateDialog(BuildContext context) {
-    showDialog(
+  void _showCrisisModal(BuildContext context) {
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Deactivate Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-        content: const Text(
-          'Are you sure you want to deactivate your account? You will be logged out and your account will be suspended. Contact support to reactivate.',
-          style: TextStyle(fontFamily: 'Poppins'),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.crisis_alert_rounded, color: Color(0xFFDC2626), size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '24/7 Crisis & Emergency Support',
+                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF0F172A)),
+                          ),
+                          Text(
+                            'Free, confidential mental health help available anytime.',
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                _buildCrisisHotlineCard(
+                  name: 'National Center for Mental Health (NCMH)',
+                  hotline: '1553 (Toll-Free) • 0917-899-8727',
+                  desc: '24/7 Free & Confidential Crisis Helpline (Philippines)',
+                  color: const Color(0xFFDC2626),
+                ),
+                const SizedBox(height: 10),
+                _buildCrisisHotlineCard(
+                  name: 'Hopeline Philippines',
+                  hotline: '0917-558-4673 • (02) 8804-4673',
+                  desc: '24/7 Suicide Prevention & Emotional Crisis Line',
+                  color: const Color(0xFF0284C7),
+                ),
+                const SizedBox(height: 10),
+                _buildCrisisHotlineCard(
+                  name: 'National Emergency Hotline',
+                  hotline: '911',
+                  desc: 'For immediate life-threatening medical emergencies',
+                  color: const Color(0xFFEA580C),
+                ),
+                const SizedBox(height: 10),
+                _buildCrisisHotlineCard(
+                  name: 'CSU Guidance & Counseling Office',
+                  hotline: 'csu.guidance@carsu.edu.ph',
+                  desc: 'Caraga State University Student Mental Health Center',
+                  color: const Color(0xFF16A34A),
+                ),
+
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Close', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                final authProvider = context.read<AuthProvider>();
-                final userId = authProvider.currentUser?['id'];
-                if (userId != null) {
-                  await ApiClient().patch('/admin/users/$userId/status', body: {'is_active': false});
-                }
-                await authProvider.logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    slideRoute(const LoginScreen()),
-                    (route) => false,
-                  );
-                }
-              } catch (_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to deactivate account. Please try again.')),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: const Text('Deactivate'))
+        );
+      },
+    );
+  }
+
+  static Widget _buildCrisisHotlineCard({
+    required String name,
+    required String hotline,
+    required String desc,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.phone_in_talk_rounded, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A))),
+                Text(hotline, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: color)),
+                Text(desc, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  void _showDeleteDialog(BuildContext context) {
+  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        title: const Text('Log Out', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
         content: const Text(
-          'Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be erased.',
-          style: TextStyle(fontFamily: 'Poppins'),
+          'Are you sure you want to log out? Your journal entries, mood logs, and clinical assessments remain safe and encrypted.',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
@@ -87,31 +172,21 @@ class ProfileScreen extends StatelessWidget {
             child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(ctx);
-              try {
-                final authProvider = context.read<AuthProvider>();
-                final userId = authProvider.currentUser?['id'];
-                if (userId != null) {
-                  await ApiClient().delete('/admin/users/$userId');
-                }
-                await authProvider.logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    slideRoute(const LoginScreen()),
-                    (route) => false,
-                  );
-                }
-              } catch (_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to delete account. Please try again.')),
-                  );
-                }
-              }
+              context.read<AuthProvider>().logout();
+              Navigator.of(context).pushAndRemoveUntil(
+                slideRoute(const LoginScreen()),
+                (route) => false,
+              );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: const Text('Delete'))
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Log Out'),
+          ),
         ],
       ),
     );
@@ -119,144 +194,160 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.currentUser;
+    final fullName = user?['full_name'] ?? 'User';
+    final email = user?['email'] ?? '';
+    final role = user?['role'] ?? 'Student';
+    final isClient = role == 'client' || role == 'Client' || role == 'Student';
+    final avatarUrl = user?['avatar_url'] ?? '';
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FF),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          children: [
-            // Title row with optional back button
-            Row(
-              children: [
-                if (Navigator.of(context).canPop())
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                    onPressed: () => Navigator.of(context).pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    color: const Color(0xFF3D405B),
+      backgroundColor: const Color(0xFFF6F8F6),
+      appBar: AppBar(
+        title: Text(
+          'Profile',
+          style: AppTextStyles.heading1.copyWith(fontSize: 20),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                slideRoute(const EditProfileScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        children: [
+          // User Details Row
+          Row(
+            children: [
+              Stack(
+                children: [
+                  CachedAvatar(
+                    imageUrl: avatarUrl,
+                    fallbackInitial: fullName,
+                    radius: 36,
                   ),
-                if (Navigator.of(context).canPop())
-                  const SizedBox(width: 8),
-                Text(
-                  'Profile',
-                  style: AppTextStyles.heading1.copyWith(
-                    fontSize: 24,
-                    letterSpacing: -0.64,
-                    color: const Color(0xFF3D405B),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            slideRoute(const EditProfileScreen()),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fullName,
+                        style: AppTextStyles.heading2.copyWith(fontSize: 18),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        email,
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isClient ? 'Student' : role.toString().toUpperCase(),
+                          style: const TextStyle(
+                            fontFamily: 'Urbanist',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
 
-            Consumer<AuthProvider>(
-              builder: (context, auth, _) {
-                final user = auth.currentUser ?? {};
-                final firstName = user['first_name'] ?? 'User';
-                final lastName = user['last_name'] ?? '';
-                final email = user['email'] ?? '';
-                final avatarUrl = user['avatar_url'] as String?;
-                
-                return GestureDetector(
-                  onTap: () => Navigator.of(context).push(slideRoute(const EditProfileScreen())),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x140078D4),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        CachedAvatar(
-                          imageUrl: avatarUrl,
-                          radius: 28.5,
-                          fallbackInitial: firstName,
-                          backgroundColor: Colors.white.withAlpha(40),
-                          foregroundColor: Colors.white,
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$firstName $lastName'.trim(),
-                                style: AppTextStyles.heading2.copyWith(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                  letterSpacing: 0,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                email,
-                                style: AppTextStyles.body.copyWith(
-                                  fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.edit_rounded, color: Colors.white, size: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            ),
-            const SizedBox(height: 20),
-
-            // ACHIEVEMENTS Section
+            // QUICK ACCESS (Achievements & Screeners)
             _buildSectionContainer(
-              title: 'PROGRESS & ACHIEVEMENTS',
+              title: 'MY WELLNESS JOURNEY',
               children: [
                 _buildListItem(
                   icon: Icons.emoji_events_rounded,
-                  title: 'Achievements & Badges',
+                  title: 'Achievements & Milestones',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const AchievementsScreen()));
+                    Navigator.push(
+                      context,
+                      slideRoute(const AchievementsScreen()),
+                    );
+                  },
+                ),
+                _buildDivider(),
+                _buildListItem(
+                  icon: Icons.assessment_rounded,
+                  title: 'Assessment History (PHQ-9 & GAD-7)',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      slideRoute(const AssessmentHistoryScreen()),
+                    );
                   },
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // MY MOOD TRACKER Section
+            // WELLNESS & INSIGHTS Section
             _buildSectionContainer(
-              title: 'MY MOOD TRACKER',
+              title: 'WELLNESS & INSIGHTS',
               children: [
                 const MoodTrendsChart(),
-                _buildDivider(),
+                const SizedBox(height: 12),
                 _buildListItem(
                   icon: Icons.insights_rounded,
-                  title: 'Detailed Trends & Insights',
+                  title: 'My Mental Health Insights',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const StudentInsightsScreen()));
-                  },
-                ),
-                _buildDivider(),
-                _buildListItem(
-                  icon: Icons.history_rounded,
-                  title: 'Assessment History',
-                  onTap: () {
-                    Navigator.push(context, slideRoute(const AssessmentHistoryScreen()));
+                    Navigator.push(
+                      context,
+                      slideRoute(const StudentInsightsScreen()),
+                    );
                   },
                 ),
               ],
@@ -265,65 +356,55 @@ class ProfileScreen extends StatelessWidget {
 
             // SETTINGS Section
             _buildSectionContainer(
-              title: 'SETTINGS',
+              title: 'SETTINGS & CONTROLS',
               children: [
-                _buildListItem(
-                  icon: Icons.person_outline_rounded,
-                  title: 'Profile',
-                  onTap: () {
-                    Navigator.push(context, slideRoute(const EditProfileScreen()),
-                    );
-                  }),
-                _buildDivider(),
                 _buildListItem(
                   icon: Icons.notifications_none_rounded,
                   title: 'Notifications',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const NotificationSettingsScreen()),
-                    );
-                  }),
-                _buildDivider(),
-                Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, child) {
-                    return _buildListItem(
-                      icon: Icons.dark_mode_outlined,
-                      title: 'Dark Mode',
-                      onTap: () => themeProvider.toggleTheme(),
-                      trailing: Switch(
-                        value: themeProvider.isDarkMode,
-                        onChanged: (val) => themeProvider.toggleTheme(),
-                        activeTrackColor: AppColors.primaryLight,
-                      ),
+                    Navigator.push(
+                      context,
+                      slideRoute(const NotificationSettingsScreen()),
                     );
                   },
                 ),
                 _buildDivider(),
                 _buildListItem(
-                  icon: Icons.lock_outline_rounded,
-                  title: 'Privacy',
+                  icon: Icons.shield_outlined,
+                  title: 'Privacy Controls & Shield',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const PrivacyScreen()),
+                    Navigator.push(
+                      context,
+                      slideRoute(const PrivacyCenterScreen()),
                     );
-                  }),
+                  },
+                ),
                 _buildDivider(),
                 _buildListItem(
-                  icon: Icons.shield_outlined,
-                  title: 'Privacy Center',
+                  icon: Icons.gavel_rounded,
+                  title: 'Terms & Legal Policies',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const PrivacyCenterScreen()),
+                    Navigator.push(
+                      context,
+                      slideRoute(const PrivacyScreen()),
                     );
-                  }),
+                  },
+                ),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.security_rounded,
-                  title: 'Security',
+                  title: 'Security & App Lock',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const SecurityScreen()));
-                  }),
+                    Navigator.push(
+                      context,
+                      slideRoute(const SecurityScreen()),
+                    );
+                  },
+                ),
                 _buildDivider(),
                 _buildListItem(
-                  icon: Icons.text_fields_rounded,
-                  title: 'Accessibility',
+                  icon: Icons.accessibility_new_rounded,
+                  title: 'Accessibility & Comfort',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -333,8 +414,8 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 _buildDivider(),
                 _buildListItem(
-                  icon: Icons.color_lens_outlined,
-                  title: 'Appearance',
+                  icon: Icons.palette_outlined,
+                  title: 'Appearance & Theme',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -359,98 +440,66 @@ class ProfileScreen extends StatelessWidget {
 
             // SUPPORT Section
             _buildSectionContainer(
-              title: 'SUPPORT',
+              title: 'SUPPORT & EMERGENCY',
               children: [
                 _buildListItem(
-                  icon: Icons.healing_rounded, // or med_services
-                  title: 'Crisis Resources',
-                  onTap: () {},
+                  icon: Icons.healing_rounded,
+                  title: 'Crisis Resources (24/7 Hotlines)',
+                  onTap: () => _showCrisisModal(context),
                 ),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.help_outline_rounded,
-                  title: 'FAQ',
+                  title: 'Frequently Asked Questions (FAQ)',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const HelpFaqScreen()),
+                    Navigator.push(
+                      context,
+                      slideRoute(const HelpFaqScreen()),
                     );
-                  }),
+                  },
+                ),
                 _buildDivider(),
                 _buildListItem(
                   icon: Icons.info_outline_rounded,
                   title: 'About Kausap AI',
                   onTap: () {
-                    Navigator.push(context, slideRoute(const AboutScreen()),
+                    Navigator.push(
+                      context,
+                      slideRoute(const AboutScreen()),
                     );
-                  }),
+                  },
+                ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // Logout Button
+            // Clean & Safe Logout Button
             SizedBox(
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  context.read<AuthProvider>().logout();
-                  Navigator.of(context).pushAndRemoveUntil(
-                    slideRoute(const LoginScreen()),
-                    (route) => false,
-                  );
-                },
-                icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                label: Text(
-                  'Logout',
-                  style: AppTextStyles.button.copyWith(
+              height: 50,
+              child: OutlinedButton.icon(
+                onPressed: () => _showLogoutDialog(context),
+                icon: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFFDC2626)),
+                label: const Text(
+                  'Log Out',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
                     fontSize: 14,
-                    letterSpacing: 0.14,
-                    color: Colors.white)
+                    color: Color(0xFFDC2626),
+                  ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF5858),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+                  backgroundColor: const Color(0xFFFEF2F2),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-
-            // Deactivate Account Button
-            SizedBox(
-              height: 52,
-              child: OutlinedButton.icon(
-                onPressed: () => _showDeactivateDialog(context),
-                icon: const Icon(Icons.person_off_rounded, size: 18, color: AppColors.error),
-                label: const Text(
-                  'Deactivate Account',
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.error),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.error),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Delete Account Button
-            SizedBox(
-              height: 52,
-              child: TextButton.icon(
-                onPressed: () => _showDeleteDialog(context),
-                icon: const Icon(Icons.delete_forever_rounded, size: 18, color: Color(0xFFDC2626)),
-                label: const Text(
-                  'Delete Account',
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFFDC2626)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 36),
           ],
         ),
-      ),
     );
   }
 
@@ -458,12 +507,13 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x140078D4),
-            blurRadius: 12,
-            offset: Offset(0, 4),
+            color: Color(0x04000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -476,11 +526,11 @@ class ProfileScreen extends StatelessWidget {
             child: Text(
               title,
               style: const TextStyle(
-                fontFamily: 'Urbanist',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF707974),
-                letterSpacing: 0.4,
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
+                letterSpacing: 0.7,
               ),
             ),
           ),
@@ -490,44 +540,28 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildListItem({required IconData icon, required String title, required VoidCallback onTap, Widget? trailing}) {
+  Widget _buildListItem({required IconData icon, required String title, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
         child: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F2FB),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 18,
-                color: const Color(0xFF3D405B),
-              ),
-            ),
-            const SizedBox(width: 14),
+            Icon(icon, size: 20, color: const Color(0xFF475569)),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 title,
                 style: const TextStyle(
-                  fontFamily: 'Urbanist',
-                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF3D405B),
+                  color: Color(0xFF0F172A),
                 ),
               ),
             ),
-            if (trailing != null) trailing else const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 14,
-              color: Color(0xFFC0C9C2),
-            ),
+            const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
           ],
         ),
       ),
@@ -535,13 +569,6 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildDivider() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12),
-      child: Divider(
-        color: Color(0x4DC0C9C2), // rgba(192,201,194,0.3)
-        height: 1,
-        thickness: 1,
-      ),
-    );
+    return const Divider(height: 1, indent: 40, color: Color(0x12000000));
   }
 }

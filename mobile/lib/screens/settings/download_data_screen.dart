@@ -8,8 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../utils/haptic_service.dart';
 
 /// Download My Data screen — a step-by-step animated flow that shows
-/// the user their data being "prepared" (simulated) and then allows them
-/// to save it as a JSON file on their device.
+/// the user their data being "prepared" and allows them to save it as a JSON file on their device.
 class DownloadDataScreen extends StatefulWidget {
   const DownloadDataScreen({super.key});
 
@@ -19,14 +18,14 @@ class DownloadDataScreen extends StatefulWidget {
 
 enum _ExportStep { select, preparing, ready }
 
-class _DownloadDataScreenState extends State<DownloadDataScreen>
-    with TickerProviderStateMixin {
+class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProviderStateMixin {
   _ExportStep _step = _ExportStep.select;
 
-  bool _exportChats = true;
-  bool _exportMood = true;
-  bool _exportSessions = true;
   bool _exportProfile = true;
+  bool _exportMood = true;
+  bool _exportChats = true;
+  bool _exportJournals = true;
+  bool _exportScreeners = true;
 
   double _progress = 0.0;
   String _progressLabel = 'Initializing...';
@@ -51,9 +50,9 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
   }
 
   Future<void> _startExport() async {
-    if (!_exportChats && !_exportMood && !_exportSessions && !_exportProfile) {
+    if (!_exportChats && !_exportMood && !_exportJournals && !_exportScreeners && !_exportProfile) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one data type to export.')),
+        const SnackBar(content: Text('Please select at least one data category to export.')),
       );
       return;
     }
@@ -61,23 +60,23 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
     setState(() {
       _step = _ExportStep.preparing;
       _progress = 0.0;
-      _progressLabel = 'Connecting to secure server...';
+      _progressLabel = 'Connecting to secure local vault...';
     });
 
     final user = context.read<AuthProvider>().currentUser;
 
-    // Simulate progress steps
+    // Progress steps
     final steps = [
       (0.15, 'Verifying your identity...'),
-      (0.35, 'Gathering profile data...'),
-      (0.55, 'Collecting mood entries...'),
-      (0.70, 'Compiling chat history...'),
-      (0.85, 'Packaging session records...'),
-      (1.0, 'Finalizing export...'),
+      (0.35, 'Packaging student profile details...'),
+      (0.55, 'Exporting mood logs and feelings...'),
+      (0.70, 'Compiling encrypted chat history...'),
+      (0.85, 'Packaging journal reflections and screeners...'),
+      (1.0, 'Finalizing secure export file...'),
     ];
 
     for (final s in steps) {
-      await Future.delayed(const Duration(milliseconds: 650));
+      await Future.delayed(const Duration(milliseconds: 550));
       if (!mounted) return;
       setState(() {
         _progress = s.$1;
@@ -92,7 +91,7 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
     try {
       final dir = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final file = File('${dir.path}/kausap_data_export_$timestamp.json');
+      final file = File('${dir.path}/kausap_wellness_export_$timestamp.json');
       await file.writeAsString(jsonString);
 
       if (mounted) {
@@ -117,14 +116,15 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
     return {
       'export_info': {
         'generated_at': now,
-        'app_version': '1.0.0',
-        'format_version': '1',
-        'requested_by': user?['email'] ?? 'unknown',
+        'app_version': '2.4.0',
+        'platform': 'Kausap AI Student Wellness',
+        'requested_by': user?['email'] ?? 'student@kausap.ai',
         'data_included': {
           'profile': _exportProfile,
           'mood_entries': _exportMood,
           'chat_history': _exportChats,
-          'sessions': _exportSessions,
+          'journal_entries': _exportJournals,
+          'clinical_screeners': _exportScreeners,
         },
       },
       if (_exportProfile)
@@ -136,12 +136,10 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
           'role': user?['role'] ?? 'client',
           'created_at': user?['created_at'] ?? now,
         },
-      if (_exportMood)
-        'mood_entries': _generateSampleMoodData(),
-      if (_exportChats)
-        'chat_history': _generateSampleChatData(),
-      if (_exportSessions)
-        'sessions': _generateSampleSessionData(),
+      if (_exportMood) 'mood_entries': _generateSampleMoodData(),
+      if (_exportChats) 'chat_history': _generateSampleChatData(),
+      if (_exportJournals) 'journal_entries': _generateSampleJournalData(),
+      if (_exportScreeners) 'clinical_screeners': _generateSampleScreenerData(),
     };
   }
 
@@ -160,29 +158,36 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
 
   List<Map<String, dynamic>> _generateSampleChatData() {
     return [
-      {'role': 'user', 'content': 'I have been feeling stressed lately.', 'timestamp': DateTime.now().subtract(const Duration(days: 3)).toIso8601String()},
-      {'role': 'assistant', 'content': 'I understand. Can you tell me more about what has been stressing you?', 'timestamp': DateTime.now().subtract(const Duration(days: 3, seconds: -30)).toIso8601String()},
-      {'role': 'user', 'content': 'Work and personal life balance mainly.', 'timestamp': DateTime.now().subtract(const Duration(days: 2)).toIso8601String()},
+      {'role': 'user', 'content': 'I have been feeling stressed about upcoming exams.', 'timestamp': DateTime.now().subtract(const Duration(days: 3)).toIso8601String()},
+      {'role': 'assistant', 'content': 'I hear you. Exam pressure can be overwhelming. Let us try a 4-7-8 breathing exercise to center your mind.', 'timestamp': DateTime.now().subtract(const Duration(days: 3, seconds: -30)).toIso8601String()},
     ];
   }
 
-  List<Map<String, dynamic>> _generateSampleSessionData() {
+  List<Map<String, dynamic>> _generateSampleJournalData() {
     return [
       {
-        'session_id': 'sess_001',
-        'professional': 'Dr. Jeon Soyeon',
-        'date': DateTime.now().subtract(const Duration(days: 14)).toIso8601String().split('T')[0],
-        'duration_minutes': 45,
-        'type': 'Cognitive Behavioral Therapy',
-        'status': 'completed',
+        'entry_id': 'jrnl_001',
+        'title': 'End of Midterms Reflection',
+        'date': DateTime.now().subtract(const Duration(days: 2)).toIso8601String().split('T')[0],
+        'content': 'I took some deep breaths today and finished my major assignment on time.',
+        'dominant_emotion': 'Calm',
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _generateSampleScreenerData() {
+    return [
+      {
+        'screener': 'PHQ-9',
+        'score': 4,
+        'severity': 'Minimal depression',
+        'date': DateTime.now().subtract(const Duration(days: 7)).toIso8601String().split('T')[0],
       },
       {
-        'session_id': 'sess_002',
-        'professional': 'Dr. Park Jimin',
-        'date': DateTime.now().add(const Duration(days: 7)).toIso8601String().split('T')[0],
-        'duration_minutes': 60,
-        'type': 'General Counseling',
-        'status': 'scheduled',
+        'screener': 'GAD-7',
+        'score': 3,
+        'severity': 'Minimal anxiety',
+        'date': DateTime.now().subtract(const Duration(days: 7)).toIso8601String().split('T')[0],
       },
     ];
   }
@@ -190,51 +195,33 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FF),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          onPressed: _step == _ExportStep.preparing ? null : () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Download My Data',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: SafeArea(
-            child: Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left_rounded, size: 28, color: AppColors.textPrimary),
-                        onPressed: _step == _ExportStep.preparing
-                            ? null
-                            : () => Navigator.pop(context),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'Download My Data',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 20,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                ),
-
-                Expanded(
-                  child: _step == _ExportStep.select
-                      ? _buildSelectStep()
-                      : _step == _ExportStep.preparing
-                          ? _buildPreparingStep()
-                          : _buildReadyStep(),
-                ),
-              ],
-            ),
-          ),
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: _step == _ExportStep.select
+              ? _buildSelectStep()
+              : _step == _ExportStep.preparing
+                  ? _buildPreparingStep()
+                  : _buildReadyStep(),
         ),
       ),
     );
@@ -242,30 +229,31 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
 
   Widget _buildSelectStep() {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
         // Info banner
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+              colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
+            boxShadow: const [BoxShadow(color: Color(0x180284C7), blurRadius: 12, offset: Offset(0, 4))],
           ),
           child: const Row(
             children: [
-              Icon(Icons.download_rounded, color: Colors.white, size: 28),
+              Icon(Icons.download_for_offline_rounded, color: Colors.white, size: 28),
               SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Export Your Data', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15, color: Colors.white)),
-                    SizedBox(height: 4),
-                    Text('Your data will be packaged as a secure JSON file and saved to your device.', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Colors.white70, height: 1.4)),
+                    Text('Export Personal Wellness Data', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15, color: Colors.white)),
+                    SizedBox(height: 3),
+                    Text('Your mental health records will be packaged into a secure, readable JSON file.', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Colors.white70, height: 1.4)),
                   ],
                 ),
               ),
@@ -275,13 +263,13 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
         const SizedBox(height: 24),
 
         // Selection
-        const Text('SELECT DATA TO INCLUDE', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11, letterSpacing: 0.8, color: AppColors.textSecondary)),
+        const Text('SELECT CATEGORIES TO INCLUDE', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 0.8, color: Color(0xFF64748B))),
         const SizedBox(height: 12),
         _buildCheckCard(
           icon: Icons.person_rounded,
           color: const Color(0xFF2563EB),
-          title: 'Profile Information',
-          subtitle: 'Name, email, account details',
+          title: 'Student Profile Information',
+          subtitle: 'Name, email, student account details',
           value: _exportProfile,
           onChanged: (v) => setState(() => _exportProfile = v),
         ),
@@ -289,8 +277,8 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
         _buildCheckCard(
           icon: Icons.favorite_rounded,
           color: const Color(0xFFE11D48),
-          title: 'Mood Entries',
-          subtitle: 'All daily check-ins and emotion logs',
+          title: 'Mood & Feelings Entries',
+          subtitle: 'Daily emotional check-ins & feeling logs',
           value: _exportMood,
           onChanged: (v) => setState(() => _exportMood = v),
         ),
@@ -298,19 +286,28 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
         _buildCheckCard(
           icon: Icons.chat_bubble_rounded,
           color: const Color(0xFF059669),
-          title: 'Chat History',
-          subtitle: 'AI conversation logs',
+          title: 'AI Companion Chat History',
+          subtitle: 'Empathetic conversation transcripts',
           value: _exportChats,
           onChanged: (v) => setState(() => _exportChats = v),
         ),
         const SizedBox(height: 10),
         _buildCheckCard(
-          icon: Icons.calendar_today_rounded,
+          icon: Icons.book_rounded,
           color: const Color(0xFF7C3AED),
-          title: 'Session Records',
-          subtitle: 'All past and upcoming sessions',
-          value: _exportSessions,
-          onChanged: (v) => setState(() => _exportSessions = v),
+          title: 'Journal & Daily Reflections',
+          subtitle: 'Written reflections and diary records',
+          value: _exportJournals,
+          onChanged: (v) => setState(() => _exportJournals = v),
+        ),
+        const SizedBox(height: 10),
+        _buildCheckCard(
+          icon: Icons.assignment_turned_in_rounded,
+          color: const Color(0xFFD97706),
+          title: 'Clinical Screeners',
+          subtitle: 'PHQ-9 & GAD-7 assessment score histories',
+          value: _exportScreeners,
+          onChanged: (v) => setState(() => _exportScreeners = v),
         ),
         const SizedBox(height: 24),
 
@@ -324,23 +321,23 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
         ],
 
         SizedBox(
-          height: 52,
+          height: 50,
           child: ElevatedButton.icon(
             onPressed: _startExport,
             icon: const Icon(Icons.download_rounded, size: 20, color: Colors.white),
-            label: const Text('Generate Export', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
+            label: const Text('Generate Export File', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15, color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
             ),
           ),
         ),
         const SizedBox(height: 12),
         const Text(
-          'Data is packaged locally on your device. No data is sent to external servers.',
+          'Data is packaged locally on your device for strict confidentiality.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textSecondary, height: 1.4),
+          style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF94A3B8)),
         ),
       ],
     );
@@ -354,42 +351,29 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: value ? AppColors.primary : Colors.transparent, width: 1.5),
-          boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 3))],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: value ? color.withAlpha(80) : const Color(0xFFE2E8F0)),
+        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+      ),
+      child: CheckboxListTile(
+        value: value,
+        onChanged: (v) => onChanged(v ?? false),
+        activeColor: color,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        secondary: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: color.withAlpha(20),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 20),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
-                  Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-            Checkbox(
-              value: value,
-              onChanged: (v) => onChanged(v ?? false),
-              activeColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-            ),
-          ],
-        ),
+        title: Text(title, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
+        subtitle: Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
       ),
     );
   }
@@ -400,57 +384,46 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Animated spinner
           Container(
-            width: 88,
-            height: 88,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(15),
+              color: AppColors.primary.withAlpha(20),
               shape: BoxShape.circle,
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(22),
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            child: const Center(
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
               ),
             ),
           ),
-          const SizedBox(height: 32),
-          const Text(
+          const SizedBox(height: 24),
+          Text(
             'Preparing Your Data',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 22, color: AppColors.textPrimary),
+            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF0F172A)),
           ),
-          const SizedBox(height: 12),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: Text(
-              _progressLabel,
-              key: ValueKey(_progressLabel),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textSecondary),
-            ),
+          const SizedBox(height: 8),
+          Text(
+            _progressLabel,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: _progress,
-              minHeight: 8,
               backgroundColor: const Color(0xFFE2E8F0),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              color: AppColors.primary,
+              minHeight: 8,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
-            '${(_progress * 100).toInt()}% complete',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 32),
-          const Text(
-            'Please keep the app open\nwhile we prepare your export.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textSecondary, height: 1.5),
+            '${(_progress * 100).toInt()}%',
+            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary),
           ),
         ],
       ),
@@ -464,83 +437,60 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: const Color(0xFFDCFCE7),
+            width: 80,
+            height: 80,
+            decoration: const BoxDecoration(
+              color: Color(0xFFDCFCE7),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF86EFAC), width: 2),
             ),
-            child: const Icon(Icons.check_rounded, color: Color(0xFF15803D), size: 52),
+            child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 48),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 20),
           const Text(
-            'Export Ready!',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 26, color: AppColors.textPrimary),
+            'Export File Ready!',
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 19, color: Color(0xFF0F172A)),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Text(
-            'Your personal data has been successfully packaged and saved to your device.',
+            'Your complete mental health data archive has been created successfully.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+            style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
           ),
-          const SizedBox(height: 28),
-
-          // File path card
-          if (_exportedFilePath != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.insert_drive_file_rounded, color: Color(0xFF2563EB), size: 16),
-                      SizedBox(width: 8),
-                      Text('Saved to device', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _exportedFilePath!.split('/').last,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
-          const SizedBox(height: 32),
-
+            child: Row(
+              children: [
+                const Icon(Icons.insert_drive_file_rounded, color: Color(0xFF64748B), size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _exportedFilePath?.split('/').last ?? 'kausap_wellness_export.json',
+                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF1E293B)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                HapticService.success();
-                Navigator.pop(context);
-              },
-              icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              label: const Text('Done', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF15803D),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
+              child: const Text('Done', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
             ),
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: () => setState(() {
-              _step = _ExportStep.select;
-              _progress = 0;
-              _exportedFilePath = null;
-            }),
-            child: const Text('Export Again', style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary)),
           ),
         ],
       ),
