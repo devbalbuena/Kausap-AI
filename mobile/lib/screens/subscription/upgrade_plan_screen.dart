@@ -11,9 +11,9 @@ class UpgradePlanScreen extends StatefulWidget {
 
 class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
   static const _storage = FlutterSecureStorage();
-  bool _isAnnual = true;
+  bool _isAnnual = false; // Default to monthly view
   bool _isUpgrading = false;
-  bool _isPro = false;
+  String _activePlanTier = 'none'; // 'none' | 'monthly' | 'annual'
 
   final List<Map<String, String>> _faqs = [
     {
@@ -40,27 +40,42 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
   }
 
   Future<void> _checkProStatus() async {
-    final pro = await _storage.read(key: 'is_pro_member');
+    final tier = await _storage.read(key: 'pro_plan_tier');
+    final isPro = await _storage.read(key: 'is_pro_member');
+
     if (mounted) {
-      setState(() => _isPro = pro == 'true');
+      setState(() {
+        if (tier == 'annual' || tier == 'monthly') {
+          _activePlanTier = tier!;
+          _isAnnual = (tier == 'annual');
+        } else if (isPro == 'true') {
+          _activePlanTier = 'monthly';
+        } else {
+          _activePlanTier = 'none';
+        }
+      });
     }
   }
 
-  Future<void> _handleUpgrade() async {
+  Future<void> _handleUpgrade(String targetTier) async {
     setState(() => _isUpgrading = true);
     await Future.delayed(const Duration(milliseconds: 900));
+
     await _storage.write(key: 'is_pro_member', value: 'true');
+    await _storage.write(key: 'pro_plan_tier', value: targetTier);
 
     if (!mounted) return;
     setState(() {
       _isUpgrading = false;
-      _isPro = true;
+      _activePlanTier = targetTier;
     });
 
-    _showCelebrationSheet();
+    _showCelebrationSheet(targetTier);
   }
 
-  void _showManageSubscriptionSheet() {
+  void _showManageSubscriptionSheet(String planTier) {
+    final bool isAnnualPlan = planTier == 'annual';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -99,17 +114,17 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                 const SizedBox(width: 14),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      'Kausap AI Pro',
-                      style: TextStyle(
+                      isAnnualPlan ? 'Kausap AI Pro (Annual)' : 'Kausap AI Pro (Monthly)',
+                      style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF1F2937),
                       ),
                     ),
-                    Text(
+                    const Text(
                       '🟢 Active Subscription',
                       style: TextStyle(
                         fontFamily: 'Inter',
@@ -132,11 +147,11 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
               ),
               child: Column(
                 children: [
-                  _buildSubRow('Billing Cycle', _isAnnual ? 'Annual (₱1,899/year)' : 'Monthly (₱199/month)'),
+                  _buildSubRow('Billing Cycle', isAnnualPlan ? 'Annual (₱1,899/year)' : 'Monthly (₱199/month)'),
                   const Divider(height: 18, color: Color(0xFFE2E8F0)),
                   _buildSubRow('Access Tier', 'All 4 Specialist Avatars & Features'),
                   const Divider(height: 18, color: Color(0xFFE2E8F0)),
-                  _buildSubRow('Renewal Date', 'August 2027 (Renews Automatically)'),
+                  _buildSubRow('Renewal Date', isAnnualPlan ? 'August 2027 (Renews Yearly)' : 'Next Month (Renews Monthly)'),
                 ],
               ),
             ),
@@ -206,8 +221,9 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
 
     if (confirm == true) {
       await _storage.write(key: 'is_pro_member', value: 'false');
+      await _storage.write(key: 'pro_plan_tier', value: 'none');
       if (mounted) {
-        setState(() => _isPro = false);
+        setState(() => _activePlanTier = 'none');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Subscription downgraded to Free Basic tier.'),
@@ -218,7 +234,8 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
     }
   }
 
-  void _showCelebrationSheet() {
+  void _showCelebrationSheet(String tier) {
+    final isAnnual = tier == 'annual';
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -243,13 +260,15 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
             const Text('👑', style: TextStyle(fontSize: 52)),
             const SizedBox(height: 12),
             Text(
-              'Welcome to Kausap AI Pro!',
+              isAnnual ? 'Welcome to Kausap Pro Annual!' : 'Welcome to Kausap Pro Monthly!',
               style: AppTextStyles.heading1.copyWith(fontSize: 22),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'You now have unlimited AI conversations, all specialist avatars unlocked, and priority access to wellness features.',
+              isAnnual
+                  ? 'You unlocked the complete Annual plan with 20% savings, unlimited AI sessions, and all specialist avatars!'
+                  : 'You now have full Pro access with all specialist avatars unlocked.',
               style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, height: 1.4),
               textAlign: TextAlign.center,
             ),
@@ -259,8 +278,8 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(ctx); // Close sheet
-                  Navigator.pop(context); // Return to previous screen
+                  Navigator.pop(ctx);
+                  Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -298,7 +317,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
+                            color: Colors.black.withAlpha(15),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -308,32 +327,30 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    'Upgrade Plan',
-                    style: AppTextStyles.heading2.copyWith(fontSize: 18),
-                  ),
+                  Text('Upgrade Plan', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
                 ],
               ),
             ),
 
+            // Scrollable Content
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 children: [
                   // Hero Banner
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
+                        colors: [Color(0xFF0284C7), Color(0xFF0EA5E9)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(22),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0077B6).withValues(alpha: 0.3),
+                          color: const Color(0xFF0284C7).withAlpha(60),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),
@@ -345,9 +362,9 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(10),
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.25),
+                                color: Colors.white.withAlpha(45),
                                 shape: BoxShape.circle,
                               ),
                               child: const Text('👑', style: TextStyle(fontSize: 22)),
@@ -360,18 +377,20 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                                   const Text(
                                     'Kausap AI Pro',
                                     style: TextStyle(
-                                      fontFamily: 'Inter',
+                                      fontFamily: 'Poppins',
                                       fontSize: 20,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white,
                                     ),
                                   ),
                                   Text(
-                                    _isPro ? 'You are currently a Pro Member' : 'Your Complete Mental Wellness Partner',
+                                    _activePlanTier != 'none'
+                                        ? 'You are currently a ${_activePlanTier.toUpperCase()} Pro Member'
+                                        : 'Unlock full mental wellness companion',
                                     style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 12,
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: Colors.white.withAlpha(220),
                                     ),
                                   ),
                                 ],
@@ -380,13 +399,13 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        const Text(
+                        Text(
                           'Unlock unlimited conversations with specialist personas, deep analytics, and personalized guided recovery.',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 13,
-                            color: Colors.white,
-                            height: 1.45,
+                            color: Colors.white.withAlpha(235),
+                            height: 1.4,
                           ),
                         ),
                       ],
@@ -395,12 +414,12 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Billing Toggle (Monthly / Annual)
+                  // Billing Cycle Toggle (Monthly vs Annual)
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(14),
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
                       children: [
@@ -411,12 +430,12 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: !_isAnnual ? Colors.white : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 boxShadow: !_isAnnual
                                     ? [
                                         BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.08),
-                                          blurRadius: 6,
+                                          color: Colors.black.withAlpha(15),
+                                          blurRadius: 4,
                                           offset: const Offset(0, 2),
                                         ),
                                       ]
@@ -427,9 +446,9 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                                   'Monthly (₱199/mo)',
                                   style: TextStyle(
                                     fontFamily: 'Inter',
-                                    fontSize: 13,
+                                    fontSize: 12.5,
                                     fontWeight: !_isAnnual ? FontWeight.w700 : FontWeight.w500,
-                                    color: !_isAnnual ? const Color(0xFF1F2937) : const Color(0xFF6B7280),
+                                    color: !_isAnnual ? const Color(0xFF1E293B) : const Color(0xFF64748B),
                                   ),
                                 ),
                               ),
@@ -443,12 +462,12 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: _isAnnual ? Colors.white : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 boxShadow: _isAnnual
                                     ? [
                                         BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.08),
-                                          blurRadius: 6,
+                                          color: Colors.black.withAlpha(15),
+                                          blurRadius: 4,
                                           offset: const Offset(0, 2),
                                         ),
                                       ]
@@ -461,9 +480,9 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                                     'Annual (₱158/mo)',
                                     style: TextStyle(
                                       fontFamily: 'Inter',
-                                      fontSize: 13,
+                                      fontSize: 12.5,
                                       fontWeight: _isAnnual ? FontWeight.w700 : FontWeight.w500,
-                                      color: _isAnnual ? const Color(0xFF1F2937) : const Color(0xFF6B7280),
+                                      color: _isAnnual ? const Color(0xFF1E293B) : const Color(0xFF64748B),
                                     ),
                                   ),
                                   const SizedBox(width: 4),
@@ -477,7 +496,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                                       '-20%',
                                       style: TextStyle(
                                         fontFamily: 'Inter',
-                                        fontSize: 10,
+                                        fontSize: 9.5,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white,
                                       ),
@@ -494,25 +513,26 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Features Checklist Card
+                  // Included Features List
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0x1AC0C9C2)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
+                          color: Colors.black.withAlpha(8),
                           blurRadius: 10,
-                          offset: const Offset(0, 3),
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Included with Pro', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
-                        const SizedBox(height: 14),
+                        Text('Included with Pro', style: AppTextStyles.heading2.copyWith(fontSize: 15)),
+                        const SizedBox(height: 16),
                         _buildFeatureRow('Unlimited AI Companion Chat', 'No daily message limits or slowdowns'),
                         _buildFeatureRow('Unlock All Specialist Avatars', 'Dr. Kim, Dr. Min, Coach Jeon & custom personas'),
                         _buildFeatureRow('Full Wellness Activity Library', 'Access to all guided meditations, breathwork, and journaling'),
@@ -524,34 +544,8 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Upgrade CTA Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _isUpgrading ? null : (_isPro ? _showManageSubscriptionSheet : _handleUpgrade),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      child: _isUpgrading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                            )
-                          : Text(
-                              _isPro ? 'Manage Active Pro Plan' : (_isAnnual ? 'Upgrade to Pro — ₱1,899/year' : 'Upgrade to Pro — ₱199/month'),
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                    ),
-                  ),
+                  // Upgrade / Manage CTA Button based on exact tier state
+                  _buildActionButton(),
 
                   const SizedBox(height: 24),
 
@@ -601,6 +595,122 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildActionButton() {
+    if (_isUpgrading) {
+      return Container(
+        width: double.infinity,
+        height: 52,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+        ),
+      );
+    }
+
+    // Tab is Monthly
+    if (!_isAnnual) {
+      if (_activePlanTier == 'monthly') {
+        return SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () => _showManageSubscriptionSheet('monthly'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
+            ),
+            child: const Text('Manage Monthly Pro Plan', style: TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w700)),
+          ),
+        );
+      } else if (_activePlanTier == 'annual') {
+        return Container(
+          width: double.infinity,
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFCBD5E1)),
+          ),
+          child: const Center(
+            child: Text(
+              'Included in Active Annual Plan 👑',
+              style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+            ),
+          ),
+        );
+      } else {
+        return SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () => _handleUpgrade('monthly'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
+            ),
+            child: const Text('Upgrade to Monthly — ₱199/month', style: TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w700)),
+          ),
+        );
+      }
+    }
+
+    // Tab is Annual
+    if (_activePlanTier == 'annual') {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: () => _showManageSubscriptionSheet('annual'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            elevation: 0,
+          ),
+          child: const Text('Manage Annual Pro Plan', style: TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w700)),
+        ),
+      );
+    } else if (_activePlanTier == 'monthly') {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: () => _handleUpgrade('annual'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF10B981),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            elevation: 0,
+          ),
+          child: const Text('Switch to Annual — ₱1,899/year (Save 20%)', style: TextStyle(fontFamily: 'Inter', fontSize: 14.5, fontWeight: FontWeight.w700)),
+        ),
+      );
+    } else {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: () => _handleUpgrade('annual'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            elevation: 0,
+          ),
+          child: const Text('Upgrade to Annual — ₱1,899/year', style: TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w700)),
+        ),
+      );
+    }
   }
 
   Widget _buildFeatureRow(String title, String subtitle) {

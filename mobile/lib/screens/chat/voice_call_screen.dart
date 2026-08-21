@@ -1,5 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:js' as js;
+
 import '../../models/avatar_model.dart';
 import '../../utils/ambient_audio_service.dart';
 
@@ -21,22 +27,21 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
   Timer? _callTimer;
   bool _isMuted = false;
   bool _isSpeakerOn = true;
+  bool _isAiSpeaking = false;
+  bool _isListening = false;
 
-  final List<String> _spokenPrompts = [
-    "Kumusta! I'm listening. Take all the time you need.",
-    "Breathe in gently... I'm right here with you.",
-    "Tell me more about what's been on your mind.",
-    "You are doing great just by checking in today.",
-  ];
-  int _currentPromptIndex = 0;
-  Timer? _promptTimer;
+  String _currentDialogue = "Connecting to Kausap Voice...";
+  String _userSpeechBuffer = "";
+
+  Timer? _pollTimer;
+  Timer? _silenceTimer;
 
   @override
   void initState() {
     super.initState();
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
     // Start Call Timer
@@ -44,23 +49,174 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
       if (mounted) setState(() => _callSeconds++);
     });
 
-    // Play initial gentle chime
+    // Play greeting chime and speak greeting out loud
     _audioService.playChime(frequency: 440.0, durationSeconds: 0.8);
-
-    // Cycle supportive prompts
-    _promptTimer = Timer.periodic(const Duration(seconds: 7), (t) {
+    Future.delayed(const Duration(milliseconds: 600), () {
       if (mounted) {
-        setState(() {
-          _currentPromptIndex = (_currentPromptIndex + 1) % _spokenPrompts.length;
-        });
+        final greeting = "Kumusta! I'm ${widget.avatar.name}. I'm listening. Tell me what's on your mind today.";
+        _aiSpeak(greeting);
       }
     });
+
+    if (kIsWeb) {
+      _startSpeechPoller();
+    }
+  }
+
+  void _startSpeechPoller() {
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 400), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      if (_isAiSpeaking || _isMuted) return;
+
+      try {
+        final transcript = js.context['window']['_kausapVoiceTranscript'] as String?;
+        if (transcript != null && transcript.isNotEmpty && transcript != _userSpeechBuffer) {
+          setState(() {
+            _userSpeechBuffer = transcript;
+            _currentDialogue = 'You: "$transcript"';
+          });
+
+          // Reset silence timer to wait for student to finish sentence
+          _silenceTimer?.cancel();
+          _silenceTimer = Timer(const Duration(milliseconds: 1600), () {
+            if (_userSpeechBuffer.trim().isNotEmpty && !_isAiSpeaking) {
+              final spoken = _userSpeechBuffer;
+              js.context.callMethod('eval', ['window._kausapVoiceTranscript = "";']);
+              _processUserSpokenInput(spoken);
+            }
+          });
+        }
+      } catch (_) {}
+    });
+  }
+
+  void _startListening() {
+    if (_isMuted || _isAiSpeaking || !kIsWeb) return;
+    try {
+      final jsCode = '''
+      (function() {
+        var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) return;
+        if (window._kausapVoiceRec) {
+          try { window._kausapVoiceRec.stop(); } catch(e) {}
+        }
+        var rec = new SpeechRec();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = 'en-PH';
+        window._kausapVoiceRec = rec;
+
+        rec.onresult = function(event) {
+          var transcript = '';
+          for (var i = 0; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript + ' ';
+          }
+          if (transcript.trim().length > 0) {
+            window._kausapVoiceTranscript = transcript.trim();
+          }
+        };
+
+        rec.start();
+      })();
+      ''';
+      js.context.callMethod('eval', [jsCode]);
+      setState(() => _isListening = true);
+    } catch (_) {}
+  }
+
+  void _stopListening() {
+    if (!kIsWeb) return;
+    try {
+      final jsCode = '''
+      (function() {
+        if (window._kausapVoiceRec) {
+          try { window._kausapVoiceRec.stop(); } catch(e) {}
+          window._kausapVoiceRec = null;
+        }
+      })();
+      ''';
+      js.context.callMethod('eval', [jsCode]);
+      if (mounted) setState(() => _isListening = false);
+    } catch (_) {}
+  }
+
+  void _aiSpeak(String text) {
+    if (!mounted) return;
+    setState(() {
+      _isAiSpeaking = true;
+      _currentDialogue = text;
+    });
+
+    _stopListening();
+
+    if (_isSpeakerOn && kIsWeb) {
+      try {
+        final safeText = jsonEncode(text);
+        final jsCode = '''
+        (function() {
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            var u = new SpeechSynthesisUtterance($safeText);
+            u.rate = 0.95;
+            u.pitch = 1.05;
+            window.speechSynthesis.speak(u);
+          }
+        })();
+        ''';
+        js.context.callMethod('eval', [jsCode]);
+      } catch (_) {}
+    }
+
+    final wordCount = text.split(' ').length;
+    final speakDuration = Duration(milliseconds: (wordCount * 320).clamp(2400, 7500));
+    Future.delayed(speakDuration, () {
+      if (mounted) {
+        setState(() {
+          _isAiSpeaking = false;
+          _userSpeechBuffer = "";
+        });
+        _startListening();
+      }
+    });
+  }
+
+  void _processUserSpokenInput(String userInput) {
+    final lower = userInput.toLowerCase();
+    String reply;
+
+    if (lower.contains('depre') || lower.contains('sad') || lower.contains('lungkot') || lower.contains('crying')) {
+      reply = "I hear the sadness in your voice. Please know that it's okay to feel this way, and you are not alone. Let's take a slow breath together.";
+    } else if (lower.contains('family') || lower.contains('parents') || lower.contains('mom') || lower.contains('dad')) {
+      reply = "Family situations can be so overwhelming. Your feelings are completely valid. What's been the hardest part for you recently?";
+    } else if (lower.contains('stress') || lower.contains('exam') || lower.contains('school') || lower.contains('study') || lower.contains('thesis')) {
+      reply = "Academic stress can feel like a heavy burden. Remember that your grades don't define your worth. Have you taken a short break today?";
+    } else if (lower.contains('anxious') || lower.contains('panic') || lower.contains('scared') || lower.contains('kaba')) {
+      reply = "I'm right here with you. Let's ground ourselves: feel your feet on the floor and breathe in for 4 seconds... and breathe out.";
+    } else if (lower.contains('sleep') || lower.contains('tired') || lower.contains('insomnia')) {
+      reply = "Rest is so essential. When your mind is racing, try not to fight it. Just breathe gently and allow yourself to pause.";
+    } else if (lower.contains('giving up') || lower.contains('die') || lower.contains('suicide') || lower.contains('end it')) {
+      reply = "I hear how much pain you're in. You are deeply valued, and support is here. You can call the 24/7 NCMH hotline at 1553 anytime.";
+    } else {
+      reply = "Thank you for sharing that with me. I'm listening closely. Tell me more about what you're feeling right now.";
+    }
+
+    _aiSpeak(reply);
   }
 
   @override
   void dispose() {
     _callTimer?.cancel();
-    _promptTimer?.cancel();
+    _pollTimer?.cancel();
+    _silenceTimer?.cancel();
+    _stopListening();
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('eval', ['if ("speechSynthesis" in window) window.speechSynthesis.cancel();']);
+      } catch (_) {}
+    }
     _waveController.dispose();
     super.dispose();
   }
@@ -74,7 +230,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Sleek immersive dark mode for call
+      backgroundColor: const Color(0xFF0F172A),
       body: SafeArea(
         child: Column(
           children: [
@@ -100,11 +256,15 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                         ),
                       ),
                       Text(
-                        'Voice Call • ${_formatCallDuration(_callSeconds)}',
-                        style: const TextStyle(
+                        _isAiSpeaking
+                            ? 'Speaking...'
+                            : (_isListening ? 'Listening to you...' : 'Voice Call • ${_formatCallDuration(_callSeconds)}'),
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 12,
-                          color: Color(0xFF38BDF8),
+                          color: _isAiSpeaking
+                              ? const Color(0xFF38BDF8)
+                              : (_isListening ? const Color(0xFF4ADE80) : const Color(0xFF94A3B8)),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -113,9 +273,16 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                   IconButton(
                     icon: Icon(
                       _isSpeakerOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                      color: Colors.white70,
+                      color: _isSpeakerOn ? const Color(0xFF38BDF8) : Colors.white54,
                     ),
-                    onPressed: () => setState(() => _isSpeakerOn = !_isSpeakerOn),
+                    onPressed: () {
+                      setState(() => _isSpeakerOn = !_isSpeakerOn);
+                      if (!_isSpeakerOn && kIsWeb) {
+                        try {
+                          js.context.callMethod('eval', ['if ("speechSynthesis" in window) window.speechSynthesis.cancel();']);
+                        } catch (_) {}
+                      }
+                    },
                   ),
                 ],
               ),
@@ -127,40 +294,45 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
             AnimatedBuilder(
               animation: _waveController,
               builder: (context, child) {
-                final scale = _waveController.value;
+                final scale = _isAiSpeaking ? _waveController.value : (_isListening ? 0.3 : 0.05);
+                final waveColor = _isAiSpeaking ? const Color(0xFF38BDF8) : const Color(0xFF4ADE80);
+
                 return Stack(
                   alignment: Alignment.center,
                   children: [
                     // Outer pulsating wave
                     Container(
-                      width: 220 + (30 * scale),
-                      height: 220 + (30 * scale),
+                      width: 220 + (40 * scale),
+                      height: 220 + (40 * scale),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFF38BDF8).withAlpha((25 * (1 - scale * 0.5)).toInt()),
+                        color: waveColor.withAlpha((35 * (1 - scale * 0.4)).toInt()),
                       ),
                     ),
                     // Middle wave
                     Container(
-                      width: 170 + (20 * scale),
-                      height: 170 + (20 * scale),
+                      width: 170 + (25 * scale),
+                      height: 170 + (25 * scale),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFF38BDF8).withAlpha((45 * (1 - scale * 0.5)).toInt()),
+                        color: waveColor.withAlpha((60 * (1 - scale * 0.4)).toInt()),
                       ),
                     ),
                     // Avatar circle
                     Container(
-                      width: 130,
-                      height: 130,
+                      width: 135,
+                      height: 135,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF38BDF8), width: 3),
+                        border: Border.all(
+                          color: _isAiSpeaking ? const Color(0xFF38BDF8) : (_isListening ? const Color(0xFF4ADE80) : Colors.white24),
+                          width: 3.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF38BDF8).withAlpha(100),
-                            blurRadius: 20,
-                            spreadRadius: 2,
+                            color: waveColor.withAlpha(100),
+                            blurRadius: 24,
+                            spreadRadius: 3,
                           ),
                         ],
                       ),
@@ -182,39 +354,48 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
 
             const SizedBox(height: 36),
 
-            // Live Spoken Prompt Card
+            // Live Spoken Dialogue Card
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                child: Container(
-                  key: ValueKey(_currentPromptIndex),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(20),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withAlpha(30)),
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(18),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _isAiSpeaking
+                        ? const Color(0xFF38BDF8).withAlpha(120)
+                        : (_isListening ? const Color(0xFF4ADE80).withAlpha(120) : Colors.white.withAlpha(30)),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.graphic_eq_rounded, color: Color(0xFF38BDF8), size: 20),
-                      const SizedBox(width: 10),
-                      Flexible(
-                        child: Text(
-                          _spokenPrompts[_currentPromptIndex],
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13.5,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                            height: 1.3,
-                          ),
-                          textAlign: TextAlign.center,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isAiSpeaking
+                          ? Icons.volume_up_rounded
+                          : (_isListening ? Icons.mic_rounded : Icons.graphic_eq_rounded),
+                      color: _isAiSpeaking
+                          ? const Color(0xFF38BDF8)
+                          : (_isListening ? const Color(0xFF4ADE80) : Colors.white70),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        _currentDialogue,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13.5,
+                          color: Colors.white,
+                          fontWeight: _isAiSpeaking ? FontWeight.w600 : FontWeight.w400,
+                          height: 1.35,
                         ),
+                        textAlign: TextAlign.center,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -231,9 +412,16 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                   _CallControlBtn(
                     icon: _isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
                     label: _isMuted ? 'Unmute' : 'Mute',
-                    bgColor: _isMuted ? Colors.white24 : Colors.white12,
-                    iconColor: Colors.white,
-                    onTap: () => setState(() => _isMuted = !_isMuted),
+                    bgColor: _isMuted ? Colors.red.withAlpha(50) : Colors.white12,
+                    iconColor: _isMuted ? const Color(0xFFF87171) : Colors.white,
+                    onTap: () {
+                      setState(() => _isMuted = !_isMuted);
+                      if (_isMuted) {
+                        _stopListening();
+                      } else {
+                        _startListening();
+                      }
+                    },
                   ),
 
                   // End Call Button (Red)
@@ -249,7 +437,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                     },
                   ),
 
-                  // Audio Grounding Button
+                  // Grounding Calm Resonance Button
                   _CallControlBtn(
                     icon: Icons.spa_rounded,
                     label: 'Grounding',
@@ -257,12 +445,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
                     iconColor: const Color(0xFF34D399),
                     onTap: () {
                       _audioService.playChime(frequency: 528.0, durationSeconds: 1.5);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Playing 528Hz calming grounding resonance...'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
+                      _aiSpeak("Let's pause together and listen to this 528 hertz calming resonance. Breathe in slowly... and let go.");
                     },
                   ),
                 ],

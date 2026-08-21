@@ -267,7 +267,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     try {
       final sessionId = await _ensureSession();
       final endpoint = '${ApiConfig.chatSessions}/$sessionId/messages';
-      final data = await ApiClient().post(endpoint, body: {'content': trimmed});
+      final data = await ApiClient().post(endpoint, body: {'content': trimmed.isEmpty ? '[Photo attachment]' : trimmed});
       final aiContent = data['content'] as String? ?? '…';
 
       if (!mounted) return;
@@ -279,7 +279,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       _scrollToBottom();
     } catch (_) {
       // Dynamic Cognitive Fallback Engine
-      final fallbackResponse = _generateEmpatheticFallback(trimmed, isCrisis: isCrisis);
+      final fallbackResponse = _generateEmpatheticFallback(
+        trimmed,
+        isCrisis: isCrisis,
+        hasImage: imageBytes != null || imagePath != null,
+      );
       if (!mounted) return;
       setState(() {
         _messages.add(_ChatMessage(
@@ -318,11 +322,15 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     return false;
   }
 
-  String _generateEmpatheticFallback(String input, {bool isCrisis = false}) {
+  String _generateEmpatheticFallback(String input, {bool isCrisis = false, bool hasImage = false}) {
     final lower = input.toLowerCase();
 
     if (isCrisis) {
       return "I hear how heavy things feel right now, and I want you to know you don't have to carry this alone. Your life has immense value, and there is caring support available 24/7. Please connect with someone who can help right now:";
+    }
+
+    if (hasImage && input.trim().isEmpty) {
+      return "I received your photo! 📸 Whether it's your student ID, school documents, study notes, or something personal you wanted to share, I'm right here with you. What would you like to discuss about it, or how are you feeling right now?";
     }
 
     // Family and Relationship Struggles

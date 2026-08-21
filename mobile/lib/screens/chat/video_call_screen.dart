@@ -1,5 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:js' as js;
+
 import '../../models/avatar_model.dart';
 import '../../utils/ambient_audio_service.dart';
 
@@ -21,22 +27,25 @@ class _VideoCallScreenState extends State<VideoCallScreen>
   Timer? _callTimer;
   bool _isMuted = false;
   bool _isCameraOn = true;
+  bool _isAiSpeaking = false;
 
-  final List<String> _captions = [
-    "Hello! It's so good to see you today.",
-    "I'm here to give you my full attention.",
-    "Whatever you're facing, you don't have to carry it alone.",
+  String _currentSubtitle = "Connecting video feed...";
+
+  final List<String> _companionPrompts = [
+    "Hello! It's so good to see you today. I'm right here with you.",
+    "Take all the time you need. How is your day going so far?",
+    "Remember to be gentle with yourself. You're doing the best you can.",
     "Let's take a slow breath together whenever you're ready.",
   ];
-  int _captionIndex = 0;
-  Timer? _captionTimer;
+  int _promptIndex = 0;
+  Timer? _dialogueCycleTimer;
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2400),
     )..repeat(reverse: true);
 
     _callTimer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -45,19 +54,106 @@ class _VideoCallScreenState extends State<VideoCallScreen>
 
     _audioService.playChime(frequency: 587.33, durationSeconds: 0.9);
 
-    _captionTimer = Timer.periodic(const Duration(seconds: 6), (t) {
+    if (kIsWeb) {
+      _startWebcam();
+    }
+
+    // Initial greeting out loud
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
-        setState(() {
-          _captionIndex = (_captionIndex + 1) % _captions.length;
-        });
+        _speakCompanion(_companionPrompts[0]);
       }
+    });
+
+    // Cycle supportive voice guidance every 12 seconds
+    _dialogueCycleTimer = Timer.periodic(const Duration(seconds: 14), (t) {
+      if (mounted && !_isMuted) {
+        _promptIndex = (_promptIndex + 1) % _companionPrompts.length;
+        _speakCompanion(_companionPrompts[_promptIndex]);
+      }
+    });
+  }
+
+  void _startWebcam() {
+    if (!kIsWeb) return;
+    try {
+      final jsCode = '''
+      (function() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          navigator.mediaDevices.getUserMedia({video: true, audio: false})
+            .then(function(stream) {
+              window._kausapCamStream = stream;
+            })
+            .catch(function(err) {});
+        }
+      })();
+      ''';
+      js.context.callMethod('eval', [jsCode]);
+      if (mounted) setState(() => _isCameraOn = true);
+    } catch (_) {}
+  }
+
+  void _stopWebcam() {
+    if (!kIsWeb) return;
+    try {
+      final jsCode = '''
+      (function() {
+        if (window._kausapCamStream) {
+          var tracks = window._kausapCamStream.getTracks();
+          for (var i = 0; i < tracks.length; i++) {
+            tracks[i].stop();
+          }
+          window._kausapCamStream = null;
+        }
+      })();
+      ''';
+      js.context.callMethod('eval', [jsCode]);
+      if (mounted) setState(() => _isCameraOn = false);
+    } catch (_) {}
+  }
+
+  void _speakCompanion(String text) {
+    if (!mounted) return;
+    setState(() {
+      _isAiSpeaking = true;
+      _currentSubtitle = text;
+    });
+
+    if (kIsWeb) {
+      try {
+        final safeText = jsonEncode(text);
+        final jsCode = '''
+        (function() {
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            var u = new SpeechSynthesisUtterance($safeText);
+            u.rate = 0.95;
+            u.pitch = 1.05;
+            window.speechSynthesis.speak(u);
+          }
+        })();
+        ''';
+        js.context.callMethod('eval', [jsCode]);
+      } catch (_) {}
+    }
+
+    final wordCount = text.split(' ').length;
+    final speakDuration = Duration(milliseconds: (wordCount * 320).clamp(2400, 7500));
+    Future.delayed(speakDuration, () {
+      if (mounted) setState(() => _isAiSpeaking = false);
     });
   }
 
   @override
   void dispose() {
     _callTimer?.cancel();
-    _captionTimer?.cancel();
+    _dialogueCycleTimer?.cancel();
+    _stopWebcam();
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('eval', ['if ("speechSynthesis" in window) window.speechSynthesis.cancel();']);
+      } catch (_) {}
+    }
     _animController.dispose();
     super.dispose();
   }
@@ -74,12 +170,12 @@ class _VideoCallScreenState extends State<VideoCallScreen>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Fullscreen Avatar Video Feed
+          // Fullscreen Avatar Video Feed with Subtle Breathing Scale
           Positioned.fill(
             child: AnimatedBuilder(
               animation: _animController,
               builder: (context, child) {
-                final scale = 1.0 + (_animController.value * 0.03);
+                final scale = 1.0 + (_animController.value * (_isAiSpeaking ? 0.04 : 0.02));
                 return Transform.scale(
                   scale: scale,
                   child: Image.asset(
@@ -97,7 +193,7 @@ class _VideoCallScreenState extends State<VideoCallScreen>
             ),
           ),
 
-          // Subtle Dark Gradient Overlay for Controls Visibility
+          // Vignette Gradient Overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -105,18 +201,18 @@ class _VideoCallScreenState extends State<VideoCallScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withAlpha(150),
+                    Colors.black.withAlpha(160),
                     Colors.transparent,
                     Colors.transparent,
-                    Colors.black.withAlpha(200),
+                    Colors.black.withAlpha(220),
                   ],
-                  stops: const [0.0, 0.25, 0.7, 1.0],
+                  stops: const [0.0, 0.22, 0.65, 1.0],
                 ),
               ),
             ),
           ),
 
-          // Top Header (Avatar name + Duration)
+          // Top Header (Avatar name + Duration + Indicator)
           Positioned(
             top: 0,
             left: 0,
@@ -143,8 +239,8 @@ class _VideoCallScreenState extends State<VideoCallScreen>
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF22C55E),
+                            decoration: BoxDecoration(
+                              color: _isAiSpeaking ? const Color(0xFF38BDF8) : const Color(0xFF22C55E),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -161,42 +257,55 @@ class _VideoCallScreenState extends State<VideoCallScreen>
                         ],
                       ),
                     ),
-                    const SizedBox(width: 48), // Balance spacing
+                    const SizedBox(width: 48),
                   ],
                 ),
               ),
             ),
           ),
 
-          // Picture-in-Picture (Student self preview)
+          // Picture-in-Picture Self Preview (Cam Stream / Status)
           Positioned(
             top: 80,
             right: 20,
             child: Container(
-              width: 100,
-              height: 140,
+              width: 105,
+              height: 145,
               decoration: BoxDecoration(
                 color: const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withAlpha(60), width: 1.5),
+                border: Border.all(
+                  color: _isCameraOn ? const Color(0xFF4ADE80) : Colors.white.withAlpha(50),
+                  width: 1.8,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withAlpha(120),
-                    blurRadius: 12,
+                    color: Colors.black.withAlpha(140),
+                    blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(14),
                 child: _isCameraOn
                     ? Stack(
                         alignment: Alignment.center,
                         children: [
                           Container(
-                            color: const Color(0xFF334155),
+                            color: const Color(0xFF1E293B),
                             child: const Center(
-                              child: Icon(Icons.person_rounded, color: Colors.white54, size: 42),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.videocam_rounded, color: Color(0xFF4ADE80), size: 28),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Camera Active',
+                                    style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, color: Colors.white70),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           Positioned(
@@ -216,41 +325,60 @@ class _VideoCallScreenState extends State<VideoCallScreen>
                         ],
                       )
                     : const Center(
-                        child: Icon(Icons.videocam_off_rounded, color: Colors.white38, size: 30),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.videocam_off_rounded, color: Colors.white38, size: 26),
+                            SizedBox(height: 4),
+                            Text('Cam Off', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Colors.white38)),
+                          ],
+                        ),
                       ),
               ),
             ),
           ),
 
-          // Live Subtitles / Speech Closed Captions
+          // Live Subtitles Closed Captions
           Positioned(
             bottom: 120,
-            left: 24,
-            right: 24,
+            left: 20,
+            right: 20,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 350),
               child: Container(
-                key: ValueKey(_captionIndex),
+                key: ValueKey(_currentSubtitle),
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(160),
+                  color: Colors.black.withAlpha(180),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withAlpha(30)),
+                  border: Border.all(
+                    color: _isAiSpeaking ? const Color(0xFF38BDF8).withAlpha(140) : Colors.white.withAlpha(40),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(80),
+                      blurRadius: 8,
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.closed_caption_rounded, color: Color(0xFF38BDF8), size: 18),
-                    const SizedBox(width: 8),
+                    Icon(
+                      _isAiSpeaking ? Icons.volume_up_rounded : Icons.closed_caption_rounded,
+                      color: _isAiSpeaking ? const Color(0xFF38BDF8) : Colors.white70,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        _captions[_captionIndex],
-                        style: const TextStyle(
+                        _currentSubtitle,
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 13,
                           color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                          height: 1.3,
+                          fontWeight: _isAiSpeaking ? FontWeight.w600 : FontWeight.w400,
+                          height: 1.35,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -261,7 +389,7 @@ class _VideoCallScreenState extends State<VideoCallScreen>
             ),
           ),
 
-          // Bottom Controls (Mute, Camera, Flip, End Call)
+          // Bottom Controls (Cam Toggle, Mic Mute, End Call)
           Positioned(
             bottom: 30,
             left: 20,
@@ -273,16 +401,31 @@ class _VideoCallScreenState extends State<VideoCallScreen>
                 _VideoControlBtn(
                   icon: _isCameraOn ? Icons.videocam_rounded : Icons.videocam_off_rounded,
                   label: _isCameraOn ? 'Cam On' : 'Cam Off',
-                  bgColor: _isCameraOn ? Colors.white12 : Colors.white24,
-                  onTap: () => setState(() => _isCameraOn = !_isCameraOn),
+                  bgColor: _isCameraOn ? const Color(0xFF22C55E).withAlpha(40) : Colors.white12,
+                  iconColor: _isCameraOn ? const Color(0xFF4ADE80) : Colors.white60,
+                  onTap: () {
+                    if (_isCameraOn) {
+                      _stopWebcam();
+                    } else {
+                      _startWebcam();
+                    }
+                  },
                 ),
 
-                // Mute Mic Toggle
+                // Mic Mute Toggle
                 _VideoControlBtn(
                   icon: _isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
                   label: _isMuted ? 'Unmute' : 'Mute',
-                  bgColor: _isMuted ? Colors.white24 : Colors.white12,
-                  onTap: () => setState(() => _isMuted = !_isMuted),
+                  bgColor: _isMuted ? Colors.red.withAlpha(40) : Colors.white12,
+                  iconColor: _isMuted ? const Color(0xFFF87171) : Colors.white,
+                  onTap: () {
+                    setState(() => _isMuted = !_isMuted);
+                    if (_isMuted && kIsWeb) {
+                      try {
+                        js.context.callMethod('eval', ['if ("speechSynthesis" in window) window.speechSynthesis.cancel();']);
+                      } catch (_) {}
+                    }
+                  },
                 ),
 
                 // End Call Button (Red)
@@ -290,6 +433,7 @@ class _VideoCallScreenState extends State<VideoCallScreen>
                   icon: Icons.call_end_rounded,
                   label: 'End',
                   bgColor: const Color(0xFFEF4444),
+                  iconColor: Colors.white,
                   isEnd: true,
                   onTap: () {
                     _audioService.playChime(frequency: 330.0, durationSeconds: 0.5);
@@ -309,6 +453,7 @@ class _VideoControlBtn extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color bgColor;
+  final Color? iconColor;
   final VoidCallback onTap;
   final bool isEnd;
 
@@ -316,6 +461,7 @@ class _VideoControlBtn extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.bgColor,
+    this.iconColor,
     required this.onTap,
     this.isEnd = false,
   });
@@ -342,7 +488,7 @@ class _VideoControlBtn extends StatelessWidget {
                   ),
               ],
             ),
-            child: Icon(icon, color: Colors.white, size: isEnd ? 30 : 22),
+            child: Icon(icon, color: iconColor ?? Colors.white, size: isEnd ? 30 : 22),
           ),
         ),
         const SizedBox(height: 6),
