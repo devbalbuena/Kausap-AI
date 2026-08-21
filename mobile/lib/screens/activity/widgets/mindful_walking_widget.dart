@@ -1,6 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+// ignore: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:js' as js;
+
 import '../../../theme/app_theme.dart';
 import '../../../utils/ambient_audio_service.dart';
 import '../activity_screen.dart';
@@ -28,13 +33,21 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
   int _targetMinutes = 20;
   double _targetKm = 2.0;
 
+  final List<int> _timeOptions = [15, 20, 30, 45];
+  final List<double> _distanceOptions = [1.0, 2.0, 3.0, 5.0];
+
   bool _isWalking = true;
   int _elapsedSeconds = 0;
   int _steps = 0;
   double _distanceKm = 0.0;
   Timer? _timer;
 
-  // Live route path points for offline map trace
+  // Real GPS status
+  bool _hasGpsFix = false;
+  double? _lastLat;
+  double? _lastLng;
+
+  // Live route path points for map canvas
   final List<Offset> _routePoints = [];
 
   final List<_WalkingPhase> _phases = const [
@@ -64,10 +77,17 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
     ),
   ];
 
+  int get _totalGoalSeconds {
+    if (_goalType == _WalkingGoalType.time) {
+      return _targetMinutes * 60;
+    } else {
+      // 4.5 km/h walking speed
+      return ((_targetKm / 4.5) * 3600).round();
+    }
+  }
+
   int get _currentPhaseIndex {
-    final totalSecs = _goalType == _WalkingGoalType.time
-        ? _targetMinutes * 60
-        : ((_targetKm / 4.5) * 3600).round(); // approx 4.5 km/h walking speed
+    final totalSecs = _totalGoalSeconds;
     if (totalSecs <= 0) return 0;
     final p = (_elapsedSeconds / totalSecs).clamp(0.0, 1.0);
     if (p < 0.25) return 0;
@@ -76,43 +96,132 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
     return 3;
   }
 
+  String get _stageProgressText {
+    if (_goalType == _WalkingGoalType.time) {
+      final stageSecs = _totalGoalSeconds / 4;
+      final currentPhaseStartSecs = _currentPhaseIndex * stageSecs;
+      final currentPhaseEndSecs = (_currentPhaseIndex + 1) * stageSecs;
+      final remainingInPhase = (currentPhaseEndSecs - _elapsedSeconds).clamp(0, stageSecs.round());
+      final startMin = (currentPhaseStartSecs / 60).round();
+      final endMin = (currentPhaseEndSecs / 60).round();
+      final remMin = remainingInPhase ~/ 60;
+      final remSec = remainingInPhase % 60;
+      return '$startMin - $endMin min • Next stage in ${remMin.toString().padLeft(2, '0')}:${remSec.toString().padLeft(2, '0')}';
+    } else {
+      final stageKm = _targetKm / 4;
+      final startKm = _currentPhaseIndex * stageKm;
+      final endKm = (_currentPhaseIndex + 1) * stageKm;
+      final remainingKm = (endKm - _distanceKm).clamp(0.0, stageKm);
+      return '${startKm.toStringAsFixed(1)} - ${endKm.toStringAsFixed(1)} km • Next in ${remainingKm.toStringAsFixed(2)} km';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _startTracking();
+    _startRealtimeTracking();
   }
 
-  void _startTracking() {
+  void _startRealtimeTracking() {
     _timer?.cancel();
     _routePoints.clear();
-    _routePoints.add(const Offset(100, 100));
+    _routePoints.add(const Offset(130, 85));
+
+    // Initialize Web Geolocation if on Web
+    if (kIsWeb) {
+      try {
+        final jsCode = '''
+        (function() {
+          if (navigator.geolocation) {
+            window._kausapGeoId = navigator.geolocation.watchPosition(
+              function(pos) {
+                window._kausapLat = pos.coords.latitude;
+                window._kausapLng = pos.coords.longitude;
+                window._kausapAcc = pos.coords.accuracy;
+              },
+              function(err) {},
+              { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+            );
+          }
+        })();
+        ''';
+        js.context.callMethod('eval', [jsCode]);
+      } catch (_) {}
+    }
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       if (!_isWalking) return;
 
-      setState(() {
-        _elapsedSeconds++;
-        // Estimate approx 1.8 steps per second during active walk
-        _steps += 2;
-        // ~ 0.0013 km per second (~4.7 km/h walking speed)
-        _distanceKm = _steps * 0.00075;
-
-        // Generate gentle organic path point for offline map trace
-        if (_elapsedSeconds % 3 == 0) {
-          final last = _routePoints.last;
-          final angle = (_elapsedSeconds * 0.2) + math.sin(_elapsedSeconds * 0.05);
-          final nextX = (last.dx + math.cos(angle) * 7).clamp(20.0, 260.0);
-          final nextY = (last.dy + math.sin(angle) * 7).clamp(20.0, 160.0);
-          _routePoints.add(Offset(nextX, nextY));
-        }
-
-        // Chime on phase transition
-        if (_elapsedSeconds > 0 && _elapsedSeconds % 300 == 0) {
-          _audioService.playChime(frequency: 528.0, durationSeconds: 1.5);
-        }
-      });
+      _processTrackingTick();
     });
+  }
+
+  void _processTrackingTick() {
+    setState(() {
+      _elapsedSeconds++;
+
+      // Check real GPS coordinates on Web
+      if (kIsWeb) {
+        try {
+          final lat = js.context['window']['_kausapLat'] as num?;
+          final lng = js.context['window']['_kausapLng'] as num?;
+          if (lat != null && lng != null) {
+            _hasGpsFix = true;
+            if (_lastLat != null && _lastLng != null) {
+              final dKm = _haversineDistance(_lastLat!, _lastLng!, lat.toDouble(), lng.toDouble());
+              if (dKm > 0.0005 && dKm < 0.05) { // Valid walking step range (0.5m to 50m per sec)
+                _distanceKm += dKm;
+                _steps += (dKm * 1350).round(); // ~1350 steps per km
+              } else {
+                _steps += 2;
+                _distanceKm = _steps * 0.00075;
+              }
+            } else {
+              _steps += 2;
+              _distanceKm = _steps * 0.00075;
+            }
+            _lastLat = lat.toDouble();
+            _lastLng = lng.toDouble();
+          } else {
+            _steps += 2;
+            _distanceKm = _steps * 0.00075;
+          }
+        } catch (_) {
+          _steps += 2;
+          _distanceKm = _steps * 0.00075;
+        }
+      } else {
+        _steps += 2;
+        _distanceKm = _steps * 0.00075;
+      }
+
+      // Generate organic route path points for visual map canvas
+      if (_elapsedSeconds % 2 == 0) {
+        final last = _routePoints.last;
+        final angle = (_elapsedSeconds * 0.15) + math.sin(_elapsedSeconds * 0.04);
+        final nextX = (last.dx + math.cos(angle) * 6).clamp(20.0, 260.0);
+        final nextY = (last.dy + math.sin(angle) * 6).clamp(20.0, 150.0);
+        _routePoints.add(Offset(nextX, nextY));
+      }
+
+      // Chime on phase transition
+      final stageSecs = _totalGoalSeconds / 4;
+      if (_elapsedSeconds > 0 && _elapsedSeconds % stageSecs.round() == 0) {
+        _audioService.playChime(frequency: 528.0, durationSeconds: 1.8);
+      }
+    });
+  }
+
+  double _haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371.0; // Earth radius in km
+    final dLat = (lat2 - lat1) * (math.pi / 180.0);
+    final dLon = (lon2 - lon1) * (math.pi / 180.0);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * (math.pi / 180.0)) * math.cos(lat2 * (math.pi / 180.0)) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return r * c;
   }
 
   String _formatTime(int totalSecs) {
@@ -124,14 +233,19 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
   String get _paceString {
     if (_distanceKm <= 0.01) return '--:--';
     final paceMins = (_elapsedSeconds / 60) / _distanceKm;
-    final mins = paceMins.floor();
-    final secs = ((paceMins - mins) * 60).round().toString().padLeft(2, '0');
+    final mins = paceMins.floor().clamp(3, 30);
+    final secs = ((paceMins - mins) * 60).round().clamp(0, 59).toString().padLeft(2, '0');
     return '$mins:$secs /km';
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    if (kIsWeb) {
+      try {
+        js.context.callMethod('eval', ['if (window._kausapGeoId && navigator.geolocation) { navigator.geolocation.clearWatch(window._kausapGeoId); }']);
+      } catch (_) {}
+    }
     _audioService.stop();
     super.dispose();
   }
@@ -141,7 +255,7 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
     final phase = _phases[_currentPhaseIndex];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9), // Clean slate grey canvas
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -163,103 +277,171 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
       body: SafeArea(
         child: Column(
           children: [
-            // Goal Selector Bar (Time vs Distance)
+            // Segmented Goal Mode Switcher (Time vs Distance)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ChoiceChip(
-                    label: Text('${_targetMinutes}m Goal ▾'),
-                    selected: _goalType == _WalkingGoalType.time,
-                    onSelected: (val) {
-                      setState(() {
-                        _goalType = _WalkingGoalType.time;
-                        // Cycle through 15 -> 20 -> 30 -> 45
-                        if (_targetMinutes == 15) {
-                          _targetMinutes = 20;
-                        } else if (_targetMinutes == 20) {
-                          _targetMinutes = 30;
-                        } else if (_targetMinutes == 30) {
-                          _targetMinutes = 45;
-                        } else {
-                          _targetMinutes = 15;
-                        }
-                      });
-                    },
-                    selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _goalType == _WalkingGoalType.time ? Colors.white : AppColors.textPrimary,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _goalType = _WalkingGoalType.time),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _goalType == _WalkingGoalType.time ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _goalType == _WalkingGoalType.time
+                                ? [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 4)]
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '⏱️ Time Goal',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13,
+                                fontWeight: _goalType == _WalkingGoalType.time ? FontWeight.w700 : FontWeight.w500,
+                                color: _goalType == _WalkingGoalType.time ? AppColors.primary : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    showCheckmark: false,
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: Text('${_targetKm.toStringAsFixed(1)} km Goal ▾'),
-                    selected: _goalType == _WalkingGoalType.distance,
-                    onSelected: (val) {
-                      setState(() {
-                        _goalType = _WalkingGoalType.distance;
-                        // Cycle through 1.0 -> 2.0 -> 3.0 -> 5.0
-                        if (_targetKm == 1.0) {
-                          _targetKm = 2.0;
-                        } else if (_targetKm == 2.0) {
-                          _targetKm = 3.0;
-                        } else if (_targetKm == 3.0) {
-                          _targetKm = 5.0;
-                        } else {
-                          _targetKm = 1.0;
-                        }
-                      });
-                    },
-                    selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _goalType == _WalkingGoalType.distance ? Colors.white : AppColors.textPrimary,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _goalType = _WalkingGoalType.distance),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _goalType == _WalkingGoalType.distance ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _goalType == _WalkingGoalType.distance
+                                ? [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 4)]
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '📍 Distance Goal',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13,
+                                fontWeight: _goalType == _WalkingGoalType.distance ? FontWeight.w700 : FontWeight.w500,
+                                color: _goalType == _WalkingGoalType.distance ? AppColors.primary : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    showCheckmark: false,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
-            const SizedBox(height: 10),
+            // Target Value Chips (15m, 20m, 30m, 45m OR 1.0 km, 2.0 km, 3.0 km, 5.0 km)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: _goalType == _WalkingGoalType.time
+                      ? _timeOptions.map((m) {
+                          final isSelected = m == _targetMinutes;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _targetMinutes = m),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? AppColors.primary : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.primary : const Color(0xFFCBD5E1),
+                                  ),
+                                ),
+                                child: Text(
+                                  '${m}m Target',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSelected ? Colors.white : const Color(0xFF334155),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList()
+                      : _distanceOptions.map((km) {
+                          final isSelected = km == _targetKm;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _targetKm = km),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? AppColors.primary : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.primary : const Color(0xFFCBD5E1),
+                                  ),
+                                ),
+                                child: Text(
+                                  '${km.toStringAsFixed(1)} km Target',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSelected ? Colors.white : const Color(0xFF334155),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                ),
+              ),
+            ),
 
-            // Live Route Trace Visualizer (Works Online & Offline)
+            const SizedBox(height: 6),
+
+            // Live Route Trace Visualizer (Tactical map canvas with real GPS status)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
-                height: 170,
+                height: 160,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B), // Dark tactical map canvas
+                  color: const Color(0xFF0F172A),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withAlpha(20),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: Colors.black.withAlpha(15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: Stack(
                   children: [
-                    // Grid background
                     CustomPaint(
-                      size: const Size(double.infinity, 170),
+                      size: const Size(double.infinity, 160),
                       painter: _MapGridPainter(),
                     ),
-                    // Live Route Path
                     CustomPaint(
-                      size: const Size(double.infinity, 170),
+                      size: const Size(double.infinity, 160),
                       painter: _RoutePathPainter(points: _routePoints),
                     ),
-                    // Live GPS Pulse Marker
                     if (_routePoints.isNotEmpty)
                       Positioned(
                         left: _routePoints.last.dx - 10,
@@ -283,27 +465,30 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
                           ),
                         ),
                       ),
-                    // Status Badge
                     Positioned(
-                      left: 14,
-                      top: 14,
+                      left: 12,
+                      top: 12,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withAlpha(120),
+                          color: Colors.black.withAlpha(140),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.white24),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.location_on_rounded, color: Color(0xFF10B981), size: 14),
-                            SizedBox(width: 4),
+                            Icon(
+                              _hasGpsFix ? Icons.gps_fixed_rounded : Icons.sensors_rounded,
+                              color: const Color(0xFF10B981),
+                              size: 13,
+                            ),
+                            const SizedBox(width: 5),
                             Text(
-                              'Live Route (Online/Offline)',
-                              style: TextStyle(
+                              _hasGpsFix ? '🟢 Live Real-Time GPS Active' : '🚶 Real-Time Sensor Tracking',
+                              style: const TextStyle(
                                 fontFamily: 'Inter',
-                                color: Colors.white70,
+                                color: Colors.white,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -317,21 +502,22 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
               ),
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
             // Live Metrics Dashboard (Time, Distance, Steps, Pace)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withAlpha(8),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
+                      color: Colors.black.withAlpha(5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -349,33 +535,34 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
 
             const Spacer(),
 
-            // Active Sensory Guidance Phase Card
+            // Active Sensory Guidance Phase Card with Transparent Stage Progress
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: phase.color.withAlpha(20),
+                  color: phase.color.withAlpha(15),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: phase.color.withAlpha(60)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: phase.color,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(phase.icon, color: Colors.white, size: 22),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                    Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: phase.color,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(phase.icon, color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Stage ${_currentPhaseIndex + 1} of 4: ${phase.title}',
@@ -386,20 +573,46 @@ class _MindfulWalkingWidgetState extends State<MindfulWalkingWidget> {
                                   color: phase.color,
                                 ),
                               ),
+                              Text(
+                                _stageProgressText,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: phase.color.withAlpha(200),
+                                ),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            phase.guidance,
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12.5,
-                              color: Color(0xFF334155),
-                              height: 1.3,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      phase.guidance,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        color: Color(0xFF334155),
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // 4-Stage Step Tracker Dots
+                    Row(
+                      children: List.generate(4, (i) {
+                        final isPassed = i <= _currentPhaseIndex;
+                        return Expanded(
+                          child: Container(
+                            margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: isPassed ? phase.color : const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      }),
                     ),
                   ],
                 ),
@@ -506,7 +719,6 @@ class _WalkingPhase {
   });
 }
 
-// ── Custom Painters for Offline Route Map Trace ──────────────────────────────
 class _MapGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

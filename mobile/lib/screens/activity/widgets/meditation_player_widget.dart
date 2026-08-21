@@ -146,7 +146,7 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
     final progress = _totalSeconds > 0 ? (_elapsedSeconds / _totalSeconds).clamp(0.0, 1.0) : 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A), // Deep calming blue
+      backgroundColor: const Color(0xFFF8FAFC), // Light Serene Wellness Canvas
       body: SafeArea(
         child: Column(
           children: [
@@ -156,7 +156,7 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                    icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary),
                     onPressed: () => Navigator.maybePop(context),
                   ),
                   const Spacer(),
@@ -166,7 +166,7 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w700,
                       fontSize: 18,
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const Spacer(),
@@ -175,31 +175,51 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
               ),
             ),
 
-            // Duration Selector Chips (5m, 10m, 15m, 30m, 60m)
+            // Duration Selector Chips (5m, 10m, 15m, 30m, 60m) - HIGH CONTRAST & VISIBLE
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: _durationOptions.map((mins) {
                   final isSelected = mins == _selectedDurationMinutes;
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: ChoiceChip(
-                      label: Text('${mins}m'),
-                      selected: isSelected,
-                      onSelected: (val) {
-                        if (val) _changeDuration(mins);
-                      },
-                      selectedColor: AppColors.primary,
-                      backgroundColor: Colors.white.withAlpha(15),
-                      labelStyle: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? Colors.white : Colors.white70,
+                    child: GestureDetector(
+                      onTap: () => _changeDuration(mins),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary : const Color(0xFFCBD5E1),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            if (isSelected)
+                              BoxShadow(
+                                color: AppColors.primary.withAlpha(60),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              )
+                            else
+                              BoxShadow(
+                                color: Colors.black.withAlpha(6),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                          ],
+                        ),
+                        child: Text(
+                          '${mins}m',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                            color: isSelected ? Colors.white : const Color(0xFF334155),
+                          ),
+                        ),
                       ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      showCheckmark: false,
                     ),
                   );
                 }).toList(),
@@ -208,7 +228,7 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
 
             const Spacer(),
 
-            // Circular Timer with Pulsing Aura
+            // Circular Timer with Pulsing Aura in Light Theme
             SizedBox(
               width: 220,
               height: 220,
@@ -221,17 +241,17 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
                     height: 220,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFF38BDF8).withAlpha(15),
+                      color: AppColors.primary.withAlpha(15),
                     ),
                   ),
                   // Background ring
                   SizedBox(
                     width: 190,
                     height: 190,
-                    child: CircularProgressIndicator(
+                    child: const CircularProgressIndicator(
                       value: 1.0,
                       strokeWidth: 8,
-                      color: Colors.white.withAlpha(20),
+                      color: Color(0xFFE2E8F0),
                     ),
                   ),
                   // Progress ring
@@ -241,7 +261,7 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
                     child: CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 8,
-                      color: const Color(0xFF38BDF8),
+                      color: AppColors.primary,
                       strokeCap: StrokeCap.round,
                     ),
                   ),
@@ -249,7 +269,7 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(stage.icon, color: const Color(0xFF38BDF8), size: 28),
+                      Icon(stage.icon, color: AppColors.primary, size: 28),
                       const SizedBox(height: 6),
                       Text(
                         _formatTime(_secondsRemaining),
@@ -257,7 +277,7 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
                           fontFamily: 'Inter',
                           fontSize: 40,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           letterSpacing: -1,
                         ),
                       ),
@@ -265,8 +285,9 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
                         'Stage ${_currentStageIndex + 1} of 4',
                         style: const TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 12,
-                          color: Colors.white54,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -277,25 +298,32 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
 
             const Spacer(),
 
-            // Stage Title & Guided Affirmation Card
+            // Stage Title & Guided Affirmation Card (Light aesthetic)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(12),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withAlpha(15)),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(8),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
                     Text(
                       stage.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF38BDF8),
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -304,7 +332,7 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
                       style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 14,
-                        color: Colors.white70,
+                        color: Color(0xFF475569),
                         height: 1.4,
                       ),
                       textAlign: TextAlign.center,
@@ -316,24 +344,35 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
 
             const SizedBox(height: 16),
 
-            // Ambient Soundscape Selector Strip
+            // Ambient Soundscape Selector Strip (Light floating pill bar)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(50),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildSoundOption(AmbientSoundType.singingBowl, '🔔 Singing Bowl'),
-                    _buildSoundOption(AmbientSoundType.rain, '🌧️ Rain'),
-                    _buildSoundOption(AmbientSoundType.ocean, '🌊 Waves'),
-                    _buildSoundOption(AmbientSoundType.forest, '🌲 Forest'),
-                    _buildSoundOption(AmbientSoundType.silence, '🔇 Mute'),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(6),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
                   ],
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildSoundOption(AmbientSoundType.singingBowl, '🔔 Singing Bowl'),
+                      _buildSoundOption(AmbientSoundType.rain, '🌧️ Rain'),
+                      _buildSoundOption(AmbientSoundType.ocean, '🌊 Waves'),
+                      _buildSoundOption(AmbientSoundType.forest, '🌲 Forest'),
+                      _buildSoundOption(AmbientSoundType.silence, '🔇 Mute'),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -342,14 +381,14 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
 
             // Controls & Finish Button
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: const BorderSide(color: Colors.white24),
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
@@ -399,19 +438,20 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
     return GestureDetector(
       onTap: () => _setAmbientSound(type),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withAlpha(80) : Colors.transparent,
+          color: isSelected ? AppColors.primary.withAlpha(20) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
-          border: isSelected ? Border.all(color: AppColors.primary, width: 1.2) : null,
+          border: isSelected ? Border.all(color: AppColors.primary, width: 1.5) : Border.all(color: Colors.transparent),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-            color: isSelected ? Colors.white : Colors.white60,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? AppColors.primary : const Color(0xFF64748B),
           ),
         ),
       ),

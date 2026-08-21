@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import 'widgets/audio_journal_bottom_sheet.dart';
+import 'journal_history_screen.dart';
 
 class DailyJournalScreen extends StatefulWidget {
   const DailyJournalScreen({super.key});
@@ -58,8 +60,25 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     });
     
     final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    await _storage.write(key: 'journal_$dateKey', value: _journalController.text);
+    final content = _journalController.text;
+    await _storage.write(key: 'journal_$dateKey', value: content);
     await _storage.write(key: 'mood_$dateKey', value: _moodValue.toString());
+
+    // Append to unified journal_history
+    try {
+      final rawHistory = await _storage.read(key: 'journal_history');
+      final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) as List : [];
+      history.removeWhere((e) => e['date'] == dateKey);
+      history.insert(0, {
+        'id': dateKey,
+        'date': dateKey,
+        'type': 'freeform',
+        'content': content,
+        'mood': _moodValue.toString(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await _storage.write(key: 'journal_history', value: jsonEncode(history));
+    } catch (_) {}
     
     if (mounted) {
       setState(() {
@@ -117,6 +136,18 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history_rounded, color: AppColors.textPrimary),
+            tooltip: 'Journal History',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const JournalHistoryScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: _isLoading
