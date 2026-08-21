@@ -60,6 +60,164 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
     _showCelebrationSheet();
   }
 
+  void _showManageSubscriptionSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Text('👑', style: TextStyle(fontSize: 24)),
+                ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Kausap AI Pro',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                    Text(
+                      '🟢 Active Subscription',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF16A34A),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  _buildSubRow('Billing Cycle', _isAnnual ? 'Annual (₱1,899/year)' : 'Monthly (₱199/month)'),
+                  const Divider(height: 18, color: Color(0xFFE2E8F0)),
+                  _buildSubRow('Access Tier', 'All 4 Specialist Avatars & Features'),
+                  const Divider(height: 18, color: Color(0xFFE2E8F0)),
+                  _buildSubRow('Renewal Date', 'August 2027 (Renews Automatically)'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text('Keep Active Plan', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  _confirmCancelSubscription();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFEF4444),
+                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Cancel Subscription / Revert to Free', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B))),
+        Text(value, style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+      ],
+    );
+  }
+
+  Future<void> _confirmCancelSubscription() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Cancel Pro Membership?'),
+        content: const Text('You will be reverted to the Free Basic tier and will lose access to specialist avatars.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep Pro')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Yes, Downgrade', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _storage.write(key: 'is_pro_member', value: 'false');
+      if (mounted) {
+        setState(() => _isPro = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Subscription downgraded to Free Basic tier.'),
+            backgroundColor: Color(0xFF475569),
+          ),
+        );
+      }
+    }
+  }
+
   void _showCelebrationSheet() {
     showModalBottomSheet(
       context: context,
@@ -371,7 +529,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _isUpgrading ? null : _handleUpgrade,
+                      onPressed: _isUpgrading ? null : (_isPro ? _showManageSubscriptionSheet : _handleUpgrade),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
