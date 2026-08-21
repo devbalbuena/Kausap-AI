@@ -164,9 +164,26 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FF),
-        body: _phase == _Phase.active
-            ? _buildActivePhase()
-            : _buildIdlePhase(),
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 380),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.0, 0.06),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: _phase == _Phase.active
+              ? KeyedSubtree(key: const ValueKey('active'), child: _buildActivePhase())
+              : KeyedSubtree(key: const ValueKey('idle'), child: _buildIdlePhase()),
+        ),
       ),
     );
   }

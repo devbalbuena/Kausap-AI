@@ -5,6 +5,9 @@ import '../../../theme/app_theme.dart';
 import '../../../utils/ambient_audio_service.dart';
 import '../activity_screen.dart';
 
+enum _BreathingPattern { fourSevenEight, box, resonant }
+enum _BreathingPhase { inhale, hold, exhale, holdAfterExhale }
+
 class BreathingPlayerWidget extends StatefulWidget {
   final ActivityItem activity;
   final VoidCallback onComplete;
@@ -19,8 +22,6 @@ class BreathingPlayerWidget extends StatefulWidget {
   State<BreathingPlayerWidget> createState() => _BreathingPlayerWidgetState();
 }
 
-enum _BreathingPhase { inhale, hold, exhale, holdAfterExhale }
-
 class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
@@ -30,14 +31,17 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
   bool _soundEnabled = true;
   bool _isPlaying = true;
 
+  _BreathingPattern _pattern = _BreathingPattern.fourSevenEight;
   int _currentCycle = 1;
-  final int _totalCycles = 4;
+  int _totalCycles = 4;
+
+  final List<int> _cycleOptions = [4, 8, 12];
 
   _BreathingPhase _currentPhase = _BreathingPhase.inhale;
   int _phaseSecondsRemaining = 4;
   Timer? _timer;
 
-  // Pattern config
+  // Pattern durations
   late int _inhaleSec;
   late int _holdSec;
   late int _exhaleSec;
@@ -46,7 +50,7 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
   @override
   void initState() {
     super.initState();
-    _configurePattern();
+    _applyPatternConfig();
 
     _animController = AnimationController(
       vsync: this,
@@ -60,20 +64,41 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
     _startPhase(_BreathingPhase.inhale);
   }
 
-  void _configurePattern() {
+  void _applyPatternConfig() {
     final title = widget.activity.title.toLowerCase();
     if (title.contains('box')) {
-      _inhaleSec = 4;
-      _holdSec = 4;
-      _exhaleSec = 4;
-      _holdAfterExhaleSec = 4;
-    } else {
-      // 4-7-8 Breathing
-      _inhaleSec = 4;
-      _holdSec = 7;
-      _exhaleSec = 8;
-      _holdAfterExhaleSec = 0;
+      _pattern = _BreathingPattern.box;
     }
+
+    switch (_pattern) {
+      case _BreathingPattern.fourSevenEight:
+        _inhaleSec = 4;
+        _holdSec = 7;
+        _exhaleSec = 8;
+        _holdAfterExhaleSec = 0;
+        break;
+      case _BreathingPattern.box:
+        _inhaleSec = 4;
+        _holdSec = 4;
+        _exhaleSec = 4;
+        _holdAfterExhaleSec = 4;
+        break;
+      case _BreathingPattern.resonant:
+        _inhaleSec = 5;
+        _holdSec = 0;
+        _exhaleSec = 5;
+        _holdAfterExhaleSec = 0;
+        break;
+    }
+  }
+
+  void _setPattern(_BreathingPattern newPattern) {
+    setState(() {
+      _pattern = newPattern;
+      _applyPatternConfig();
+      _currentCycle = 1;
+      _startPhase(_BreathingPhase.inhale);
+    });
   }
 
   void _startPhase(_BreathingPhase phase) {
@@ -154,7 +179,6 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
       setState(() => _currentCycle++);
       _startPhase(_BreathingPhase.inhale);
     } else {
-      // Completed all cycles!
       if (_soundEnabled) {
         _audioService.playChime(frequency: 528.0, durationSeconds: 2.5);
       }
@@ -198,12 +222,12 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
   Color _phaseColor(_BreathingPhase phase) {
     switch (phase) {
       case _BreathingPhase.inhale:
-        return const Color(0xFF0EA5E9); // Sky blue
+        return const Color(0xFF0284C7); // Sky cyan
       case _BreathingPhase.hold:
       case _BreathingPhase.holdAfterExhale:
-        return const Color(0xFF10B981); // Emerald
+        return const Color(0xFF059669); // Emerald
       case _BreathingPhase.exhale:
-        return const Color(0xFF8B5CF6); // Soft purple
+        return const Color(0xFF7C3AED); // Royal purple
     }
   }
 
@@ -219,18 +243,18 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
     final currentColor = _phaseColor(_currentPhase);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Calming dark canvas
+      backgroundColor: const Color(0xFFF8FAFC), // Light Serene Wellness Canvas
       body: SafeArea(
         child: Column(
           children: [
-            // Top Bar
+            // Top App Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                    icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary),
                     onPressed: () => Navigator.maybePop(context),
                   ),
                   Text(
@@ -239,13 +263,13 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w700,
                       fontSize: 18,
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   IconButton(
                     icon: Icon(
                       _soundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                      color: _soundEnabled ? AppColors.primary : Colors.white38,
+                      color: _soundEnabled ? AppColors.primary : const Color(0xFF94A3B8),
                     ),
                     onPressed: () {
                       setState(() => _soundEnabled = !_soundEnabled);
@@ -255,58 +279,106 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
               ),
             ),
 
-            // Cycle & Progress indicator
+            // Pattern Selector Chips (4-7-8 Relax, Box 4-4-4-4, Resonant 5-5)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Cycle $_currentCycle of $_totalCycles',
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white70,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildPatternChip(_BreathingPattern.fourSevenEight, '🌬️ 4-7-8 Relax'),
+                  const SizedBox(width: 6),
+                  _buildPatternChip(_BreathingPattern.box, '📦 Box 4-4-4-4'),
+                  const SizedBox(width: 6),
+                  _buildPatternChip(_BreathingPattern.resonant, '🌊 5-5 Flow'),
+                ],
+              ),
+            ),
+
+            // Cycle Selector & Live Tracker
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withAlpha(15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.primary.withAlpha(40)),
+                    ),
+                    child: Text(
+                      'Cycle $_currentCycle of $_totalCycles',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
-                ),
+                  Row(
+                    children: _cycleOptions.map((c) {
+                      final isSelected = c == _totalCycles;
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _totalCycles = c),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${c}x',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? Colors.white : const Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
             ),
 
             const Spacer(),
 
-            // Animated Breathing Sphere
+            // Animated Breathing Sphere in Light Theme
             AnimatedBuilder(
               animation: _scaleAnimation,
               builder: (context, child) {
                 return Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Outer glow ring
+                    // Outer Ripple Glow
                     Container(
-                      width: 260 * _scaleAnimation.value,
-                      height: 260 * _scaleAnimation.value,
+                      width: 250 * _scaleAnimation.value,
+                      height: 250 * _scaleAnimation.value,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: currentColor.withAlpha(20),
                       ),
                     ),
-                    // Middle aura
+                    // Middle Ring
                     Container(
-                      width: 210 * _scaleAnimation.value,
-                      height: 210 * _scaleAnimation.value,
+                      width: 200 * _scaleAnimation.value,
+                      height: 200 * _scaleAnimation.value,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: currentColor.withAlpha(45),
                       ),
                     ),
-                    // Core breathing circle
+                    // Core breathing sphere
                     Container(
-                      width: 160 * _scaleAnimation.value,
-                      height: 160 * _scaleAnimation.value,
+                      width: 150 * _scaleAnimation.value,
+                      height: 150 * _scaleAnimation.value,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
@@ -314,14 +386,15 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
                           end: Alignment.bottomRight,
                           colors: [
                             currentColor,
-                            currentColor.withAlpha(190),
+                            currentColor.withAlpha(210),
                           ],
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: currentColor.withAlpha(90),
-                            blurRadius: 30,
-                            spreadRadius: 4,
+                            blurRadius: 28,
+                            spreadRadius: 3,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
@@ -333,12 +406,11 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
                               _phaseTitle(_currentPhase),
                               style: const TextStyle(
                                 fontFamily: 'Poppins',
-                                fontSize: 24,
+                                fontSize: 23,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 2),
                             Text(
                               '$_phaseSecondsRemaining',
                               style: const TextStyle(
@@ -359,34 +431,49 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
 
             const Spacer(),
 
-            // Phase instructions
+            // Phase instructions Card
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                _phaseSubtitle(_currentPhase),
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white70,
-                  height: 1.4,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
+                child: Text(
+                  _phaseSubtitle(_currentPhase),
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF334155),
+                    height: 1.35,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             // Bottom action buttons
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: const BorderSide(color: Colors.white24),
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
@@ -433,6 +520,40 @@ class _BreathingPlayerWidgetState extends State<BreathingPlayerWidget>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPatternChip(_BreathingPattern p, String label) {
+    final isSelected = _pattern == p;
+    return GestureDetector(
+      onTap: () => _setPattern(p),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : const Color(0xFFCBD5E1),
+          ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: AppColors.primary.withAlpha(50),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF334155),
+          ),
         ),
       ),
     );

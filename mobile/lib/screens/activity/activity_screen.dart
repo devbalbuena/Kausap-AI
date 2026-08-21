@@ -233,7 +233,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   /// Navigate to ActivityStartScreen then reload completions when returning.
   Future<void> _openActivity(ActivityItem activity) async {
-    await Navigator.of(context).push(slideRoute(ActivityStartScreen(activity: activity)));
+    await Navigator.of(context).push(slideUpRoute(ActivityStartScreen(activity: activity)));
     _loadCompletions();
   }
 
