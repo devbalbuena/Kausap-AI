@@ -12,7 +12,6 @@ import '../../widgets/branded_refresh_indicator.dart';
 import '../auth/login_screen.dart';
 import '../checkin/daily_checkin_step1_screen.dart';
 import '../journal/daily_journal_screen.dart';
-import '../journal/mindfulness_exercises_screen.dart';
 import '../chat/chatbot_screen.dart';
 import '../insights/student_insights_screen.dart';
 import '../activity/activity_screen.dart';
@@ -313,9 +312,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       iconBg: AppColors.chatbotIcon,
                       icon: Icons.smart_toy_rounded,
                       iconColor: const Color(0xFF0077B6),
-                      title: 'Chat with Kausap AI',
-                      subtitle: 'Need someone to talk to?',
-                      onTap: () => Navigator.of(context).push(slideRoute(const ChatbotScreen())),
+                      title: 'Talk to Kausap AI',
+                      subtitle: '24/7 confidential CBT companion',
+                      onTap: () => setState(() => _navIndex = 2),
                     ),
                     const SizedBox(height: 12),
                     _buildQuickActionCard(
@@ -323,8 +322,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.self_improvement_rounded,
                       iconColor: const Color(0xFF059669),
                       title: 'Mindfulness Exercises',
-                      subtitle: 'Breathe and relax',
-                      onTap: () => Navigator.of(context).push(slideRoute(const MindfulnessExercisesScreen())),
+                      subtitle: 'Breathe, meditate & relax',
+                      onTap: () => setState(() => _navIndex = 1),
                     ),
                     const SizedBox(height: 12),
                     _buildQuickActionCard(
@@ -334,15 +333,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       title: 'Self-Assessments',
                       subtitle: 'PHQ-9 Depression & GAD-7 Anxiety Screeners',
                       onTap: () => setState(() => _navIndex = 3),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildQuickActionCard(
-                      iconBg: const Color(0xFFECFDF5),
-                      icon: Icons.chat_bubble_outline_rounded,
-                      iconColor: const Color(0xFF10B981),
-                      title: 'Talk to Kausap AI',
-                      subtitle: '24/7 confidential CBT companion',
-                      onTap: () => setState(() => _navIndex = 2),
                     ),
                     const SizedBox(height: 16),
                     _buildQuoteCard(),
