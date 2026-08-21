@@ -84,7 +84,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
                         icon: Icons.lock_rounded,
                         color: const Color(0xFF2563EB),
                         title: 'End-to-End Encryption',
-                        description: 'All messages between you and your professional are encrypted with AES-256. Only you and your therapist can read them.',
+                        description: 'All chat conversations with Kausap AI and your journal entries are encrypted with AES-256 for complete privacy.',
                       ),
                       const SizedBox(height: 10),
                       _buildEncryptionPillar(
@@ -344,7 +344,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
     final items = [
       ('Account Info', 'Name, email, profile photo', Icons.person_outline_rounded),
       ('Mood Entries', 'Daily check-ins and emotion logs', Icons.favorite_border_rounded),
-      ('Chat History', 'AI and professional messages', Icons.chat_bubble_outline_rounded),
+      ('Chat History', 'AI conversations and wellness reflections', Icons.chat_bubble_outline_rounded),
       ('Session Records', 'Booking and appointment data', Icons.calendar_today_rounded),
       ('Device Info', 'OS version, device model (anonymous)', Icons.phone_android_rounded),
     ];

@@ -299,7 +299,7 @@ class _DownloadDataScreenState extends State<DownloadDataScreen>
           icon: Icons.chat_bubble_rounded,
           color: const Color(0xFF059669),
           title: 'Chat History',
-          subtitle: 'AI and professional message threads',
+          subtitle: 'AI conversation logs',
           value: _exportChats,
           onChanged: (v) => setState(() => _exportChats = v),
         ),

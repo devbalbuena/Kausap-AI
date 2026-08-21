@@ -190,7 +190,6 @@ class CacheService {
 /// Cache keys used across the app — centralized for scalability.
 class CacheKeys {
   // Home
-  static const String professionals = 'professionals';
   static const String homeData = 'home_data';
   static const String notifications = 'notifications';
 
@@ -209,9 +208,6 @@ class CacheKeys {
 
   // Messages
   static const String messagesList = 'messages_list';
-
-  // Discover
-  static const String discoverProfessionals = 'discover_professionals';
 
   // Emergency
   static const String emergencyContacts = 'emergency_contacts';

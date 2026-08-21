@@ -7,7 +7,7 @@ from sqlmodel import Session, select, func
 
 from app.database import get_session
 from app.core.deps import get_current_admin
-from app.models.user import User, ProfessionalProfile
+from app.models.user import User
 from app.models.mood import MoodEntry
 from app.models.chat import ChatSession, ChatMessage
 from app.models.referral import DoctorReferral
@@ -43,13 +43,6 @@ def list_users(
         # Count chat sessions
         chat_count = session.exec(select(func.count()).select_from(ChatSession).where(ChatSession.user_id == u.id)).one()
         
-        # Fetch is_verified for professionals
-        is_verified = None
-        if u.role == "professional":
-            prof_profile = session.exec(select(ProfessionalProfile).where(ProfessionalProfile.user_id == u.id)).first()
-            if prof_profile:
-                is_verified = prof_profile.is_verified
-        
         summaries.append(
             UserSummary(
                 id=u.id,
@@ -60,7 +53,6 @@ def list_users(
                 created_at=u.created_at,
                 mood_entries_count=mood_count,
                 chat_sessions_count=chat_count,
-                is_verified=is_verified,
             )
         )
     return summaries
@@ -113,30 +105,6 @@ def update_user_status(
     session.add(u)
     session.commit()
     return {"id": u.id, "is_active": u.is_active}
-
-
-@router.patch("/users/{user_id}/verify")
-def verify_professional(
-    user_id: uuid.UUID,
-    admin: Annotated[User, Depends(get_current_admin)],
-    session: Annotated[Session, Depends(get_session)],
-):
-    """Approve/verify a professional account."""
-    u = session.get(User, user_id)
-    if not u:
-        raise HTTPException(status_code=404, detail="User not found")
-        
-    if u.role != "professional":
-        raise HTTPException(status_code=400, detail="User is not a professional")
-        
-    prof_profile = session.exec(select(ProfessionalProfile).where(ProfessionalProfile.user_id == u.id)).first()
-    if not prof_profile:
-        raise HTTPException(status_code=404, detail="Professional profile not found")
-        
-    prof_profile.is_verified = True
-    session.add(prof_profile)
-    session.commit()
-    return {"id": u.id, "is_verified": True}
 
 
 @router.get("/flagged-messages", response_model=List[FlaggedMessageRead])

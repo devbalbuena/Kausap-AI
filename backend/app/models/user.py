@@ -7,7 +7,6 @@ from sqlmodel import Field, SQLModel, Relationship
 
 class UserRole(str, Enum):
     client = "client"
-    professional = "professional"
     admin = "admin"
 
 
@@ -38,7 +37,7 @@ class User(SQLModel, table=True):
     role: UserRole = Field(default=UserRole.client)
     is_active: bool = Field(default=True)
 
-    # Basic info (shared by all roles)
+    # Basic info
     first_name: str
     last_name: str
     phone_number: str
@@ -50,36 +49,11 @@ class User(SQLModel, table=True):
     bio: Optional[str] = Field(default=None)
     avatar_url: Optional[str] = Field(default=None)
 
-    # For clients only — occupation dropdown
+    # For students/clients — occupation dropdown
     occupation: Optional[OccupationEnum] = Field(default=None)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    # Relationship to professional profile
-    professional_profile: Optional["ProfessionalProfile"] = Relationship(back_populates="user")
-
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}".strip()
-
-
-class ProfessionalProfile(SQLModel, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="user.id", unique=True, index=True)
-
-    profession: str
-    prc_license_number: str
-    license_url: Optional[str] = Field(default=None)
-    specialization: str
-    years_of_experience: int
-    bio: Optional[str] = Field(default=None)
-    is_accepting_clients: bool = Field(default=True)
-    location: str
-
-    # Verification — flipped to True by admin only
-    is_verified: bool = Field(default=False)
-
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-
-    # Relationship back to user
-    user: Optional[User] = Relationship(back_populates="professional_profile")

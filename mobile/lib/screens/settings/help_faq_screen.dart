@@ -77,8 +77,8 @@ class HelpFaqScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _buildFaqItem(
             context,
-            'How do I book a session?',
-            'Navigate to the Discover tab, select a professional, and tap "Book Session". You can choose an available time slot that works for you.',
+            'How do I start a wellness activity?',
+            'Navigate to the Activity tab, choose an exercise (like Box Breathing or Daily Journaling), and tap "Start Activity".',
           ),
           _buildFaqItem(
             context,

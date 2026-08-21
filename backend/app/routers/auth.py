@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from app.database import get_session
-from app.models.user import User, UserRole, ProfessionalProfile
+from app.models.user import User, UserRole
 from app.schemas.user import RegisterRequest, UserRead, UserUpdate
 from app.schemas.auth import Token, LoginRequest, ForgotPasswordRequest, VerifyCodeRequest, ResetPasswordRequest
 import random
@@ -21,11 +21,9 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, session: Annotated[Session, Depends(get_session)]):
     """
-    Register a new user account.
-    - Role must be "client" or "professional" — "admin" is rejected with 400.
-    - If role is "professional", a linked ProfessionalProfile is also created.
+    Register a new user (student/client) account.
+    - Admin self-registration is rejected.
     """
-    # Validate role (also caught by Pydantic validator, this is a belt-and-suspenders check)
     if payload.role == UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -40,21 +38,11 @@ def register(payload: RegisterRequest, session: Annotated[Session, Depends(get_s
             detail="Email already registered",
         )
 
-    # Validate professional-specific fields
-    if payload.role == UserRole.professional:
-        missing = [f for f in ["profession", "prc_license_number", "specialization", "years_of_experience", "location"]
-                   if getattr(payload, f) is None]
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Professional registration requires these fields: {', '.join(missing)}"
-            )
-
     # Create user
     user = User(
         email=payload.email,
         hashed_password=hash_password(payload.password),
-        role=payload.role,
+        role=UserRole.client,
         first_name=payload.first_name,
         last_name=payload.last_name,
         phone_number=payload.phone_number,
@@ -62,27 +50,10 @@ def register(payload: RegisterRequest, session: Annotated[Session, Depends(get_s
         gender=payload.gender,
         address=payload.address,
         bio=payload.bio,
+        avatar_url=payload.avatar_url,
         occupation=payload.occupation,
     )
     session.add(user)
-    session.flush()  # Get user.id before committing
-
-    # Create professional profile if needed
-    if payload.role == UserRole.professional:
-        profile = ProfessionalProfile(
-            user_id=user.id,
-            profession=payload.profession,
-            prc_license_number=payload.prc_license_number,
-            license_url=payload.license_url,
-            specialization=payload.specialization,
-            years_of_experience=payload.years_of_experience,
-            bio=payload.professional_bio,
-            is_accepting_clients=payload.is_accepting_clients if payload.is_accepting_clients is not None else True,
-            location=payload.location,
-            is_verified=False,  # always starts unverified
-        )
-        session.add(profile)
-
     session.commit()
     session.refresh(user)
     return user

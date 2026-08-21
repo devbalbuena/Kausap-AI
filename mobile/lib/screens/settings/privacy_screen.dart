@@ -13,7 +13,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
     _PrivacySection(
       title: 'Terms of Service',
       content:
-          'By using Kausap AI, you agree to these terms. Kausap AI is a mental health support platform that provides AI-powered companionship, mood tracking, and access to licensed professionals. This service is not a substitute for professional medical advice. You must be at least 13 years old to use this platform.',
+          'By using Kausap AI, you agree to these terms. Kausap AI is a mental health support platform that provides AI-powered companionship, mood tracking, and student wellness tools. This service is not a substitute for professional medical advice. You must be at least 13 years old to use this platform.',
     ),
     _PrivacySection(
       title: 'Data Collection',
@@ -28,7 +28,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
     _PrivacySection(
       title: 'Data Access',
       content:
-          'Only you and the professionals you connect with can view your personal information. Our support team may access your data only when necessary to resolve technical issues, with your consent. All access is logged and audited.',
+          'Only you can view your personal journal and mood information. Our support team may access technical data only when necessary to resolve issues, with your consent. All access is logged and audited.',
     ),
     _PrivacySection(
       title: 'Your Legal Rights',

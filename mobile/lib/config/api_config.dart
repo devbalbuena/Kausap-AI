@@ -42,7 +42,4 @@ class ApiConfig {
 
   // Settings endpoints
   static const String changePassword = '/auth/change-password';
-
-  // Discover endpoints
-  static const String discoverProfessionals = '/discover/professionals';
 }

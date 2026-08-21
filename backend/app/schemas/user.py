@@ -34,35 +34,6 @@ class UserCreate(BaseModel):
         return v
 
 
-class ProfessionalProfileCreate(BaseModel):
-    profession: str
-    prc_license_number: str
-    license_url: Optional[str] = None
-    specialization: str
-    years_of_experience: int
-    bio: Optional[str] = None
-    is_accepting_clients: bool = True
-    location: str
-
-
-class ProfessionalProfileRead(BaseModel):
-    id: uuid.UUID
-    user_id: uuid.UUID
-    profession: str
-    prc_license_number: str
-    license_url: Optional[str]
-    specialization: str
-    years_of_experience: int
-    bio: Optional[str]
-    is_accepting_clients: bool
-    location: str
-    is_verified: bool
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
 class UserRead(BaseModel):
     id: uuid.UUID
     email: str
@@ -73,20 +44,18 @@ class UserRead(BaseModel):
     phone_number: str
     birthday: date
     gender: GenderEnum
-    address: Optional[str]
-    bio: Optional[str]
+    address: Optional[str] = None
+    bio: Optional[str] = None
     avatar_url: Optional[str] = None
-    occupation: Optional[OccupationEnum]
+    occupation: Optional[OccupationEnum] = None
     created_at: datetime
-    professional_profile: Optional[ProfessionalProfileRead] = None
 
     class Config:
         from_attributes = True
 
 
 class RegisterRequest(BaseModel):
-    """Full registration payload — user fields + optional professional profile fields."""
-    # User fields
+    """Registration payload for students/clients."""
     role: UserRole = UserRole.client
     email: str
     password: str
@@ -99,16 +68,6 @@ class RegisterRequest(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
-
-    # Professional profile fields — required when role == professional
-    profession: Optional[str] = None
-    prc_license_number: Optional[str] = None
-    license_url: Optional[str] = None
-    specialization: Optional[str] = None
-    years_of_experience: Optional[int] = None
-    professional_bio: Optional[str] = None
-    is_accepting_clients: Optional[bool] = True
-    location: Optional[str] = None
 
     @field_validator("role")
     @classmethod

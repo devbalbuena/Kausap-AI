@@ -16,7 +16,6 @@ class UserSummary(BaseModel):
     created_at: datetime
     mood_entries_count: int
     chat_sessions_count: int
-    is_verified: Optional[bool] = None
 
 
 class FlaggedMessageRead(BaseModel):

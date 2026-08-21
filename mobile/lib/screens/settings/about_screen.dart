@@ -72,7 +72,7 @@ class AboutScreen extends StatelessWidget {
           // Info cards
           _buildInfoSection('About Kausap AI', [
             _buildInfoRow(Icons.info_outline_rounded, 'What is Kausap AI?',
-                'Kausap AI is a Filipino-first mental health app that connects users with AI-powered companionship and licensed mental health professionals.'),
+                'Kausap AI is a Filipino-first mental health companion app providing AI-powered emotional support, daily mood tracking, and student wellness resources.'),
             _buildDivider(),
             _buildInfoRow(Icons.language_rounded, 'Language', 'Filipino / English'),
             _buildDivider(),

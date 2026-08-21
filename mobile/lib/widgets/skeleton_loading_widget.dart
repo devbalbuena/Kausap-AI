@@ -31,49 +31,6 @@ class SkeletonLoadingWidget extends StatelessWidget {
   }
 }
 
-// Pre-built skeleton for Discover Professionals card
-class ProfessionalCardSkeleton extends StatelessWidget {
-  const ProfessionalCardSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SkeletonLoadingWidget(width: 80, height: 80, borderRadius: 16),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SkeletonLoadingWidget(width: 120, height: 20, borderRadius: 4),
-                const SizedBox(height: 8),
-                const SkeletonLoadingWidget(width: 80, height: 16, borderRadius: 4),
-                const SizedBox(height: 12),
-                Row(
-                  children: const [
-                    SkeletonLoadingWidget(width: 60, height: 24, borderRadius: 12),
-                    SizedBox(width: 8),
-                    SkeletonLoadingWidget(width: 60, height: 24, borderRadius: 12),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // Pre-built skeleton for Upcoming Session
 class UpcomingSessionSkeleton extends StatelessWidget {
   const UpcomingSessionSkeleton({super.key});

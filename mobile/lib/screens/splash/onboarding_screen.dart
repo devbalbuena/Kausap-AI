@@ -24,10 +24,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       illustrationColor: Color(0xFFEDE9FF),
     ),
     _OnboardingSlide(
-      icon: Icons.people_rounded,
+      icon: Icons.spa_rounded,
       iconGradient: [Color(0xFF10B981), Color(0xFF34D399)],
-      title: 'Connect with Professionals',
-      subtitle: 'Find verified Filipino mental health professionals. Book sessions and message them directly — no waiting.',
+      title: 'Mindfulness & Activities',
+      subtitle: 'Practice guided breathing, daily journaling, and wellness exercises designed for students.',
       illustrationColor: Color(0xFFE6FFF5),
     ),
     _OnboardingSlide(
