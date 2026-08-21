@@ -12,6 +12,8 @@ import '../../config/api_config.dart';
 import '../../models/avatar_model.dart';
 import 'select_avatar_screen.dart';
 import 'chat_history_screen.dart';
+import 'voice_call_screen.dart';
+import 'video_call_screen.dart';
 import '../settings/account_settings_screen.dart';
 import '../articles/articles_screen.dart';
 import '../subscription/upgrade_plan_screen.dart';
@@ -519,9 +521,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           _HeaderIconBtn(
             icon: Icons.phone_outlined,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Voice call coming in Phase 2!')),
-              );
+              Navigator.of(context).push(slideUpRoute(VoiceCallScreen(avatar: _currentAvatar)));
             },
           ),
           const SizedBox(width: 8),
@@ -529,9 +529,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           _HeaderIconBtn(
             icon: Icons.videocam_outlined,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Video call coming in Phase 2!')),
-              );
+              Navigator.of(context).push(slideUpRoute(VideoCallScreen(avatar: _currentAvatar)));
             },
           ),
           const SizedBox(width: 8),
