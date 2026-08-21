@@ -49,6 +49,10 @@ class _HomeScreenState extends State<HomeScreen> {
     {'title': 'Write a journal entry', 'completed': false},
     {'title': 'Complete a mindfulness exercise', 'completed': false},
   ];
+
+  List<double?> _weeklyMoods = List.filled(7, null);
+  double? _weeklyAverage;
+  int _totalLogsThisWeek = 0;
   
   final NotificationService _notificationService = NotificationService();
 
@@ -60,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUnreadCount();
     _fetchStreak();
     _fetchQuests();
+    _fetchMoodTrends();
     // Show mood popup after first frame if mood not yet logged today
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMoodPopup());
   }
@@ -83,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUnreadCount();
     _fetchStreak();
     _fetchQuests();
+    _fetchMoodTrends();
   }
 
   /// Show a friendly mood check-in pop-up if the user hasn't logged mood today.
@@ -124,6 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
               _fetchStreak();
               _fetchQuests();
+              _fetchMoodTrends();
             }
           } catch (_) {
             if (mounted) {
@@ -213,6 +220,69 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       // On error keep _streak = 0
     }
+  }
+
+  Future<void> _fetchMoodTrends() async {
+    try {
+      final moodData = await ApiClient().get(ApiConfig.mood);
+      if (moodData is! List || !mounted) return;
+
+      final now = DateTime.now();
+      // Monday of current week (DateTime.weekday: Mon=1, Sun=7)
+      final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+
+      final List<double?> weeklyMoods = List.filled(7, null);
+      double totalSum = 0;
+      int loggedDays = 0;
+
+      for (int i = 0; i < 7; i++) {
+        final targetDate = monday.add(Duration(days: i));
+        final dateStr = DateFormat('yyyy-MM-dd').format(targetDate);
+
+        final dayEntries = moodData.where((e) {
+          final created = e['created_at'] as String?;
+          return created != null && created.startsWith(dateStr);
+        }).toList();
+
+        if (dayEntries.isNotEmpty) {
+          double daySum = 0;
+          for (final entry in dayEntries) {
+            final level = (entry['mood_level'] as num?)?.toDouble() ?? 3.0;
+            daySum += level;
+          }
+          final avgLevel = (daySum / dayEntries.length).clamp(1.0, 5.0);
+          weeklyMoods[i] = avgLevel;
+          totalSum += avgLevel;
+          loggedDays++;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _weeklyMoods = weeklyMoods;
+          _totalLogsThisWeek = loggedDays;
+          _weeklyAverage = loggedDays > 0 ? (totalSum / loggedDays) : null;
+        });
+      }
+    } catch (_) {
+      // Keep defaults
+    }
+  }
+
+  Color _moodColor(double level) {
+    if (level >= 4.5) return const Color(0xFF06B6D4); // Great (Cyan)
+    if (level >= 3.5) return const Color(0xFF10B981); // Good (Emerald)
+    if (level >= 2.5) return const Color(0xFFF59E0B); // Okay (Amber)
+    if (level >= 1.5) return const Color(0xFFF97316); // Low (Orange)
+    return const Color(0xFFEF4444);                   // Rough (Red)
+  }
+
+  String _moodEmoji(double level) {
+    if (level >= 4.5) return '😄';
+    if (level >= 3.5) return '🙂';
+    if (level >= 2.5) return '😐';
+    if (level >= 1.5) return '😟';
+    return '😞';
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -1086,78 +1156,235 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Mood Trends ───────────────────────────────────────────────────────────
   Widget _buildMoodTrends() {
-    // Mock weekly mood data 0-5 (Mon–Sun)
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const values = [1.5, 2.5, 3.5, 1.5, 4.0, 5.0, 2.5];
-    final todayIdx = DateTime.now().weekday - 1; // Mon=0
+    final todayIdx = DateTime.now().weekday - 1; // Mon=0, Sun=6
 
     return _card(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            const Icon(Icons.bar_chart_rounded,
-                color: AppColors.primary, size: 24),
-            const SizedBox(width: 6),
-            Text('Mood Trends', style: AppTextStyles.heading2),
-          ]),
-          const SizedBox(height: 2),
-          Text('Your Week at a Glance', style: AppTextStyles.subheading),
-          const SizedBox(height: 16),
+          // Header Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.bar_chart_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mood Trends', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+                      const SizedBox(height: 2),
+                      Text('Your Week at a Glance', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ],
+              ),
+              if (_weeklyAverage != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _moodColor(_weeklyAverage!).withAlpha(25),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _moodColor(_weeklyAverage!).withAlpha(80)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_moodEmoji(_weeklyAverage!), style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_weeklyAverage!.toStringAsFixed(1)} / 5',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _moodColor(_weeklyAverage!),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // 7-Day Chart
           SizedBox(
-            height: 120,
+            height: 130,
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(7, (i) {
-                final h = (values[i] / 5.0) * 100;
+                final mood = _weeklyMoods[i];
                 final isToday = i == todayIdx;
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Stack(
+                final isFuture = i > todayIdx;
+
+                // Max bar height = 65
+                final barHeight = mood != null ? ((mood / 5.0) * 65).clamp(14.0, 65.0) : 0.0;
+                final color = mood != null ? _moodColor(mood) : AppColors.primary;
+
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // Top Emoji or Indicator
+                        SizedBox(
+                          height: 18,
+                          child: mood != null
+                              ? Text(
+                                  _moodEmoji(mood),
+                                  style: const TextStyle(fontSize: 12),
+                                )
+                              : (isToday
+                                  ? Center(
+                                      child: Container(
+                                        width: 5,
+                                        height: 5,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink()),
+                        ),
+                        const SizedBox(height: 4),
+
+                        // Bar
+                        Expanded(
+                          child: Container(
                             alignment: Alignment.bottomCenter,
-                            children: [
-                              Container(
-                                width: 20,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryLight.withAlpha(50),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              Container(
-                                width: 20,
-                                height: h,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ],
+                            decoration: BoxDecoration(
+                              color: isToday
+                                  ? AppColors.primary.withAlpha(20)
+                                  : Colors.black.withAlpha(8),
+                              borderRadius: BorderRadius.circular(10),
+                              border: isToday
+                                  ? Border.all(color: AppColors.primary.withAlpha(80), width: 1.2)
+                                  : null,
+                            ),
+                            child: mood != null
+                                ? AnimatedContainer(
+                                    duration: const Duration(milliseconds: 500),
+                                    curve: Curves.easeOutCubic,
+                                    width: double.infinity,
+                                    height: barHeight,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          color,
+                                          color.withAlpha(180),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(9),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: color.withAlpha(50),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, -1),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Container(
+                                    width: double.infinity,
+                                    height: isFuture ? 4 : 8,
+                                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: isFuture
+                                          ? Colors.black.withAlpha(12)
+                                          : (isToday ? AppColors.primary.withAlpha(60) : Colors.black.withAlpha(25)),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 6),
+
+                        // Day label
+                        Text(
+                          days[i],
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                            color: isToday
+                                ? AppColors.primary
+                                : (isFuture ? AppColors.textSecondary.withAlpha(100) : AppColors.textSecondary),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      days[i],
-                      style: AppTextStyles.caption.copyWith(
-                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                        color: isToday
-                            ? AppColors.textPrimary
-                            : AppColors.textSecondary.withAlpha(130),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
+                  ),
                 );
               }),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Footer info row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(70),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _totalLogsThisWeek > 0 ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+                  size: 16,
+                  color: _totalLogsThisWeek > 0 ? const Color(0xFF10B981) : AppColors.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _totalLogsThisWeek > 0
+                        ? '$_totalLogsThisWeek ${_totalLogsThisWeek == 1 ? "day" : "days"} logged this week. Keep it up!'
+                        : 'No logs yet this week. Tap "How are you feeling today?" to start!',
+                    style: AppTextStyles.caption.copyWith(
+                      fontSize: 11.5,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _navIndex = 3),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Insights',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.primary),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
