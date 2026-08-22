@@ -57,19 +57,17 @@ class ArticlesStorageService {
   }
 
   /// Build a raw map from form fields suitable for saving / sending to the API.
-  static Map<String, dynamic> buildArticleJson({
-    required String id,
+  static Map<String, dynamic> buildArticlePayload({
     required String title,
     required String subtitle,
     required String author,
     required String authorRole,
     required String category,
     required String themeColorHex,
-    required String? imageBase64,
     required List<Map<String, dynamic>> sections,
+    String? imageBase64,
   }) {
-    return {
-      'id': id,
+    final payload = <String, dynamic>{
       'title': title,
       'subtitle': subtitle,
       'author': author,
@@ -78,10 +76,13 @@ class ArticlesStorageService {
       'theme_color_hex': themeColorHex,
       'read_time': '${(sections.length * 2 + 2)} min read',
       'is_published': true,
-      if (imageBase64 != null) 'image_url': imageBase64,
       'sections': sections,
       'created_at': DateTime.now().toIso8601String(),
     };
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      payload['image_url'] = imageBase64;
+    }
+    return payload;
   }
 
   /// Return the icon that matches a category string.

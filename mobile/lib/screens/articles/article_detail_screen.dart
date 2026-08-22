@@ -54,10 +54,10 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _bounceAnimation = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.elasticOut));
+    _bounceAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.3), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut));
     _loadReactions();
   }
 
