@@ -3,6 +3,7 @@ import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
 import 'admin_dashboard_screen.dart';
+import 'admin_articles_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_system_screen.dart';
 import 'package:intl/intl.dart';
@@ -992,6 +993,10 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> {
           _buildNavItem(Icons.dashboard_rounded, 'Dashboard', false, () {
             HapticService.lightTap();
             Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+          }),
+          _buildNavItem(Icons.article_rounded, 'Articles', false, () {
+            HapticService.lightTap();
+            Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminArticlesScreen()));
           }),
           _buildNavItem(Icons.people_alt_rounded, 'Users', false, () {
             HapticService.lightTap();

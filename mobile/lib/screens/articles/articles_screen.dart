@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../services/api_client.dart';
+import '../../services/articles_storage_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/haptic_service.dart';
 import 'articles_data.dart';
 import 'article_detail_screen.dart';
 
@@ -12,9 +16,18 @@ class ArticlesScreen extends StatefulWidget {
 }
 
 class _ArticlesScreenState extends State<ArticlesScreen> {
+  final ApiClient _api = ApiClient();
   int _selectedCategoryIndex = 0;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  List<ArticleModel> _allArticles = ArticlesData.all;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLiveArticles();
+  }
 
   @override
   void dispose() {
@@ -22,14 +35,47 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
     super.dispose();
   }
 
+  Future<void> _fetchLiveArticles() async {
+    setState(() => _isLoading = true);
+
+    // Load locally stored admin articles first (offline-first)
+    final localArticles = await ArticlesStorageService.loadLocalArticles();
+    if (localArticles.isNotEmpty && mounted) {
+      setState(() {
+        _allArticles = ArticlesData.mergeWithDefaults(localArticles);
+        _isLoading = false;
+      });
+    }
+
+    // Then try to sync from API
+    try {
+      final res = await _api.get('/articles');
+      if (res is List) {
+        final live = res.map((e) => ArticleModel.fromJson(e as Map<String, dynamic>)).toList();
+        if (mounted) {
+          setState(() {
+            _allArticles = ArticlesData.mergeWithDefaults([...localArticles, ...live]);
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (_) {
+      // Fallback silently to local + built-in ArticlesData.all
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   List<ArticleModel> get _filteredArticles {
     final category = ArticlesData.categories[_selectedCategoryIndex];
-    return ArticlesData.all.where((article) {
+    return _allArticles.where((article) {
       final matchesCategory = category == 'All' || article.category == category;
       final matchesQuery = _searchQuery.isEmpty ||
           article.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           article.subtitle.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          article.category.toLowerCase().contains(_searchQuery.toLowerCase());
+          article.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          article.author.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCategory && matchesQuery;
     }).toList();
   }
@@ -49,7 +95,10 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      HapticService.lightTap();
+                      Navigator.pop(context);
+                    },
                     child: Container(
                       width: 36,
                       height: 36,
@@ -68,24 +117,32 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Mental Wellness Articles',
-                        style: AppTextStyles.heading2.copyWith(fontSize: 18),
-                      ),
-                      const Text(
-                        'Psychoeducation & Awareness Factsheets',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          color: Color(0xFF64748B),
-                          fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Mental Wellness Articles',
+                          style: AppTextStyles.heading2.copyWith(fontSize: 18),
                         ),
-                      ),
-                    ],
+                        const Text(
+                          'Psychoeducation & Student Factsheets',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  if (_isLoading)
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                    ),
                 ],
               ),
             ),
@@ -152,7 +209,10 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                 itemBuilder: (context, index) {
                   final isSelected = index == _selectedCategoryIndex;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedCategoryIndex = index),
+                    onTap: () {
+                      HapticService.lightTap();
+                      setState(() => _selectedCategoryIndex = index);
+                    },
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -191,34 +251,43 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
 
             // Articles List
             Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+              child: RefreshIndicator(
+                onRefresh: _fetchLiveArticles,
+                color: AppColors.primary,
+                child: filtered.isEmpty
+                    ? ListView(
                         children: [
-                          const Text('🔍', style: TextStyle(fontSize: 40)),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No articles found',
-                            style: AppTextStyles.heading2.copyWith(fontSize: 16),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Try a different keyword or category.',
-                            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 13),
+                          SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('🔍', style: TextStyle(fontSize: 40)),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No articles found',
+                                  style: AppTextStyles.heading2.copyWith(fontSize: 16),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Try a different keyword or category.',
+                                  style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 13),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        itemCount: filtered.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 14),
+                        itemBuilder: (context, index) {
+                          final article = filtered[index];
+                          return _buildArticleCard(article);
+                        },
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      itemCount: filtered.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 14),
-                      itemBuilder: (context, index) {
-                        final article = filtered[index];
-                        return _buildArticleCard(article);
-                      },
-                    ),
+              ),
             ),
           ],
         ),
@@ -227,10 +296,15 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
   }
 
   Widget _buildArticleCard(ArticleModel article) {
+    final bool hasImage = article.imageUrl != null && article.imageUrl!.isNotEmpty;
+
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article))),
+      onTap: () {
+        HapticService.lightTap();
+        Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
+      },
       child: Container(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
@@ -284,30 +358,62 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
-            // Title
-            Text(
-              article.title,
-              style: AppTextStyles.heading2.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1F2937),
-                height: 1.3,
-              ),
-            ),
-            const SizedBox(height: 6),
-
-            // Subtitle
-            Text(
-              article.subtitle,
-              style: AppTextStyles.body.copyWith(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            // Main Content Row (with image thumbnail if available)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        article.title,
+                        style: AppTextStyles.heading2.copyWith(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1F2937),
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        article.subtitle,
+                        style: AppTextStyles.body.copyWith(
+                          fontSize: 12.5,
+                          color: AppColors.textSecondary,
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (hasImage) ...[
+                  const SizedBox(width: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 72,
+                      height: 72,
+                      color: article.themeColor.withAlpha(20),
+                      child: article.imageUrl!.startsWith('data:image')
+                          ? Image.memory(
+                              base64Decode(article.imageUrl!.split(',').last),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Icon(article.categoryIcon, color: article.themeColor, size: 28),
+                            )
+                          : Image.network(
+                              article.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Icon(article.categoryIcon, color: article.themeColor, size: 28),
+                            ),
+                    ),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 14),
 
@@ -321,7 +427,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       radius: 12,
                       backgroundColor: article.themeColor.withAlpha(30),
                       child: Text(
-                        article.author[0],
+                        article.author.isNotEmpty ? article.author[0] : 'K',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 10,

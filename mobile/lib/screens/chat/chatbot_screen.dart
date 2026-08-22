@@ -16,7 +16,6 @@ import '../../models/avatar_model.dart';
 import 'select_avatar_screen.dart';
 import 'chat_history_screen.dart';
 import 'voice_call_screen.dart';
-import '../settings/account_settings_screen.dart';
 import '../articles/articles_screen.dart';
 import '../subscription/upgrade_plan_screen.dart';
 
@@ -52,7 +51,9 @@ class _ChatMessage {
 }
 
 class ChatbotScreen extends StatefulWidget {
-  const ChatbotScreen({super.key});
+  final String? initialMessage;
+
+  const ChatbotScreen({super.key, this.initialMessage});
 
   @override
   State<ChatbotScreen> createState() => _ChatbotScreenState();
@@ -115,6 +116,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     '🛡️ 5-4-3-2-1 Grounding',
   ];
 
+  bool _showQuickPrompts = true;
+
   @override
   void initState() {
     super.initState();
@@ -123,7 +126,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       duration: const Duration(milliseconds: 900),
     )..repeat();
     _dotAnimation = Tween<double>(begin: 0, end: 1).animate(_dotController);
-    _loadSavedAvatar();
+    _loadSavedAvatar().then((_) {
+      // Pre-fill initial message from article discussion button
+      if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _sendMessage(widget.initialMessage!);
+        });
+      }
+    });
     AmbientAudioService.instance.addListener(_onAmbientAudioChanged);
   }
 
@@ -145,6 +155,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     final avatarId = await _storage.read(key: 'selected_chatbot_avatar_id');
     final customName = await _storage.read(key: 'custom_avatar_name');
     final customPrompt = await _storage.read(key: 'custom_avatar_prompt');
+    final showPrompts = await _storage.read(key: 'show_chatbot_quick_prompts');
+
+    if (showPrompts != null && mounted) {
+      setState(() => _showQuickPrompts = showPrompts == 'true');
+    }
 
     if (avatarId == 'custom_user_avatar' && customName != null && customName.isNotEmpty) {
       if (mounted) {
@@ -164,6 +179,12 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         setState(() => _currentAvatar = found);
       }
     }
+  }
+
+  Future<void> _toggleQuickPrompts() async {
+    HapticService.lightTap();
+    setState(() => _showQuickPrompts = !_showQuickPrompts);
+    await _storage.write(key: 'show_chatbot_quick_prompts', value: _showQuickPrompts.toString());
   }
 
   @override
@@ -747,28 +768,32 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   }
 
   Widget _buildWelcomeView() {
+    final bool isSpacious = !_showQuickPrompts;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: isSpacious ? 24 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Avatar Hero Card with Soft Ambient Glow
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.symmetric(horizontal: isSpacious ? 24 : 20, vertical: isSpacious ? 32 : 20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [Color(0xFFE0F2FE), Color(0xFFEDE9FE)],
               ),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(color: const Color(0xFFBAE6FD)),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x100077B6),
-                  blurRadius: 18,
-                  offset: Offset(0, 6),
+                  color: Color(0x120077B6),
+                  blurRadius: 22,
+                  offset: Offset(0, 8),
                 ),
               ],
             ),
@@ -777,7 +802,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 if (_currentAvatar.isMascot)
                   _ChatCompanionAvatar(
                     isTyping: false,
-                    size: 68,
+                    size: isSpacious ? 104 : 68,
                     avatar: _currentAvatar,
                     onAvatarTap: () {
                       HapticService.mediumTap();
@@ -795,14 +820,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   )
                 else
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: isSpacious ? 104 : 72,
+                    height: isSpacious ? 104 : 72,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha(25),
-                          blurRadius: 12,
+                          color: Colors.black.withAlpha(isSpacious ? 35 : 25),
+                          blurRadius: isSpacious ? 16 : 12,
                           offset: const Offset(0, 4),
                         ),
                       ],
@@ -813,16 +838,16 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(
                           color: const Color(0xFFEEF2FF),
-                          child: const Icon(Icons.person, color: AppColors.primary, size: 36),
+                          child: Icon(Icons.person, color: AppColors.primary, size: isSpacious ? 52 : 36),
                         ),
                       ),
                     ),
                   ),
-                const SizedBox(height: 12),
+                SizedBox(height: isSpacious ? 16 : 12),
                 Text(
                   'Magandang araw! I\'m ${_currentAvatar.name} ✨',
                   style: AppTextStyles.heading2.copyWith(
-                    fontSize: 18,
+                    fontSize: isSpacious ? 20 : 18,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F172A),
                   ),
@@ -833,113 +858,180 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   _currentAvatar.isMascot
                       ? 'Your 24/7 confidential CBT companion for student wellness. How can I help support you today?'
                       : 'Your ${_currentAvatar.isPremium ? 'Specialist' : 'Companion'} for student mental wellness. How can I support you today?',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12.5,
-                    color: Color(0xFF475569),
+                    fontSize: isSpacious ? 13.5 : 12.5,
+                    color: const Color(0xFF475569),
                     height: 1.4,
                   ),
                   textAlign: TextAlign.center,
                 ),
+                if (isSpacious) ...[
+                  const SizedBox(height: 20),
+                  InkWell(
+                    onTap: _toggleQuickPrompts,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(220),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFBAE6FD)),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x0A000000), blurRadius: 6, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.bolt_rounded, size: 16, color: Color(0xFF0284C7)),
+                          SizedBox(width: 6),
+                          Text(
+                            'Show Conversation Prompts 💡',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 20),
 
-          // Quick-Start Conversation Prompts Header
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                Icon(Icons.bolt_rounded, size: 16, color: Color(0xFF0284C7)),
-                SizedBox(width: 4),
-                Text(
-                  'Quick-Start Conversation Prompts',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E293B),
+          if (_showQuickPrompts) ...[
+            const SizedBox(height: 20),
+
+            // Quick-Start Conversation Prompts Header with Hide Button
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.bolt_rounded, size: 16, color: Color(0xFF0284C7)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Quick-Start Prompts',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Prompt Cards
-          ..._quickPromptCards.map((item) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                child: InkWell(
-                  onTap: () {
-                    HapticService.lightTap();
-                    _sendMessage(item['prompt']!);
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x06000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item['title']!,
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                item['desc']!,
-                                style: const TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 11.5,
-                                  color: Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
+                  GestureDetector(
+                    onTap: _toggleQuickPrompts,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Text(
+                            'Hide',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF1F5F9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 12,
-                            color: Color(0xFF0284C7),
-                          ),
-                        ),
-                      ],
+                          SizedBox(width: 2),
+                          Icon(Icons.keyboard_arrow_up_rounded, size: 14, color: Color(0xFF64748B)),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            );
-          }),
+            ),
+            const SizedBox(height: 10),
+
+            // Prompt Cards
+            ..._quickPromptCards.map((item) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    onTap: () {
+                      HapticService.lightTap();
+                      _sendMessage(item['prompt']!);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x06000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item['title']!,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  item['desc']!,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11.5,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 12,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
           const SizedBox(height: 12),
         ],
       ),
@@ -1378,15 +1470,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     child: Container(
                       width: 34,
                       height: 34,
-                      margin: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withAlpha(100),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            color: Color(0x330077B6),
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
                           ),
                         ],
                       ),
@@ -1435,38 +1526,29 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
               _MenuDivider(),
               _MenuItem(
-                icon: Icons.person_outline,
-                label: 'Account',
-                onTap: () {
-                  setState(() => _showMenu = false);
-                  Navigator.of(context).push(slideRoute(const AccountSettingsScreen()));
-                },
-              ),
-              _MenuDivider(),
-              _MenuItem(
                 icon: Icons.swap_horiz_rounded,
                 label: 'Switch Avatar',
                 onTap: _openSelectAvatar,
               ),
               _MenuDivider(),
               _MenuItem(
-                icon: Icons.article_outlined,
-                label: 'Articles',
-                iconColor: const Color(0xFF6E6EFF),
+                icon: Icons.credit_card_outlined,
+                label: 'Upgrade Plan',
+                iconColor: const Color(0xFFD97706),
+                labelColor: const Color(0xFFD97706),
                 onTap: () {
                   setState(() => _showMenu = false);
-                  Navigator.of(context).push(slideRoute(const ArticlesScreen()));
+                  Navigator.of(context).push(slideRoute(const UpgradePlanScreen()));
                 },
               ),
               _MenuDivider(),
               _MenuItem(
-                icon: Icons.credit_card_outlined,
-                label: 'Upgrade Plan',
+                icon: Icons.article_outlined,
+                label: 'Wellness Articles',
                 iconColor: const Color(0xFF6E6EFF),
-                labelColor: const Color(0xFF6E6EFF),
                 onTap: () {
                   setState(() => _showMenu = false);
-                  Navigator.of(context).push(slideRoute(const UpgradePlanScreen()));
+                  Navigator.of(context).push(slideRoute(const ArticlesScreen()));
                 },
               ),
               const SizedBox(height: 4),

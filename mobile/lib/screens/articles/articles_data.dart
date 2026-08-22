@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class ArticleModel {
@@ -8,9 +9,11 @@ class ArticleModel {
   final String readTime;
   final String author;
   final String authorRole;
+  final String? imageUrl;
   final IconData categoryIcon;
   final Color themeColor;
   final List<ArticleSection> sections;
+  final bool isPublished;
 
   const ArticleModel({
     required this.id,
@@ -20,10 +23,67 @@ class ArticleModel {
     required this.readTime,
     required this.author,
     required this.authorRole,
+    this.imageUrl,
     required this.categoryIcon,
     required this.themeColor,
     required this.sections,
+    this.isPublished = true,
   });
+
+  factory ArticleModel.fromJson(Map<String, dynamic> json) {
+    final cat = json['category'] as String? ?? 'Mental Awareness';
+    final hexColor = json['theme_color_hex'] as String? ?? '#0284C7';
+    Color color;
+    try {
+      final clean = hexColor.replaceAll('#', '');
+      color = Color(int.parse('FF$clean', radix: 16));
+    } catch (_) {
+      color = const Color(0xFF0284C7);
+    }
+
+    List<ArticleSection> secList = [];
+    if (json['content_json'] != null) {
+      try {
+        final parsed = jsonDecode(json['content_json'] as String);
+        if (parsed is List) {
+          secList = parsed.map((s) => ArticleSection.fromJson(s as Map<String, dynamic>)).toList();
+        }
+      } catch (_) {}
+    } else if (json['sections'] != null && json['sections'] is List) {
+      secList = (json['sections'] as List).map((s) => ArticleSection.fromJson(s as Map<String, dynamic>)).toList();
+    }
+
+    return ArticleModel(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? 'Untitled',
+      subtitle: json['subtitle'] as String? ?? '',
+      category: cat,
+      readTime: json['read_time'] as String? ?? '4 min read',
+      author: json['author'] as String? ?? 'CSU Guidance Center',
+      authorRole: json['author_role'] as String? ?? 'Counselor',
+      imageUrl: json['image_url'] as String?,
+      categoryIcon: ArticlesData.iconForCategory(cat),
+      themeColor: color,
+      sections: secList,
+      isPublished: json['is_published'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'subtitle': subtitle,
+      'category': category,
+      'read_time': readTime,
+      'author': author,
+      'author_role': authorRole,
+      'image_url': imageUrl,
+      'theme_color_hex': '#${themeColor.toARGB32().toRadixString(16).substring(2)}',
+      'content_json': jsonEncode(sections.map((s) => s.toJson()).toList()),
+      'is_published': isPublished,
+    };
+  }
 }
 
 class ArticleSection {
@@ -36,6 +96,28 @@ class ArticleSection {
     required this.content,
     this.keyPoints,
   });
+
+  factory ArticleSection.fromJson(Map<String, dynamic> json) {
+    List<String>? points;
+    if (json['key_points'] is List) {
+      points = (json['key_points'] as List).map((e) => e.toString()).toList();
+    } else if (json['keyPoints'] is List) {
+      points = (json['keyPoints'] as List).map((e) => e.toString()).toList();
+    }
+    return ArticleSection(
+      heading: json['heading'] as String? ?? '',
+      content: json['content'] as String? ?? '',
+      keyPoints: points,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'heading': heading,
+      'content': content,
+      if (keyPoints != null) 'key_points': keyPoints,
+    };
+  }
 }
 
 class ArticlesData {
@@ -46,7 +128,36 @@ class ArticlesData {
     'Anxiety & Coping',
     'Family & Relations',
     'Crisis Prevention',
+    'Campus Wellness',
   ];
+
+  static IconData iconForCategory(String category) {
+    switch (category) {
+      case 'Student Burnout':
+        return Icons.school_rounded;
+      case 'Anxiety & Coping':
+        return Icons.psychology_rounded;
+      case 'Family & Relations':
+        return Icons.people_alt_rounded;
+      case 'Crisis Prevention':
+        return Icons.health_and_safety_rounded;
+      case 'Campus Wellness':
+        return Icons.spa_rounded;
+      default:
+        return Icons.menu_book_rounded;
+    }
+  }
+
+  static List<ArticleModel> mergeWithDefaults(List<ArticleModel> dynamicArticles) {
+    final existingIds = dynamicArticles.map((a) => a.id).toSet();
+    final combined = List<ArticleModel>.from(dynamicArticles);
+    for (final d in all) {
+      if (!existingIds.contains(d.id)) {
+        combined.add(d);
+      }
+    }
+    return combined;
+  }
 
   static const List<ArticleModel> all = [
     ArticleModel(

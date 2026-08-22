@@ -8,6 +8,7 @@ import '../auth/login_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
+import 'admin_articles_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -200,11 +201,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final totalInteractions = chatSessions + moodEntries;
 
     final moodMap = (_stats!['mood_distribution'] as Map<String, dynamic>?) ?? {};
-    final greatMoods = (moodMap['great'] as num?)?.toInt() ?? 0;
-    final goodMoods = (moodMap['good'] as num?)?.toInt() ?? 0;
-    final okayMoods = (moodMap['okay'] as num?)?.toInt() ?? 0;
-    final downMoods = (moodMap['down'] as num?)?.toInt() ?? 0;
-    final distressedMoods = (moodMap['distressed'] as num?)?.toInt() ?? 0;
+    // Render backend may not include mood_distribution yet — handle gracefully
+    // by computing from total_mood_entries if all zeros
+    int greatMoods = (moodMap['great'] as num?)?.toInt() ?? 0;
+    int goodMoods = (moodMap['good'] as num?)?.toInt() ?? 0;
+    int okayMoods = (moodMap['okay'] as num?)?.toInt() ?? 0;
+    int downMoods = (moodMap['down'] as num?)?.toInt() ?? 0;
+    int distressedMoods = (moodMap['distressed'] as num?)?.toInt() ?? 0;
+    // If distribution sums to 0 but we have total entries, the backend hasn't
+    // deployed the distribution field yet — show a note rather than all zeros
+    final distributionTotal = greatMoods + goodMoods + okayMoods + downMoods + distressedMoods;
+    final bool distributionMissing = distributionTotal == 0 && moodEntries > 0;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -488,20 +495,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    // Mood distribution chips
-                    Row(
-                      children: [
-                        _buildMoodPill("🌟 Great", greatMoods, const Color(0xFF16A34A)),
-                        const SizedBox(width: 6),
-                        _buildMoodPill("😊 Good", goodMoods, const Color(0xFF0284C7)),
-                        const SizedBox(width: 6),
-                        _buildMoodPill("😐 Okay", okayMoods, const Color(0xFF64748B)),
-                        const SizedBox(width: 6),
-                        _buildMoodPill("😔 Down", downMoods, const Color(0xFFD97706)),
-                        const SizedBox(width: 6),
-                        _buildMoodPill("🚨 Distressed", distressedMoods, const Color(0xFFDC2626)),
-                      ],
-                    ),
+                    if (distributionMissing)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7ED),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFFFEDD5)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFD97706)),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Breakdown will show after backend is deployed with mood distribution support.',
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF92400E)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _buildMoodPill("🌟 Great", greatMoods, const Color(0xFF16A34A)),
+                          _buildMoodPill("😊 Good", goodMoods, const Color(0xFF0284C7)),
+                          _buildMoodPill("😐 Okay", okayMoods, const Color(0xFF64748B)),
+                          _buildMoodPill("😔 Down", downMoods, const Color(0xFFD97706)),
+                          _buildMoodPill("🚨 Distressed", distressedMoods, const Color(0xFFDC2626)),
+                        ],
+                      ),
+
                   ],
                 ),
               ),
@@ -561,6 +588,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   HapticService.lightTap();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const AdminSystemScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildQuickActionTile(
+                icon: Icons.auto_stories_rounded,
+                iconColor: const Color(0xFF7C3AED),
+                iconBg: const Color(0xFFF3E8FF),
+                title: 'Psychoeducation & Articles CMS',
+                subtitle: 'Publish mental health awareness guides with image uploads',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminArticlesScreen()),
                   );
                 },
               ),
@@ -820,6 +861,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(Icons.dashboard_rounded, 'Dashboard', true, null),
+          _buildNavItem(Icons.article_rounded, 'Articles', false, () {
+            HapticService.lightTap();
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const AdminArticlesScreen()),
+            );
+          }),
           _buildNavItem(Icons.people_alt_rounded, 'Users', false, () {
             HapticService.lightTap();
             Navigator.of(context).pushReplacement(

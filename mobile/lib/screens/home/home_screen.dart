@@ -958,16 +958,23 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text(_streak == 0 ? '🌱' : '🔥', style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 6),
-                  Text(
-                    _streak == 0 ? 'Start your streak today!' : '$_streak Day Streak',
-                    style: AppTextStyles.heading2,
-                  ),
-                ],
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_streak == 0 ? '🌱' : '🔥', style: const TextStyle(fontSize: 20)),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _streak == 0 ? 'Start your streak today!' : '$_streak Day Streak',
+                        style: AppTextStyles.heading2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
