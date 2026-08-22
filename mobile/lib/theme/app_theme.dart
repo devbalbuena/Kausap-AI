@@ -192,6 +192,8 @@ class AppTheme {
           style: ElevatedButton.styleFrom(
             backgroundColor: accentColor,
             foregroundColor: AppColors.textOnPrimary,
+            disabledBackgroundColor: const Color(0xFFE2E8F0),
+            disabledForegroundColor: const Color(0xFF94A3B8),
             minimumSize: const Size(double.infinity, 48),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             elevation: 0,
@@ -244,6 +246,8 @@ class AppTheme {
           style: ElevatedButton.styleFrom(
             backgroundColor: accentColor,
             foregroundColor: const Color(0xFF121212),
+            disabledBackgroundColor: const Color(0xFF334155),
+            disabledForegroundColor: const Color(0xFF64748B),
             minimumSize: const Size(double.infinity, 48),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             elevation: 0,

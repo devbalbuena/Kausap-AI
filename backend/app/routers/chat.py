@@ -2,6 +2,7 @@ from typing import Annotated, List
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.database import get_session
@@ -16,11 +17,15 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 SAFETY_MESSAGE = """I'm really glad you reached out, and I want you to know you don't have to go through this alone. What you're feeling matters, and there are people ready to help right now.
 
-You can call the National Center for Mental Health (NCMH) Crisis Hotline anytime, 24/7, for free: 1553 (or 0917-899-8727). 
+You can call the National Center for Mental Health (NCMH) Crisis Hotline anytime, 24/7, for free: 1553 (or 0917-899-8727), or Hopeline Philippines: 0917-558-4673.
 
-You can also use the Doctor Referral feature in this app to connect with a mental health professional.
+You can also reach out to the CSU Guidance & Counseling Office or dial 911 immediately if you are in immediate danger."""
 
-If you're in immediate danger, please contact emergency services or go to the nearest hospital right away."""
+
+class SosAlertResponse(BaseModel):
+    status: str
+    message: str
+    session_id: uuid.UUID
 
 
 def _get_own_session(
@@ -103,16 +108,11 @@ async def post_message(
         ai_risk_flag = True
     else:
         # Normal AI conversation flow
-        # Build message history for the LLM context
-        # We need to fetch previous messages in the session, sorted by created_at
         db.refresh(chat_session) # Ensure messages are loaded
-        # Sort messages by created_at to maintain chronological order
         sorted_messages = sorted(chat_session.messages, key=lambda m: m.created_at)
         
-        # Prepare context for OpenAI
-        # We can add a system prompt at the beginning
         llm_messages = [
-            {"role": "system", "content": "You are Kausap AI, an empathetic and supportive mental health chatbot for users in the Philippines. You are a conversational partner. Be warm, non-judgmental, and helpful."}
+            {"role": "system", "content": "You are Kausap AI, an empathetic and supportive mental health companion for Filipino students. You are warm, non-judgmental, and validating. Support them through academic stress, emotional overwhelm, and daily reflections."}
         ]
         
         for msg in sorted_messages:
@@ -137,3 +137,45 @@ async def post_message(
 
     # 5. Always return the assistant's message in the response
     return ai_msg
+
+
+@router.post("/sos-alert", response_model=SosAlertResponse, status_code=status.HTTP_201_CREATED)
+def trigger_sos_alert(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_session)],
+):
+    """Trigger an immediate 1-tap SOS distress alert from the student to the campus guidance & admin network."""
+    # 1. Create a dedicated SOS session
+    session = ChatSession(
+        user_id=current_user.id,
+        topic="🚨 EMERGENCY SOS DISTRESS ALERT"
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+
+    # 2. Add flagged student distress message
+    student_name = current_user.full_name or current_user.email
+    user_alert_msg = ChatMessage(
+        session_id=session.id,
+        role="user",
+        content=f"🚨 EMERGENCY SOS DISTRESS ALERT: Student {student_name} ({current_user.email}) requested immediate crisis support via 1-Tap SOS.",
+        risk_flag=True
+    )
+    db.add(user_alert_msg)
+
+    # 3. Add system reassurance response
+    system_reply = ChatMessage(
+        session_id=session.id,
+        role="assistant",
+        content=f"Your emergency distress alert has been logged with highest priority for the guidance team. If you are in immediate physical danger, please immediately dial NCMH 1553 (Toll-Free 24/7) or 911. Help is available.",
+        risk_flag=True
+    )
+    db.add(system_reply)
+    db.commit()
+
+    return SosAlertResponse(
+        status="alert_sent",
+        message="Emergency SOS distress alert registered and escalated to crisis triage.",
+        session_id=session.id
+    )

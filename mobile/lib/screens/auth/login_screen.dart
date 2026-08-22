@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../utils/app_routes.dart';
 import 'package:provider/provider.dart';
+import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../utils/haptic_service.dart';
 import '../../widgets/accessible_error_widget.dart';
 import '../../utils/app_validators.dart';
 import '../home/home_screen.dart';
@@ -12,7 +13,7 @@ import '../signup/client_signup_step1_screen.dart';
 import 'forgot_password_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
-/// Clean, Generic Login Screen for Students and Users.
+/// Clean, Generic Login Screen for Students and Administrators.
 /// Automatically detects Admin accounts on successful login.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,6 +24,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final GlobalKey<KausapBuddyMascotState> _mascotKey = GlobalKey<KausapBuddyMascotState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -51,9 +53,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     _clearErrors();
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      HapticService.error();
+      return;
+    }
 
     setState(() => _isLoading = true);
+    HapticService.mediumTap();
 
     try {
       final authProvider = context.read<AuthProvider>();
@@ -67,6 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Auto-detect role and route
       final user = authProvider.currentUser;
       if (user != null) {
+        HapticService.success();
         if (user['role'] == 'admin') {
           Navigator.of(context).pushAndRemoveUntil(
             slideRoute(const AdminDashboardScreen()),
@@ -80,8 +87,10 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } on ApiException catch (e) {
+      HapticService.error();
       _parseApiError(e);
     } catch (e) {
+      HapticService.error();
       setState(() => _bannerError =
           'Unable to sign in. Please check your credentials and try again, or reset your password.');
     } finally {
@@ -107,10 +116,21 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _handleSocialAuth(String provider) {
+    HapticService.lightTap();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$provider sign-in is ready for institutional single sign-on (SSO).'),
+        backgroundColor: AppColors.primary,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -122,8 +142,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 40),
-                    const KausapHeader(),
+                    const SizedBox(height: 32),
+                    KausapBuddyMascot(key: _mascotKey),
                     const SizedBox(height: 24),
                     AuthCard(
                       child: Padding(
@@ -138,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               'Sign in to continue',
                               style: AppTextStyles.subheading,
                             ),
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 24),
 
                             // Email field
                             Text('Email', style: AppTextStyles.label),
@@ -146,6 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
                               autocorrect: false,
                               style: AppTextStyles.inputText,
                               decoration: InputDecoration(
@@ -153,17 +174,48 @@ class _LoginScreenState extends State<LoginScreen> {
                                 errorText: _emailError,
                               ),
                               validator: AppValidators.email,
-                              onChanged: (_) => _clearErrors(),
+                              onChanged: (val) {
+                                _clearErrors();
+                                if (val.isNotEmpty) {
+                                  _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                                }
+                              },
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 18),
 
-                            // Password field
-                            Text('Password', style: AppTextStyles.label),
+                            // Password Label Row with Inline "Forgot password?" Link
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Password', style: AppTextStyles.label),
+                                GestureDetector(
+                                  onTap: () {
+                                    HapticService.lightTap();
+                                    Navigator.of(context).push(
+                                      slideRoute(const ForgotPasswordScreen()),
+                                    );
+                                  },
+                                  child: const Text(
+                                    'Forgot password?',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 8),
+
+                            // Password Input
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _handleLogin(),
                               style: AppTextStyles.inputText,
                               decoration: InputDecoration(
                                 hintText: '••••••••',
@@ -176,62 +228,30 @@ class _LoginScreenState extends State<LoginScreen> {
                                     size: 18,
                                     color: AppColors.textSecondary,
                                   ),
-                                  onPressed: () =>
-                                      setState(() => _obscurePassword = !_obscurePassword),
+                                  onPressed: () {
+                                    HapticService.lightTap();
+                                    setState(() => _obscurePassword = !_obscurePassword);
+                                  },
                                 ),
                               ),
                               validator: AppValidators.password,
-                              onChanged: (_) => _clearErrors(),
-                            ),
-
-                            // Forgot password link
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    slideRoute(const ForgotPasswordScreen()),
-                                  );
-                                },
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  minimumSize: Size.zero,
-                                ),
-                                child: const Text(
-                                  'FORGOT PASSWORD?',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textSecondary,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
+                              onChanged: (val) {
+                                _clearErrors();
+                                if (val.isNotEmpty) {
+                                  _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                                }
+                              },
                             ),
 
                             // Error banner
                             if (_bannerError != null) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 12),
                               AccessibleErrorWidget(message: _bannerError!),
                             ],
 
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 20),
 
-                            // Divider
-                            const Row(
-                              children: [
-                                Expanded(child: Divider(color: AppColors.divider)),
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text('or', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                ),
-                                Expanded(child: Divider(color: AppColors.divider)),
-                              ],
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Sign In button
+                            // Sign In button (Primary Action)
                             ElevatedButton(
                               onPressed: _isLoading ? null : _handleLogin,
                               child: _isLoading
@@ -246,103 +266,100 @@ class _LoginScreenState extends State<LoginScreen> {
                                   : const Text('Sign In'),
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
 
-                            // Social Sign-in Buttons
+                            // Divider (Separating Email/Password from Social Sign-Ins)
+                            const Row(
+                              children: [
+                                Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 14),
+                                  child: Text(
+                                    'or continue with',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      color: Color(0xFF64748B),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                              ],
+                            ),
+
+                            const SizedBox(height: 18),
+
+                            // Social Sign-in: Google
                             OutlinedButton(
-                              onPressed: () {},
+                              onPressed: () => _handleSocialAuth('Google'),
                               style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(double.infinity, 50),
-                                side: const BorderSide(color: AppColors.inputBorder),
+                                minimumSize: const Size(double.infinity, 48),
+                                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                                backgroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: const Color(0xFFDDDDDD)),
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        'G',
-                                        style: TextStyle(
-                                          fontFamily: 'Arial',
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF4285F4),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                  const GoogleBrandLogo(size: 20),
                                   const SizedBox(width: 12),
                                   Text(
                                     'Sign in with Google',
-                                    style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                    style: AppTextStyles.body.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13.5,
+                                      color: const Color(0xFF0F172A),
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
+
+                            // Social Sign-in: Facebook
                             OutlinedButton(
-                              onPressed: () {},
+                              onPressed: () => _handleSocialAuth('Facebook'),
                               style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(double.infinity, 50),
-                                side: const BorderSide(color: AppColors.inputBorder),
+                                minimumSize: const Size(double.infinity, 48),
+                                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                                backgroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF1877F2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        'f',
-                                        style: TextStyle(
-                                          fontFamily: 'Arial',
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                  const FacebookBrandLogo(size: 20),
                                   const SizedBox(width: 12),
                                   Text(
                                     'Sign in with Facebook',
-                                    style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                    style: AppTextStyles.body.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13.5,
+                                      color: const Color(0xFF0F172A),
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 22),
 
                             // Sign Up link
                             Center(
                               child: GestureDetector(
                                 onTap: () {
+                                  HapticService.lightTap();
                                   Navigator.of(context).push(
                                     slideRoute(const ClientSignupStep1Screen()),
                                   );
                                 },
                                 child: RichText(
                                   text: TextSpan(
-                                    style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                                    style: AppTextStyles.body.copyWith(color: const Color(0xFF64748B), fontSize: 13),
                                     children: [
                                       const TextSpan(text: "Don't have an account? "),
                                       TextSpan(text: 'Sign Up', style: AppTextStyles.link),
@@ -355,7 +372,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
                     const AuthFooter(),
                     const SizedBox(height: 24),
                   ],

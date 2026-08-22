@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_db_and_tables
-from app.routers import auth, mood, chat, referral, admin, session, direct_message, notification
+from app.routers import auth, mood, chat, admin, notification
 
 
 @asynccontextmanager
@@ -15,8 +15,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Kausap AI API",
-    description="Backend API for Kausap AI — Mental Health Chatbot",
-    version="0.1.0",
+    description="Backend API for Kausap AI — Student Mental Health Companion",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -39,8 +39,5 @@ def root():
 app.include_router(auth.router)
 app.include_router(mood.router)
 app.include_router(chat.router)
-app.include_router(referral.router)
 app.include_router(admin.router)
-app.include_router(session.router)
-app.include_router(direct_message.router)
 app.include_router(notification.router)

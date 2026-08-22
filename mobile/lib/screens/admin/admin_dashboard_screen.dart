@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../utils/haptic_service.dart';
 import '../auth/login_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_moderation_screen.dart';
@@ -50,16 +51,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _logout() {
+    HapticService.lightTap();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Confirm Logout"),
-        content: const Text("Are you sure you want to sign out of the Administrator account?"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Color(0xFFC62828), size: 22),
+            SizedBox(width: 10),
+            Text(
+              "Sign Out",
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ],
+        ),
+        content: const Text(
+          "Are you sure you want to sign out of the Administrator Control Center?",
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+          ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
+              HapticService.heavyTap();
               await context.read<AuthProvider>().logout();
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
@@ -67,8 +86,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 (route) => false,
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC62828), foregroundColor: Colors.white),
-            child: const Text("Logout"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text("Sign Out", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -78,33 +101,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FF),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: const Color(0xFFD6F1FC),
+                color: const Color(0xFFE0F2FE),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.admin_panel_settings_rounded, color: AppColors.primary, size: 20),
+              child: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF0284C7), size: 20),
             ),
             const SizedBox(width: 10),
-            Column(
+            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Admin Control Center', style: AppTextStyles.heading2.copyWith(fontSize: 16, color: const Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-                const Text('Kausap AI Student Platform', style: TextStyle(fontSize: 11, color: Color(0xFF707974))),
+                Text(
+                  'Admin Control Center',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 15,
+                    color: Color(0xFF0F172A),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'Kausap AI Student Platform',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ],
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Color(0xFFC62828)),
+            tooltip: 'Sign Out',
+            icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
             onPressed: _logout,
           ),
         ],
@@ -125,9 +164,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
+              const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 48),
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                _error!,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  color: Color(0xFFEF4444),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _fetchStats,
@@ -145,163 +192,483 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
-    final flaggedCount = _stats!['total_flagged_messages'] ?? 0;
+    final flaggedCount = (_stats!['total_flagged_messages'] as num?)?.toInt() ?? 0;
+    final totalUsers = (_stats!['total_users'] as num?)?.toInt() ?? 0;
+    final activeUsers = (_stats!['total_active_users'] as num?)?.toInt() ?? 0;
+    final chatSessions = (_stats!['total_chat_sessions'] as num?)?.toInt() ?? 0;
+    final moodEntries = (_stats!['total_mood_entries'] as num?)?.toInt() ?? 0;
+    final totalInteractions = chatSessions + moodEntries;
+
+    final moodMap = (_stats!['mood_distribution'] as Map<String, dynamic>?) ?? {};
+    final greatMoods = (moodMap['great'] as num?)?.toInt() ?? 0;
+    final goodMoods = (moodMap['good'] as num?)?.toInt() ?? 0;
+    final okayMoods = (moodMap['okay'] as num?)?.toInt() ?? 0;
+    final downMoods = (moodMap['down'] as num?)?.toInt() ?? 0;
+    final distressedMoods = (moodMap['distressed'] as num?)?.toInt() ?? 0;
 
     return RefreshIndicator(
-      onRefresh: _fetchStats,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          // ── Health Header Pill ───────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFA7F3D0)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "All Systems Operational • Live Neon Postgres (v1.14 Simplified)",
-                    style: TextStyle(color: Color(0xFF065F46), fontSize: 12, fontWeight: FontWeight.bold),
+      onRefresh: () async {
+        HapticService.lightTap();
+        await _fetchStats();
+      },
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            children: [
+              // ── 1. University Health Banner ────────────────────────────────
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "All Systems Operational • Campus Shield Active (Neon Connected)",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: Color(0xFF166534),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // ── 2. Real-time Crisis Safety Banner ──────────────────────────
+              if (flaggedCount == 0)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.verified_user_rounded, color: Color(0xFF16A34A), size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Crisis Triage: Safe (0 Active Alerts)",
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              "All student chats & check-ins are within safe emotional boundaries.",
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11.5,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                    boxShadow: const [BoxShadow(color: Color(0x08EF4444), blurRadius: 8, offset: Offset(0, 2))],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "⚠️ $flaggedCount Crisis Distress Alert${flaggedCount > 1 ? 's' : ''}",
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: Color(0xFF991B1B),
+                              ),
+                            ),
+                            const Text(
+                              "Urgent messages require counselor review and hotline dispatch.",
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11.5,
+                                color: Color(0xFFB91C1C),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          HapticService.lightTap();
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Review', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
 
-          // ── Platform Metrics Grid ─────────────────────────────────────────
-          Text('Platform Metrics & Engagement', style: AppTextStyles.heading2.copyWith(fontSize: 16, color: const Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.25,
-            children: [
-              _buildStatCard(
-                'Total Users',
-                _stats!['total_users']?.toString() ?? '0',
-                Icons.people_alt_rounded,
-                const Color(0xFF3B82F6),
-                onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminUsersScreen())),
+              const SizedBox(height: 18),
+
+              // ── 3. Platform Metrics Grid ───────────────────────────────────
+              const Padding(
+                padding: EdgeInsets.only(left: 2),
+                child: Text(
+                  'PLATFORM METRICS & ENGAGEMENT',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ),
-              _buildStatCard(
-                'Active Users',
-                _stats!['total_active_users']?.toString() ?? '0',
-                Icons.how_to_reg_rounded,
-                const Color(0xFF10B981),
-                onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminUsersScreen())),
+              const SizedBox(height: 8),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.35,
+                children: [
+                  _buildStatCard(
+                    title: 'Total Students',
+                    value: '$totalUsers',
+                    icon: Icons.people_alt_rounded,
+                    color: const Color(0xFF0284C7),
+                    onTap: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                    ),
+                  ),
+                  _buildStatCard(
+                    title: 'Active Accounts',
+                    value: '$activeUsers',
+                    icon: Icons.how_to_reg_rounded,
+                    color: const Color(0xFF16A34A),
+                    onTap: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                    ),
+                  ),
+                  _buildStatCard(
+                    title: 'AI Chat Sessions',
+                    value: '$chatSessions',
+                    icon: Icons.chat_bubble_rounded,
+                    color: const Color(0xFF7C3AED),
+                  ),
+                  _buildStatCard(
+                    title: 'Crisis Flags',
+                    value: '$flaggedCount',
+                    icon: Icons.flag_rounded,
+                    color: flaggedCount > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                    onTap: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
+                    ),
+                  ),
+                  _buildStatCard(
+                    title: 'Mood Entries',
+                    value: '$moodEntries',
+                    icon: Icons.mood_rounded,
+                    color: const Color(0xFFD97706),
+                  ),
+                  _buildStatCard(
+                    title: 'Total Engagement',
+                    value: '$totalInteractions',
+                    icon: Icons.bolt_rounded,
+                    color: const Color(0xFF0D9488),
+                  ),
+                ],
               ),
-              _buildStatCard(
-                'Chat Sessions',
-                _stats!['total_chat_sessions']?.toString() ?? '0',
-                Icons.chat_bubble_rounded,
-                const Color(0xFF8B5CF6),
+
+              const SizedBox(height: 20),
+
+              // ── 4. Campus Mood Pulse Snapshot ──────────────────────────────
+              const Padding(
+                padding: EdgeInsets.only(left: 2),
+                child: Text(
+                  'CAMPUS MOOD PULSE (LIVE)',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ),
-              _buildStatCard(
-                'Flagged Crisis',
-                '$flaggedCount',
-                Icons.flag_rounded,
-                flaggedCount > 0 ? AppColors.error : const Color(0xFF10B981),
-                onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminModerationScreen())),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.insights_rounded, color: Color(0xFF0284C7), size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              "Student Emotional Climate",
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          "$moodEntries Total Check-ins",
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    // Mood distribution chips
+                    Row(
+                      children: [
+                        _buildMoodPill("🌟 Great", greatMoods, const Color(0xFF16A34A)),
+                        const SizedBox(width: 6),
+                        _buildMoodPill("😊 Good", goodMoods, const Color(0xFF0284C7)),
+                        const SizedBox(width: 6),
+                        _buildMoodPill("😐 Okay", okayMoods, const Color(0xFF64748B)),
+                        const SizedBox(width: 6),
+                        _buildMoodPill("😔 Down", downMoods, const Color(0xFFD97706)),
+                        const SizedBox(width: 6),
+                        _buildMoodPill("🚨 Distressed", distressedMoods, const Color(0xFFDC2626)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              _buildStatCard(
-                'Mood Entries',
-                _stats!['total_mood_entries']?.toString() ?? '0',
-                Icons.mood_rounded,
-                const Color(0xFFF59E0B),
+
+              const SizedBox(height: 20),
+
+              // ── 5. Quick Admin Actions ─────────────────────────────────────
+              const Padding(
+                padding: EdgeInsets.only(left: 2),
+                child: Text(
+                  'QUICK ADMIN ACTIONS',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ),
-              _buildStatCard(
-                'Safety Status',
-                'Active 24/7',
-                Icons.shield_rounded,
-                const Color(0xFF0077B6),
-                onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminModerationScreen())),
+              const SizedBox(height: 8),
+              _buildQuickActionTile(
+                icon: Icons.person_search_rounded,
+                iconColor: const Color(0xFF0284C7),
+                iconBg: const Color(0xFFE0F2FE),
+                title: 'User Management Directory',
+                subtitle: 'Search students, monitor engagement & manage account status',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildQuickActionTile(
+                icon: Icons.emergency_rounded,
+                iconColor: const Color(0xFFDC2626),
+                iconBg: const Color(0xFFFEE2E2),
+                title: 'Crisis Triage & Moderation',
+                subtitle: 'Review risk-flagged messages and dispatch emergency hotlines',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildQuickActionTile(
+                icon: Icons.verified_user_rounded,
+                iconColor: const Color(0xFF16A34A),
+                iconBg: const Color(0xFFDCFCE7),
+                title: 'RA 11036 Data Governance',
+                subtitle: 'Export platform compliance audits, PHQ-9 trends & cloud health',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const AdminSystemScreen()),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── 6. Cloud & Infrastructure Health ───────────────────────────
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.cloud_done_rounded, color: Color(0xFF0284C7), size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          "Infrastructure & Safety Architecture",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildHealthRow("Database Engine", "Neon Serverless Postgres (Connected)", const Color(0xFF16A34A)),
+                    const SizedBox(height: 8),
+                    _buildHealthRow("AI Wellness Companion", "Google Gemini AI Guardrails Active", const Color(0xFF16A34A)),
+                    const SizedBox(height: 8),
+                    _buildHealthRow("Data Protection", "RA 11036 & RA 10173 Encrypted", const Color(0xFF16A34A)),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 22),
-
-          // ── Quick Admin Actions ──────────────────────────────────────────
-          Text('Quick Admin Actions', style: AppTextStyles.heading2.copyWith(fontSize: 16, color: const Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          _buildQuickActionTile(
-            icon: Icons.person_search_rounded,
-            iconColor: const Color(0xFF3B82F6),
-            iconBg: const Color(0xFFEFF6FF),
-            title: 'User Management Directory',
-            subtitle: 'Search accounts, monitor engagement & manage permissions',
-            onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminUsersScreen())),
-          ),
-          const SizedBox(height: 10),
-          _buildQuickActionTile(
-            icon: Icons.emergency_rounded,
-            iconColor: const Color(0xFFEF4444),
-            iconBg: const Color(0xFFFEF2F2),
-            title: 'Crisis Triage & Moderation',
-            subtitle: 'Review risk-flagged messages and dispatch emergency hotlines',
-            onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminModerationScreen())),
-          ),
-          const SizedBox(height: 10),
-          _buildQuickActionTile(
-            icon: Icons.verified_user_rounded,
-            iconColor: const Color(0xFF10B981),
-            iconBg: const Color(0xFFECFDF5),
-            title: 'RA 11036 Data Governance',
-            subtitle: 'Export platform compliance audits and cloud health logs',
-            onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminSystemScreen())),
-          ),
-          const SizedBox(height: 22),
-
-          // ── Cloud & Infrastructure Health ────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE8EAED)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.cloud_done_rounded, color: AppColors.primary, size: 18),
-                    SizedBox(width: 8),
-                    Text("Infrastructure Status", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50))),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildHealthRow("PostgreSQL Database", "Neon Serverless (Connected)", const Color(0xFF10B981)),
-                const SizedBox(height: 8),
-                _buildHealthRow("Kausap AI Engine", "Online & Responding", const Color(0xFF10B981)),
-                const SizedBox(height: 8),
-                _buildHealthRow("RA 11036 Data Protection", "Encryption Active", const Color(0xFF10B981)),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
+  Widget _buildMoodPill(String label, int count, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withAlpha(15),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withAlpha(40)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              '$count',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 9.5,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap != null
+          ? () {
+              HapticService.lightTap();
+              onTap();
+            }
+          : null,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE8EAED)),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
         ),
         child: Column(
@@ -312,20 +679,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(icon, color: color, size: 20),
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 18),
                 ),
                 if (onTap != null)
-                  const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFFCBD5E1)),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
               ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value, style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-                const SizedBox(height: 2),
-                Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF707974), fontWeight: FontWeight.w500)),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ],
@@ -342,23 +727,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8EAED)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: iconColor, size: 22),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1))],
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50))),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF707974))),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1)),
-        onTap: onTap,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12.5,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF94A3B8)),
+          ],
+        ),
       ),
     );
   }
@@ -367,12 +781,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 11.5,
+            color: Color(0xFF64748B),
+          ),
+        ),
         Row(
           children: [
             Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
             const SizedBox(width: 6),
-            Text(status, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+            Text(
+              status,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11.5,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ],
@@ -381,26 +810,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildBottomNav() {
     return Container(
-      height: 65,
+      height: 60,
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, -2))],
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, -2))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(Icons.dashboard_rounded, 'Dashboard', true, null),
           _buildNavItem(Icons.people_alt_rounded, 'Users', false, () {
+            HapticService.lightTap();
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
             );
           }),
           _buildNavItem(Icons.flag_rounded, 'Moderation', false, () {
+            HapticService.lightTap();
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
             );
           }),
           _buildNavItem(Icons.tune_rounded, 'System', false, () {
+            HapticService.lightTap();
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const AdminSystemScreen()),
             );
@@ -411,21 +844,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildNavItem(IconData icon, String label, bool isSelected, VoidCallback? onTap) {
-    final color = isSelected ? AppColors.primary : const Color(0xFF707974);
+    final color = isSelected ? AppColors.primary : const Color(0xFF64748B);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 22),
+          Icon(icon, color: color, size: 20),
           const SizedBox(height: 2),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontFamily: 'Poppins',
+              fontSize: 10.5,
               color: color,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ],

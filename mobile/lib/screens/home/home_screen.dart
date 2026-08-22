@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/haptic_service.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -120,45 +121,149 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _logMood(int level) async {
+    if (_todayMoodLevel != null) {
+      _showAlreadyLoggedNotice();
+      return;
+    }
+    HapticService.mediumTap();
+    try {
+      await ApiClient().post(ApiConfig.mood, body: {
+        'mood_level': level,
+        'emotions': null,
+        'intensity': level,
+      });
+      if (mounted) {
+        setState(() {
+          _todayMoodLevel = level;
+          _dailyQuests[0]['completed'] = true;
+        });
+        HapticService.success();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Mood checked in as ${_getMoodEmojiAndLabel(level)}! ✅ Daily quest completed.'),
+            backgroundColor: const Color(0xFF16A34A),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        _fetchStreak();
+        _fetchQuests();
+        _fetchMoodTrends();
+
+        // Prompt caring support for rough/low/okay moods, or celebration for good/great moods
+        if (level <= 3) {
+          _openCaringSupportSheet(level);
+        } else {
+          _openCelebrationSheet(level);
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save mood. Please try again.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openCaringSupportSheet(int level) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _CaringSupportModal(
+        level: level,
+        firstName: _firstName,
+        onTalkToAi: () {
+          Navigator.of(ctx).pop();
+          setState(() => _navIndex = 2);
+        },
+        onOpenJournal: () async {
+          Navigator.of(ctx).pop();
+          final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
+          if (res == true) {
+            _fetchQuests();
+            _fetchStreak();
+          }
+        },
+        onOpenMindfulness: () {
+          Navigator.of(ctx).pop();
+          setState(() => _navIndex = 1);
+        },
+        onOpenSos: () {
+          Navigator.of(ctx).pop();
+          Navigator.of(context).push(slideRoute(const SosScreen()));
+        },
+      ),
+    );
+  }
+
+  Future<void> _openCelebrationSheet(int level) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _CelebrationModal(
+        level: level,
+        firstName: _firstName,
+        onOpenGratitudeJournal: () async {
+          Navigator.of(ctx).pop();
+          final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
+          if (res == true) {
+            _fetchQuests();
+            _fetchStreak();
+          }
+        },
+        onTalkToAi: () {
+          Navigator.of(ctx).pop();
+          setState(() => _navIndex = 2);
+        },
+      ),
+    );
+  }
+
+  void _showAlreadyLoggedNotice() {
+    HapticService.lightTap();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Text('✨', style: TextStyle(fontSize: 16)),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'You already checked in today! Feel free to reflect in your Daily Journal 🌿',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   /// Show unified friendly 1-tap mood check-in sheet
   Future<void> _openMoodPickerSheet() async {
+    if (_todayMoodLevel != null) {
+      _showAlreadyLoggedNotice();
+      return;
+    }
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _MoodPopupSheet(
         firstName: _firstName,
-        onMoodSelected: (level) async {
-          try {
-            await ApiClient().post(ApiConfig.mood, body: {
-              'mood_level': level,
-              'emotions': null,
-              'intensity': level,
-            });
-            if (mounted) {
-              setState(() {
-                _todayMoodLevel = level;
-                _dailyQuests[0]['completed'] = true;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Mood logged! ✅ Daily quest updated.'),
-                  backgroundColor: Color(0xFF22C55E),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-              _fetchStreak();
-              _fetchQuests();
-              _fetchMoodTrends();
-            }
-          } catch (_) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Could not save mood. Try again.')),
-              );
-            }
-          }
-        },
+        onMoodSelected: (level) => _logMood(level),
       ),
     );
   }
@@ -200,7 +305,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ).toList();
           if (todayEntries.isNotEmpty) {
             moodCompleted = true;
-            todayLevel = (todayEntries.last['mood_level'] as num?)?.toInt();
+            // API returns newest first
+            todayLevel = (todayEntries.first['mood_level'] as num?)?.toInt();
           }
         }
       } catch (_) {}
@@ -365,13 +471,6 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.delayed(const Duration(milliseconds: 400));
   }
 
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
   /// Builds the home tab content (the main scrollable dashboard)
   Widget _buildHomeTab() {
     return Center(
@@ -383,38 +482,22 @@ class _HomeScreenState extends State<HomeScreen> {
             controller: _scrollController,
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _buildHeader(),
-                    const SizedBox(height: 20),
-                    _buildGreeting(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+                    _buildHomeCompanionHero(),
+                    const SizedBox(height: 14),
+                    _build1TapMoodSection(),
+                    const SizedBox(height: 14),
                     _buildStreakCard(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _buildSosBanner(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _buildDailyQuestsCard(),
-                    const SizedBox(height: 16),
-                    _todayMoodLevel == null
-                        ? _buildQuickActionCard(
-                            iconBg: AppColors.checkinIcon,
-                            icon: Icons.favorite_rounded,
-                            iconColor: const Color(0xFFE74C3C),
-                            title: 'How are you feeling today?',
-                            subtitle: 'Tap to check-in your mood',
-                            onTap: _openMoodPickerSheet,
-                          )
-                        : _buildQuickActionCard(
-                            iconBg: const Color(0xFFE0F2FE),
-                            icon: Icons.sentiment_satisfied_alt_rounded,
-                            iconColor: const Color(0xFF0284C7),
-                            title: "Today's Mood: ${_getMoodEmojiAndLabel(_todayMoodLevel!)}",
-                            subtitle: 'Logged today ✅ • Tap to view trends & insights',
-                            onTap: () => setState(() => _navIndex = 3),
-                          ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     _buildQuickActionCard(
                       iconBg: const Color(0xFFFEF3C7),
                       icon: Icons.edit_note_rounded,
@@ -617,68 +700,322 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Greeting ───────────────────────────────────────────────────────────────
-  Widget _buildGreeting() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${_greeting()},',
-          style: AppTextStyles.heading1.copyWith(
-            fontWeight: FontWeight.w500,
-            fontSize: 26,
+  String _greetingPeriodFilipino() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'umaga';
+    if (hour < 18) return 'hapon';
+    return 'gabi';
+  }
+
+  // ── Home Companion Hero Card ───────────────────────────────────────────────
+  Widget _buildHomeCompanionHero() {
+    final hasMood = _todayMoodLevel != null;
+    final moodLabel = hasMood ? _getMoodEmojiAndLabel(_todayMoodLevel!) : '';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080077B6),
+            blurRadius: 16,
+            offset: Offset(0, 4),
           ),
-        ),
-        Text(
-          '${_firstName.isNotEmpty ? _firstName[0].toUpperCase() + _firstName.substring(1) : 'User'}!',
-          style: AppTextStyles.heading1.copyWith(fontSize: 26),
-        ),
-      ],
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Interactive Living Companion Avatar
+          _HomeCompanionAvatar(
+            todayMood: _todayMoodLevel,
+            firstName: _firstName,
+          ),
+          const SizedBox(width: 14),
+
+          // Greeting & Supportive Status
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F2FE),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBAE6FD)),
+                  ),
+                  child: const Text(
+                    '🌱 Campus Wellness Shield',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0284C7),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Magandang ${_greetingPeriodFilipino()},\n${_firstName.isNotEmpty ? _firstName[0].toUpperCase() + _firstName.substring(1) : 'Friend'}! ✨',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  hasMood
+                      ? 'Feeling $moodLabel today • Keep blooming 🌱'
+                      : 'How are you feeling right now? Tap a mood below 💙',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // ── Streak Card ────────────────────────────────────────────────────────────
+  // ── 1-Tap Quick Mood Check-In Bar ──────────────────────────────────────────
+  Widget _build1TapMoodSection() {
+    final hasLogged = _todayMoodLevel != null;
+    final List<Map<String, dynamic>> moodOptions = [
+      {'level': 1, 'emoji': '😞', 'label': 'Rough', 'color': const Color(0xFFEF4444)},
+      {'level': 2, 'emoji': '😟', 'label': 'Low', 'color': const Color(0xFFF97316)},
+      {'level': 3, 'emoji': '😐', 'label': 'Okay', 'color': const Color(0xFFF59E0B)},
+      {'level': 4, 'emoji': '🙂', 'label': 'Good', 'color': const Color(0xFF10B981)},
+      {'level': 5, 'emoji': '😄', 'label': 'Great', 'color': const Color(0xFF06B6D4)},
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Daily Mood Check-In',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: hasLogged ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  hasLogged ? 'Checked In Today ✅' : '1-Tap Log',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: hasLogged ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // 5-Emoji Selector Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: moodOptions.map((item) {
+              final level = item['level'] as int;
+              final isSelected = _todayMoodLevel == level;
+              final color = item['color'] as Color;
+              final isDimmed = hasLogged && !isSelected;
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => _logMood(level),
+                  behavior: HitTestBehavior.opaque,
+                  child: Opacity(
+                    opacity: isDimmed ? 0.5 : 1.0,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? color.withAlpha(25) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected ? color : const Color(0xFFE2E8F0),
+                          width: isSelected ? 2 : 1,
+                        ),
+                        boxShadow: isSelected
+                            ? [BoxShadow(color: color.withAlpha(40), blurRadius: 8, offset: const Offset(0, 2))]
+                            : [],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            item['emoji'] as String,
+                            style: TextStyle(fontSize: isSelected ? 24 : 20),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item['label'] as String,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 10,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected ? color : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+
+          if (hasLogged) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_clock_rounded, size: 12, color: Color(0xFF94A3B8)),
+                const SizedBox(width: 4),
+                Text(
+                  'Mood locked for today • Reflect further in Daily Journal 🌿',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.5,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Streak Card with Milestone Badges ──────────────────────────────────────
   Widget _buildStreakCard() {
     final clampedStreak = _streak.clamp(0, _goal);
     final progress = _goal > 0 ? clampedStreak / _goal : 0.0;
-    final streakLabel = _streak == 0
-        ? 'Start your streak today! 🌱'
-        : '$_streak Day${_streak == 1 ? '' : 's'} Streak 🔥';
-    final subLabel = _streak == 0
-        ? 'Log your mood to begin'
-        : '$clampedStreak / $_goal days to your goal';
+
+    String rankBadge = '🌱 Novice Explorer';
+    if (_streak >= 14) {
+      rankBadge = '👑 Wellness Legend';
+    } else if (_streak >= 7) {
+      rankBadge = '⚡ Zen Champion';
+    } else if (_streak >= 3) {
+      rankBadge = '🔥 Mindful Trailblazer';
+    }
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Text(_streak == 0 ? '🌱' : '🔥',
-                style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(streakLabel, style: AppTextStyles.heading2),
-            ),
-          ]),
-          const SizedBox(height: 4),
-          Text(subLabel, style: AppTextStyles.subheading),
-          const SizedBox(height: 12),
-          Stack(children: [
-            Container(
-              height: 12,
-              decoration: BoxDecoration(
-                  color: AppColors.streakTrack,
-                  borderRadius: BorderRadius.circular(99)),
-            ),
-            FractionallySizedBox(
-              widthFactor: progress.clamp(0.0, 1.0),
-              child: Container(
-                height: 12,
-                decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(99)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(_streak == 0 ? '🌱' : '🔥', style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 6),
+                  Text(
+                    _streak == 0 ? 'Start your streak today!' : '$_streak Day Streak',
+                    style: AppTextStyles.heading2,
+                  ),
+                ],
               ),
-            ),
-          ]),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFFEDD5)),
+                ),
+                child: Text(
+                  rankBadge,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFEA580C),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _streak == 0 ? 'Check in daily to build your mental wellness momentum' : '$clampedStreak of $_goal days towards your monthly milestone',
+            style: AppTextStyles.subheading.copyWith(fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Stack(
+            children: [
+              Container(
+                height: 10,
+                decoration: BoxDecoration(
+                  color: AppColors.streakTrack,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: progress.clamp(0.0, 1.0),
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+                    ),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -753,7 +1090,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final completedCount = _dailyQuests.where((q) => q['completed'] as bool).length;
     final totalQuests = _dailyQuests.length;
     final progress = totalQuests > 0 ? completedCount / totalQuests : 0.0;
-    
+    final allDone = completedCount == totalQuests;
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -761,29 +1099,72 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Daily Quests', style: AppTextStyles.heading2),
+              Row(
+                children: [
+                  const Icon(Icons.checklist_rounded, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 6),
+                  Text('Daily Quests', style: AppTextStyles.heading2),
+                ],
+              ),
               Text(
                 '$completedCount/$totalQuests completed',
-                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: allDone ? const Color(0xFF16A34A) : AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: AppColors.streakTrack,
-              color: AppColors.primary,
+              color: allDone ? const Color(0xFF16A34A) : AppColors.primary,
               minHeight: 8,
             ),
           ),
-          const SizedBox(height: 16),
+
+          // Celebration Banner when all 3 quests completed
+          if (allDone) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEFCE8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFEF08A)),
+              ),
+              child: const Row(
+                children: [
+                  Text('🌟', style: TextStyle(fontSize: 16)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'All 3 Quests Complete! Outstanding job nurturing your mind today! 🎉',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF854D0E),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 14),
           ..._dailyQuests.asMap().entries.map((entry) {
             final idx = entry.key;
             final quest = entry.value;
             final isCompleted = quest['completed'] as bool;
-            
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: InkWell(
@@ -810,18 +1191,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     children: [
                       Container(
-                        width: 24,
-                        height: 24,
+                        width: 22,
+                        height: 22,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isCompleted ? AppColors.primary : AppColors.divider,
+                            color: isCompleted ? const Color(0xFF16A34A) : AppColors.divider,
                             width: 2,
                           ),
-                          color: isCompleted ? AppColors.primary : Colors.transparent,
+                          color: isCompleted ? const Color(0xFF16A34A) : Colors.transparent,
                         ),
                         child: isCompleted
-                            ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                            ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
                             : null,
                       ),
                       const SizedBox(width: 12),
@@ -830,6 +1211,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           quest['title'] as String,
                           style: TextStyle(
                             fontFamily: 'Inter',
+                            fontSize: 13,
                             color: isCompleted ? AppColors.textSecondary : AppColors.textPrimary,
                             decoration: isCompleted ? TextDecoration.lineThrough : null,
                           ),
@@ -1698,3 +2080,772 @@ class _MoodPopupSheetState extends State<_MoodPopupSheet>
     );
   }
 }
+
+// ── Interactive Home Companion Avatar ────────────────────────────────────────
+class _HomeCompanionAvatar extends StatefulWidget {
+  final int? todayMood;
+  final String firstName;
+
+  const _HomeCompanionAvatar({
+    required this.todayMood,
+    required this.firstName,
+  });
+
+  @override
+  State<_HomeCompanionAvatar> createState() => _HomeCompanionAvatarState();
+}
+
+class _HomeCompanionAvatarState extends State<_HomeCompanionAvatar> with TickerProviderStateMixin {
+  late AnimationController _floatController;
+  late AnimationController _bounceController;
+  late Animation<double> _floatAnim;
+  late Animation<double> _pulseAnim;
+  late Animation<double> _bounceAnim;
+  late Animation<double> _wiggleAnim;
+
+  final List<String> _mindfulAffirmations = [
+    "You're doing great, one step at a time! ✨",
+    "Take a gentle, deep breath right now 🌿",
+    "I'm so glad you're here today! 💙",
+    "Be kind to your mind today 🌱",
+    "You are capable of amazing growth 🌟",
+    "Peace begins with a gentle smile 🌸",
+  ];
+
+  int _affirmationIdx = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat(reverse: true);
+
+    _floatAnim = Tween<double>(begin: -3.5, end: 3.5).animate(
+      CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
+    );
+
+    _pulseAnim = Tween<double>(begin: 0.97, end: 1.03).animate(
+      CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
+    );
+
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _bounceAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.25, end: 0.95), weight: 35),
+      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0), weight: 25),
+    ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.easeOutBack));
+
+    _wiggleAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.15), weight: 25),
+      TweenSequenceItem(tween: Tween(begin: -0.15, end: 0.15), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 0.15, end: 0.0), weight: 25),
+    ]).animate(_bounceController);
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  void _tapCompanion() {
+    HapticService.lightTap();
+    _bounceController.forward(from: 0.0);
+    setState(() {
+      _affirmationIdx = (_affirmationIdx + 1) % _mindfulAffirmations.length;
+    });
+
+    final affirmation = _mindfulAffirmations[_affirmationIdx];
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Text('✨', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Kausap Buddy: "$affirmation"',
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  List<Color> _getAuraGradient() {
+    switch (widget.todayMood) {
+      case 5:
+        return const [Color(0xFF06B6D4), Color(0xFF38BDF8)]; // Great (Cyan)
+      case 4:
+        return const [Color(0xFF0284C7), Color(0xFF60A5FA)]; // Good (Sky)
+      case 3:
+        return const [Color(0xFF10B981), Color(0xFF34D399)]; // Okay (Mint)
+      case 2:
+        return const [Color(0xFFF59E0B), Color(0xFFFBBF24)]; // Low (Amber)
+      case 1:
+        return const [Color(0xFFF43F5E), Color(0xFFFB7185)]; // Rough (Rose)
+      default:
+        return const [Color(0xFF7C3AED), Color(0xFF38BDF8)]; // Default (Purple-Cyan)
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gradient = _getAuraGradient();
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _tapCompanion,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_floatController, _bounceController]),
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, _floatAnim.value),
+              child: Transform.rotate(
+                angle: _wiggleAnim.value,
+                child: Transform.scale(
+                  scale: _pulseAnim.value * _bounceAnim.value,
+                  child: Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: gradient.first.withAlpha(90),
+                          blurRadius: 14,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Headset Band
+                        Positioned(
+                          top: 6,
+                          child: Container(
+                            width: 42,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.white.withAlpha(220), width: 2.2),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(30),
+                                topRight: Radius.circular(30),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Headset Ear Cushions
+                        const Positioned(
+                          left: 7,
+                          top: 20,
+                          child: CircleAvatar(radius: 4.5, backgroundColor: Colors.white),
+                        ),
+                        const Positioned(
+                          right: 7,
+                          top: 20,
+                          child: CircleAvatar(radius: 4.5, backgroundColor: Colors.white),
+                        ),
+                        // Expressive Mood Face
+                        CustomPaint(
+                          size: const Size(40, 40),
+                          painter: _HomeMascotFacePainter(
+                            mood: widget.todayMood,
+                            progress: _floatController.value,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeMascotFacePainter extends CustomPainter {
+  final int? mood;
+  final double progress;
+
+  _HomeMascotFacePainter({
+    required this.mood,
+    required this.progress,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final eyePaint = Paint()..color = Colors.white;
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final blushPaint = Paint()..color = const Color(0xFFFFB4A2).withAlpha(160);
+
+    final isBlinking = progress > 0.48 && progress < 0.52;
+
+    if (mood == 3 || isBlinking) {
+      // Peaceful closed smiling eyes ( ˘ ᵕ ˘ )
+      final leftArc = Path()
+        ..moveTo(size.width * 0.24, size.height * 0.44)
+        ..quadraticBezierTo(size.width * 0.35, size.height * 0.36, size.width * 0.46, size.height * 0.44);
+      final rightArc = Path()
+        ..moveTo(size.width * 0.54, size.height * 0.44)
+        ..quadraticBezierTo(size.width * 0.65, size.height * 0.36, size.width * 0.76, size.height * 0.44);
+      canvas.drawPath(leftArc, strokePaint);
+      canvas.drawPath(rightArc, strokePaint);
+    } else {
+      // Round sparkling eyes
+      canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.42), 3.2, eyePaint);
+      canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.42), 3.2, eyePaint);
+
+      final glintPaint = Paint()..color = Colors.white;
+      canvas.drawCircle(Offset(size.width * 0.33, size.height * 0.39), 1.2, glintPaint);
+      canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.39), 1.2, glintPaint);
+    }
+
+    // Cheeks
+    canvas.drawCircle(Offset(size.width * 0.18, size.height * 0.54), 2.8, blushPaint);
+    canvas.drawCircle(Offset(size.width * 0.82, size.height * 0.54), 2.8, blushPaint);
+
+    // Dynamic Smile
+    if (mood == 1) {
+      // Comforting gentle smile
+      final mouth = Path()
+        ..moveTo(size.width * 0.42, size.height * 0.62)
+        ..quadraticBezierTo(size.width * 0.50, size.height * 0.68, size.width * 0.58, size.height * 0.62);
+      canvas.drawPath(mouth, strokePaint);
+    } else {
+      // Upbeat open smile
+      final mouth = Path()
+        ..moveTo(size.width * 0.38, size.height * 0.58)
+        ..quadraticBezierTo(size.width * 0.50, size.height * 0.72, size.width * 0.62, size.height * 0.58);
+      canvas.drawPath(mouth, strokePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HomeMascotFacePainter oldDelegate) =>
+      oldDelegate.mood != mood || oldDelegate.progress != progress;
+}
+
+// ── Caring Support Modal Sheet (For Levels 1-3) ──────────────────────────────
+class _CaringSupportModal extends StatefulWidget {
+  final int level;
+  final String firstName;
+  final VoidCallback onTalkToAi;
+  final VoidCallback onOpenJournal;
+  final VoidCallback onOpenMindfulness;
+  final VoidCallback onOpenSos;
+
+  const _CaringSupportModal({
+    required this.level,
+    required this.firstName,
+    required this.onTalkToAi,
+    required this.onOpenJournal,
+    required this.onOpenMindfulness,
+    required this.onOpenSos,
+  });
+
+  @override
+  State<_CaringSupportModal> createState() => _CaringSupportModalState();
+}
+
+class _CaringSupportModalState extends State<_CaringSupportModal> {
+  final Set<String> _selectedTriggers = {};
+
+  final List<String> _triggers = [
+    '📚 Academics',
+    '📝 Exam Stress',
+    '😴 Exhaustion',
+    '💭 Overthinking',
+    '💔 Relationships',
+    '🏡 Family',
+    '🌧️ Feeling low',
+  ];
+
+  String _getTitle() {
+    final name = widget.firstName.isNotEmpty
+        ? widget.firstName[0].toUpperCase() + widget.firstName.substring(1)
+        : 'friend';
+    switch (widget.level) {
+      case 1:
+        return "I'm right here with you, $name 💙";
+      case 2:
+        return "Sending you warmth, $name 🌿";
+      default:
+        return "Checking in on you, $name ✨";
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x22000000), blurRadius: 24, offset: Offset(0, -6)),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                width: 44,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Living Mascot Avatar
+              _HomeCompanionAvatar(
+                todayMood: widget.level,
+                firstName: widget.firstName,
+              ),
+              const SizedBox(height: 12),
+
+              // Title & Subtitle
+              Text(
+                _getTitle(),
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "It's completely okay to have heavy days. What's contributing to this feeling right now?",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  color: Color(0xFF64748B),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+
+              // Trigger Tag Selector Chips
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                alignment: WrapAlignment.center,
+                children: _triggers.map((tag) {
+                  final isSelected = _selectedTriggers.contains(tag);
+                  return GestureDetector(
+                    onTap: () {
+                      HapticService.lightTap();
+                      setState(() {
+                        if (isSelected) {
+                          _selectedTriggers.remove(tag);
+                        } else {
+                          _selectedTriggers.add(tag);
+                        }
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: Text(
+                        tag,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF475569),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 18),
+
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Ways to support you right now:',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Action 1: Talk to Kausap AI
+              _buildSupportTile(
+                icon: Icons.chat_bubble_rounded,
+                iconBg: const Color(0xFFE0F2FE),
+                iconColor: const Color(0xFF0284C7),
+                title: 'Talk with Kausap AI 💬',
+                subtitle: 'Safe, 24/7 space to unpack what is on your mind',
+                onTap: widget.onTalkToAi,
+              ),
+              const SizedBox(height: 8),
+
+              // Action 2: Write in Daily Journal
+              _buildSupportTile(
+                icon: Icons.edit_note_rounded,
+                iconBg: const Color(0xFFFEF3C7),
+                iconColor: const Color(0xFFD97706),
+                title: 'Write in Daily Journal 📖',
+                subtitle: 'Pour your thoughts into a private reflection space',
+                onTap: widget.onOpenJournal,
+              ),
+              const SizedBox(height: 8),
+
+              // Action 3: Calming Breath
+              _buildSupportTile(
+                icon: Icons.self_improvement_rounded,
+                iconBg: const Color(0xFFD1FAE5),
+                iconColor: const Color(0xFF059669),
+                title: '2-Minute Calming Breath 🧘',
+                subtitle: 'Guided box breathing to slow your heart rate',
+                onTap: widget.onOpenMindfulness,
+              ),
+
+              // If level == 1 (Rough), add SOS Hotline shortcut
+              if (widget.level == 1) ...[
+                const SizedBox(height: 8),
+                _buildSupportTile(
+                  icon: Icons.sos_rounded,
+                  iconBg: const Color(0xFFFFE4E6),
+                  iconColor: const Color(0xFFE11D48),
+                  title: 'Need Immediate Crisis Help? 🆘',
+                  subtitle: 'Connect with campus guidance & 24/7 hotlines',
+                  onTap: widget.onOpenSos,
+                ),
+              ],
+
+              const SizedBox(height: 18),
+
+              // Dismiss
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  "I'm okay for now, thanks 🌿",
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSupportTile({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Positive Mood Celebration Sheet (For Levels 4-5) ─────────────────────────
+class _CelebrationModal extends StatelessWidget {
+  final int level;
+  final String firstName;
+  final VoidCallback onOpenGratitudeJournal;
+  final VoidCallback onTalkToAi;
+
+  const _CelebrationModal({
+    required this.level,
+    required this.firstName,
+    required this.onOpenGratitudeJournal,
+    required this.onTalkToAi,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final name = firstName.isNotEmpty
+        ? firstName[0].toUpperCase() + firstName.substring(1)
+        : 'friend';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x22000000), blurRadius: 24, offset: Offset(0, -6)),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                width: 44,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Living Mascot in celebratory style
+              _HomeCompanionAvatar(
+                todayMood: level,
+                firstName: firstName,
+              ),
+              const SizedBox(height: 12),
+
+              // Celebration Heading
+              Text(
+                level == 5
+                    ? 'Yay! So wonderful to hear, $name! 🌟'
+                    : "That's fantastic, $name! 😊",
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'What made today feel so good? Anchoring positive wins strengthens long-term emotional resilience!',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  color: Color(0xFF64748B),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+
+              // Action 1: Log a Gratitude Note
+              _buildCelebrationTile(
+                icon: Icons.favorite_rounded,
+                iconBg: const Color(0xFFFFE4E6),
+                iconColor: const Color(0xFFE11D48),
+                title: 'Log a Gratitude Note 📝',
+                subtitle: "Capture 3 things you're grateful for today",
+                onTap: onOpenGratitudeJournal,
+              ),
+              const SizedBox(height: 8),
+
+              // Action 2: Save this Moment in Journal
+              _buildCelebrationTile(
+                icon: Icons.auto_stories_rounded,
+                iconBg: const Color(0xFFF3E8FF),
+                iconColor: const Color(0xFF9333EA),
+                title: 'Save this Moment in Journal 🎨',
+                subtitle: 'Record what went well and celebrate your growth',
+                onTap: onOpenGratitudeJournal,
+              ),
+              const SizedBox(height: 8),
+
+              // Action 3: Share with Kausap AI
+              _buildCelebrationTile(
+                icon: Icons.smart_toy_rounded,
+                iconBg: const Color(0xFFE0F2FE),
+                iconColor: const Color(0xFF0284C7),
+                title: 'Share the Good News with Kausap AI 💬',
+                subtitle: 'Tell your companion what made you smile today!',
+                onTap: onTalkToAi,
+              ),
+
+              const SizedBox(height: 18),
+
+              // Dismiss
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  'Keep enjoying your day! ✨',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0284C7),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCelebrationTile({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF94A3B8)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

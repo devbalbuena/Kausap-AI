@@ -1,10 +1,9 @@
 from datetime import datetime
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel
 from app.schemas.mood import MoodEntryRead
 from app.schemas.chat import ChatSessionRead
-from app.schemas.referral import DoctorReferralRead
 
 
 class UserSummary(BaseModel):
@@ -16,6 +15,11 @@ class UserSummary(BaseModel):
     created_at: datetime
     mood_entries_count: int
     chat_sessions_count: int
+    flagged_messages_count: Optional[int] = 0
+    phone_number: Optional[str] = None
+    birthday: Optional[str] = None
+    gender: Optional[str] = None
+    occupation: Optional[str] = None
 
 
 class FlaggedMessageRead(BaseModel):
@@ -35,9 +39,12 @@ class UserDetail(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+    phone_number: Optional[str] = None
+    birthday: Optional[str] = None
+    gender: Optional[str] = None
+    occupation: Optional[str] = None
     recent_moods: List[MoodEntryRead]
     recent_sessions: List[ChatSessionRead]
-    referrals: List[DoctorReferralRead]
 
 
 class AdminStats(BaseModel):
@@ -46,4 +53,4 @@ class AdminStats(BaseModel):
     total_mood_entries: int
     total_chat_sessions: int
     total_flagged_messages: int
-    total_referrals: int
+    mood_distribution: Optional[Dict[str, int]] = None

@@ -16,6 +16,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  final GlobalKey<KausapBuddyMascotState> _mascotKey = GlobalKey<KausapBuddyMascotState>();
   final _emailController = TextEditingController();
   String? _errorMessage;
   bool _isLoading = false;
@@ -65,7 +66,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
-                    const KausapHeader(),
+                    KausapBuddyMascot(key: _mascotKey),
                     const SizedBox(height: 24),
                     AuthCard(
                       child: Padding(
@@ -116,6 +117,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 hintText: 'Enter your email',
                               ),
                               validator: AppValidators.email,
+                              onChanged: (val) {
+                                if (val.isNotEmpty) _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                             ),
                             const SizedBox(height: 32),
 

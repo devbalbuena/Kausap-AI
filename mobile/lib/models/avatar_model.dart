@@ -15,11 +15,20 @@ class AvatarModel {
   });
 
   bool get isPremium => tier == 'premium';
+  bool get isMascot => id == 'mascot_buddy';
 }
 
 /// All available avatars in the app.
 class AvatarData {
   static const List<AvatarModel> all = [
+    // ── Mascot Companion (Animated) ────────────────────────────────────
+    AvatarModel(
+      id: 'mascot_buddy',
+      name: 'Kausap Buddy (Mascot)',
+      tier: 'basic',
+      imagePath: 'assets/mascot/kausap_buddy.png',
+      systemPrompt: 'You are Kausap Buddy, the joyful and empathetic campus mental wellness companion. Speak in a gentle, warm, and uplifting tone with helpful CBT strategies.',
+    ),
     // ── Basic (Free) ───────────────────────────────────────────────────
     AvatarModel(
       id: 'basic_kim',

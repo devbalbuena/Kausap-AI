@@ -17,6 +17,7 @@ class ClientSignupStep1Screen extends StatefulWidget {
 
 class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
   final _formKey = GlobalKey<FormState>();
+  final GlobalKey<KausapBuddyMascotState> _mascotKey = GlobalKey<KausapBuddyMascotState>();
 
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -102,7 +103,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 32),
-                    const KausapHeader(),
+                    KausapBuddyMascot(key: _mascotKey),
                     const SizedBox(height: 20),
                     AuthCard(
                       child: Padding(
@@ -133,6 +134,9 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               decoration: const InputDecoration(hintText: 'John'),
                               textCapitalization: TextCapitalization.words,
                               validator: (v) => AppValidators.requiredName(v, label: 'First name'),
+                              onChanged: (val) {
+                                if (val.isNotEmpty) _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                             ),
                             const SizedBox(height: 16),
 
@@ -145,6 +149,9 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               decoration: const InputDecoration(hintText: 'Doe'),
                               textCapitalization: TextCapitalization.words,
                               validator: (v) => AppValidators.requiredName(v, label: 'Last name'),
+                              onChanged: (val) {
+                                if (val.isNotEmpty) _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                             ),
                             const SizedBox(height: 16),
 
@@ -159,6 +166,9 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               decoration:
                                   const InputDecoration(hintText: 'john.doe@gmail.com'),
                               validator: AppValidators.email,
+                              onChanged: (val) {
+                                if (val.isNotEmpty) _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                             ),
                             const SizedBox(height: 16),
 
@@ -172,6 +182,9 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               decoration: const InputDecoration(
                                   hintText: '+63 0123 456 7890'),
                               validator: AppValidators.phone,
+                              onChanged: (val) {
+                                if (val.isNotEmpty) _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                             ),
                             const SizedBox(height: 16),
 
@@ -183,11 +196,14 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                               style: AppTextStyles.inputText,
                               readOnly: true,
                               decoration: const InputDecoration(
-                                hintText: 'mm/dd/yyyy',
-                                suffixIcon: Icon(Icons.calendar_today_outlined,
-                                    size: 18, color: AppColors.textSecondary),
+                                  hintText: 'mm/dd/yyyy',
+                                  suffixIcon: Icon(Icons.calendar_today_outlined,
+                                      size: 18, color: AppColors.textSecondary),
                               ),
-                              onTap: _pickBirthday,
+                              onTap: () {
+                                _pickBirthday();
+                                _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                               validator: (v) => (v == null || v.isEmpty)
                                   ? 'Birthday is required'
                                   : null,
@@ -206,8 +222,10 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                                   .map((g) => DropdownMenuItem(
                                       value: g, child: Text(g)))
                                   .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _selectedGender = v),
+                              onChanged: (v) {
+                                setState(() => _selectedGender = v);
+                                _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                               validator: (v) =>
                                   v == null ? 'Please select a gender' : null,
                             ),
@@ -235,6 +253,9 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                                 ),
                               ),
                               validator: AppValidators.passwordStrong,
+                              onChanged: (val) {
+                                if (val.isNotEmpty) _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                             ),
                             const SizedBox(height: 16),
 
@@ -260,6 +281,9 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                                 ),
                               ),
                               validator: (v) => AppValidators.confirmPassword(v, _passwordController.text),
+                              onChanged: (val) {
+                                if (val.isNotEmpty) _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
+                              },
                             ),
                             const SizedBox(height: 28),
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -8,12 +9,13 @@ import 'package:image_picker/image_picker.dart';
 import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
+import '../../services/ambient_audio_service.dart';
+import '../../utils/haptic_service.dart';
 import '../../config/api_config.dart';
 import '../../models/avatar_model.dart';
 import 'select_avatar_screen.dart';
 import 'chat_history_screen.dart';
 import 'voice_call_screen.dart';
-import 'video_call_screen.dart';
 import '../settings/account_settings_screen.dart';
 import '../articles/articles_screen.dart';
 import '../subscription/upgrade_plan_screen.dart';
@@ -75,14 +77,42 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   late AnimationController _dotController;
   late Animation<double> _dotAnimation;
 
-  // Quick-reply chips shown in the empty state
-  static const List<String> _quickReplies = [
-    'Academic & Exam Stress',
-    'Anxiety & Overwhelm',
-    "Can't Sleep / Insomnia",
-    'Feeling Lonely',
-    'CBT Thought Reframing',
-    '5-4-3-2-1 Grounding',
+  // Quick-Start conversation prompt cards
+  static const List<Map<String, String>> _quickPromptCards = [
+    {
+      'title': "I'm anxious about exams & deadlines 📚",
+      'desc': 'Unpack study stress, manage time, and regain focus',
+      'prompt': "I'm feeling overwhelmed and anxious about my upcoming exams and school deadlines.",
+    },
+    {
+      'title': 'Guide me through a calming breath 🌿',
+      'desc': '2-minute box breathing to reset your nervous system',
+      'prompt': 'Can you guide me through a 2-minute calming breathing exercise right now?',
+    },
+    {
+      'title': 'I just need someone to vent to 💭',
+      'desc': 'Safe, confidential space without any judgment',
+      'prompt': 'I had a really difficult day and I just need a safe space to vent and talk through things.',
+    },
+    {
+      'title': "I can't sleep, my thoughts are racing 😴",
+      'desc': 'Quiet bedtime meditation and nighttime relaxation',
+      'prompt': "I'm having trouble falling asleep because my mind won't stop racing.",
+    },
+    {
+      'title': 'Help me reframe a negative thought 💡',
+      'desc': 'Cognitive reframing for balance and self-compassion',
+      'prompt': 'Can you help me practice CBT thought reframing on a negative thought I keep having?',
+    },
+  ];
+
+  static const List<String> _quickChips = [
+    '📚 Exam Stress',
+    '🌿 Calming Breath',
+    '💭 Just Venting',
+    '😴 Insomnia',
+    '💡 CBT Reframe',
+    '🛡️ 5-4-3-2-1 Grounding',
   ];
 
   @override
@@ -94,6 +124,21 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     )..repeat();
     _dotAnimation = Tween<double>(begin: 0, end: 1).animate(_dotController);
     _loadSavedAvatar();
+    AmbientAudioService.instance.addListener(_onAmbientAudioChanged);
+  }
+
+  void _onAmbientAudioChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openAmbientSoundscapeSheet() async {
+    HapticService.lightTap();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _AmbientSoundscapeSheet(),
+    );
   }
 
   Future<void> _loadSavedAvatar() async {
@@ -123,6 +168,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   @override
   void dispose() {
+    AmbientAudioService.instance.removeListener(_onAmbientAudioChanged);
     _inputController.dispose();
     _scrollController.dispose();
     _dotController.dispose();
@@ -453,6 +499,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         _sessionId = null;
         _messages.clear();
       });
+      await _storage.write(key: 'selected_chatbot_avatar_id', value: result.id);
     }
   }
 
@@ -489,42 +536,167 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   }
 
   Widget _buildHeader() {
+    final audio = AmbientAudioService.instance;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
+          // Living Expressive Chat Mascot Avatar (Reacts to isTyping!) or Specialist Avatar Photo
+          if (_currentAvatar.isMascot)
+            _ChatCompanionAvatar(
+              isTyping: _isTyping,
+              avatar: _currentAvatar,
+              size: 38,
+              onAvatarTap: () => setState(() => _showMenu = !_showMenu),
+            )
+          else
+            GestureDetector(
+              onTap: () => setState(() => _showMenu = !_showMenu),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipOval(
+                      child: Image.asset(
+                        _currentAvatar.imagePath,
+                        width: 38,
+                        height: 38,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: const Color(0xFFEEF2FF),
+                          child: const Icon(Icons.person, color: AppColors.primary, size: 22),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(width: 10),
+
           // Left: Brand name + tier
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kausap AI',
-                style: AppTextStyles.heading2.copyWith(
-                  color: AppColors.primary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _currentAvatar.name,
+                        style: AppTextStyles.heading2.copyWith(
+                          color: AppColors.primary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    if (_isTyping)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'thinking… ✨',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0284C7),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                Text(
+                  _isTyping
+                      ? 'Composing a caring response'
+                      : (_currentAvatar.isPremium
+                          ? '👑 Premium Specialist'
+                          : (_currentAvatar.isMascot ? '🌱 Active Mascot Shield' : '🌱 Basic Companion')),
+                  style: AppTextStyles.body.copyWith(
+                    fontSize: 11,
+                    color: _currentAvatar.isPremium
+                        ? const Color(0xFFD97706)
+                        : (_isTyping ? const Color(0xFF0284C7) : AppColors.textSecondary),
+                    fontWeight: _currentAvatar.isPremium ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Ambient Audio / Soundscape Control Button
+          if (audio.isPlaying)
+            GestureDetector(
+              onTap: _openAmbientSoundscapeSheet,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2FE),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF7DD3FC)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x140284C7), blurRadius: 6, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      audio.currentType == SoundscapeType.rain
+                          ? '🌧️'
+                          : audio.currentType == SoundscapeType.ocean
+                              ? '🌊'
+                              : audio.currentType == SoundscapeType.forest
+                                  ? '🍃'
+                                  : '🧘',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(width: 4),
+                    const _SoundwaveBars(),
+                  ],
                 ),
               ),
-              Text(
-                _currentAvatar.isPremium ? 'Premium' : 'Basic',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 12,
-                  color: _currentAvatar.isPremium
-                      ? const Color(0xFFFFC107)
-                      : AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          // History Button
-          _HeaderIconBtn(
-            icon: Icons.history_rounded,
-            onTap: _openChatHistory,
-          ),
-          const SizedBox(width: 8),
+            )
+          else
+            _HeaderIconBtn(
+              icon: Icons.headphones_rounded,
+              onTap: _openAmbientSoundscapeSheet,
+            ),
+          const SizedBox(width: 6),
+
           // Phone call icon
           _HeaderIconBtn(
             icon: Icons.phone_outlined,
@@ -532,16 +704,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               Navigator.of(context).push(slideUpRoute(VoiceCallScreen(avatar: _currentAvatar)));
             },
           ),
-          const SizedBox(width: 8),
-          // Video call icon
-          _HeaderIconBtn(
-            icon: Icons.videocam_outlined,
-            onTap: () {
-              Navigator.of(context).push(slideUpRoute(VideoCallScreen(avatar: _currentAvatar)));
-            },
-          ),
-          const SizedBox(width: 8),
-          // Avatar profile circle → opens menu
+          const SizedBox(width: 6),
+
+          // Avatar profile circle → opens dropdown menu
           GestureDetector(
             onTap: () => setState(() => _showMenu = !_showMenu),
             child: Container(
@@ -551,22 +716,29 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withAlpha(35),
+                    color: Colors.black.withAlpha(25),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: Image.asset(
-                  _currentAvatar.imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: const Color(0xFFEEF2FF),
-                    child: Icon(Icons.person, color: AppColors.primary, size: 22),
-                  ),
-                ),
-              ),
+              child: _currentAvatar.isMascot
+                  ? ClipOval(
+                      child: Container(
+                        color: const Color(0xFFE0F2FE),
+                        child: const Icon(Icons.menu_rounded, color: AppColors.primary, size: 20),
+                      ),
+                    )
+                  : ClipOval(
+                      child: Image.asset(
+                        _currentAvatar.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: const Color(0xFFEEF2FF),
+                          child: const Icon(Icons.person, color: AppColors.primary, size: 22),
+                        ),
+                      ),
+                    ),
             ),
           ),
         ],
@@ -576,58 +748,199 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   Widget _buildWelcomeView() {
     return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 20),
+          // Avatar Hero Card with Soft Ambient Glow
           Container(
             width: double.infinity,
-            height: 340,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFDDE6FF), Color(0xFFF0E6FF)],
+                colors: [Color(0xFFE0F2FE), Color(0xFFEDE9FE)],
               ),
-            ),
-            child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              child: Image.asset(
-                _currentAvatar.imagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Center(
-                  child: Icon(Icons.smart_toy_rounded,
-                      color: AppColors.primary, size: 80),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x100077B6),
+                  blurRadius: 18,
+                  offset: Offset(0, 6),
                 ),
-              ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style: AppTextStyles.heading2.copyWith(
-                  fontSize: 22,
-                  height: 1.4,
-                  color: const Color(0xFF191C21),
-                ),
-                children: const [
-                  TextSpan(
-                    text: 'Meet Kausap AI',
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: AppColors.primary,
+            child: Column(
+              children: [
+                if (_currentAvatar.isMascot)
+                  _ChatCompanionAvatar(
+                    isTyping: false,
+                    size: 68,
+                    avatar: _currentAvatar,
+                    onAvatarTap: () {
+                      HapticService.mediumTap();
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text("I'm right here listening, take your time! 💬✨"),
+                          backgroundColor: const Color(0xFF0F172A),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  )
+                else
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        _currentAvatar.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: const Color(0xFFEEF2FF),
+                          child: const Icon(Icons.person, color: AppColors.primary, size: 36),
+                        ),
+                      ),
                     ),
                   ),
-                  TextSpan(text: ', your\ncompanion'),
-                ],
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  'Magandang araw! I\'m ${_currentAvatar.name} ✨',
+                  style: AppTextStyles.heading2.copyWith(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _currentAvatar.isMascot
+                      ? 'Your 24/7 confidential CBT companion for student wellness. How can I help support you today?'
+                      : 'Your ${_currentAvatar.isPremium ? 'Specialist' : 'Companion'} for student mental wellness. How can I support you today?',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.5,
+                    color: Color(0xFF475569),
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+
+          // Quick-Start Conversation Prompts Header
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                Icon(Icons.bolt_rounded, size: 16, color: Color(0xFF0284C7)),
+                SizedBox(width: 4),
+                Text(
+                  'Quick-Start Conversation Prompts',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Prompt Cards
+          ..._quickPromptCards.map((item) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  onTap: () {
+                    HapticService.lightTap();
+                    _sendMessage(item['prompt']!);
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x06000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['title']!,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                item['desc']!,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11.5,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 12,
+                            color: Color(0xFF0284C7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -658,30 +971,36 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 4, right: 10),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(25),
-                    blurRadius: 6,
+            child: _currentAvatar.isMascot
+                ? _ChatCompanionAvatar(
+                    isTyping: false,
+                    size: 32,
+                    avatar: _currentAvatar,
+                  )
+                : Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(25),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        _currentAvatar.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: const Color(0xFFE4F9FF),
+                          child: const Icon(Icons.smart_toy_rounded,
+                              color: AppColors.primary, size: 18),
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  _currentAvatar.imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: const Color(0xFFE4F9FF),
-                    child: const Icon(Icons.smart_toy_rounded,
-                        color: AppColors.primary, size: 18),
-                  ),
-                ),
-              ),
-            ),
           ),
           Flexible(
             child: Column(
@@ -723,7 +1042,6 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       ),
     );
   }
-
   Widget _buildCrisisCard() {
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -884,30 +1202,36 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 4, right: 10),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(25),
-                    blurRadius: 6,
+            child: _currentAvatar.isMascot
+                ? _ChatCompanionAvatar(
+                    isTyping: true,
+                    size: 32,
+                    avatar: _currentAvatar,
+                  )
+                : Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(25),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        _currentAvatar.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: const Color(0xFFE4F9FF),
+                          child: const Icon(Icons.smart_toy_rounded,
+                              color: AppColors.primary, size: 18),
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  _currentAvatar.imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: const Color(0xFFE4F9FF),
-                    child: const Icon(Icons.smart_toy_rounded,
-                        color: AppColors.primary, size: 18),
-                  ),
-                ),
-              ),
-            ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -954,40 +1278,42 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       color: const Color(0xFFF0F2FF),
       child: Column(
         children: [
-          if (isEmpty) ...[
-            const SizedBox(height: 8),
+          if (!isEmpty) ...[
+            const SizedBox(height: 6),
             SizedBox(
-              height: 38,
+              height: 34,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _quickReplies.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemCount: _quickChips.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
                 itemBuilder: (context, i) {
                   return GestureDetector(
-                    onTap: () => _sendMessage(_quickReplies[i]),
+                    onTap: () {
+                      HapticService.lightTap();
+                      _sendMessage(_quickPromptCards[i % _quickPromptCards.length]['prompt']!);
+                    },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 17, vertical: 9),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                            color: const Color(0xFFC1C7D3).withAlpha(128)),
+                        border: Border.all(color: const Color(0xFFBAE6FD)),
                         boxShadow: const [
                           BoxShadow(
-                            color: Color(0x0D000000),
-                            blurRadius: 1,
+                            color: Color(0x08000000),
+                            blurRadius: 2,
                             offset: Offset(0, 1),
                           ),
                         ],
                       ),
                       child: Text(
-                        _quickReplies[i],
+                        _quickChips[i],
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                          color: Color(0xFF0284C7),
                         ),
                       ),
                     ),
@@ -996,7 +1322,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
             ),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Container(
@@ -1251,3 +1577,540 @@ class _Dot extends StatelessWidget {
     );
   }
 }
+
+// ── Living Chat Companion Avatar (Reacts to Typing & States) ─────────────────
+class _ChatCompanionAvatar extends StatefulWidget {
+  final bool isTyping;
+  final double size;
+  final AvatarModel avatar;
+  final VoidCallback? onAvatarTap;
+
+  const _ChatCompanionAvatar({
+    required this.isTyping,
+    this.size = 38,
+    required this.avatar,
+    this.onAvatarTap,
+  });
+
+  @override
+  State<_ChatCompanionAvatar> createState() => _ChatCompanionAvatarState();
+}
+
+class _ChatCompanionAvatarState extends State<_ChatCompanionAvatar> with TickerProviderStateMixin {
+  late AnimationController _floatController;
+  late AnimationController _wiggleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat(reverse: true);
+
+    _wiggleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    if (widget.isTyping) {
+      _wiggleController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChatCompanionAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isTyping != oldWidget.isTyping) {
+      if (widget.isTyping) {
+        _wiggleController.repeat(reverse: true);
+      } else {
+        _wiggleController.stop();
+        _wiggleController.reset();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    _wiggleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onAvatarTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_floatController, _wiggleController]),
+        builder: (context, _) {
+          final floatOffset = math.sin(_floatController.value * math.pi * 2) * 2.0;
+          final wiggleAngle = widget.isTyping ? (math.sin(_wiggleController.value * math.pi * 2) * 0.08) : 0.0;
+
+          return Transform.translate(
+            offset: Offset(0, floatOffset),
+            child: Transform.rotate(
+              angle: wiggleAngle,
+              child: Container(
+                width: widget.size,
+                height: widget.size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: widget.isTyping
+                        ? [const Color(0xFF06B6D4), const Color(0xFF8B5CF6)]
+                        : [const Color(0xFF0077B6), const Color(0xFF00B4D8)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.isTyping
+                          ? const Color(0x668B5CF6)
+                          : const Color(0x330077B6),
+                      blurRadius: widget.isTyping ? 12 : 8,
+                      spreadRadius: widget.isTyping ? 2 : 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Headset Arc
+                    Positioned(
+                      top: widget.size * 0.12,
+                      child: Container(
+                        width: widget.size * 0.65,
+                        height: widget.size * 0.25,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Colors.white.withAlpha(220), width: widget.size * 0.05),
+                          ),
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(widget.size * 0.3)),
+                        ),
+                      ),
+                    ),
+                    // Headset Ear Cushions
+                    Positioned(
+                      left: widget.size * 0.16,
+                      top: widget.size * 0.44,
+                      child: CircleAvatar(radius: widget.size * 0.09, backgroundColor: Colors.white),
+                    ),
+                    Positioned(
+                      right: widget.size * 0.16,
+                      top: widget.size * 0.44,
+                      child: CircleAvatar(radius: widget.size * 0.09, backgroundColor: Colors.white),
+                    ),
+                    // Expressive Face Painter
+                    CustomPaint(
+                      size: Size(widget.size, widget.size),
+                      painter: _ChatMascotFacePainter(
+                        isTyping: widget.isTyping,
+                        progress: _floatController.value,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ChatMascotFacePainter extends CustomPainter {
+  final bool isTyping;
+  final double progress;
+
+  _ChatMascotFacePainter({
+    required this.isTyping,
+    required this.progress,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final eyePaint = Paint()..color = Colors.white;
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.05
+      ..strokeCap = StrokeCap.round;
+    final blushPaint = Paint()..color = const Color(0xFFFFB4A2).withAlpha(180);
+
+    final isBlinking = !isTyping && progress > 0.48 && progress < 0.52;
+
+    if (isTyping) {
+      // Winking star eye ( ★ ‿ ◕ )
+      final starPath = Path();
+      final cx = size.width * 0.35;
+      final cy = size.height * 0.43;
+      final r = size.width * 0.09;
+      starPath.moveTo(cx, cy - r);
+      starPath.lineTo(cx + r * 0.3, cy - r * 0.3);
+      starPath.lineTo(cx + r, cy);
+      starPath.lineTo(cx + r * 0.3, cy + r * 0.3);
+      starPath.lineTo(cx, cy + r);
+      starPath.lineTo(cx - r * 0.3, cy + r * 0.3);
+      starPath.lineTo(cx - r, cy);
+      starPath.lineTo(cx - r * 0.3, cy - r * 0.3);
+      starPath.close();
+      canvas.drawPath(starPath, eyePaint);
+
+      // Right eye: round open eye
+      canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.43), size.width * 0.08, eyePaint);
+      canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.40), size.width * 0.03, Paint()..color = Colors.white);
+    } else if (isBlinking) {
+      // Peaceful closed smiling eyes
+      final leftArc = Path()
+        ..moveTo(size.width * 0.24, size.height * 0.44)
+        ..quadraticBezierTo(size.width * 0.35, size.height * 0.36, size.width * 0.46, size.height * 0.44);
+      final rightArc = Path()
+        ..moveTo(size.width * 0.54, size.height * 0.44)
+        ..quadraticBezierTo(size.width * 0.65, size.height * 0.36, size.width * 0.76, size.height * 0.44);
+      canvas.drawPath(leftArc, strokePaint);
+      canvas.drawPath(rightArc, strokePaint);
+    } else {
+      // Round sparkling eyes
+      canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.42), size.width * 0.08, eyePaint);
+      canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.42), size.width * 0.08, eyePaint);
+
+      final glintPaint = Paint()..color = Colors.white;
+      canvas.drawCircle(Offset(size.width * 0.33, size.height * 0.39), size.width * 0.03, glintPaint);
+      canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.39), size.width * 0.03, glintPaint);
+    }
+
+    // Rosy Cheeks
+    canvas.drawCircle(Offset(size.width * 0.20, size.height * 0.56), size.width * 0.07, blushPaint);
+    canvas.drawCircle(Offset(size.width * 0.80, size.height * 0.56), size.width * 0.07, blushPaint);
+
+    // Warm Upbeat Smile
+    final mouth = Path()
+      ..moveTo(size.width * 0.38, size.height * 0.58)
+      ..quadraticBezierTo(size.width * 0.50, size.height * 0.72, size.width * 0.62, size.height * 0.58);
+    canvas.drawPath(mouth, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChatMascotFacePainter oldDelegate) =>
+      oldDelegate.isTyping != isTyping || oldDelegate.progress != progress;
+}
+
+// ── Animated Equalizer Bars for Active Audio ──────────────────────────────────
+class _SoundwaveBars extends StatefulWidget {
+  const _SoundwaveBars();
+
+  @override
+  State<_SoundwaveBars> createState() => _SoundwaveBarsState();
+}
+
+class _SoundwaveBarsState extends State<_SoundwaveBars> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = _controller.value;
+        final h1 = 4.0 + (math.sin(t * math.pi * 2) * 4.0).abs();
+        final h2 = 4.0 + (math.sin((t + 0.33) * math.pi * 2) * 6.0).abs();
+        final h3 = 4.0 + (math.sin((t + 0.66) * math.pi * 2) * 5.0).abs();
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildBar(h1),
+            const SizedBox(width: 2),
+            _buildBar(h2),
+            const SizedBox(width: 2),
+            _buildBar(h3),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBar(double height) {
+    return Container(
+      width: 2.5,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0284C7),
+        borderRadius: BorderRadius.circular(1.5),
+      ),
+    );
+  }
+}
+
+// ── Ambient Soundscapes Bottom Modal Sheet ────────────────────────────────────
+class _AmbientSoundscapeSheet extends StatefulWidget {
+  const _AmbientSoundscapeSheet();
+
+  @override
+  State<_AmbientSoundscapeSheet> createState() => _AmbientSoundscapeSheetState();
+}
+
+class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
+  final AmbientAudioService _audio = AmbientAudioService.instance;
+
+  @override
+  Widget build(BuildContext context) {
+    final soundscapes = AmbientAudioService.availableSoundscapes;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x22000000), blurRadius: 24, offset: Offset(0, -6)),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                width: 44,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Title & Subtitle
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Text('🎧', style: TextStyle(fontSize: 20)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Calming Ambient Soundscapes',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Play soothing background soundscapes while chatting to ease anxiety and focus your mind.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: Color(0xFF64748B),
+                  height: 1.35,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+
+              // Soundscape Selection Cards
+              ...soundscapes.map((s) {
+                final isSelected = _audio.currentType == s.type;
+                final isPlayingThis = isSelected && _audio.isPlaying;
+
+                return GestureDetector(
+                  onTap: () {
+                    HapticService.lightTap();
+                    setState(() {
+                      if (isSelected && _audio.isPlaying) {
+                        _audio.stop();
+                      } else {
+                        _audio.play(s.type);
+                      }
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFF0F9FF) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: isSelected
+                          ? const [BoxShadow(color: Color(0x140284C7), blurRadius: 8, offset: Offset(0, 2))]
+                          : [],
+                    ),
+                    child: Row(
+                      children: [
+                        Text(s.emoji, style: const TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.title,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13.5,
+                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                  color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF1E293B),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                s.description,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isPlayingThis ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isPlayingThis ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                            size: 18,
+                            color: isPlayingThis ? Colors.white : const Color(0xFF475569),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
+              const SizedBox(height: 14),
+
+              // Volume Slider
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _audio.volume > 0.5
+                          ? Icons.volume_up_rounded
+                          : _audio.volume > 0
+                              ? Icons.volume_down_rounded
+                              : Icons.volume_mute_rounded,
+                      color: const Color(0xFF0284C7),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 4,
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                          activeTrackColor: const Color(0xFF0284C7),
+                          inactiveTrackColor: const Color(0xFFCBD5E1),
+                          thumbColor: const Color(0xFF0284C7),
+                        ),
+                        child: Slider(
+                          value: _audio.volume,
+                          min: 0.0,
+                          max: 1.0,
+                          onChanged: (val) {
+                            setState(() => _audio.setVolume(val));
+                          },
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${(_audio.volume * 100).toInt()}%',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // Bottom Play/Pause & Dismiss Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        HapticService.mediumTap();
+                        setState(() {
+                          _audio.togglePlay();
+                        });
+                      },
+                      icon: Icon(_audio.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                      label: Text(_audio.isPlaying ? 'Pause Soundscape' : 'Play Soundscape'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _audio.isPlaying ? const Color(0xFFEF4444) : const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

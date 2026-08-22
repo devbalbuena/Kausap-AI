@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../auth/login_screen.dart';
 import 'onboarding_screen.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -54,8 +52,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _startAnimation() async {
     await Future.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
     _logoController.forward();
     await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
     _textController.forward();
     await Future.delayed(const Duration(milliseconds: 1800));
     _navigateNext();
@@ -63,15 +63,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _navigateNext() async {
     if (!mounted) return;
-    const storage = FlutterSecureStorage();
-    final seenOnboarding = await storage.read(key: 'seen_onboarding');
-
-    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, _, _) =>
-            seenOnboarding == 'true' ? const LoginScreen() : const OnboardingScreen(),
+        pageBuilder: (_, _, _) => const OnboardingScreen(),
         transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
       ),

@@ -417,24 +417,65 @@ class _AvatarCard extends StatelessWidget {
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    gradient: avatar.isMascot
+                        ? const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
+                          )
+                        : null,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
+                        color: avatar.isMascot ? const Color(0x330077B6) : Colors.black.withValues(alpha: 0.15),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      avatar.imagePath,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        color: const Color(0xFFEEF2FF),
-                        child: const Icon(Icons.person, color: AppColors.primary, size: 40),
-                      ),
-                    ),
-                  ),
+                  child: avatar.isMascot
+                      ? Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              top: 10,
+                              child: Container(
+                                width: 52,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(color: Colors.white.withAlpha(220), width: 4),
+                                  ),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                ),
+                              ),
+                            ),
+                            const Positioned(
+                              left: 12,
+                              top: 35,
+                              child: CircleAvatar(radius: 7, backgroundColor: Colors.white),
+                            ),
+                            const Positioned(
+                              right: 12,
+                              top: 35,
+                              child: CircleAvatar(radius: 7, backgroundColor: Colors.white),
+                            ),
+                            // Eyes & Smile
+                            CustomPaint(
+                              size: const Size(80, 80),
+                              painter: _MascotAvatarIconPainter(),
+                            ),
+                          ],
+                        )
+                      : ClipOval(
+                          child: Image.asset(
+                            avatar.imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              color: const Color(0xFFEEF2FF),
+                              child: const Icon(Icons.person, color: AppColors.primary, size: 40),
+                            ),
+                          ),
+                        ),
                 ),
                 if (avatar.isPremium && !isProUnlocked)
                   Positioned(
@@ -458,6 +499,7 @@ class _AvatarCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF191C21),
               ),
+              textAlign: TextAlign.center,
             ),
             if (avatar.isPremium)
               Text(
@@ -468,9 +510,52 @@ class _AvatarCard extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+            if (avatar.isMascot)
+              Text(
+                'Animated Companion',
+                style: AppTextStyles.body.copyWith(
+                  fontSize: 11,
+                  color: const Color(0xFF0284C7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+class _MascotAvatarIconPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final eyePaint = Paint()..color = Colors.white;
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round;
+    final blushPaint = Paint()..color = const Color(0xFFFFB4A2).withAlpha(180);
+
+    // Round sparkling eyes
+    canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.42), 6.5, eyePaint);
+    canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.42), 6.5, eyePaint);
+
+    final glintPaint = Paint()..color = Colors.white;
+    canvas.drawCircle(Offset(size.width * 0.33, size.height * 0.39), 2.5, glintPaint);
+    canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.39), 2.5, glintPaint);
+
+    // Rosy cheeks
+    canvas.drawCircle(Offset(size.width * 0.20, size.height * 0.56), 5.5, blushPaint);
+    canvas.drawCircle(Offset(size.width * 0.80, size.height * 0.56), 5.5, blushPaint);
+
+    // Upbeat smile
+    final mouth = Path()
+      ..moveTo(size.width * 0.38, size.height * 0.58)
+      ..quadraticBezierTo(size.width * 0.50, size.height * 0.72, size.width * 0.62, size.height * 0.58);
+    canvas.drawPath(mouth, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MascotAvatarIconPainter oldDelegate) => false;
 }
