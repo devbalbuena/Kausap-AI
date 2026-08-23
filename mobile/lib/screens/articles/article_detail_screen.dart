@@ -81,8 +81,8 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
   Future<void> _recordView() async {
     // Record view in local persistent storage
     await ArticlesStorageService.recordView(widget.article.id);
-    // Sync with backend in background
-    ApiClient().get('/articles/${widget.article.id}').catchError((_) => null);
+    // Sync with backend silently in background
+    ApiClient().get('/articles/${widget.article.id}', silent: true).catchError((_) => null);
   }
 
   @override
@@ -183,11 +183,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
         // Record to local persistent storage
         ArticlesStorageService.recordReaction(widget.article.id, emoji, true, previousEmoji);
 
-        // Sync with backend API in background
+        // Sync with backend API silently in background
         ApiClient().post('/articles/${widget.article.id}/react', body: {
           'emoji': emoji,
           'label': _reactions[index].label,
-        }).catchError((_) => null);
+        }, silent: true).catchError((_) => null);
       }
     });
   }

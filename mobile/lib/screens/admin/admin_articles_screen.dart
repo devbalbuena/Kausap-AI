@@ -41,7 +41,7 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
     // 2. Try syncing from API in background if online
     List<ArticleModel> apiArticles = [];
     try {
-      final res = await _api.get('/admin/articles');
+      final res = await _api.get('/admin/articles', silent: true);
       if (res is List) {
         apiArticles = res.map((item) => ArticleModel.fromJson(item as Map<String, dynamic>)).toList();
       }
@@ -468,7 +468,7 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
 
     // Try to sync with backend
     try {
-      await _api.patch('/admin/articles/${a.id}', body: {'is_featured': updatedArticle.isFeatured});
+      await _api.patch('/admin/articles/${a.id}', body: {'is_featured': updatedArticle.isFeatured}, silent: true);
     } catch (_) {}
 
     if (mounted) {
@@ -860,7 +860,7 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
     await ArticlesStorageService.saveArticle(localJson);
 
     // ── Try syncing to backend in background (non-blocking) ──
-    _api.post('/admin/articles', body: payload).catchError((_) => null);
+    _api.post('/admin/articles', body: payload, silent: true).catchError((_) => null);
 
     if (mounted) {
       Navigator.pop(context);

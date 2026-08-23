@@ -55,9 +55,9 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
       });
     }
 
-    // 2. Try to sync from API
+    // 2. Try to sync from API silently
     try {
-      final res = await _api.get('/articles');
+      final res = await _api.get('/articles', silent: true);
       if (res is List) {
         final live = res.map((e) => ArticleModel.fromJson(e as Map<String, dynamic>)).toList();
         final merged = ArticlesData.mergeWithDefaults([...localArticles, ...live]);
