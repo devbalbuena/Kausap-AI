@@ -30,7 +30,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   Future<void> _loadUserProgress() async {
     try {
       // 1. Fetch Mood Entries
-      final moodData = await ApiClient().get(ApiConfig.mood);
+      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       final List<dynamic> entries = moodData is List ? moodData : [];
       _totalCheckins = entries.length;
 

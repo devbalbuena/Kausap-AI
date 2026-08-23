@@ -10,11 +10,11 @@ bearer_scheme = HTTPBearer()
 bearer_scheme_optional = HTTPBearer(auto_error=False)
 
 
-def get_current_user(
+def get_current_user_allow_inactive(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
     session: Annotated[Session, Depends(get_session)],
 ) -> User:
-    """Decode the JWT and return the authenticated user. Raises 401 if invalid."""
+    """Decode the JWT and return user (even if deactivated, as long as not soft deleted)."""
     token = credentials.credentials
     payload = decode_access_token(token)
     if payload is None:
@@ -28,8 +28,19 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
     user = session.get(User, user_id)
-    if user is None or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+    if user is None or user.is_deleted:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or archived")
+    return user
+
+
+def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+    session: Annotated[Session, Depends(get_session)],
+) -> User:
+    """Decode the JWT and return active authenticated user."""
+    user = get_current_user_allow_inactive(credentials, session)
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated")
     return user
 
 

@@ -707,53 +707,58 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                                   : 1.0;
                               return Transform.scale(scale: scale, child: child);
                             },
-                            child: GestureDetector(
-                              onTap: () => _toggleReaction(i),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? r.color.withAlpha(25) : const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected ? r.color : const Color(0xFFE2E8F0),
-                                    width: isSelected ? 1.5 : 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(r.emoji, style: const TextStyle(fontSize: 14)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      r.label,
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 11.5,
-                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                        color: isSelected ? r.color : const Color(0xFF64748B),
-                                      ),
+                            child: Semantics(
+                              label: 'React with ${r.label} emoji ${r.emoji}.${count > 0 ? ' $count students reacted.' : ''}${isSelected ? ' Currently selected.' : ''}',
+                              button: true,
+                              selected: isSelected,
+                              child: GestureDetector(
+                                onTap: () => _toggleReaction(i),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? r.color.withAlpha(25) : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected ? r.color : const Color(0xFFE2E8F0),
+                                      width: isSelected ? 1.5 : 1,
                                     ),
-                                    if (count > 0) ...[
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(r.emoji, style: const TextStyle(fontSize: 14)),
                                       const SizedBox(width: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: isSelected ? r.color : const Color(0xFFCBD5E1),
-                                          borderRadius: BorderRadius.circular(8),
+                                      Text(
+                                        r.label,
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 11.5,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                          color: isSelected ? r.color : const Color(0xFF64748B),
                                         ),
-                                        child: Text(
-                                          '$count',
-                                          style: TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: isSelected ? Colors.white : const Color(0xFF475569),
+                                      ),
+                                      if (count > 0) ...[
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? r.color : const Color(0xFFCBD5E1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '$count',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: isSelected ? Colors.white : const Color(0xFF475569),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),

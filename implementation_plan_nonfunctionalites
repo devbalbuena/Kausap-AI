@@ -1,0 +1,261 @@
+# NFR Implementation Plan — Kausap AI
+**Goal:** Implement all 10 Non-Functional Requirements across 4 phases. Each phase must pass `dart analyze lib` with 0 errors before proceeding to the next.
+
+> [!IMPORTANT]
+> **DO NOT push to GitHub until explicitly instructed.**
+> Each phase is approved and executed independently before moving to the next.
+
+---
+
+## Overview — Phase Map
+
+```
+Phase 1 — AI Safety & Ethics (Backend)
+Phase 2 — Admin Audit Trail (Backend + Admin UI)
+Phase 3 — Offline Resilience & Silent Sync (Mobile)
+Phase 4 — Scalability, Accessibility & Code Quality (Backend + Mobile)
+```
+
+---
+
+## Phase 1 — 🧠 Ethical AI Guardrails & Clinical Safety
+
+**NFR Covered:** Ethical AI Boundaries
+
+**What this means:** The Kausap AI companion must refuse to prescribe medications, issue formal psychiatric diagnoses, or replace professional clinical care — even when students explicitly ask for it.
+
+### Why this matters
+Students in distress sometimes ask the AI directly: *"What medication should I take for anxiety?"* or *"Do I have ADHD?"*. Without guardrails, the AI might attempt to answer these with confidence, which is clinically dangerous and legally liable.
+
+---
+
+### Proposed Changes
+
+#### [MODIFY] `backend/app/routers/chat.py`
+- Add a **clinical boundary pre-check** before sending any user message to Gemini.
+- Detect trigger phrases like:
+  - *"prescribe"*, *"what medication"*, *"what drug"*, *"diagnose me"*, *"do i have"*, *"is this [disorder]"*, *"am i depressed"*, *"what's my diagnosis"*
+- If detected → inject a **system prompt override segment** that:
+  1. Instructs Gemini to decline the clinical request respectfully.
+  2. Redirects the student to CSU Guidance & Counseling Center.
+  3. Offers to discuss their *feelings* instead (therapeutic deflection).
+- Add a **guardrail system prompt** at the beginning of every Gemini conversation (regardless of trigger) that reminds the AI of its non-clinical role.
+
+#### [MODIFY] `backend/app/routers/chat.py` — System Prompt Hardening
+- Inject a permanent safety prefix into every AI request:
+  ```
+  You are Kausap, a compassionate AI mental wellness companion for university students at Caraga State University. You are NOT a licensed psychologist, psychiatrist, or physician. You MUST NEVER prescribe medications, issue formal mental health diagnoses (e.g., 'You have depression', 'You have ADHD'), or suggest the student has a specific clinical condition. If asked for a diagnosis or medication, redirect warmly to the CSU Guidance & Counseling Center. Focus on listening, emotional support, and evidence-based coping strategies.
+  ```
+
+---
+
+### Verification Plan
+- Manually test with trigger messages like:
+  - *"What antidepressants should I take?"*
+  - *"Diagnose me, I think I have bipolar disorder"*
+- Confirm AI declines clinically and redirects to counseling.
+- `dart analyze lib` — 0 errors.
+
+---
+
+## Phase 2 — 🔒 Admin Audit Trail (Security & Accountability)
+
+**NFR Covered:** Security & Audit Logging (NFR-1 & NFR-5)
+
+**What this means:** Every sensitive admin/counselor action must be permanently and tamper-evidently recorded in the database with: timestamp, admin identity, target user, and reason/justification.
+
+---
+
+### Proposed Changes
+
+#### [NEW] `backend/app/models/audit_log.py`
+Create an `AuditLog` database model with fields:
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `admin_id` | UUID | The admin who performed the action |
+| `admin_email` | str | Denormalized for fast querying |
+| `action` | str | e.g., `user_deactivated`, `user_restored`, `article_published`, `appeal_approved` |
+| `target_type` | str | `user`, `article`, `message` |
+| `target_id` | str | UUID of the affected entity |
+| `detail` | str | Free-text counselor note / reason |
+| `created_at` | datetime | UTC timestamp (immutable once written) |
+
+#### [NEW] `backend/app/schemas/audit.py`
+- `AuditLogRead` schema for API responses.
+
+#### [MODIFY] `backend/app/routers/admin.py`
+- After every mutating admin action, write an `AuditLog` entry:
+  - `PATCH /users/{id}/status` → `user_deactivated` or `user_reactivated`
+  - `DELETE /users/{id}` → `user_archived`
+  - `POST /users/{id}/restore` → `user_restored`
+  - `POST /users/{id}/resolve-appeal` → `appeal_approved` or `appeal_dismissed`
+  - `PATCH /articles/{id}` → `article_edited`
+  - `POST /articles` → `article_published`
+  - `DELETE /articles/{id}` → `article_deleted`
+
+#### [NEW] `GET /admin/audit-logs`
+- Paginated, filterable audit log list endpoint.
+- Filter by `action`, `admin_email`, `target_type`, and `date range`.
+
+#### Neon PostgreSQL Schema Migration
+- Run SQL to create `auditlog` table.
+
+#### [MODIFY] `mobile/lib/screens/admin/admin_system_screen.dart`
+- Add an **"Admin Activity Log"** section to the System Hub:
+  - Scrollable list of recent counselor actions.
+  - Each entry shows: 🟢 action badge, admin name, target user, timestamp.
+  - Filter by action type and date.
+
+---
+
+### Verification Plan
+- Perform deactivation, restore, and appeal actions.
+- Confirm entries appear in the audit log API and Admin System screen.
+- `dart analyze lib` — 0 errors.
+
+---
+
+## Phase 3 — 🛡️ Offline Resilience & Silent Sync
+
+**NFR Covered:**
+- Graceful Offline Degradation
+- Silent Background Synchronization
+
+**What this means:**
+1. When a student loses Wi-Fi, the app must **never freeze or show blank screens** — cached articles, emergency contacts, and previously loaded data must remain visible.
+2. Non-critical analytics calls (emoji reactions, view counts, article feed refreshes) must **never pop up red retry banners** — they should silently retry in the background.
+
+---
+
+### Current State Assessment
+- ✅ `ConnectivityService` already monitors Wi-Fi and mobile data with real DNS ping checks.
+- ✅ `CacheService` already stores lists/maps with TTL.
+- ✅ `ApiClient` already has `silent: true` parameter on retry banners.
+- ✅ Some article/emoji calls already use `silent: true`.
+
+### What's Missing
+- ❌ No **offline banner** shown to students when internet is lost (they see errors instead).
+- ❌ Articles, emergency numbers, and home data are not **always** served from cache-first when offline.
+- ❌ No **offline mood queue** — mood entries typed offline are lost.
+- ❌ The silent parameter is not consistently applied to all background analytics.
+
+---
+
+### Proposed Changes
+
+#### [NEW] `mobile/lib/widgets/offline_banner.dart`
+- A persistent top `OfflineBanner` widget that slides in when `ConnectivityService.isOnline == false`.
+- Shows: 📡 *"You're offline. Showing saved content. Changes will sync when reconnected."*
+- No close button — auto-dismisses when connection returns.
+- Soft amber/grey styling, non-intrusive.
+
+#### [MODIFY] `mobile/lib/main.dart`
+- Wrap the app with a `Consumer<ConnectivityService>` to insert the `OfflineBanner` at the root level above all screens.
+
+#### [MODIFY] `mobile/lib/screens/articles/articles_screen.dart`
+- **Cache-first loading**: On load, immediately show cached articles list while fetching fresh data in background.
+- If fetch fails (offline), silently keep showing cached content instead of error screen.
+
+#### [MODIFY] `mobile/lib/screens/home/home_screen.dart`
+- Emergency contacts and crisis numbers must be read from `CacheService` on startup so they are always available, even offline.
+
+#### [NEW] `mobile/lib/services/offline_mood_queue.dart`
+- A local queue (via `SharedPreferences`) that stores mood entries written while offline.
+- On reconnection (detected by `ConnectivityService`), automatically flush the queue to the API silently.
+
+#### [MODIFY] `mobile/lib/screens/admin/admin_articles_screen.dart`, `articles_screen.dart`, `article_detail_screen.dart`
+- Audit all article view count, emoji reaction, and share tracking calls.
+- Confirm all use `silent: true`.
+- Any remaining non-silent background calls → set to `silent: true`.
+
+---
+
+### Verification Plan
+- Test by disabling Wi-Fi while on articles screen — confirm cached content shows with offline banner.
+- Log a mood entry while offline → confirm it syncs when reconnected.
+- Disconnect/reconnect — confirm banner shows/hides automatically.
+- `dart analyze lib` — 0 errors.
+
+---
+
+## Phase 4 — ♿ Accessibility, Scalability & Code Quality
+
+**NFR Covered:**
+- Color Contrast Ratio (≥ 4.5:1)
+- Touch Target Size (≥ 44×44 dp)
+- Screen Reader Compatibility
+- Concurrent Peak Load (PgBouncer connection pooling)
+- Database Autoscaling (Neon serverless — already handled by infrastructure)
+- Static Analysis Zero-Error Standard
+- Layered Architecture
+
+This phase has two independent tracks that can be worked on in order:
+
+---
+
+### Track A — ♿ Accessibility Polish (Mobile)
+
+#### [MODIFY] All key screens
+- **Touch Targets**: Audit every `GestureDetector`, `IconButton`, emoji reaction button, and chip to ensure minimum `48×48` effective hit area using `SizedBox` or `ConstrainedBox` wrappers where needed.
+- **Semantic Labels**: Wrap all non-text icons, emoji buttons, and mood selectors with `Semantics(label: '...', child: ...)` for TalkBack / VoiceOver compatibility.
+  - e.g., `Semantics(label: 'Feeling happy emoji reaction', button: true, child: ...)`
+- **Focus Traversal**: Ensure logical keyboard focus order across all interactive elements.
+
+Priority screens to audit:
+1. `home_screen.dart` — Emoji mood check-in buttons
+2. `article_detail_screen.dart` — Emoji reaction row
+3. `articles_screen.dart` — Filter chips
+4. `admin_users_screen.dart` — Action buttons
+5. `deactivated_account_screen.dart` — Contact cards and appeal button
+
+> Note: Color contrast ratios (≥ 4.5:1) are already satisfied by the current Poppins-on-white and white-on-primary-blue palette used throughout. We will verify critical components and document this.
+
+---
+
+### Track B — 📈 Backend Scalability (PgBouncer Connection Pooling)
+
+#### [MODIFY] `backend/app/database.py`
+- Update the Neon PostgreSQL connection string to use the **PgBouncer pooled connection endpoint** (port 6432) instead of the direct connection (port 5432).
+- Add `?pgbouncer=true` query parameter for SQLAlchemy-compatible pooled connections.
+- Set `pool_pre_ping=True` and `pool_recycle=300` to handle Neon's scale-to-zero behavior gracefully.
+
+> [!NOTE]
+> Neon PostgreSQL's serverless compute already autoscales automatically. This track ensures the application layer doesn't exhaust connections during peak load (8:00–9:00 AM class start). No infrastructure changes required beyond the connection string update.
+
+---
+
+### Track C — 🧩 Static Analysis & Architecture Audit
+
+#### `dart analyze lib`
+- Run full analysis and confirm **0 errors, 0 warnings**.
+- Fix any warnings introduced during Phases 1–3.
+
+#### Architecture Documentation
+- Confirm all new services follow the established layered pattern:
+  - `Screens` → `Providers` → `Services (ApiClient, CacheService)` → `Storage`
+- No direct API calls from widgets — all go through providers or services.
+
+---
+
+### Verification Plan
+- Run accessibility scanner on key screens.
+- Test PgBouncer connection under simulated concurrent load.
+- Final `dart analyze lib` — 0 errors, 0 warnings.
+- Document NFR compliance status.
+
+---
+
+## Summary Table
+
+| Phase | NFR | Backend | Mobile | Estimated Complexity |
+|-------|-----|---------|--------|----------------------|
+| **1** | Ethical AI Guardrails | ✅ chat.py | — | Low |
+| **2** | Admin Audit Trail | ✅ audit_log.py, admin.py | ✅ admin_system_screen | Medium |
+| **3** | Offline Degradation + Silent Sync | — | ✅ Multiple screens + new services | Medium |
+| **4A** | Accessibility (WCAG 2.1 AA) | — | ✅ All key screens | Low-Medium |
+| **4B** | Scalability / PgBouncer | ✅ database.py | — | Low |
+| **4C** | Code Quality / Architecture Audit | ✅ | ✅ | Low |
+
+> [!IMPORTANT]
+> **GitHub Push Policy**: All changes are held locally until you explicitly say to push. No `git push` will be executed at any point during this plan.

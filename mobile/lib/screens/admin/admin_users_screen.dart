@@ -62,81 +62,248 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   Future<void> _toggleUserStatus(String userId, String name, bool currentStatus) async {
     final bool nextStatus = !currentStatus;
-    final String actionText = nextStatus ? "Reactivate" : "Deactivate";
 
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text(
-          '$actionText Account',
-          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
-        ),
-        content: Text(
-          'Are you sure you want to $actionText the account for $name?\n\n${nextStatus ? "The student will regain access to their companion, journals, and screeners." : "The student will be temporarily suspended from logging into Kausap AI."}',
-          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+    if (nextStatus) {
+      // ── Reactivate Flow ──
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 22),
+              SizedBox(width: 8),
+              Text('Reactivate Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: nextStatus ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Text(
+            'Reactivating $name will restore their immediate full access to Kausap AI companion, mood logs, and clinical screeners.',
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
             ),
-            child: Text(actionText, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Reactivate', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      try {
+        HapticService.heavyTap();
+        await ApiClient().patch('/admin/users/$userId/status', body: {'is_active': true}, silent: true);
+        _fetchUsers();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$name has been reactivated! ✨'), backgroundColor: const Color(0xFF16A34A)),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Reactivation failed: $e'), backgroundColor: const Color(0xFFDC2626)),
+          );
+        }
+      }
+      return;
+    }
+
+    // ── Deactivate with Reason Flow ──
+    final List<String> presetReasons = [
+      "Account verification / identity check required",
+      "Counselor clinical review / check-in requested",
+      "Student requested temporary account pause",
+      "Violation of university wellness community guidelines",
+      "Custom reason...",
+    ];
+    String selectedReason = presetReasons[0];
+    final customReasonController = TextEditingController();
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.pause_circle_outline_rounded, color: Color(0xFFDC2626), size: 22),
+                SizedBox(width: 8),
+                Text('Deactivate Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Select the reason for placing $name\'s account on hold. This will be shown to the student when they log in.',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B), height: 1.4),
+                  ),
+                  const SizedBox(height: 14),
+                  ...presetReasons.map((r) {
+                    final isChosen = selectedReason == r;
+                    return GestureDetector(
+                      onTap: () => setDialogState(() => selectedReason = r),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isChosen ? const Color(0xFFFEF2F2) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isChosen ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(isChosen ? Icons.radio_button_checked : Icons.radio_button_off,
+                                size: 16, color: isChosen ? const Color(0xFFDC2626) : const Color(0xFF94A3B8)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                r,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  fontWeight: isChosen ? FontWeight.w600 : FontWeight.w400,
+                                  color: isChosen ? const Color(0xFF991B1B) : const Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  if (selectedReason == "Custom reason...") ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: customReasonController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: "Enter custom counselor explanation...",
+                        hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFDC2626))),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Deactivate', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+              ),
+            ],
+          );
+        },
       ),
     );
 
-    if (confirm != true) return;
+    if (confirmed != true) return;
+
+    final finalReason = selectedReason == "Custom reason..."
+        ? (customReasonController.text.trim().isNotEmpty ? customReasonController.text.trim() : "Account temporarily deactivated by Guidance Counselor.")
+        : selectedReason;
 
     try {
       HapticService.heavyTap();
-      await ApiClient().patch('/admin/users/$userId/status', body: {'is_active': nextStatus});
+      await ApiClient().patch(
+        '/admin/users/$userId/status',
+        body: {'is_active': false, 'deactivation_reason': finalReason},
+        silent: true,
+      );
       _fetchUsers();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$name has been ${nextStatus ? "reactivated" : "deactivated"}.'),
-            backgroundColor: nextStatus ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+            content: Text('$name has been deactivated. Reason recorded: "$finalReason"'),
+            backgroundColor: const Color(0xFFDC2626),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Status update failed: $e'), backgroundColor: const Color(0xFFDC2626)),
+          SnackBar(content: Text('Deactivation failed: $e'), backgroundColor: const Color(0xFFDC2626)),
         );
       }
     }
   }
 
-  Future<void> _deleteUserPermanently(String userId, String name) async {
+  Future<void> _softDeleteUser(String userId, String name) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Row(
           children: [
-            Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 24),
+            Icon(Icons.inventory_2_outlined, color: Color(0xFFDC2626), size: 22),
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Delete Account Permanently?',
+                'Archive Account (Soft Delete)',
                 style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
               ),
             ),
           ],
         ),
-        content: Text(
-          'This action is IRREVERSIBLE in compliance with RA 11036 Right to Erasure.\n\nAll data for $name (journals, mood logs, AI chat history, and screener assessments) will be permanently deleted.',
-          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to archive $name\'s account?',
+              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.shield_outlined, color: Color(0xFF0284C7), size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'RA 11036 Compliance Notice: Clinical records, mood entries, and screener assessments are safely preserved in the database for auditing and continuity of care, but removed from active student directory views.',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF1E40AF), height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -150,7 +317,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Permanently Delete', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            child: const Text('Archive Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -160,20 +327,99 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
     try {
       HapticService.heavyTap();
-      await ApiClient().delete('/admin/users/$userId');
+      await ApiClient().delete('/admin/users/$userId', silent: true);
       _fetchUsers();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Student account for $name has been permanently deleted.'),
-            backgroundColor: const Color(0xFFDC2626),
+            content: Text('$name\'s account has been archived. You can view or restore it in the "Archived" tab.'),
+            backgroundColor: const Color(0xFF0F172A),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Account deletion failed: $e'), backgroundColor: const Color(0xFFDC2626)),
+          SnackBar(content: Text('Account archiving failed: $e'), backgroundColor: const Color(0xFFDC2626)),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreUser(String userId, String name) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.restore_from_trash_rounded, color: Color(0xFF16A34A), size: 22),
+            SizedBox(width: 8),
+            Text('Restore Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+          ],
+        ),
+        content: Text(
+          'Restore $name\'s account back to the active student directory? Their full login access and previous logs will be restored.',
+          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF16A34A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Restore Now', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      HapticService.heavyTap();
+      await ApiClient().post('/admin/users/$userId/restore', silent: true);
+      _fetchUsers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$name\'s account has been successfully restored! 🎉'), backgroundColor: const Color(0xFF16A34A)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Restoration failed: $e'), backgroundColor: const Color(0xFFDC2626)),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleAppeal(String userId, String name, bool approve) async {
+    try {
+      HapticService.mediumTap();
+      await ApiClient().post(
+        '/admin/users/$userId/resolve-appeal?approved=$approve',
+        silent: true,
+      );
+      _fetchUsers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(approve ? '$name\'s appeal approved & account reactivated! ✨' : '$name\'s appeal was dismissed.'),
+            backgroundColor: approve ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to process appeal: $e'), backgroundColor: const Color(0xFFDC2626)),
         );
       }
     }
@@ -185,7 +431,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final email = user['email'] ?? '';
     final role = (user['role'] ?? 'client').toString().toLowerCase();
     final isAdmin = role == 'admin';
-    final bool isActive = user['is_active'] != false;
+    final bool isDeleted = user['is_deleted'] == true;
+    final bool isActive = user['is_active'] != false && !isDeleted;
+    final String? deactivationReason = user['deactivation_reason'];
+    final String? appeal = user['reactivation_appeal'];
     final moodCount = user['mood_entries_count'] ?? 0;
     final chatCount = user['chat_sessions_count'] ?? 0;
     final flagCount = user['flagged_messages_count'] ?? 0;
@@ -206,213 +455,349 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: isAdmin ? const Color(0xFFF3E8FF) : const Color(0xFFE0F2FE),
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: isAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0284C7),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: isDeleted
+                          ? const Color(0xFFF1F5F9)
+                          : (isAdmin ? const Color(0xFFF3E8FF) : const Color(0xFFE0F2FE)),
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: isDeleted
+                              ? const Color(0xFF64748B)
+                              : (isAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0284C7)),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildRoleBadge(role),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            email,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDeleted
+                            ? const Color(0xFFF1F5F9)
+                            : (isActive ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2)),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDeleted
+                              ? const Color(0xFFCBD5E1)
+                              : (isActive ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA)),
+                        ),
+                      ),
+                      child: Text(
+                        isDeleted ? "Archived" : (isActive ? "Active" : "Inactive"),
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          color: isDeleted
+                              ? const Color(0xFF475569)
+                              : (isActive ? const Color(0xFF166534) : const Color(0xFF991B1B)),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 16),
+
+                // ── Deactivation Reason Notice (if inactive) ──
+                if (!isActive && !isDeleted && deactivationReason != null && deactivationReason.isNotEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        const Row(
                           children: [
-                            Flexible(
-                              child: Text(
-                                name,
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  color: Color(0xFF0F172A),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildRoleBadge(role),
+                            Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFDC2626)),
+                            SizedBox(width: 6),
+                            Text('Deactivation Reason Recorded:',
+                                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF991B1B))),
                           ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
-                          email,
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            color: Color(0xFF64748B),
-                          ),
+                          '"$deactivationReason"',
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF7F1D1D), height: 1.35),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 14),
+                ],
+
+                // ── Student Reactivation Appeal (if pending) ──
+                if (appeal != null && appeal.isNotEmpty) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isActive ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isActive ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA)),
+                      color: const Color(0xFFFFFBEB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
                     ),
-                    child: Text(
-                      isActive ? "Active" : "Inactive",
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        color: isActive ? const Color(0xFF166534) : const Color(0xFF991B1B),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.mark_email_unread_rounded, size: 15, color: Color(0xFFD97706)),
+                            SizedBox(width: 6),
+                            Text('Student Reactivation Appeal 📩',
+                                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E))),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '"$appeal"',
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF78350F), height: 1.35),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _handleAppeal(user['id'], name, true);
+                                },
+                                icon: const Icon(Icons.check_rounded, size: 14),
+                                label: const Text('Approve Appeal', style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF16A34A),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _handleAppeal(user['id'], name, false);
+                                },
+                                icon: const Icon(Icons.close_rounded, size: 14),
+                                label: const Text('Dismiss', style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF64748B),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
+                // Account Details Info
+                const Text(
+                  "Account & Demographics Overview",
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildDetailRow("Account Role", isAdmin ? "Administrator 🛡️" : "Student / Client 🎓"),
+                      const SizedBox(height: 8),
+                      _buildDetailRow("Occupation", occupation),
+                      const SizedBox(height: 8),
+                      _buildDetailRow("Phone Number", phone),
+                      const SizedBox(height: 8),
+                      _buildDetailRow("Birthday", birthday),
+                      const SizedBox(height: 8),
+                      _buildDetailRow("Gender", gender),
+                      const SizedBox(height: 8),
+                      _buildDetailRow("Registration Date", createdAt),
+                      const SizedBox(height: 8),
+                      _buildDetailRow("AI Chat Sessions", "$chatCount sessions"),
+                      const SizedBox(height: 8),
+                      _buildDetailRow("Mood Check-ins", "$moodCount entries"),
+                      const SizedBox(height: 8),
+                      _buildDetailRow(
+                        "Crisis Flags Logged",
+                        flagCount > 0 ? "⚠️ $flagCount Flags" : "0 Flags (Safe)",
+                        valueColor: flagCount > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Modal Actions
+                if (isAdmin || isSelf)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3E8FF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE9D5FF)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.shield_rounded, color: Color(0xFF7C3AED), size: 20),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            "Administrator Account (System Protected — Cannot be deactivated)",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF6B21A8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (isDeleted) ...[
+                  // ── Archived Account Restore Action ──
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _restoreUser(user['id'], name);
+                      },
+                      icon: const Icon(Icons.restore_from_trash_rounded, size: 18),
+                      label: const Text('Restore Account to Active Directory ♻️',
+                          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              const Divider(height: 1, color: Color(0xFFF1F5F9)),
-              const SizedBox(height: 16),
-
-              // Account Details Info
-              const Text(
-                "Account & Demographics Overview",
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  children: [
-                    _buildDetailRow("Account Role", isAdmin ? "Administrator 🛡️" : "Student / Client 🎓"),
-                    const SizedBox(height: 8),
-                    _buildDetailRow("Occupation", occupation),
-                    const SizedBox(height: 8),
-                    _buildDetailRow("Phone Number", phone),
-                    const SizedBox(height: 8),
-                    _buildDetailRow("Birthday", birthday),
-                    const SizedBox(height: 8),
-                    _buildDetailRow("Gender", gender),
-                    const SizedBox(height: 8),
-                    _buildDetailRow("Registration Date", createdAt),
-                    const SizedBox(height: 8),
-                    _buildDetailRow("AI Chat Sessions", "$chatCount sessions"),
-                    const SizedBox(height: 8),
-                    _buildDetailRow("Mood Check-ins", "$moodCount entries"),
-                    const SizedBox(height: 8),
-                    _buildDetailRow(
-                      "Crisis Flags Logged",
-                      flagCount > 0 ? "⚠️ $flagCount Flags" : "0 Flags (Safe)",
-                      valueColor: flagCount > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Modal Actions
-              if (isAdmin || isSelf)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3E8FF),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE9D5FF)),
-                  ),
-                  child: const Row(
+                ] else ...[
+                  Row(
                     children: [
-                      Icon(Icons.shield_rounded, color: Color(0xFF7C3AED), size: 20),
-                      SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          "Administrator Account (System Protected — Cannot be deactivated)",
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF6B21A8),
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _toggleUserStatus(user['id'], name, isActive);
+                          },
+                          icon: Icon(isActive ? Icons.pause_circle_outline_rounded : Icons.check_circle_outline, size: 16),
+                          label: Text(
+                            isActive ? "Deactivate" : "Activate",
+                            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isActive ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                            side: BorderSide(color: isActive ? const Color(0xFFFECACA) : const Color(0xFFBBF7D0)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _softDeleteUser(user['id'], name);
+                          },
+                          icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                          label: const Text(
+                            "Archive (Delete)",
+                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFDC2626),
+                            side: const BorderSide(color: Color(0xFFFECACA)),
+                            backgroundColor: const Color(0xFFFEF2F2),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       ),
                     ],
                   ),
-                )
-              else ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _toggleUserStatus(user['id'], name, isActive);
-                        },
-                        icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_outline, size: 16),
-                        label: Text(
-                          isActive ? "Deactivate" : "Activate",
-                          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: isActive ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                          side: BorderSide(color: isActive ? const Color(0xFFFECACA) : const Color(0xFFBBF7D0)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _deleteUserPermanently(user['id'], name);
-                        },
-                        icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                        label: const Text(
-                          "Delete Account",
-                          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFDC2626),
-                          side: const BorderSide(color: Color(0xFFFECACA)),
-                          backgroundColor: const Color(0xFFFEF2F2),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },
@@ -476,11 +861,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
     // Filter chip
     if (_activeFilter == 'student') {
-      result = result.where((u) => (u['role'] ?? 'client').toString().toLowerCase() != 'admin').toList();
+      result = result.where((u) => u['is_deleted'] != true && (u['role'] ?? 'client').toString().toLowerCase() != 'admin').toList();
     } else if (_activeFilter == 'admin') {
-      result = result.where((u) => (u['role'] ?? '').toString().toLowerCase() == 'admin').toList();
+      result = result.where((u) => u['is_deleted'] != true && (u['role'] ?? '').toString().toLowerCase() == 'admin').toList();
     } else if (_activeFilter == 'inactive') {
-      result = result.where((u) => u['is_active'] == false).toList();
+      result = result.where((u) => u['is_deleted'] != true && u['is_active'] == false).toList();
+    } else if (_activeFilter == 'archived') {
+      result = result.where((u) => u['is_deleted'] == true).toList();
+    } else {
+      // 'all' shows all active and inactive, excluding soft deleted
+      result = result.where((u) => u['is_deleted'] != true).toList();
     }
 
     return result;
@@ -489,6 +879,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filterUsers(_users);
+    final activeCount = _users.where((u) => u['is_deleted'] != true).length;
+    final studentCount = _users.where((u) => u['is_deleted'] != true && (u['role'] ?? 'client').toString().toLowerCase() != 'admin').length;
+    final adminCount = _users.where((u) => u['is_deleted'] != true && (u['role'] ?? '').toString().toLowerCase() == 'admin').length;
+    final inactiveCount = _users.where((u) => u['is_deleted'] != true && u['is_active'] == false).length;
+    final archivedCount = _users.where((u) => u['is_deleted'] == true).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -519,7 +914,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   ),
                 ),
                 Text(
-                  '${_users.length} Registered Accounts',
+                  '$activeCount Active Accounts${archivedCount > 0 ? ' • $archivedCount Archived' : ''}',
                   style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
@@ -579,13 +974,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildFilterChip("All Accounts (${_users.length})", _activeFilter == 'all', () => setState(() => _activeFilter = 'all')),
+                      _buildFilterChip("All ($activeCount)", _activeFilter == 'all', () => setState(() => _activeFilter = 'all')),
                       const SizedBox(width: 8),
-                      _buildFilterChip("🎓 Students", _activeFilter == 'student', () => setState(() => _activeFilter = 'student')),
+                      _buildFilterChip("🎓 Students ($studentCount)", _activeFilter == 'student', () => setState(() => _activeFilter = 'student')),
                       const SizedBox(width: 8),
-                      _buildFilterChip("🛡️ Admins", _activeFilter == 'admin', () => setState(() => _activeFilter = 'admin')),
+                      _buildFilterChip("🛡️ Admins ($adminCount)", _activeFilter == 'admin', () => setState(() => _activeFilter = 'admin')),
                       const SizedBox(width: 8),
-                      _buildFilterChip("Inactive", _activeFilter == 'inactive', () => setState(() => _activeFilter = 'inactive')),
+                      _buildFilterChip("⚠️ Inactive ($inactiveCount)", _activeFilter == 'inactive', () => setState(() => _activeFilter = 'inactive')),
+                      const SizedBox(width: 8),
+                      _buildFilterChip("🗑️ Archived ($archivedCount)", _activeFilter == 'archived', () => setState(() => _activeFilter = 'archived')),
                     ],
                   ),
                 ),
@@ -620,10 +1017,23 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         ),
                       )
                     : filtered.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No accounts match search criteria.',
-                              style: TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B)),
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(_activeFilter == 'archived' ? Icons.inventory_2_outlined : Icons.people_outline_rounded,
+                                      size: 40, color: const Color(0xFF94A3B8)),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    _activeFilter == 'archived'
+                                        ? 'No archived accounts found.'
+                                        : 'No accounts match the selected filter.',
+                                    style: const TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B), fontSize: 13),
+                                  ),
+                                ],
+                              ),
                             ),
                           )
                         : RefreshIndicator(
@@ -675,7 +1085,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final email = user['email'] ?? '';
     final role = (user['role'] ?? 'client').toString().toLowerCase();
     final isAdmin = role == 'admin';
-    final bool isActive = user['is_active'] != false;
+    final bool isDeleted = user['is_deleted'] == true;
+    final bool isActive = user['is_active'] != false && !isDeleted;
+    final String? appeal = user['reactivation_appeal'];
     final moodCount = user['mood_entries_count'] ?? 0;
     final chatCount = user['chat_sessions_count'] ?? 0;
     final flagCount = user['flagged_messages_count'] ?? 0;
@@ -684,9 +1096,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDeleted ? const Color(0xFFF8FAFC) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: isDeleted ? const Color(0xFFE2E8F0) : const Color(0xFFE2E8F0)),
         boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
       ),
       child: Column(
@@ -697,13 +1109,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 alignment: Alignment.bottomRight,
                 children: [
                   CircleAvatar(
-                    backgroundColor: isAdmin ? const Color(0xFFF3E8FF) : const Color(0xFFE0F2FE),
+                    backgroundColor: isDeleted
+                        ? const Color(0xFFE2E8F0)
+                        : (isAdmin ? const Color(0xFFF3E8FF) : const Color(0xFFE0F2FE)),
                     radius: 22,
                     child: Text(
                       name.isNotEmpty ? name[0].toUpperCase() : '?',
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        color: isAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0284C7),
+                        color: isDeleted
+                            ? const Color(0xFF64748B)
+                            : (isAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0284C7)),
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                       ),
@@ -713,7 +1129,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                      color: isDeleted
+                          ? const Color(0xFF94A3B8)
+                          : (isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 1.5),
                     ),
@@ -730,11 +1148,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         Flexible(
                           child: Text(
                             name,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
-                              color: Color(0xFF0F172A),
+                              color: isDeleted ? const Color(0xFF64748B) : const Color(0xFF0F172A),
+                              decoration: isDeleted ? TextDecoration.lineThrough : null,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -742,6 +1161,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         ),
                         const SizedBox(width: 8),
                         _buildRoleBadge(role),
+                        if (isDeleted) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('Archived', style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -758,6 +1188,31 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               ),
             ],
           ),
+          if (appeal != null && appeal.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.mark_email_unread_rounded, size: 14, color: Color(0xFFD97706)),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'Reactivation appeal submitted by student',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFFD97706)),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
           const SizedBox(height: 10),
@@ -813,8 +1268,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             height: 34,
             child: OutlinedButton.icon(
               onPressed: () => _showUserDetailsModal(user),
-              icon: const Icon(Icons.info_outline_rounded, size: 14),
-              label: const Text('Account Details', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+              icon: Icon(isDeleted ? Icons.restore_from_trash_rounded : Icons.info_outline_rounded, size: 14),
+              label: Text(
+                isDeleted ? 'View Archived / Restore' : 'Account Details',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
+              ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFFE2E8F0)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

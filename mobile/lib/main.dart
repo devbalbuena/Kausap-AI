@@ -12,6 +12,7 @@ import 'widgets/pin_lock_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/retry_service.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/deactivated_account_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/splash/splash_screen.dart';
@@ -108,6 +109,9 @@ class _AppStartup extends StatelessWidget {
 
     if (auth.isAuthenticated && auth.currentUser != null) {
       final user = auth.currentUser!;
+      if (user['is_active'] == false) {
+        return DeactivatedAccountScreen(userProfile: user);
+      }
       Widget home;
       if (user['role'] == 'admin') {
         home = const AdminDashboardScreen();

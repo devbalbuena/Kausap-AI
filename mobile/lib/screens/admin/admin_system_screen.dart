@@ -24,10 +24,30 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
   String _latencyText = "Connected (18ms latency)";
   Color _latencyColor = const Color(0xFF16A34A);
 
+  // Audit log state
+  List<Map<String, dynamic>> _auditLogs = [];
+  bool _isLoadingAuditLogs = false;
+
   @override
   void initState() {
     super.initState();
     _pingHealth();
+    _fetchAuditLogs();
+  }
+
+  Future<void> _fetchAuditLogs() async {
+    setState(() => _isLoadingAuditLogs = true);
+    try {
+      final data = await ApiClient().get('/admin/audit-logs?limit=30', silent: true);
+      if (mounted && data is List) {
+        setState(() {
+          _auditLogs = data.cast<Map<String, dynamic>>();
+          _isLoadingAuditLogs = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingAuditLogs = false);
+    }
   }
 
   Future<void> _pingHealth() async {
@@ -588,6 +608,75 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
               ),
               const SizedBox(height: 18),
 
+              // ── Admin Activity Audit Log ─────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "COUNSELOR ACTIVITY LOG",
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11.5,
+                      letterSpacing: 0.6,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _fetchAuditLogs,
+                    child: Row(
+                      children: [
+                        _isLoadingAuditLogs
+                            ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF0284C7)))
+                            : const Icon(Icons.refresh_rounded, size: 13, color: Color(0xFF0284C7)),
+                        const SizedBox(width: 4),
+                        const Text(
+                          "Refresh",
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF0284C7)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: const [BoxShadow(color: Color(0x03000000), blurRadius: 8, offset: Offset(0, 2))],
+                ),
+                child: _isLoadingAuditLogs
+                    ? const Padding(
+                        padding: EdgeInsets.all(28),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0284C7))),
+                      )
+                    : _auditLogs.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              children: [
+                                Icon(Icons.history_rounded, size: 32, color: Colors.grey.shade300),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  "No counselor actions recorded yet.",
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF94A3B8)),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _auditLogs.length,
+                            separatorBuilder: (context, idx) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            itemBuilder: (_, i) => _buildAuditEntry(_auditLogs[i]),
+                          ),
+              ),
+              const SizedBox(height: 18),
+
               // ── Security & Data Guardrails ───────────────────────────────────
               const Text(
                 "SECURITY & DATA PRIVACY GUARDRAILS",
@@ -757,6 +846,121 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
             Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminModerationScreen()));
           }),
           _buildNavItem(Icons.tune_rounded, 'System', true, null),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuditEntry(Map<String, dynamic> log) {
+    final action = log['action'] as String? ?? '';
+    final adminEmail = log['admin_email'] as String? ?? '';
+    final detail = log['detail'] as String?;
+    final createdAt = log['created_at'] as String? ?? '';
+
+    // Color-coded badges per action category
+    final Map<String, Map<String, dynamic>> actionStyles = {
+      'user_deactivated':  {'icon': Icons.block_rounded,           'color': const Color(0xFFDC2626), 'bg': const Color(0xFFFEF2F2), 'label': 'Deactivated'},
+      'user_reactivated':  {'icon': Icons.check_circle_outline_rounded, 'color': const Color(0xFF16A34A), 'bg': const Color(0xFFF0FDF4), 'label': 'Reactivated'},
+      'user_archived':     {'icon': Icons.archive_outlined,         'color': const Color(0xFFD97706), 'bg': const Color(0xFFFFFBEB), 'label': 'Archived'},
+      'user_restored':     {'icon': Icons.restore_rounded,          'color': const Color(0xFF0284C7), 'bg': const Color(0xFFE0F2FE), 'label': 'Restored'},
+      'appeal_approved':   {'icon': Icons.thumb_up_alt_outlined,    'color': const Color(0xFF16A34A), 'bg': const Color(0xFFF0FDF4), 'label': 'Appeal Approved'},
+      'appeal_dismissed':  {'icon': Icons.thumb_down_alt_outlined,  'color': const Color(0xFF64748B), 'bg': const Color(0xFFF1F5F9), 'label': 'Appeal Dismissed'},
+      'article_published': {'icon': Icons.article_outlined,         'color': const Color(0xFF7C3AED), 'bg': const Color(0xFFF5F3FF), 'label': 'Published'},
+      'article_updated':   {'icon': Icons.edit_outlined,            'color': const Color(0xFF0284C7), 'bg': const Color(0xFFE0F2FE), 'label': 'Updated'},
+      'article_deleted':   {'icon': Icons.delete_outline_rounded,   'color': const Color(0xFFDC2626), 'bg': const Color(0xFFFEF2F2), 'label': 'Deleted'},
+    };
+
+    final style = actionStyles[action] ?? {
+      'icon': Icons.history_rounded,
+      'color': const Color(0xFF64748B),
+      'bg': const Color(0xFFF1F5F9),
+      'label': action.replaceAll('_', ' '),
+    };
+
+    // Format timestamp
+    String timeLabel = '';
+    try {
+      final dt = DateTime.parse(createdAt).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inMinutes < 1) {
+        timeLabel = 'Just now';
+      } else if (diff.inHours < 1) {
+        timeLabel = '${diff.inMinutes}m ago';
+      } else if (diff.inDays < 1) {
+        timeLabel = '${diff.inHours}h ago';
+      } else if (diff.inDays < 7) {
+        timeLabel = '${diff.inDays}d ago';
+      } else {
+        timeLabel = '${dt.day}/${dt.month}/${dt.year}';
+      }
+    } catch (_) {
+      timeLabel = createdAt.length > 10 ? createdAt.substring(0, 10) : createdAt;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: style['bg'] as Color,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(style['icon'] as IconData, color: style['color'] as Color, size: 15),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: style['bg'] as Color,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(color: (style['color'] as Color).withAlpha(50)),
+                      ),
+                      child: Text(
+                        style['label'] as String,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: style['color'] as Color,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      timeLabel,
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF94A3B8)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  adminEmail,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (detail != null && detail.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    detail,
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B), height: 1.3),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );

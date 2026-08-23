@@ -60,7 +60,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       // 2. Load unified dynamic mood logs from API
       List<Map<String, dynamic>> loadedMoods = [];
       try {
-        final moodData = await ApiClient().get(ApiConfig.mood);
+        final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
         if (moodData is List) {
           loadedMoods = List<Map<String, dynamic>>.from(moodData.cast<Map<String, dynamic>>());
         }

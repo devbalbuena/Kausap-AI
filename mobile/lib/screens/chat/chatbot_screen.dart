@@ -19,6 +19,8 @@ import 'voice_call_screen.dart';
 import '../articles/articles_screen.dart';
 import '../profile/profile_screen.dart';
 import '../subscription/upgrade_plan_screen.dart';
+import '../../services/voice_audio_service.dart';
+import '../../services/offline_mood_queue.dart';
 
 /// A single message in the chat (either user or assistant).
 class _ChatMessage {
@@ -53,8 +55,15 @@ class _ChatMessage {
 
 class ChatbotScreen extends StatefulWidget {
   final String? initialMessage;
+  final int? contextualMoodLevel;
+  final String? userName;
 
-  const ChatbotScreen({super.key, this.initialMessage});
+  const ChatbotScreen({
+    super.key,
+    this.initialMessage,
+    this.contextualMoodLevel,
+    this.userName,
+  });
 
   @override
   State<ChatbotScreen> createState() => _ChatbotScreenState();
@@ -69,6 +78,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   String? _sessionId;
   bool _isTyping = false;
   bool _showMenu = false;
+
+  // Voice recording & TTS states
+  bool _isRecordingVoice = false;
+  String? _currentlySpeakingContent;
+  int? _activeMoodContext;
 
   AvatarModel _currentAvatar = AvatarData.defaultAvatar;
   final ImagePicker _imagePicker = ImagePicker();
@@ -122,16 +136,41 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   @override
   void initState() {
     super.initState();
+    _activeMoodContext = widget.contextualMoodLevel;
     _dotController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat();
     _dotAnimation = Tween<double>(begin: 0, end: 1).animate(_dotController);
-    _loadSavedAvatar().then((_) {
-      // Pre-fill initial message from article discussion button
+    _loadSavedAvatar().then((_) async {
+      // 1. Pre-fill initial message from article discussion button if present
       if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _sendMessage(widget.initialMessage!);
+        });
+        return;
+      }
+
+      // 2. Feature A: Contextual Mood-to-Chat Bridge
+      // If student has a logged mood today and no active chat messages yet, greet them contextually
+      int? effectiveMood = _activeMoodContext;
+      effectiveMood ??= await OfflineMoodQueue().getTodayOfflineMood();
+
+      if (effectiveMood != null && _messages.isEmpty && mounted) {
+        final name = widget.userName != null && widget.userName!.isNotEmpty
+            ? (widget.userName![0].toUpperCase() + widget.userName!.substring(1))
+            : 'Friend';
+        String greeting;
+        if (effectiveMood <= 2) {
+          greeting = "I noticed you're having a low day today, $name. 💙 You don't have to carry it alone. Would you like to talk about what's weighing on you, or would you prefer a quick grounding exercise?";
+        } else if (effectiveMood == 3) {
+          greeting = "Kumusta $name! 🌿 I see you're feeling okay today. How is everything going so far? I'm right here whenever you need a listening ear.";
+        } else {
+          greeting = "Magandang araw $name! ✨ Glad to hear you're feeling ${effectiveMood == 5 ? 'great' : 'good'} today! What's something that made you smile?";
+        }
+
+        setState(() {
+          _messages.add(_ChatMessage(role: 'assistant', content: greeting));
         });
       }
     });
@@ -188,8 +227,54 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     await _storage.write(key: 'show_chatbot_quick_prompts', value: _showQuickPrompts.toString());
   }
 
+  void _toggleVoiceRecording() {
+    if (!_isRecordingVoice) {
+      HapticService.heavyTap();
+      setState(() {
+        _isRecordingVoice = true;
+      });
+      VoiceAudioService().startListening(
+        onResult: (transcript) {
+          if (mounted) {
+            setState(() {
+              _inputController.text = transcript;
+            });
+          }
+        },
+      );
+    } else {
+      HapticService.mediumTap();
+      VoiceAudioService().stopListening();
+      setState(() {
+        _isRecordingVoice = false;
+      });
+      final textToSend = _inputController.text.trim();
+      if (textToSend.isNotEmpty) {
+        _sendMessage(textToSend);
+      }
+    }
+  }
+
+  void _toggleTts(String text) {
+    if (_currentlySpeakingContent == text && VoiceAudioService().isSpeaking) {
+      VoiceAudioService().stopSpeaking();
+      setState(() => _currentlySpeakingContent = null);
+    } else {
+      HapticService.lightTap();
+      setState(() => _currentlySpeakingContent = text);
+      VoiceAudioService().speak(
+        text,
+        onDone: () {
+          if (mounted) setState(() => _currentlySpeakingContent = null);
+        },
+      );
+    }
+  }
+
   @override
   void dispose() {
+    VoiceAudioService().stopSpeaking();
+    VoiceAudioService().stopListening();
     AmbientAudioService.instance.removeListener(_onAmbientAudioChanged);
     _inputController.dispose();
     _scrollController.dispose();
@@ -1127,6 +1212,40 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     ),
                   ),
                 ),
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: () => _toggleTts(msg.content),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _currentlySpeakingContent == msg.content ? const Color(0xFFE0F2FE) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      border: _currentlySpeakingContent == msg.content
+                          ? Border.all(color: const Color(0xFFBAE6FD))
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _currentlySpeakingContent == msg.content ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
+                          size: 13,
+                          color: _currentlySpeakingContent == msg.content ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _currentlySpeakingContent == msg.content ? 'Speaking • Tap to stop' : 'Listen 🔊',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: _currentlySpeakingContent == msg.content ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 if (msg.isCrisis) _buildCrisisCard(),
               ],
             ),
@@ -1415,6 +1534,54 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
             ),
           ],
+          if (_isRecordingVoice)
+            Container(
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.mic_rounded, color: Color(0xFFDC2626), size: 18),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Listening... Speak freely 🎙️',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF991B1B),
+                      ),
+                    ),
+                  ),
+                  const _SoundwaveBars(),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: _toggleVoiceRecording,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Send Voice',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -1454,10 +1621,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       style: AppTextStyles.body.copyWith(
                           fontSize: 14, color: const Color(0xFF191C21)),
                       decoration: InputDecoration(
-                        hintText: 'Start conversation...',
+                        hintText: _isRecordingVoice ? 'Listening to your voice...' : 'Start conversation...',
                         hintStyle: AppTextStyles.body.copyWith(
                           fontSize: 14,
-                          color: const Color(0xFF9BA4B4),
+                          color: _isRecordingVoice ? const Color(0xFFDC2626) : const Color(0xFF9BA4B4),
                         ),
                         border: InputBorder.none,
                         contentPadding:
@@ -1465,27 +1632,54 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () => _sendMessage(_inputController.text),
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0x330077B6),
-                            blurRadius: 6,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
+                  // Mic Button (Hold / Tap to record voice note)
+                  Semantics(
+                    label: _isRecordingVoice ? 'Stop voice recording and send' : 'Record voice message',
+                    button: true,
+                    child: GestureDetector(
+                      onTap: _toggleVoiceRecording,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: _isRecordingVoice ? const Color(0xFFFEF2F2) : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isRecordingVoice ? Icons.stop_circle_rounded : Icons.mic_none_rounded,
+                          color: _isRecordingVoice ? const Color(0xFFDC2626) : AppColors.primary,
+                          size: 22,
+                        ),
                       ),
-                      child: const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 16),
                     ),
                   ),
+                  const SizedBox(width: 4),
+                  // Send Text Button
+                  Semantics(
+                    label: 'Send text message',
+                    button: true,
+                    child: GestureDetector(
+                      onTap: () => _sendMessage(_inputController.text),
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x330077B6),
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.send_rounded,
+                            color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
                 ],
               ),
             ),

@@ -36,6 +36,12 @@ class User(SQLModel, table=True):
     # Role & Status
     role: UserRole = Field(default=UserRole.client)
     is_active: bool = Field(default=True)
+    is_deleted: bool = Field(default=False)
+    deleted_at: Optional[datetime] = Field(default=None)
+    deactivated_at: Optional[datetime] = Field(default=None)
+    deactivation_reason: Optional[str] = Field(default=None)
+    reactivation_appeal: Optional[str] = Field(default=None)
+    reactivation_appeal_at: Optional[datetime] = Field(default=None)
 
     # Basic info
     first_name: str

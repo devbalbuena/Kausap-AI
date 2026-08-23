@@ -4,6 +4,9 @@ import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 
+import '../../services/offline_mood_queue.dart';
+import '../../services/connectivity_service.dart';
+
 import 'daily_checkin_complete_screen.dart';
 
 class DailyCheckinStep3Screen extends StatefulWidget {
@@ -34,25 +37,51 @@ class _DailyCheckinStep3ScreenState extends State<DailyCheckinStep3Screen> {
 
   Future<void> _submit(String? note) async {
     setState(() => _isLoading = true);
-    
-    try {
-      final payload = {
-        'mood_level': widget.moodLevel,
-        'emotions': widget.emotions,
-        'intensity': widget.intensity,
-        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
-      };
 
+    final payload = {
+      'mood_level': widget.moodLevel,
+      'emotions': widget.emotions,
+      'intensity': widget.intensity,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    };
+
+    final isOnline = ConnectivityService().isOnline;
+
+    if (!isOnline) {
+      // ── Option A: Offline Mode — Queue locally and proceed seamlessly ──
+      await OfflineMoodQueue().enqueueMood(
+        moodLevel: widget.moodLevel,
+        emotions: widget.emotions,
+        intensity: widget.intensity,
+        note: note?.trim(),
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        slideRoute(const DailyCheckinCompleteScreen()),
+      );
+      return;
+    }
+
+    try {
       await ApiClient().post(ApiConfig.mood, body: payload);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         slideRoute(const DailyCheckinCompleteScreen()),
       );
-    } catch (e) {
+    } catch (_) {
+      // Network failure while online — save to offline queue as fallback
+      await OfflineMoodQueue().enqueueMood(
+        moodLevel: widget.moodLevel,
+        emotions: widget.emotions,
+        intensity: widget.intensity,
+        note: note?.trim(),
+      );
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save check-in: $e')),
+      Navigator.of(context).pushReplacement(
+        slideRoute(const DailyCheckinCompleteScreen()),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);

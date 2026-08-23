@@ -11,9 +11,30 @@ from app.database import get_session
 from app.core.deps import get_current_admin, get_current_user_optional
 from app.models.user import User
 from app.models.article import Article, ArticleReaction
+from app.models.audit_log import AuditLog
 
 router = APIRouter(prefix="/articles", tags=["Articles"])
 admin_router = APIRouter(prefix="/admin/articles", tags=["Admin Articles"])
+
+
+def _write_article_audit(
+    db: Session,
+    admin: User,
+    action: str,
+    article_id: str,
+    detail: Optional[str] = None,
+) -> None:
+    """Write an audit log entry for admin article management actions."""
+    entry = AuditLog(
+        admin_id=admin.id,
+        admin_email=admin.email,
+        action=action,
+        target_type="article",
+        target_id=article_id,
+        detail=detail,
+    )
+    db.add(entry)
+    db.commit()
 
 class ArticleCreate(BaseModel):
     title: str
@@ -215,6 +236,10 @@ def admin_create_article(
     session.add(article)
     session.commit()
     session.refresh(article)
+
+    _write_article_audit(session, admin, "article_published", article.id,
+                         detail=f"Published: '{article.title}'")
+
     return _format_article_read(article)
 
 @admin_router.put("/{article_id}", response_model=ArticleRead)
@@ -237,6 +262,10 @@ def admin_update_article(
     session.add(article)
     session.commit()
     session.refresh(article)
+
+    _write_article_audit(session, admin, "article_updated", article_id,
+                         detail=f"Updated fields: {', '.join(update_data.keys())} on '{article.title}'")
+
     return _format_article_read(article)
 
 @admin_router.patch("/{article_id}", response_model=ArticleRead)
@@ -259,6 +288,10 @@ def admin_patch_article(
     session.add(article)
     session.commit()
     session.refresh(article)
+
+    _write_article_audit(session, admin, "article_updated", article_id,
+                         detail=f"Patched: {', '.join(update_data.keys())} on '{article.title}'")
+
     return _format_article_read(article)
 
 @admin_router.delete("/{article_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -271,6 +304,12 @@ def admin_delete_article(
     article = session.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+
+    title_snapshot = article.title
     session.delete(article)
     session.commit()
+
+    _write_article_audit(session, admin, "article_deleted", article_id,
+                         detail=f"Permanently deleted: '{title_snapshot}'")
+
     return None

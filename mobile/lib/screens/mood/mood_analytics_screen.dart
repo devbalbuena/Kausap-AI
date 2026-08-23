@@ -59,7 +59,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
       _error = null;
     });
     try {
-      final data = await ApiClient().get(ApiConfig.mood);
+      final data = await ApiClient().get(ApiConfig.mood, silent: true);
       if (mounted) {
         setState(() {
           _entries = List<Map<String, dynamic>>.from(data as List);

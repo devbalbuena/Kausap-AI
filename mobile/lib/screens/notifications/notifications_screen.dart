@@ -59,7 +59,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     bool moodLogged = false;
     int moodCount = 0;
     try {
-      final moodData = await ApiClient().get(ApiConfig.mood);
+      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       if (moodData is List) {
         moodCount = moodData.length;
         moodLogged = moodData.any((e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false);

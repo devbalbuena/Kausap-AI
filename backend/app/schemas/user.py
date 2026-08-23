@@ -39,6 +39,12 @@ class UserRead(BaseModel):
     email: str
     role: UserRole
     is_active: bool
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    deactivated_at: Optional[datetime] = None
+    deactivation_reason: Optional[str] = None
+    reactivation_appeal: Optional[str] = None
+    reactivation_appeal_at: Optional[datetime] = None
     first_name: str
     last_name: str
     phone_number: str

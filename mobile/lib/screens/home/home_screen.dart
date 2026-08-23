@@ -20,6 +20,7 @@ import '../profile/profile_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
+import '../../services/offline_mood_queue.dart';
 import '../crisis/sos_screen.dart';
 import '../crisis/quick_escape_screen.dart';
 import '../articles/articles_data.dart';
@@ -117,6 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchQuests();
     _fetchMoodTrends();
     _fetchHomeArticles();
+    // Silently sync any queued offline moods
+    OfflineMoodQueue().syncPendingMoods();
   }
 
   String _getMoodEmojiAndLabel(int level) {
@@ -142,6 +145,42 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     HapticService.mediumTap();
+
+    final isOnline = ConnectivityService().isOnline;
+
+    if (!isOnline) {
+      // ── Option A: Offline Mode — Queue locally and proceed seamlessly ──
+      await OfflineMoodQueue().enqueueMood(
+        moodLevel: level,
+        intensity: level,
+      );
+
+      if (mounted) {
+        setState(() {
+          _todayMoodLevel = level;
+          _dailyQuests[0]['completed'] = true;
+        });
+        HapticService.success();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Mood checked in as ${_getMoodEmojiAndLabel(level)}! ✅ Saved locally • Will sync online.'),
+            backgroundColor: const Color(0xFF16A34A),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        _fetchStreak();
+        _fetchQuests();
+        _fetchMoodTrends();
+
+        if (level <= 3) {
+          _openCaringSupportSheet(level);
+        } else {
+          _openCelebrationSheet(level);
+        }
+      }
+      return;
+    }
+
     try {
       await ApiClient().post(ApiConfig.mood, body: {
         'mood_level': level,
@@ -173,10 +212,33 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (_) {
+      // Network failure fallback — enqueue offline
+      await OfflineMoodQueue().enqueueMood(
+        moodLevel: level,
+        intensity: level,
+      );
       if (mounted) {
+        setState(() {
+          _todayMoodLevel = level;
+          _dailyQuests[0]['completed'] = true;
+        });
+        HapticService.success();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save mood. Please try again.')),
+          SnackBar(
+            content: Text('Mood checked in as ${_getMoodEmojiAndLabel(level)}! ✅ Saved locally • Will sync online.'),
+            backgroundColor: const Color(0xFF16A34A),
+            duration: const Duration(seconds: 3),
+          ),
         );
+        _fetchStreak();
+        _fetchQuests();
+        _fetchMoodTrends();
+
+        if (level <= 3) {
+          _openCaringSupportSheet(level);
+        } else {
+          _openCelebrationSheet(level);
+        }
       }
     }
   }
@@ -286,9 +348,16 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Show a friendly mood check-in pop-up on app start if not yet logged today.
   Future<void> _maybeShowMoodPopup() async {
     if (!mounted) return;
+    // Check if already logged offline today
+    final offlineMood = await OfflineMoodQueue().getTodayOfflineMood();
+    if (offlineMood != null) {
+      if (mounted) setState(() => _todayMoodLevel = offlineMood);
+      return;
+    }
+
     try {
       final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final moodData = await ApiClient().get(ApiConfig.mood);
+      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       if (moodData is List) {
         final loggedToday = moodData.any(
           (e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false,
@@ -311,9 +380,9 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-      // 1. Check mood
+      // 1. Check mood from API
       try {
-        final moodData = await ApiClient().get(ApiConfig.mood);
+        final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
         if (moodData is List) {
           final todayEntries = moodData.where(
             (e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false,
@@ -325,6 +394,15 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       } catch (_) {}
+
+      // 1b. Check local offline mood queue if not detected from API
+      if (!moodCompleted) {
+        final offlineToday = await OfflineMoodQueue().getTodayOfflineMood();
+        if (offlineToday != null) {
+          moodCompleted = true;
+          todayLevel = offlineToday;
+        }
+      }
 
       // 2. Check journal
       final storage = const FlutterSecureStorage();
@@ -353,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchStreak() async {
     try {
-      final moodData = await ApiClient().get(ApiConfig.mood);
+      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       if (moodData is! List || !mounted) return;
 
       // Collect unique calendar days that have at least one mood entry
@@ -391,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchMoodTrends() async {
     try {
-      final moodData = await ApiClient().get(ApiConfig.mood);
+      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       if (moodData is! List || !mounted) return;
 
       final now = DateTime.now();
@@ -581,7 +659,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> tabs = [
       _buildHomeTab(),                                      // 0 – Home
       const ActivityScreen(),                              // 1 – Activity
-      const ChatbotScreen(),                               // 2 – Kausap AI
+      ChatbotScreen(
+        contextualMoodLevel: _todayMoodLevel,
+        userName: _firstName,
+      ),                               // 2 – Kausap AI
       const StudentInsightsScreen(),                       // 3 – Insights & Screeners
       const ArticlesScreen(),                              // 4 – Articles
     ];
@@ -922,44 +1003,49 @@ class _HomeScreenState extends State<HomeScreen> {
               final isDimmed = hasLogged && !isSelected;
 
               return Expanded(
-                child: GestureDetector(
-                  onTap: () => _logMood(level),
-                  behavior: HitTestBehavior.opaque,
-                  child: Opacity(
-                    opacity: isDimmed ? 0.5 : 1.0,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected ? color.withAlpha(25) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isSelected ? color : const Color(0xFFE2E8F0),
-                          width: isSelected ? 2 : 1,
+                child: Semantics(
+                  label: 'Mood option: ${item['label']}, level $level of 5${isSelected ? ', currently selected' : ''}',
+                  button: true,
+                  selected: isSelected,
+                  child: GestureDetector(
+                    onTap: () => _logMood(level),
+                    behavior: HitTestBehavior.opaque,
+                    child: Opacity(
+                      opacity: isDimmed ? 0.5 : 1.0,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? color.withAlpha(25) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected ? color : const Color(0xFFE2E8F0),
+                            width: isSelected ? 2 : 1,
+                          ),
+                          boxShadow: isSelected
+                              ? [BoxShadow(color: color.withAlpha(40), blurRadius: 8, offset: const Offset(0, 2))]
+                              : [],
                         ),
-                        boxShadow: isSelected
-                            ? [BoxShadow(color: color.withAlpha(40), blurRadius: 8, offset: const Offset(0, 2))]
-                            : [],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            item['emoji'] as String,
-                            style: TextStyle(fontSize: isSelected ? 24 : 20),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item['label'] as String,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 10,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                              color: isSelected ? color : const Color(0xFF64748B),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              item['emoji'] as String,
+                              style: TextStyle(fontSize: isSelected ? 24 : 20),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              item['label'] as String,
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 10,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? color : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -2142,31 +2228,37 @@ class _MoodPopupSheetState extends State<_MoodPopupSheet>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: emojis.map((item) {
-                return GestureDetector(
-                  onTap: _isSaving ? null : () => _select(item['level'] as int),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withAlpha(15),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: AppColors.primary.withAlpha(40), width: 1),
+                final label = item['label'] as String;
+                final level = item['level'] as int;
+                return Semantics(
+                  label: 'Check in feeling $label, level $level of 5',
+                  button: true,
+                  child: GestureDetector(
+                    onTap: _isSaving ? null : () => _select(level),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(15),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: AppColors.primary.withAlpha(40), width: 1),
+                          ),
+                          child: Center(
+                            child: Text(item['emoji'] as String,
+                                style: const TextStyle(fontSize: 28)),
+                          ),
                         ),
-                        child: Center(
-                          child: Text(item['emoji'] as String,
-                              style: const TextStyle(fontSize: 28)),
+                        const SizedBox(height: 6),
+                        Text(
+                          label,
+                          style: AppTextStyles.caption
+                              .copyWith(color: AppColors.textSecondary),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        item['label'] as String,
-                        style: AppTextStyles.caption
-                            .copyWith(color: AppColors.textSecondary),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               }).toList(),
@@ -2174,13 +2266,17 @@ class _MoodPopupSheetState extends State<_MoodPopupSheet>
             const SizedBox(height: 20),
 
             // Skip link
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Text(
-                'Skip for now',
-                style: AppTextStyles.body.copyWith(
-                    color: AppColors.textSecondary,
-                    decoration: TextDecoration.underline),
+            Semantics(
+              label: 'Skip mood check-in for now',
+              button: true,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Skip for now',
+                  style: AppTextStyles.body.copyWith(
+                      color: AppColors.textSecondary,
+                      decoration: TextDecoration.underline),
+                ),
               ),
             ),
           ],

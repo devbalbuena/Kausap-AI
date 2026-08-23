@@ -107,9 +107,9 @@ class _OfflineBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       decoration: const BoxDecoration(
-        color: Color(0xFF1A1A2E),
+        color: Color(0xFF0F172A),
         boxShadow: [
           BoxShadow(
             color: Color(0x44000000),
@@ -122,38 +122,39 @@ class _OfflineBanner extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFB703).withAlpha(30),
+              color: const Color(0xFFF59E0B).withAlpha(35),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.wifi_off_rounded, color: Color(0xFFFFB703), size: 16),
+            child: const Icon(Icons.cloud_off_rounded, color: Color(0xFFF59E0B), size: 15),
           ),
           const SizedBox(width: 10),
           const Flexible(
             child: Text(
-              'No internet connection',
+              "You're offline • Showing saved content",
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                fontFamily: 'Inter',
+                fontFamily: 'Poppins',
               ),
             ),
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.white.withAlpha(20),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: const Text(
-              'Using cached data',
+              'Syncs when reconnected',
               style: TextStyle(
-                color: Color(0xFFCBD5E1),
+                color: Color(0xFF94A3B8),
                 fontSize: 10,
                 fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -170,7 +171,7 @@ class _RestoredBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       decoration: const BoxDecoration(
         color: Color(0xFF065F46),
         boxShadow: [
@@ -185,22 +186,22 @@ class _RestoredBanner extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               color: const Color(0xFF6EE7B7).withAlpha(40),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.wifi_rounded, color: Color(0xFF6EE7B7), size: 16),
+            child: const Icon(Icons.cloud_done_rounded, color: Color(0xFF6EE7B7), size: 15),
           ),
           const SizedBox(width: 10),
           const Flexible(
             child: Text(
-              'Connection restored ✓',
+              'Connection restored ✓ • Syncing data...',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                fontFamily: 'Inter',
+                fontFamily: 'Poppins',
               ),
             ),
           ),

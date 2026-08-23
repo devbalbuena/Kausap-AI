@@ -437,37 +437,43 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                 itemCount: ArticlesData.categories.length,
                 itemBuilder: (context, index) {
                   final isSelected = index == _selectedCategoryIndex;
-                  return GestureDetector(
-                    onTap: () {
-                      HapticService.lightTap();
-                      setState(() => _selectedCategoryIndex = index);
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected ? AppColors.primary : const Color(0x33C0C9C2),
+                  final categoryName = ArticlesData.categories[index];
+                  return Semantics(
+                    label: '$categoryName category filter chip${isSelected ? ', currently active' : ''}',
+                    button: true,
+                    selected: isSelected,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticService.lightTap();
+                        setState(() => _selectedCategoryIndex = index);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary : const Color(0x33C0C9C2),
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(alpha: 0.3),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Text(
-                        ArticlesData.categories[index],
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : const Color(0xFF4B5563),
+                        child: Text(
+                          categoryName,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : const Color(0xFF4B5563),
+                          ),
                         ),
                       ),
                     ),

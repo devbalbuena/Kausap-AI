@@ -12,6 +12,12 @@ class UserSummary(BaseModel):
     full_name: Optional[str]
     role: str
     is_active: bool
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    deactivated_at: Optional[datetime] = None
+    deactivation_reason: Optional[str] = None
+    reactivation_appeal: Optional[str] = None
+    reactivation_appeal_at: Optional[datetime] = None
     created_at: datetime
     mood_entries_count: int
     chat_sessions_count: int
@@ -38,6 +44,12 @@ class UserDetail(BaseModel):
     full_name: Optional[str]
     role: str
     is_active: bool
+    is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
+    deactivated_at: Optional[datetime] = None
+    deactivation_reason: Optional[str] = None
+    reactivation_appeal: Optional[str] = None
+    reactivation_appeal_at: Optional[datetime] = None
     created_at: datetime
     phone_number: Optional[str] = None
     birthday: Optional[str] = None

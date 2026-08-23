@@ -11,6 +11,7 @@ import '../../utils/app_validators.dart';
 import '../home/home_screen.dart';
 import '../signup/client_signup_step1_screen.dart';
 import 'forgot_password_screen.dart';
+import 'deactivated_account_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
 /// Clean, Generic Login Screen for Students and Administrators.
@@ -70,11 +71,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // Auto-detect role and route
+      // Auto-detect role and active status and route
       final user = authProvider.currentUser;
       if (user != null) {
         HapticService.success();
-        if (user['role'] == 'admin') {
+        if (user['is_active'] == false) {
+          Navigator.of(context).pushAndRemoveUntil(
+            slideRoute(DeactivatedAccountScreen(userProfile: user)),
+            (route) => false,
+          );
+        } else if (user['role'] == 'admin') {
           Navigator.of(context).pushAndRemoveUntil(
             slideRoute(const AdminDashboardScreen()),
             (route) => false,
@@ -101,7 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void _parseApiError(ApiException e) {
     final detail = e.message.toLowerCase();
 
-    if (e.statusCode == 401 || e.statusCode == 400) {
+    if (e.statusCode == 403 && (detail.contains('deleted') || detail.contains('archived'))) {
+      setState(() => _bannerError = 'This account has been archived. Please contact the Guidance Office for restoration.');
+    } else if (e.statusCode == 401 || e.statusCode == 400) {
       if (detail.contains('email') || detail.contains('not found') || detail.contains('no account')) {
         setState(() => _emailError = 'No account found with this email.');
       } else if (detail.contains('password') || detail.contains('incorrect')) {

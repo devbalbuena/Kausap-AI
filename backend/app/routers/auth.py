@@ -13,9 +13,15 @@ import uuid
 otp_cache = {}  # dict of email -> str (OTP)
 reset_token_cache = {}  # dict of token -> email
 from app.core.security import hash_password, verify_password, create_access_token
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_user_allow_inactive
+from pydantic import BaseModel
+from datetime import datetime
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+class AppealRequest(BaseModel):
+    appeal_message: str
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -69,17 +75,35 @@ def login(credentials: LoginRequest, session: Annotated[Session, Depends(get_ses
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
+    if user.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has been deleted or archived. Please contact the Guidance Office for restoration.",
+        )
 
     token = create_access_token(data={"sub": str(user.id), "role": user.role})
     return Token(access_token=token)
 
 
 @router.get("/me", response_model=UserRead)
-def me(current_user: Annotated[User, Depends(get_current_user)]):
-    """Return the currently authenticated user's profile."""
+def me(current_user: Annotated[User, Depends(get_current_user_allow_inactive)]):
+    """Return the currently authenticated user's profile (including deactivated status)."""
     return current_user
+
+
+@router.post("/appeal")
+def submit_reactivation_appeal(
+    payload: AppealRequest,
+    current_user: Annotated[User, Depends(get_current_user_allow_inactive)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Allow a deactivated user to submit an appeal to the guidance center."""
+    current_user.reactivation_appeal = payload.appeal_message.strip()
+    current_user.reactivation_appeal_at = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    return {"message": "Reactivation appeal submitted successfully to the Guidance Office."}
 
 
 @router.put("/me", response_model=UserRead)
