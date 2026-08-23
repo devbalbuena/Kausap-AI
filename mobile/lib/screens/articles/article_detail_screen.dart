@@ -2,10 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/api_client.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
 import '../chat/chatbot_screen.dart';
 import 'articles_data.dart';
+
+// ─ Recently-read key
+const String _kRecentlyReadKey = 'recently_read_article_ids';
 
 // ── Reaction model ──────────────────────────────────────────────────────────
 class _Reaction {
@@ -37,6 +41,8 @@ class ArticleDetailScreen extends StatefulWidget {
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerProviderStateMixin {
   bool _isBookmarked = false;
+  double _readProgress = 0.0;
+  final ScrollController _scrollCtrl = ScrollController();
 
   /// Map of reaction index -> count
   Map<int, int> _reactionCounts = {};
@@ -59,12 +65,35 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
       TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1.0), weight: 50),
     ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut));
     _loadReactions();
+    _saveRecentlyRead();
+    _scrollCtrl.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _bounceController.dispose();
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final max = _scrollCtrl.position.maxScrollExtent;
+    if (max <= 0) return;
+    final progress = (_scrollCtrl.offset / max).clamp(0.0, 1.0);
+    if ((progress - _readProgress).abs() > 0.01) {
+      setState(() => _readProgress = progress);
+    }
+  }
+
+  Future<void> _saveRecentlyRead() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getStringList(_kRecentlyReadKey) ?? [];
+      final updated = [widget.article.id, ...raw.where((id) => id != widget.article.id)].take(5).toList();
+      await prefs.setStringList(_kRecentlyReadKey, updated);
+    } catch (_) {}
   }
 
   String get _reactionsKey => 'article_reactions_${widget.article.id}';
@@ -116,6 +145,12 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
         _reactionCounts[index] = (_reactionCounts[index] ?? 0) + 1;
         _myReaction = index;
         _bounceController.forward(from: 0);
+
+        // Sync with backend API in background
+        ApiClient().post('/articles/${widget.article.id}/react', body: {
+          'emoji': _reactions[index].emoji,
+          'label': _reactions[index].label,
+        }).catchError((_) => null);
       }
     });
     _saveReactions();
@@ -217,8 +252,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
-      body: CustomScrollView(
-        slivers: [
+      body: Stack(
+        children: [
+          CustomScrollView(
+            controller: _scrollCtrl,
+            slivers: [
           // Header App Bar with Hero Image / Gradient Banner
           SliverAppBar(
             expandedHeight: hasImage ? 220 : 180,
@@ -716,6 +754,24 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
           ),
         ],
       ),
-    );
-  }
+      // Reading progress bar pinned at top
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: SafeArea(
+          bottom: false,
+          child: LinearProgressIndicator(
+            value: _readProgress,
+            backgroundColor: Colors.transparent,
+            color: widget.article.themeColor.withAlpha(180),
+            minHeight: 3,
+          ),
+        ),
+      ),
+    ],
+  ),
+);
 }
+}
+

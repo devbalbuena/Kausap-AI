@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class ArticleModel {
@@ -14,6 +14,17 @@ class ArticleModel {
   final Color themeColor;
   final List<ArticleSection> sections;
   final bool isPublished;
+  // Lifecycle: 'draft' | 'published' | 'archived'
+  final String status;
+  // Featured hero card
+  final bool isFeatured;
+  // Engagement counts (synced from backend)
+  final Map<String, int> reactionCounts;
+  final int viewCount;
+  final int shareCount;
+  final int aiDiscussionCount;
+  // Built-in default article (not admin-created)
+  final bool isBuiltIn;
 
   const ArticleModel({
     required this.id,
@@ -28,7 +39,45 @@ class ArticleModel {
     required this.themeColor,
     required this.sections,
     this.isPublished = true,
+    this.status = 'published',
+    this.isFeatured = false,
+    this.reactionCounts = const {},
+    this.viewCount = 0,
+    this.shareCount = 0,
+    this.aiDiscussionCount = 0,
+    this.isBuiltIn = false,
   });
+
+  ArticleModel copyWith({
+    String? status,
+    bool? isFeatured,
+    Map<String, int>? reactionCounts,
+    int? viewCount,
+    int? shareCount,
+    int? aiDiscussionCount,
+  }) {
+    return ArticleModel(
+      id: id,
+      title: title,
+      subtitle: subtitle,
+      category: category,
+      readTime: readTime,
+      author: author,
+      authorRole: authorRole,
+      imageUrl: imageUrl,
+      categoryIcon: categoryIcon,
+      themeColor: themeColor,
+      sections: sections,
+      isPublished: isPublished,
+      status: status ?? this.status,
+      isFeatured: isFeatured ?? this.isFeatured,
+      reactionCounts: reactionCounts ?? this.reactionCounts,
+      viewCount: viewCount ?? this.viewCount,
+      shareCount: shareCount ?? this.shareCount,
+      aiDiscussionCount: aiDiscussionCount ?? this.aiDiscussionCount,
+      isBuiltIn: isBuiltIn,
+    );
+  }
 
   factory ArticleModel.fromJson(Map<String, dynamic> json) {
     final cat = json['category'] as String? ?? 'Mental Awareness';
@@ -53,6 +102,14 @@ class ArticleModel {
       secList = (json['sections'] as List).map((s) => ArticleSection.fromJson(s as Map<String, dynamic>)).toList();
     }
 
+    // Parse reaction counts
+    Map<String, int> reactions = {};
+    if (json['reaction_counts'] is Map) {
+      (json['reaction_counts'] as Map).forEach((k, v) {
+        reactions[k.toString()] = (v as num?)?.toInt() ?? 0;
+      });
+    }
+
     return ArticleModel(
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? 'Untitled',
@@ -66,6 +123,13 @@ class ArticleModel {
       themeColor: color,
       sections: secList,
       isPublished: json['is_published'] as bool? ?? true,
+      status: json['status'] as String? ?? 'published',
+      isFeatured: json['is_featured'] as bool? ?? false,
+      reactionCounts: reactions,
+      viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
+      shareCount: (json['share_count'] as num?)?.toInt() ?? 0,
+      aiDiscussionCount: (json['ai_discussion_count'] as num?)?.toInt() ?? 0,
+      isBuiltIn: json['is_built_in'] as bool? ?? false,
     );
   }
 
@@ -82,6 +146,12 @@ class ArticleModel {
       'theme_color_hex': '#${themeColor.toARGB32().toRadixString(16).substring(2)}',
       'content_json': jsonEncode(sections.map((s) => s.toJson()).toList()),
       'is_published': isPublished,
+      'status': status,
+      'is_featured': isFeatured,
+      'reaction_counts': reactionCounts,
+      'view_count': viewCount,
+      'share_count': shareCount,
+      'ai_discussion_count': aiDiscussionCount,
     };
   }
 }
@@ -159,7 +229,7 @@ class ArticlesData {
     return combined;
   }
 
-  static const List<ArticleModel> all = [
+  static final List<ArticleModel> all = [
     ArticleModel(
       id: 'student-burnout-awareness',
       title: 'Overcoming Academic and Work Burnout',
@@ -170,6 +240,7 @@ class ArticlesData {
       authorRole: 'Clinical Psychologist',
       categoryIcon: Icons.school_rounded,
       themeColor: Color(0xFF0284C7),
+      isBuiltIn: true,
       sections: [
         ArticleSection(
           heading: 'What is Student Burnout?',
@@ -204,6 +275,7 @@ class ArticlesData {
       authorRole: 'CBT Wellness Coach',
       categoryIcon: Icons.psychology_rounded,
       themeColor: Color(0xFF7C3AED),
+      isBuiltIn: true,
       sections: [
         ArticleSection(
           heading: 'Understanding Thought Distortions',
@@ -237,6 +309,7 @@ class ArticlesData {
       authorRole: 'Family & Youth Counselor',
       categoryIcon: Icons.diversity_3_rounded,
       themeColor: Color(0xFF059669),
+      isBuiltIn: true,
       sections: [
         ArticleSection(
           heading: 'The Cultural Context of Boundaries',
@@ -270,6 +343,7 @@ class ArticlesData {
       authorRole: 'Crisis Intervention Specialists',
       categoryIcon: Icons.emergency_rounded,
       themeColor: Color(0xFFDC2626),
+      isBuiltIn: true,
       sections: [
         ArticleSection(
           heading: 'Why Awareness Saves Lives',
@@ -290,7 +364,7 @@ class ArticlesData {
         ArticleSection(
           heading: 'Immediate 24/7 Support Resources in the Philippines',
           content:
-              'Never hesitate to call or share these free confidential resources:\n• NCMH Crisis Helpline: 1553 (Toll-free 24/7) or 0917-899-8727\n• Hopeline Philippines: (02) 8804-4673 / 0917-558-4673\n• In Touch Community: 0917-800-1123\n• National Emergency Services: 911',
+              'Never hesitate to call or share these free confidential resources:\nâ€¢ NCMH Crisis Helpline: 1553 (Toll-free 24/7) or 0917-899-8727\nâ€¢ Hopeline Philippines: (02) 8804-4673 / 0917-558-4673\nâ€¢ In Touch Community: 0917-800-1123\nâ€¢ National Emergency Services: 911',
         ),
       ],
     ),
@@ -304,6 +378,7 @@ class ArticlesData {
       authorRole: 'Sleep Specialist',
       categoryIcon: Icons.bedtime_rounded,
       themeColor: Color(0xFF4F46E5),
+      isBuiltIn: true,
       sections: [
         ArticleSection(
           heading: 'Sleep and Memory Consolidation',

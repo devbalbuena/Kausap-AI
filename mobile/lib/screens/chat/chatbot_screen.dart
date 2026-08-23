@@ -17,6 +17,7 @@ import 'select_avatar_screen.dart';
 import 'chat_history_screen.dart';
 import 'voice_call_screen.dart';
 import '../articles/articles_screen.dart';
+import '../profile/profile_screen.dart';
 import '../subscription/upgrade_plan_screen.dart';
 
 /// A single message in the chat (either user or assistant).
@@ -1549,6 +1550,16 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 onTap: () {
                   setState(() => _showMenu = false);
                   Navigator.of(context).push(slideRoute(const ArticlesScreen()));
+                },
+              ),
+              _MenuDivider(),
+              _MenuItem(
+                icon: Icons.person_outline_rounded,
+                label: 'My Profile',
+                iconColor: const Color(0xFF0F172A),
+                onTap: () {
+                  setState(() => _showMenu = false);
+                  Navigator.of(context).push(slideRoute(const ProfileScreen()));
                 },
               ),
               const SizedBox(height: 4),

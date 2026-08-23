@@ -1,12 +1,18 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/articles_storage_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
+import '../profile/profile_screen.dart';
 import 'articles_data.dart';
 import 'article_detail_screen.dart';
+
+const String _kRecentlyReadKey = 'recently_read_article_ids';
 
 class ArticlesScreen extends StatefulWidget {
   const ArticlesScreen({super.key});
@@ -21,12 +27,14 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   List<ArticleModel> _allArticles = ArticlesData.all;
+  List<ArticleModel> _recentlyRead = [];
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _fetchLiveArticles();
+    _loadRecentlyRead();
   }
 
   @override
@@ -67,9 +75,29 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
     }
   }
 
+  Future<void> _loadRecentlyRead() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ids = prefs.getStringList(_kRecentlyReadKey) ?? [];
+      final recent = ids
+          .map((id) {
+            try {
+              return _allArticles.firstWhere((a) => a.id == id);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<ArticleModel>()
+          .toList();
+      if (mounted) setState(() => _recentlyRead = recent);
+    } catch (_) {}
+  }
+
   List<ArticleModel> get _filteredArticles {
     final category = ArticlesData.categories[_selectedCategoryIndex];
+    // Exclude featured from regular list to avoid duplication
     return _allArticles.where((article) {
+      if (article.isFeatured && _selectedCategoryIndex == 0 && _searchQuery.isEmpty) return false;
       final matchesCategory = category == 'All' || article.category == category;
       final matchesQuery = _searchQuery.isEmpty ||
           article.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -78,6 +106,128 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
           article.author.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCategory && matchesQuery;
     }).toList();
+  }
+
+  ArticleModel? get _featuredArticle {
+    if (_selectedCategoryIndex != 0 || _searchQuery.isNotEmpty) return null;
+    try {
+      return _allArticles.firstWhere((a) => a.isFeatured);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildFeaturedHeroCard(ArticleModel article) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article))),
+      child: Container(
+        height: 170,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [article.themeColor, article.themeColor.withAlpha(180)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: article.themeColor.withAlpha(80), blurRadius: 16, offset: const Offset(0, 6))],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -20, top: -20,
+              child: Icon(article.categoryIcon, size: 130, color: Colors.white.withAlpha(25)),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(40),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('📌 FEATURED', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.8)),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(30),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(article.category, style: const TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w600, color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(article.title,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white, height: 1.3),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(article.readTime, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white70)),
+                      const SizedBox(width: 10),
+                      Text('By ${article.author}', style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white70)),
+                      const Spacer(),
+                      const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentlyReadSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('🕐 Recently Read',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 90,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _recentlyRead.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final a = _recentlyRead[i];
+              return GestureDetector(
+                onTap: () => Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: a))),
+                child: Container(
+                  width: 200,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: a.themeColor.withAlpha(15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: a.themeColor.withAlpha(60)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(a.categoryIcon, size: 16, color: a.themeColor),
+                      const SizedBox(height: 4),
+                      Text(a.title,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -94,36 +244,47 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      HapticService.lightTap();
-                      Navigator.pop(context);
-                    },
-                    child: Container(
+                  if (Navigator.canPop(context))
+                    GestureDetector(
+                      onTap: () {
+                        HapticService.lightTap();
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF191C21)),
+                      ),
+                    )
+                  else
+                    Container(
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        color: AppColors.primary.withAlpha(25),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF191C21)),
+                      child: const Icon(Icons.article_rounded, size: 20, color: AppColors.primary),
                     ),
-                  ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Mental Wellness Articles',
-                          style: AppTextStyles.heading2.copyWith(fontSize: 18),
+                          style: AppTextStyles.heading2.copyWith(fontSize: 17),
                         ),
                         const Text(
                           'Psychoeducation & Student Factsheets',
@@ -138,11 +299,79 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     ),
                   ),
                   if (_isLoading)
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                    const Padding(
+                      padding: EdgeInsets.only(right: 8),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                      ),
                     ),
+                  Consumer<AuthProvider>(
+                    builder: (context, auth, _) {
+                      final user = auth.currentUser ?? {};
+                      final name = user['first_name'] ?? 'U';
+                      final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+                      final avatarUrl = user['avatar_url'] as String?;
+                      final avatar = CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.primary.withAlpha(30),
+                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                            ? NetworkImage(avatarUrl)
+                            : null,
+                        child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                            ? Text(
+                                initial,
+                                style: AppTextStyles.label.copyWith(
+                                    color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 11),
+                              )
+                            : null,
+                      );
+                      return PopupMenuButton<String>(
+                        offset: const Offset(0, 44),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 8,
+                        child: avatar,
+                        onSelected: (value) {
+                          if (value == 'profile') {
+                            HapticService.lightTap();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                            );
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem<String>(
+                            value: 'profile',
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: AppColors.primary.withAlpha(20),
+                                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                                      ? NetworkImage(avatarUrl)
+                                      : null,
+                                  child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                                      ? Text(initial,
+                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
+                                    const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -249,7 +478,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
 
             const SizedBox(height: 8),
 
-            // Articles List
+            // Articles List with Featured Hero + Recently Read
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _fetchLiveArticles,
@@ -278,13 +507,29 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                           ),
                         ],
                       )
-                    : ListView.separated(
+                    : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                        itemCount: filtered.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 14),
+                        itemCount: filtered.length + (_featuredArticle != null ? 1 : 0) + (_recentlyRead.isNotEmpty && _selectedCategoryIndex == 0 && _searchQuery.isEmpty ? 1 : 0),
                         itemBuilder: (context, index) {
-                          final article = filtered[index];
-                          return _buildArticleCard(article);
+                          int offset = 0;
+
+                          // Featured Hero
+                          if (_featuredArticle != null) {
+                            if (index == 0) return Padding(padding: const EdgeInsets.only(bottom: 14), child: _buildFeaturedHeroCard(_featuredArticle!));
+                            offset++;
+                          }
+
+                          // Recently Read
+                          if (_recentlyRead.isNotEmpty && _selectedCategoryIndex == 0 && _searchQuery.isEmpty) {
+                            if (index == offset) return Padding(padding: const EdgeInsets.only(bottom: 14), child: _buildRecentlyReadSection());
+                            offset++;
+                          }
+
+                          final article = filtered[index - offset];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _buildArticleCard(article),
+                          );
                         },
                       ),
               ),

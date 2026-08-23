@@ -25,6 +25,7 @@ import '../crisis/quick_escape_screen.dart';
 import '../articles/articles_data.dart';
 import '../articles/articles_screen.dart';
 import '../articles/article_detail_screen.dart';
+import '../../services/articles_storage_service.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -55,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<double?> _weeklyMoods = List.filled(7, null);
   double? _weeklyAverage;
   int _totalLogsThisWeek = 0;
+  List<ArticleModel> _homeArticles = ArticlesData.all;
   
   final NotificationService _notificationService = NotificationService();
 
@@ -68,8 +70,20 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchStreak();
     _fetchQuests();
     _fetchMoodTrends();
+    _fetchHomeArticles();
     // Show mood popup after first frame if mood not yet logged today
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMoodPopup());
+  }
+
+  Future<void> _fetchHomeArticles() async {
+    try {
+      final local = await ArticlesStorageService.loadLocalArticles();
+      if (mounted) {
+        setState(() {
+          _homeArticles = ArticlesData.mergeWithDefaults(local);
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchQuickEscapePref() async {
@@ -102,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchStreak();
     _fetchQuests();
     _fetchMoodTrends();
+    _fetchHomeArticles();
   }
 
   String _getMoodEmojiAndLabel(int level) {
@@ -568,7 +583,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const ActivityScreen(),                              // 1 – Activity
       const ChatbotScreen(),                               // 2 – Kausap AI
       const StudentInsightsScreen(),                       // 3 – Insights & Screeners
-      const ProfileScreen(),                               // 4 – Profile
+      const ArticlesScreen(),                              // 4 – Articles
     ];
 
     return Scaffold(
@@ -667,32 +682,72 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 12),
           Semantics(
-            label: 'Open profile tab for $_firstName',
+            label: 'Account menu',
             button: true,
-            child: GestureDetector(
-              onTap: () => setState(() => _navIndex = 4),
-              child: Consumer<AuthProvider>(
-                builder: (context, auth, _) {
-                  final user = auth.currentUser ?? widget.user;
-                  final name = user['first_name'] ?? 'U';
-                  final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-                  final avatarUrl = user['avatar_url'] as String?;
-                  return CircleAvatar(
-                    radius: 17,
-                    backgroundColor: AppColors.primary.withAlpha(30),
-                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
-                        ? NetworkImage(avatarUrl)
-                        : null,
-                    child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
-                        ? Text(
-                            initial,
-                            style: AppTextStyles.label.copyWith(
-                                color: AppColors.primary, fontWeight: FontWeight.w700),
-                          )
-                        : null,
-                  );
-                },
-              ),
+            child: Consumer<AuthProvider>(
+              builder: (context, auth, _) {
+                final user = auth.currentUser ?? widget.user;
+                final name = user['first_name'] ?? 'U';
+                final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+                final avatarUrl = user['avatar_url'] as String?;
+                final avatar = CircleAvatar(
+                  radius: 17,
+                  backgroundColor: AppColors.primary.withAlpha(30),
+                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                      ? NetworkImage(avatarUrl)
+                      : null,
+                  child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                      ? Text(
+                          initial,
+                          style: AppTextStyles.label.copyWith(
+                              color: AppColors.primary, fontWeight: FontWeight.w700),
+                        )
+                      : null,
+                );
+                return PopupMenuButton<String>(
+                  offset: const Offset(0, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 8,
+                  child: avatar,
+                  onSelected: (value) {
+                    if (value == 'profile') {
+                      HapticService.lightTap();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                      );
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem<String>(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 14,
+                            backgroundColor: AppColors.primary.withAlpha(20),
+                            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                                ? NetworkImage(avatarUrl)
+                                : null,
+                            child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                                ? Text(initial,
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
+                                : null,
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
+                              const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ]),
@@ -1442,7 +1497,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Articles & Wellness Insights Section ─────────────────────────────────
   Widget _buildArticlesSection() {
-    final previewArticles = ArticlesData.all.take(4).toList();
+    // Filter only published articles
+    final published = _homeArticles.where((a) => a.isPublished && a.status == 'published').toList();
+
+    // Mood-based recommendation categories
+    List<String> targetCategories = [];
+    String subtitleText = 'Curated reads for your mental wellness';
+    if (_todayMoodLevel != null) {
+      if (_todayMoodLevel! <= 1) {
+        targetCategories = ['Crisis Prevention', 'Anxiety & Coping'];
+        subtitleText = '🌿 Recommended reads for caring support today';
+      } else if (_todayMoodLevel! == 2) {
+        targetCategories = ['Anxiety & Coping', 'Student Burnout', 'Mental Awareness'];
+        subtitleText = '🌿 Recommended reads to help you unwind';
+      } else if (_todayMoodLevel! == 3) {
+        targetCategories = ['Campus Wellness', 'Mental Awareness', 'Family & Relations'];
+        subtitleText = '🌱 Insightful reads for reflection & growth';
+      } else {
+        subtitleText = '✨ Inspiring reads to sustain your positive mindset';
+      }
+    }
+
+    // Sort: Featured first, then matching mood categories, then others
+    final sorted = List<ArticleModel>.from(published)..sort((a, b) {
+      if (a.isFeatured && !b.isFeatured) return -1;
+      if (!a.isFeatured && b.isFeatured) return 1;
+      if (targetCategories.isNotEmpty) {
+        final aMatch = targetCategories.contains(a.category);
+        final bMatch = targetCategories.contains(b.category);
+        if (aMatch && !bMatch) return -1;
+        if (!aMatch && bMatch) return 1;
+      }
+      return 0;
+    });
+
+    final previewArticles = sorted.take(6).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1458,7 +1547,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             GestureDetector(
-              onTap: () => Navigator.of(context).push(slideRoute(const ArticlesScreen())),
+              onTap: () => setState(() => _navIndex = 4),
               child: Text(
                 'See All',
                 style: TextStyle(
@@ -1472,25 +1561,33 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 4),
-        Text('Curated reads for your mental wellness', style: AppTextStyles.subheading),
+        Text(subtitleText, style: AppTextStyles.subheading),
         const SizedBox(height: 12),
         SizedBox(
-          height: 175,
+          height: 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: previewArticles.length,
             separatorBuilder: (context, index) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final article = previewArticles[index];
+              final isMoodRec = targetCategories.contains(article.category);
               return GestureDetector(
                 onTap: () => Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article))),
                 child: Container(
-                  width: 240,
+                  width: 245,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0x1AC0C9C2)),
+                    border: Border.all(
+                      color: article.isFeatured
+                          ? const Color(0xFFF59E0B)
+                          : isMoodRec
+                              ? article.themeColor.withAlpha(80)
+                              : const Color(0x1AC0C9C2),
+                      width: article.isFeatured ? 1.5 : 1,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.04),
@@ -1521,14 +1618,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          Text(
-                            article.readTime,
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 10,
-                              color: AppColors.textSecondary,
+                          if (article.isFeatured)
+                            const Text('📌 Featured', style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B)))
+                          else if (isMoodRec)
+                            const Text('🌿 For You', style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF059669)))
+                          else
+                            Text(
+                              article.readTime,
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -1551,7 +1653,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             radius: 10,
                             backgroundColor: article.themeColor.withAlpha(30),
                             child: Text(
-                              article.author[0],
+                              article.author.isNotEmpty ? article.author[0] : 'C',
                               style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
@@ -1831,7 +1933,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (Icons.fitness_center_rounded, 'Activity'),
       (Icons.chat_bubble_rounded, 'Kausap'),
       (Icons.analytics_rounded, 'Insights'),
-      (Icons.person_rounded, 'Profile'),
+      (Icons.article_rounded, 'Articles'),
     ];
 
     return Container(

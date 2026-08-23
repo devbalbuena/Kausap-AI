@@ -5,7 +5,6 @@ import '../../services/api_client.dart';
 import '../../services/articles_storage_service.dart';
 import '../../utils/haptic_service.dart';
 import '../articles/articles_data.dart';
-import '../articles/article_detail_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
@@ -22,7 +21,6 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
   final ApiClient _api = ApiClient();
   bool _isLoading = true;
   List<ArticleModel> _articles = [];
-  String? _error;
   String _searchQuery = '';
 
   @override
@@ -34,32 +32,32 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
   Future<void> _fetchArticles() async {
     setState(() {
       _isLoading = true;
-      _error = null;
     });
 
-    // Always load locally stored articles first (offline-first)
+    // Load locally stored admin articles first (offline-first)
     final localArticles = await ArticlesStorageService.loadLocalArticles();
 
-    // Try syncing from API in background; fall back silently if unavailable
-    List<ArticleModel> mergedList = localArticles;
+    // Try syncing from API in background
+    List<ArticleModel> apiArticles = [];
     try {
       final res = await _api.get('/admin/articles');
       if (res is List) {
-        final List<ArticleModel> apiList = res
-            .map((item) => ArticleModel.fromJson(item as Map<String, dynamic>))
-            .toList();
-        // Merge: API articles + any local-only articles not on server yet
-        final apiIds = apiList.map((a) => a.id).toSet();
-        final localOnly = localArticles.where((a) => !apiIds.contains(a.id)).toList();
-        mergedList = [...localOnly, ...apiList];
+        apiArticles = res.map((item) => ArticleModel.fromJson(item as Map<String, dynamic>)).toList();
       }
-    } catch (_) {
-      // Backend not yet deployed / offline — use local storage only, no error shown
-    }
+    } catch (_) {}
+
+    // Merge: API + local-only (not yet synced), then add built-in defaults at the end
+    final apiIds = apiArticles.map((a) => a.id).toSet();
+    final localOnly = localArticles.where((a) => !apiIds.contains(a.id)).toList();
+    final adminArticles = [...localOnly, ...apiArticles];
+
+    // Append built-in defaults (with isBuiltIn flag so they show read-only)
+    final builtInIds = adminArticles.map((a) => a.id).toSet();
+    final builtIns = ArticlesData.all.where((a) => !builtInIds.contains(a.id)).toList();
 
     if (mounted) {
       setState(() {
-        _articles = mergedList;
+        _articles = [...adminArticles, ...builtIns];
         _isLoading = false;
       });
     }
@@ -184,59 +182,56 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
                 ),
               ),
             ),
-
+            // Stats summary bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                children: [
+                  _statChip('${_articles.where((a) => !a.isBuiltIn && a.status == "published").length}', 'Published', const Color(0xFF16A34A)),
+                  const SizedBox(width: 8),
+                  _statChip('${_articles.where((a) => !a.isBuiltIn && a.status == "draft").length}', 'Drafts', const Color(0xFFF59E0B)),
+                  const SizedBox(width: 8),
+                  _statChip('${_articles.where((a) => !a.isBuiltIn && a.status == "archived").length}', 'Archived', const Color(0xFF94A3B8)),
+                  const Spacer(),
+                  _statChip('${ArticlesData.all.length}', 'Built-in', const Color(0xFF0284C7)),
+                ],
+              ),
+            ),
             // Content
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)))
-                  : _error != null
+                  : filtered.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.cloud_off_rounded, size: 40, color: Color(0xFF94A3B8)),
-                              const SizedBox(height: 8),
-                              const Text('Articles loaded from local storage', style: TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B))),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: const BoxDecoration(color: Color(0xFFE0F2FE), shape: BoxShape.circle),
+                                child: const Icon(Icons.article_rounded, size: 36, color: Color(0xFF0284C7)),
+                              ),
                               const SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: _fetchArticles,
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
-                                child: const Text('Refresh'),
+                              const Text(
+                                'No articles found',
+                                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF0F172A)),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Tap "+ New Article" below to post your first article.',
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
                               ),
                             ],
                           ),
                         )
-                      : filtered.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: const BoxDecoration(color: Color(0xFFE0F2FE), shape: BoxShape.circle),
-                                    child: const Icon(Icons.article_rounded, size: 36, color: Color(0xFF0284C7)),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'No dynamic articles published yet',
-                                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF0F172A)),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'Tap "+ New Article" below to post your first article with images.',
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                              itemCount: filtered.length,
-                              itemBuilder: (ctx, i) {
-                                final a = filtered[i];
-                                return _buildAdminArticleCard(a);
-                              },
-                            ),
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                          itemCount: filtered.length,
+                          itemBuilder: (ctx, i) {
+                            final a = filtered[i];
+                            return _buildAdminArticleCard(a);
+                          },
+                        ),
             ),
           ],
         ),
@@ -244,24 +239,51 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
     );
   }
 
+  Widget _statChip(String count, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(count, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: color)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAdminArticleCard(ArticleModel a) {
+    final statusColor = a.isBuiltIn
+        ? const Color(0xFF0284C7)
+        : a.status == 'published'
+            ? const Color(0xFF16A34A)
+            : a.status == 'draft'
+                ? const Color(0xFFF59E0B)
+                : const Color(0xFF94A3B8);
+    final statusLabel = a.isBuiltIn ? '🔒 Built-in' : a.status[0].toUpperCase() + a.status.substring(1);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: a.isFeatured ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0),
+          width: a.isFeatured ? 2 : 1,
+        ),
         boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a)),
-            );
-          },
+          onTap: () => _showEngagementDrawer(a),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -300,6 +322,7 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Category + Status row
                       Row(
                         children: [
                           Container(
@@ -308,67 +331,76 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
                               color: a.themeColor.withAlpha(25),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: Text(
-                              a.category,
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: a.themeColor,
-                              ),
+                            child: Text(a.category,
+                                style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: a.themeColor)),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: statusColor.withAlpha(20),
+                              borderRadius: BorderRadius.circular(6),
                             ),
+                            child: Text(statusLabel,
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w600, color: statusColor)),
                           ),
+                          if (a.isFeatured) ...[const SizedBox(width: 4), const Text('📌', style: TextStyle(fontSize: 12))],
                           const Spacer(),
-                          Text(
-                            a.readTime,
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
-                          ),
+                          Text(a.readTime, style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        a.title,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(a.title,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 2),
-                      Text(
-                        a.subtitle,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11.5,
-                          color: Color(0xFF64748B),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(a.subtitle,
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 8),
                       Row(
                         children: [
+                          // Reaction count
+                          const Icon(Icons.favorite_rounded, size: 12, color: Color(0xFFEC4899)),
+                          const SizedBox(width: 3),
                           Text(
-                            '✍️ ${a.author}',
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF475569)),
+                            '${a.reactionCounts.values.fold(0, (s, v) => s + v)}',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
                           ),
+                          const SizedBox(width: 10),
+                          // Views
+                          const Icon(Icons.visibility_rounded, size: 12, color: Color(0xFF64748B)),
+                          const SizedBox(width: 3),
+                          Text('${a.viewCount}',
+                              style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
                           const Spacer(),
-                          IconButton(
-                            icon: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0284C7)),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () => _openArticleEditor(a),
-                          ),
-                          const SizedBox(width: 14),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () => _deleteArticle(a.id),
-                          ),
+                          if (!a.isBuiltIn) ...
+                          [
+                            // Featured toggle
+                            GestureDetector(
+                              onTap: () => _toggleFeatured(a),
+                              child: Icon(
+                                a.isFeatured ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                                size: 18,
+                                color: a.isFeatured ? const Color(0xFFF59E0B) : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => _openArticleEditor(a),
+                              child: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0284C7)),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => _deleteArticle(a.id),
+                              child: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
+                            ),
+                          ] else ...
+                          [
+                            const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF94A3B8)),
+                            const SizedBox(width: 4),
+                            const Text('Read-only', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF94A3B8))),
+                          ],
                         ],
                       ),
                     ],
@@ -377,6 +409,179 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleFeatured(ArticleModel a) async {
+    HapticService.lightTap();
+    // Unfeature any previously featured article first
+    final updated = _articles.map((article) {
+      if (article.id == a.id) return article.copyWith(isFeatured: !a.isFeatured);
+      if (article.isFeatured && article.id != a.id) return article.copyWith(isFeatured: false);
+      return article;
+    }).toList();
+    setState(() => _articles = updated);
+
+    // Persist to local storage
+    final updatedArticle = updated.firstWhere((x) => x.id == a.id);
+    await ArticlesStorageService.saveArticle(updatedArticle.toJson());
+
+    // Try to sync with backend
+    try {
+      await _api.patch('/admin/articles/${a.id}', body: {'is_featured': updatedArticle.isFeatured});
+    } catch (_) {}
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(updatedArticle.isFeatured ? '📌 Article pinned as Featured!' : 'Article unpinned'),
+          backgroundColor: const Color(0xFF0F172A),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _showEngagementDrawer(ArticleModel a) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(4))),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(a.title,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ),
+                  if (a.isFeatured)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: Text('📌 Featured', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFFF59E0B), fontWeight: FontWeight.w600)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(a.author, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B))),
+              const Divider(height: 24),
+              // Stats grid
+              const Text('Engagement Overview', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _engagementStat(Icons.visibility_rounded, '${a.viewCount}', 'Views', const Color(0xFF0284C7)),
+                  const SizedBox(width: 12),
+                  _engagementStat(Icons.share_rounded, '${a.shareCount}', 'Shares', const Color(0xFF7C3AED)),
+                  const SizedBox(width: 12),
+                  _engagementStat(Icons.smart_toy_rounded, '${a.aiDiscussionCount}', 'AI Chats', const Color(0xFF059669)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text('Reactions Breakdown', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+              const SizedBox(height: 10),
+              ...[
+                ('💡', 'Insightful'), ('❤️', 'Helpful'), ('🌿', 'Calming'), ('👏', 'Inspiring'),
+                ('😢', 'Touched'), ('😮', 'Amazing'), ('🤗', 'Comforting'), ('💪', 'Empowering'),
+              ].map((e) {
+                final count = a.reactionCounts[e.$1] ?? 0;
+                final total = a.reactionCounts.values.fold(0, (s, v) => s + v);
+                final pct = total > 0 ? count / total : 0.0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Text(e.$1, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(e.$2, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF374151))),
+                                Text('$count', style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            LinearProgressIndicator(
+                              value: pct,
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              color: const Color(0xFF0284C7),
+                              minHeight: 4,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              if (a.isBuiltIn) ...
+              [
+                const Divider(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lock_rounded, size: 16, color: Color(0xFF0284C7)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This is a built-in article. Tap "+ New Article" to create your own custom article.',
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF1D4ED8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _engagementStat(IconData icon, String value, String label, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withAlpha(15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withAlpha(40)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 4),
+            Text(value, style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: color)),
+            Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF64748B))),
+          ],
         ),
       ),
     );
@@ -469,6 +674,7 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
   late TextEditingController _keyPointsController;
 
   String _selectedCategory = 'Mental Awareness';
+  String _selectedStatus = 'published';
   String? _imageUrl;
   bool _isSaving = false;
 
@@ -483,6 +689,7 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
     _readTimeController = TextEditingController(text: a?.readTime ?? '4 min read');
 
     _selectedCategory = a?.category ?? 'Mental Awareness';
+    _selectedStatus = a?.status ?? 'published';
     _imageUrl = a?.imageUrl;
 
     final firstSec = a?.sections.isNotEmpty == true ? a!.sections.first : null;
@@ -557,6 +764,7 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
       'title': title,
       'subtitle': subtitle,
       'category': _selectedCategory,
+      'status': _selectedStatus,
       'read_time': _readTimeController.text.trim().isEmpty ? '4 min read' : _readTimeController.text.trim(),
       'author': _authorController.text.trim().isEmpty ? 'CSU Guidance Center' : _authorController.text.trim(),
       'author_role': _authorRoleController.text.trim().isEmpty ? 'Counselor' : _authorRoleController.text.trim(),
@@ -569,7 +777,7 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
                   ? '#059669'
                   : '#4F46E5',
       'content_json': jsonEncode(sections.map((s) => s.toJson()).toList()),
-      'is_published': true,
+      'is_published': _selectedStatus == 'published',
     };
 
     // ── Save locally FIRST (always works, even offline) ──
@@ -578,6 +786,12 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
       'id': widget.existingArticle?.id ?? 'local_${DateTime.now().millisecondsSinceEpoch}',
       'author_role': _authorRoleController.text.trim().isEmpty ? 'Counselor' : _authorRoleController.text.trim(),
       'sections': sections.map((s) => s.toJson()).toList(),
+      'status': _selectedStatus,
+      'is_featured': widget.existingArticle?.isFeatured ?? false,
+      'reaction_counts': widget.existingArticle?.reactionCounts ?? {},
+      'view_count': widget.existingArticle?.viewCount ?? 0,
+      'share_count': widget.existingArticle?.shareCount ?? 0,
+      'ai_discussion_count': widget.existingArticle?.aiDiscussionCount ?? 0,
     };
     await ArticlesStorageService.saveArticle(localJson);
 
@@ -687,29 +901,74 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
                 ),
                 const SizedBox(height: 18),
 
-                // Category Selector
-                const Text('Category', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5, color: Color(0xFF334155))),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFCBD5E1)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedCategory,
-                      isExpanded: true,
-                      items: ArticlesData.categories
-                          .where((c) => c != 'All')
-                          .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontFamily: 'Inter', fontSize: 13))))
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedCategory = val);
-                      },
+                // Category & Status Row
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Category', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5, color: Color(0xFF334155))),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedCategory,
+                                isExpanded: true,
+                                items: ArticlesData.categories
+                                    .where((c) => c != 'All')
+                                    .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5))))
+                                    .toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedCategory = val);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Status', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5, color: Color(0xFF334155))),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedStatus,
+                                isExpanded: true,
+                                items: const [
+                                  DropdownMenuItem(value: 'published', child: Text('🟢 Published', style: TextStyle(fontFamily: 'Inter', fontSize: 12.5))),
+                                  DropdownMenuItem(value: 'draft', child: Text('🟡 Draft', style: TextStyle(fontFamily: 'Inter', fontSize: 12.5))),
+                                  DropdownMenuItem(value: 'archived', child: Text('⚪ Archived', style: TextStyle(fontFamily: 'Inter', fontSize: 12.5))),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedStatus = val);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
 

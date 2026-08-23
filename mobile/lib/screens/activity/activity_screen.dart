@@ -4,8 +4,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/haptic_service.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../profile/profile_screen.dart';
 import 'activity_start_screen.dart';
 
 // ── Data model for an activity ──────────────────────────────────────────────
@@ -361,7 +363,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 final name = user['first_name'] ?? 'U';
                 final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
                 final avatarUrl = user['avatar_url'] as String?;
-                return CircleAvatar(
+                final avatar = CircleAvatar(
                   radius: 17,
                   backgroundColor: AppColors.primary.withAlpha(30),
                   backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
@@ -374,6 +376,49 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               color: AppColors.primary, fontWeight: FontWeight.w700),
                         )
                       : null,
+                );
+                return PopupMenuButton<String>(
+                  offset: const Offset(0, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 8,
+                  child: avatar,
+                  onSelected: (value) {
+                    if (value == 'profile') {
+                      HapticService.lightTap();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                      );
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem<String>(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 14,
+                            backgroundColor: AppColors.primary.withAlpha(20),
+                            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                                ? NetworkImage(avatarUrl)
+                                : null,
+                            child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                                ? Text(initial,
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
+                                : null,
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
+                              const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
