@@ -33,8 +33,13 @@ const List<_Reaction> _reactions = [
 
 class ArticleDetailScreen extends StatefulWidget {
   final ArticleModel article;
+  final bool isPreview;
 
-  const ArticleDetailScreen({super.key, required this.article});
+  const ArticleDetailScreen({
+    super.key,
+    required this.article,
+    this.isPreview = false,
+  });
 
   @override
   State<ArticleDetailScreen> createState() => _ArticleDetailScreenState();
@@ -66,8 +71,10 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
       TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1.0), weight: 50),
     ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut));
     _loadReactions();
-    _saveRecentlyRead();
-    _recordView();
+    if (!widget.isPreview) {
+      _saveRecentlyRead();
+      _recordView();
+    }
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -132,6 +139,20 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
 
   void _toggleReaction(int index) async {
     HapticService.lightTap();
+
+    // ── Admin Preview Mode Check ──
+    if (widget.isPreview) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('👁️ Reactions are disabled in Admin Preview mode.'),
+          backgroundColor: Color(0xFF0F172A),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     final emoji = _reactions[index].emoji;
     final String? previousEmoji = _myReaction != null ? _reactions[_myReaction!].emoji : null;
 
@@ -195,9 +216,22 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
             ),
-            const Text(
-              'Share this Article',
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF0F172A)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Share this Article',
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF0F172A)),
+                ),
+                if (widget.isPreview) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                    child: const Text('Preview', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 4),
             Text(
@@ -213,44 +247,50 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
               children: [
                 _shareOption('📋', 'Copy Link', const Color(0xFF0F172A), () async {
                   Navigator.pop(ctx);
-                  await ArticlesStorageService.recordShare(article.id);
+                  if (!widget.isPreview) {
+                    await ArticlesStorageService.recordShare(article.id);
+                  }
                   Clipboard.setData(ClipboardData(text: shareText));
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('🔗 Article link copied to clipboard! Share recorded ✓'),
-                        backgroundColor: Color(0xFF0F172A),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(widget.isPreview ? '🔗 Article link copied to clipboard! (Preview mode)' : '🔗 Article link copied to clipboard! Share recorded ✓'),
+                        backgroundColor: const Color(0xFF0F172A),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   }
                 }),
                 _shareOption('📘', 'Facebook', const Color(0xFF1877F2), () async {
                   Navigator.pop(ctx);
-                  await ArticlesStorageService.recordShare(article.id);
+                  if (!widget.isPreview) {
+                    await ArticlesStorageService.recordShare(article.id);
+                  }
                   final encoded = Uri.encodeComponent(shareText);
                   final url = 'https://www.facebook.com/sharer/sharer.php?quote=$encoded';
                   Clipboard.setData(ClipboardData(text: url));
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('📘 Facebook share link copied! Share recorded ✓'),
-                        backgroundColor: Color(0xFF1877F2),
-                        duration: Duration(seconds: 3),
+                      SnackBar(
+                        content: Text(widget.isPreview ? '📘 Facebook share link copied! (Preview mode)' : '📘 Facebook share link copied! Share recorded ✓'),
+                        backgroundColor: const Color(0xFF1877F2),
+                        duration: const Duration(seconds: 3),
                       ),
                     );
                   }
                 }),
                 _shareOption('💬', 'Messenger', const Color(0xFF00B2FF), () async {
                   Navigator.pop(ctx);
-                  await ArticlesStorageService.recordShare(article.id);
+                  if (!widget.isPreview) {
+                    await ArticlesStorageService.recordShare(article.id);
+                  }
                   Clipboard.setData(ClipboardData(text: shareText));
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('💬 Messenger text copied! Share recorded ✓'),
-                        backgroundColor: Color(0xFF00B2FF),
-                        duration: Duration(seconds: 3),
+                      SnackBar(
+                        content: Text(widget.isPreview ? '💬 Messenger text copied! (Preview mode)' : '💬 Messenger text copied! Share recorded ✓'),
+                        backgroundColor: const Color(0xFF00B2FF),
+                        duration: const Duration(seconds: 3),
                       ),
                     );
                   }
@@ -619,14 +659,36 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Text('✨', style: TextStyle(fontSize: 16)),
-                          SizedBox(width: 6),
-                          Text(
-                            'How did this article make you feel?',
-                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF0F172A)),
+                          const Text('✨', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 6),
+                          const Expanded(
+                            child: Text(
+                              'How did this article make you feel?',
+                              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF0F172A)),
+                            ),
                           ),
+                          if (widget.isPreview)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.lock_outline_rounded, size: 11, color: Color(0xFF64748B)),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Preview Mode',
+                                    style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -742,6 +804,47 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                               child: ElevatedButton.icon(
                                 onPressed: () async {
                                   HapticService.mediumTap();
+                                  if (widget.isPreview) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        title: const Row(
+                                          children: [
+                                            Icon(Icons.remove_red_eye_rounded, color: Color(0xFF0284C7)),
+                                            SizedBox(width: 8),
+                                            Text('Admin Preview Mode', style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700)),
+                                          ],
+                                        ),
+                                        content: Text(
+                                          'In the student app, tapping this button connects the student with Kausap AI to discuss "${article.title}" and generate personalized coping strategies.\n\nWould you like to test the chatbot discussion flow?',
+                                          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, height: 1.4, color: Color(0xFF334155)),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx),
+                                            child: const Text('Close Preview', style: TextStyle(color: Color(0xFF64748B))),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              Navigator.pop(ctx);
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => ChatbotScreen(
+                                                    initialMessage:
+                                                        "I just read an article titled \"${article.title}\". ${article.subtitle} Can we discuss how to apply these techniques in my daily life?",
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
+                                            child: const Text('Test AI Chat'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    return;
+                                  }
                                   await ArticlesStorageService.recordAiDiscussion(article.id);
                                   if (context.mounted) {
                                     Navigator.of(context).push(
@@ -809,6 +912,46 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
           ),
         ),
       ),
+      // Admin Preview Floating Banner
+      if (widget.isPreview)
+        Positioned(
+          bottom: 16,
+          left: 20,
+          right: 20,
+          child: SafeArea(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 12, offset: Offset(0, 4))],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.remove_red_eye_rounded, size: 16, color: Color(0xFF38BDF8)),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Admin Preview Mode (Read-Only)',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0284C7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text('Exit Preview', style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
     ],
   ),
 );

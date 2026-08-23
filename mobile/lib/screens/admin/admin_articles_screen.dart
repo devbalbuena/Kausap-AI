@@ -391,7 +391,7 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
                             onTap: () {
                               HapticService.lightTap();
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a)),
+                                MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a, isPreview: true)),
                               );
                             },
                             child: Container(
@@ -528,7 +528,7 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
                   onPressed: () {
                     Navigator.pop(context);
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a)),
+                      MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a, isPreview: true)),
                     );
                   },
                   icon: const Icon(Icons.remove_red_eye_rounded, size: 18),

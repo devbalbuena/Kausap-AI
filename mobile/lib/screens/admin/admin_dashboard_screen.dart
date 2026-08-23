@@ -517,18 +517,61 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                       )
                     else
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
+                      Column(
                         children: [
-                          _buildMoodPill("🌟 Great", greatMoods, const Color(0xFF16A34A)),
-                          _buildMoodPill("😊 Good", goodMoods, const Color(0xFF0284C7)),
-                          _buildMoodPill("😐 Okay", okayMoods, const Color(0xFF64748B)),
-                          _buildMoodPill("😔 Down", downMoods, const Color(0xFFD97706)),
-                          _buildMoodPill("🚨 Distressed", distressedMoods, const Color(0xFFDC2626)),
+                          if (moodEntries > 0) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: SizedBox(
+                                height: 6,
+                                child: Row(
+                                  children: [
+                                    if (greatMoods > 0)
+                                      Expanded(
+                                        flex: greatMoods,
+                                        child: Container(color: const Color(0xFF16A34A)),
+                                      ),
+                                    if (goodMoods > 0)
+                                      Expanded(
+                                        flex: goodMoods,
+                                        child: Container(color: const Color(0xFF0284C7)),
+                                      ),
+                                    if (okayMoods > 0)
+                                      Expanded(
+                                        flex: okayMoods,
+                                        child: Container(color: const Color(0xFF64748B)),
+                                      ),
+                                    if (downMoods > 0)
+                                      Expanded(
+                                        flex: downMoods,
+                                        child: Container(color: const Color(0xFFD97706)),
+                                      ),
+                                    if (distressedMoods > 0)
+                                      Expanded(
+                                        flex: distressedMoods,
+                                        child: Container(color: const Color(0xFFDC2626)),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          Row(
+                            children: [
+                              _buildMoodPill("🌟", "Great", greatMoods, moodEntries, const Color(0xFF16A34A)),
+                              const SizedBox(width: 6),
+                              _buildMoodPill("😊", "Good", goodMoods, moodEntries, const Color(0xFF0284C7)),
+                              const SizedBox(width: 6),
+                              _buildMoodPill("😐", "Okay", okayMoods, moodEntries, const Color(0xFF64748B)),
+                              const SizedBox(width: 6),
+                              _buildMoodPill("😔", "Down", downMoods, moodEntries, const Color(0xFFD97706)),
+                              const SizedBox(width: 6),
+                              _buildMoodPill("🚨", "Distressed", distressedMoods, moodEntries, const Color(0xFFDC2626)),
+                            ],
+                          ),
                         ],
                       ),
-
                   ],
                 ),
               ),
@@ -651,23 +694,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildMoodPill(String label, int count, Color color) {
+  Widget _buildMoodPill(String emoji, String label, int count, int total, Color color) {
+    final pct = total > 0 ? ((count / total) * 100).round() : 0;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
         decoration: BoxDecoration(
           color: color.withAlpha(15),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withAlpha(40)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withAlpha(50)),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Text(
+              emoji,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 4),
             Text(
               '$count',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w700,
-                fontSize: 14,
+                fontSize: 15,
                 color: color,
               ),
             ),
@@ -676,12 +726,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               label,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 9.5,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: color,
               ),
               textAlign: TextAlign.center,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: color.withAlpha(25),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '$pct%',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
             ),
           ],
         ),
