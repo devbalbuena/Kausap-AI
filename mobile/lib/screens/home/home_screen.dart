@@ -77,10 +77,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchHomeArticles() async {
     try {
-      final local = await ArticlesStorageService.loadLocalArticles();
+      final all = await ArticlesStorageService.loadAllArticlesWithEngagement();
       if (mounted) {
         setState(() {
-          _homeArticles = ArticlesData.mergeWithDefaults(local);
+          _homeArticles = all;
         });
       }
     } catch (_) {}

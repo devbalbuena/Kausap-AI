@@ -5,6 +5,7 @@ import '../../services/api_client.dart';
 import '../../services/articles_storage_service.dart';
 import '../../utils/haptic_service.dart';
 import '../articles/articles_data.dart';
+import '../articles/article_detail_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
@@ -34,10 +35,10 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
       _isLoading = true;
     });
 
-    // Load locally stored admin articles first (offline-first)
-    final localArticles = await ArticlesStorageService.loadLocalArticles();
+    // 1. Load all local and built-in articles enriched with real engagement metrics
+    final allArticlesWithEngagement = await ArticlesStorageService.loadAllArticlesWithEngagement();
 
-    // Try syncing from API in background
+    // 2. Try syncing from API in background if online
     List<ArticleModel> apiArticles = [];
     try {
       final res = await _api.get('/admin/articles');
@@ -46,18 +47,29 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
       }
     } catch (_) {}
 
-    // Merge: API + local-only (not yet synced), then add built-in defaults at the end
-    final apiIds = apiArticles.map((a) => a.id).toSet();
-    final localOnly = localArticles.where((a) => !apiIds.contains(a.id)).toList();
-    final adminArticles = [...localOnly, ...apiArticles];
-
-    // Append built-in defaults (with isBuiltIn flag so they show read-only)
-    final builtInIds = adminArticles.map((a) => a.id).toSet();
-    final builtIns = ArticlesData.all.where((a) => !builtInIds.contains(a.id)).toList();
+    // Merge API articles if available, while retaining local engagement metrics
+    final Map<String, ArticleModel> mergedMap = {};
+    for (final a in allArticlesWithEngagement) {
+      mergedMap[a.id] = a;
+    }
+    for (final a in apiArticles) {
+      // If locally stored has higher engagement or is local, keep or overlay
+      if (mergedMap.containsKey(a.id)) {
+        final local = mergedMap[a.id]!;
+        mergedMap[a.id] = a.copyWith(
+          viewCount: local.viewCount > a.viewCount ? local.viewCount : a.viewCount,
+          shareCount: local.shareCount > a.shareCount ? local.shareCount : a.shareCount,
+          aiDiscussionCount: local.aiDiscussionCount > a.aiDiscussionCount ? local.aiDiscussionCount : a.aiDiscussionCount,
+          reactionCounts: local.reactionCounts.isNotEmpty ? local.reactionCounts : a.reactionCounts,
+        );
+      } else {
+        mergedMap[a.id] = a;
+      }
+    }
 
     if (mounted) {
       setState(() {
-        _articles = [...adminArticles, ...builtIns];
+        _articles = mergedMap.values.toList();
         _isLoading = false;
       });
     }
@@ -374,6 +386,32 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
                           Text('${a.viewCount}',
                               style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
                           const Spacer(),
+                          // Preview Button (available for all articles)
+                          GestureDetector(
+                            onTap: () {
+                              HapticService.lightTap();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a)),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.remove_red_eye_outlined, size: 13, color: Color(0xFF0284C7)),
+                                  SizedBox(width: 4),
+                                  Text('Preview', style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF0284C7))),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           if (!a.isBuiltIn) ...
                           [
                             // Featured toggle
@@ -397,9 +435,9 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
                             ),
                           ] else ...
                           [
-                            const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF94A3B8)),
-                            const SizedBox(width: 4),
-                            const Text('Read-only', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF94A3B8))),
+                            const Icon(Icons.lock_outline_rounded, size: 14, color: Color(0xFF94A3B8)),
+                            const SizedBox(width: 3),
+                            const Text('Built-in', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF94A3B8))),
                           ],
                         ],
                       ),
@@ -481,6 +519,31 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
               const SizedBox(height: 4),
               Text(a.author, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B))),
               const Divider(height: 24),
+
+              // Button to Preview as Student
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a)),
+                    );
+                  },
+                  icon: const Icon(Icons.remove_red_eye_rounded, size: 18),
+                  label: const Text('View Full Student Experience 📖',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0284C7),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // Stats grid
               const Text('Engagement Overview', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
               const SizedBox(height: 12),
@@ -677,6 +740,7 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
   String _selectedStatus = 'published';
   String? _imageUrl;
   bool _isSaving = false;
+  bool _showLivePreview = false;
 
   @override
   void initState() {
@@ -810,10 +874,36 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
     }
   }
 
+  Widget _modeChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected ? [const BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))] : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      height: MediaQuery.of(context).size.height * 0.92,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -831,12 +921,30 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.existingArticle != null ? 'Edit Article' : 'Publish Psychoeducation Article',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      widget.existingArticle != null ? 'Edit Article' : 'Psychoeducation Article',
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
-                      onPressed: () => Navigator.pop(context),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              _modeChip('✏️ Edit', !_showLivePreview, () => setState(() => _showLivePreview = false)),
+                              _modeChip('👁️ Preview', _showLivePreview, () => setState(() => _showLivePreview = true)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -845,61 +953,233 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
           ),
           const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-          // Scrollable Form
+          // View Content: Live Preview or Edit Form
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              children: [
-                // Image Picker Banner
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: Container(
-                    height: 140,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFCBD5E1), style: BorderStyle.solid),
-                    ),
-                    child: _imageUrl != null && _imageUrl!.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Stack(
-                              fit: StackFit.expand,
+            child: _showLivePreview ? _buildLivePreview() : _buildEditForm(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLivePreview() {
+    final title = _titleController.text.trim().isEmpty ? 'Article Title Preview' : _titleController.text.trim();
+    final subtitle = _subtitleController.text.trim().isEmpty ? 'Subtitle and brief summary hook...' : _subtitleController.text.trim();
+    final heading = _sectionHeadingController.text.trim().isEmpty ? 'Understanding the Topic' : _sectionHeadingController.text.trim();
+    final body = _sectionBodyController.text.trim().isEmpty ? 'Your psychoeducational guidance, clinically validated advice, and supportive strategies will be displayed here in full detail...' : _sectionBodyController.text.trim();
+    final rawPoints = _keyPointsController.text.split('\n').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+
+    final themeColor = _selectedCategory == 'Student Burnout'
+        ? const Color(0xFF0284C7)
+        : _selectedCategory == 'Anxiety & Coping'
+            ? const Color(0xFF7C3AED)
+            : _selectedCategory == 'Family & Relations'
+                ? const Color(0xFF059669)
+                : const Color(0xFF4F46E5);
+
+    final categoryIcon = ArticlesStorageService.iconForCategory(_selectedCategory);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+      children: [
+        // Status & Mode indicator
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFBFDBFE)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.remove_red_eye_rounded, size: 16, color: Color(0xFF0284C7)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Student Live Preview • Status: ${_selectedStatus.toUpperCase()}',
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Banner preview
+        Container(
+          height: 160,
+          decoration: BoxDecoration(
+            color: themeColor,
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [themeColor, themeColor.withAlpha(190)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: _imageUrl != null && _imageUrl!.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: _imageUrl!.startsWith('data:image')
+                      ? Image.memory(base64Decode(_imageUrl!.split(',').last), fit: BoxFit.cover)
+                      : Image.network(_imageUrl!, fit: BoxFit.cover),
+                )
+              : Center(child: Icon(categoryIcon, size: 60, color: Colors.white.withAlpha(200))),
+        ),
+        const SizedBox(height: 16),
+        // Category & Read time
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: themeColor.withAlpha(25),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(_selectedCategory, style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: themeColor)),
+            ),
+            const Spacer(),
+            Text(_readTimeController.text.isEmpty ? '4 min read' : _readTimeController.text,
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Title
+        Text(title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+        const SizedBox(height: 6),
+        // Subtitle
+        Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 13.5, color: Color(0xFF64748B), height: 1.4)),
+        const SizedBox(height: 16),
+        // Author card
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: themeColor.withAlpha(30),
+                child: Text(
+                  _authorController.text.isNotEmpty ? _authorController.text[0] : 'C',
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: themeColor),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_authorController.text.isEmpty ? 'CSU Guidance Center' : _authorController.text,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                    Text(_authorRoleController.text.isEmpty ? 'Counselor & Mental Health Specialist' : _authorRoleController.text,
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 32),
+        // Section Heading
+        Text(heading, style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+        const SizedBox(height: 8),
+        // Section Body
+        Text(body, style: const TextStyle(fontFamily: 'Inter', fontSize: 13.5, color: Color(0xFF334155), height: 1.6)),
+        if (rawPoints.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          const Text('Key Takeaways', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+          const SizedBox(height: 8),
+          ...rawPoints.map((pt) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('• ', style: TextStyle(fontSize: 16, color: themeColor, fontWeight: FontWeight.bold)),
+                    Expanded(child: Text(pt, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF334155)))),
+                  ],
+                ),
+              )),
+        ],
+        const SizedBox(height: 24),
+        // Save button
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton.icon(
+            onPressed: _isSaving ? null : _saveArticle,
+            icon: const Icon(Icons.publish_rounded),
+            label: Text(
+              widget.existingArticle != null ? 'Update & Publish Article' : 'Publish Article to Student Feed',
+              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0284C7),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditForm() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      children: [
+        // Image Picker Banner
+        GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            height: 140,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFCBD5E1), style: BorderStyle.solid),
+            ),
+            child: _imageUrl != null && _imageUrl!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _imageUrl!.startsWith('data:image')
+                            ? Image.memory(base64Decode(_imageUrl!.split(',').last), fit: BoxFit.cover)
+                            : Image.network(_imageUrl!, fit: BoxFit.cover),
+                        Positioned(
+                          bottom: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(color: Colors.black.withAlpha(180), borderRadius: BorderRadius.circular(20)),
+                            child: const Row(
                               children: [
-                                _imageUrl!.startsWith('data:image')
-                                    ? Image.memory(base64Decode(_imageUrl!.split(',').last), fit: BoxFit.cover)
-                                    : Image.network(_imageUrl!, fit: BoxFit.cover),
-                                Positioned(
-                                  bottom: 8,
-                                  right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(color: Colors.black.withAlpha(180), borderRadius: BorderRadius.circular(20)),
-                                    child: const Row(
-                                      children: [
-                                        Icon(Icons.photo_camera_rounded, size: 14, color: Colors.white),
-                                        SizedBox(width: 4),
-                                        Text('Change Cover', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                                Icon(Icons.photo_camera_rounded, size: 14, color: Colors.white),
+                                SizedBox(width: 4),
+                                Text('Change Cover', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white)),
                               ],
                             ),
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.add_photo_alternate_rounded, size: 36, color: Color(0xFF0284C7)),
-                              SizedBox(height: 6),
-                              Text('Upload Cover Image', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF0F172A))),
-                              Text('PNG, JPG from your gallery or desktop', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-                            ],
                           ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.add_photo_alternate_rounded, size: 36, color: Color(0xFF0284C7)),
+                      SizedBox(height: 6),
+                      Text('Upload Cover Image', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF0F172A))),
+                      Text('PNG, JPG from your gallery or desktop', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 18),
+          ),
+        ),
+        const SizedBox(height: 18),
 
                 // Category & Status Row
                 Row(
@@ -1122,10 +1402,6 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
+            );
   }
 }

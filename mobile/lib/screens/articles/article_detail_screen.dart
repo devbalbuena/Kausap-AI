@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_client.dart';
+import '../../services/articles_storage_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
 import '../chat/chatbot_screen.dart';
@@ -66,7 +67,15 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
     ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut));
     _loadReactions();
     _saveRecentlyRead();
+    _recordView();
     _scrollCtrl.addListener(_onScroll);
+  }
+
+  Future<void> _recordView() async {
+    // Record view in local persistent storage
+    await ArticlesStorageService.recordView(widget.article.id);
+    // Sync with backend in background
+    ApiClient().get('/articles/${widget.article.id}').catchError((_) => null);
   }
 
   @override
@@ -96,45 +105,48 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
     } catch (_) {}
   }
 
-  String get _reactionsKey => 'article_reactions_${widget.article.id}';
   String get _myReactionKey => 'article_my_reaction_${widget.article.id}';
 
   Future<void> _loadReactions() async {
+    // 1. Fetch latest article with engagement from storage
+    final enriched = await ArticlesStorageService.attachEngagement(widget.article);
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_reactionsKey);
     final myR = prefs.getInt(_myReactionKey);
-    if (raw != null) {
-      try {
-        final Map<String, dynamic> decoded = jsonDecode(raw);
-        if (mounted) {
-          setState(() {
-            _reactionCounts = decoded.map((k, v) => MapEntry(int.parse(k), (v as num).toInt()));
-            _myReaction = myR;
-          });
-        }
-      } catch (_) {}
+
+    final Map<int, int> countsByIndex = {};
+    for (int i = 0; i < _reactions.length; i++) {
+      final emoji = _reactions[i].emoji;
+      final count = enriched.reactionCounts[emoji] ?? 0;
+      if (count > 0) {
+        countsByIndex[i] = count;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _reactionCounts = countsByIndex;
+        _myReaction = myR;
+      });
     }
   }
 
-  Future<void> _saveReactions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final toSave = _reactionCounts.map((k, v) => MapEntry(k.toString(), v));
-    await prefs.setString(_reactionsKey, jsonEncode(toSave));
-    if (_myReaction != null) {
-      await prefs.setInt(_myReactionKey, _myReaction!);
-    } else {
-      await prefs.remove(_myReactionKey);
-    }
-  }
-
-  void _toggleReaction(int index) {
+  void _toggleReaction(int index) async {
     HapticService.lightTap();
+    final emoji = _reactions[index].emoji;
+    final String? previousEmoji = _myReaction != null ? _reactions[_myReaction!].emoji : null;
+
+    final prefs = await SharedPreferences.getInstance();
+
     setState(() {
       if (_myReaction == index) {
         // Remove my reaction
         _reactionCounts[index] = (_reactionCounts[index] ?? 1) - 1;
         if (_reactionCounts[index]! <= 0) _reactionCounts.remove(index);
         _myReaction = null;
+        prefs.remove(_myReactionKey);
+
+        // Record to local storage
+        ArticlesStorageService.recordReaction(widget.article.id, emoji, false);
       } else {
         // Remove old reaction if any
         if (_myReaction != null) {
@@ -144,21 +156,27 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
         // Add new reaction
         _reactionCounts[index] = (_reactionCounts[index] ?? 0) + 1;
         _myReaction = index;
+        prefs.setInt(_myReactionKey, index);
         _bounceController.forward(from: 0);
+
+        // Record to local persistent storage
+        ArticlesStorageService.recordReaction(widget.article.id, emoji, true, previousEmoji);
 
         // Sync with backend API in background
         ApiClient().post('/articles/${widget.article.id}/react', body: {
-          'emoji': _reactions[index].emoji,
+          'emoji': emoji,
           'label': _reactions[index].label,
         }).catchError((_) => null);
       }
     });
-    _saveReactions();
   }
 
   void _showShareSheet() {
     HapticService.lightTap();
     final article = widget.article;
+    final shareUrl = 'https://kausap-ai.web.app/articles?id=${article.id}';
+    final shareText = '${article.title}\n${article.subtitle}\n\nRead on Kausap AI Mental Wellness App:\n$shareUrl';
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -193,30 +211,49 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _shareOption('📋', 'Copy Link', const Color(0xFF0F172A), () {
+                _shareOption('📋', 'Copy Link', const Color(0xFF0F172A), () async {
                   Navigator.pop(ctx);
-                  Clipboard.setData(ClipboardData(
-                    text: '${article.title}\n\n${article.subtitle}\n\nRead this on Kausap AI',
-                  ));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Copied to clipboard! 📋'), backgroundColor: Color(0xFF0F172A), duration: Duration(seconds: 2)),
-                  );
+                  await ArticlesStorageService.recordShare(article.id);
+                  Clipboard.setData(ClipboardData(text: shareText));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('🔗 Article link copied to clipboard! Share recorded ✓'),
+                        backgroundColor: Color(0xFF0F172A),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 }),
-                _shareOption('📘', 'Facebook', const Color(0xFF1877F2), () {
+                _shareOption('📘', 'Facebook', const Color(0xFF1877F2), () async {
                   Navigator.pop(ctx);
-                  final encoded = Uri.encodeComponent('Check out this mental health article: ${article.title} - ${article.subtitle}');
+                  await ArticlesStorageService.recordShare(article.id);
+                  final encoded = Uri.encodeComponent(shareText);
                   final url = 'https://www.facebook.com/sharer/sharer.php?quote=$encoded';
                   Clipboard.setData(ClipboardData(text: url));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Facebook share link copied! Open your browser to share 📘'), backgroundColor: Color(0xFF1877F2), duration: Duration(seconds: 3)),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('📘 Facebook share link copied! Share recorded ✓'),
+                        backgroundColor: Color(0xFF1877F2),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
                 }),
-                _shareOption('💬', 'Messenger', const Color(0xFF00B2FF), () {
+                _shareOption('💬', 'Messenger', const Color(0xFF00B2FF), () async {
                   Navigator.pop(ctx);
-                  Clipboard.setData(ClipboardData(text: '${article.title} — ${article.subtitle}'));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Article text copied! Paste it in Messenger 💬'), backgroundColor: Color(0xFF00B2FF), duration: Duration(seconds: 3)),
-                  );
+                  await ArticlesStorageService.recordShare(article.id);
+                  Clipboard.setData(ClipboardData(text: shareText));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('💬 Messenger text copied! Share recorded ✓'),
+                        backgroundColor: Color(0xFF00B2FF),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
                 }),
               ],
             ),
@@ -703,16 +740,19 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                             child: SizedBox(
                               height: 44,
                               child: ElevatedButton.icon(
-                                onPressed: () {
+                                onPressed: () async {
                                   HapticService.mediumTap();
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => ChatbotScreen(
-                                        initialMessage:
-                                            "I just read an article titled \"${article.title}\". ${article.subtitle} Can we discuss how to apply these techniques in my daily life?",
+                                  await ArticlesStorageService.recordAiDiscussion(article.id);
+                                  if (context.mounted) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => ChatbotScreen(
+                                          initialMessage:
+                                              "I just read an article titled \"${article.title}\". ${article.subtitle} Can we discuss how to apply these techniques in my daily life?",
+                                        ),
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  }
                                 },
                                 icon: const Icon(Icons.chat_bubble_rounded, size: 16),
                                 label: const Text(

@@ -46,29 +46,29 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
   Future<void> _fetchLiveArticles() async {
     setState(() => _isLoading = true);
 
-    // Load locally stored admin articles first (offline-first)
-    final localArticles = await ArticlesStorageService.loadLocalArticles();
+    // 1. Load locally stored and built-in articles with real engagement
+    final localArticles = await ArticlesStorageService.loadAllArticlesWithEngagement();
     if (localArticles.isNotEmpty && mounted) {
       setState(() {
-        _allArticles = ArticlesData.mergeWithDefaults(localArticles);
+        _allArticles = localArticles;
         _isLoading = false;
       });
     }
 
-    // Then try to sync from API
+    // 2. Try to sync from API
     try {
       final res = await _api.get('/articles');
       if (res is List) {
         final live = res.map((e) => ArticleModel.fromJson(e as Map<String, dynamic>)).toList();
+        final merged = ArticlesData.mergeWithDefaults([...localArticles, ...live]);
         if (mounted) {
           setState(() {
-            _allArticles = ArticlesData.mergeWithDefaults([...localArticles, ...live]);
+            _allArticles = merged;
             _isLoading = false;
           });
         }
       }
     } catch (_) {
-      // Fallback silently to local + built-in ArticlesData.all
       if (mounted) {
         setState(() => _isLoading = false);
       }
