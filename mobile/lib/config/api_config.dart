@@ -34,6 +34,10 @@ class ApiConfig {
   static const String adminUsers = '/admin/users';
   static const String adminFlaggedMessages = '/admin/flagged-messages';
   static const String adminStats = '/admin/stats';
+  static const String adminAuditLogs = '/admin/audit-logs';
+  static const String adminCounselors = '/admin/counselors';
+  static const String adminTelemetryTokens = '/admin/telemetry/tokens';
+  static const String adminTelemetryHealth = '/admin/telemetry/system-health';
 
   // Notification endpoints
   static const String notifications = '/notifications';

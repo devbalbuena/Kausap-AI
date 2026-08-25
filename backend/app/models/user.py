@@ -7,6 +7,7 @@ from sqlmodel import Field, SQLModel, Relationship
 
 class UserRole(str, Enum):
     client = "client"
+    counselor = "counselor"
     admin = "admin"
 
 
@@ -57,6 +58,9 @@ class User(SQLModel, table=True):
 
     # For students/clients — occupation dropdown
     occupation: Optional[OccupationEnum] = Field(default=None)
+
+    # For counselors/staff — guidance department title
+    department_title: Optional[str] = Field(default=None)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

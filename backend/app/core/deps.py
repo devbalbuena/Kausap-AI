@@ -64,10 +64,35 @@ def get_current_user_optional(
 def get_current_admin(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
-    """Same as get_current_user but also enforces admin role. Raises 403 otherwise."""
+    """Enforces strict Super Admin role. Raises 403 otherwise."""
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
+            detail="Super Admin access required",
         )
     return current_user
+
+
+def get_current_counselor(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Enforces counselor role. Raises 403 otherwise."""
+    if current_user.role != "counselor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Counselor access required",
+        )
+    return current_user
+
+
+def get_current_counselor_or_admin(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Allows either counselor or super admin for clinical and moderation operations."""
+    if current_user.role not in ("counselor", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Counselor or Admin access required",
+        )
+    return current_user
+

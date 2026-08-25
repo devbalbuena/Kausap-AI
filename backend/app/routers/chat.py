@@ -9,9 +9,10 @@ from app.database import get_session
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
+from app.models.token_log import TokenUsageLog
 from app.schemas.chat import ChatMessageCreate, ChatMessageRead, ChatSessionRead
 from app.core.risk_detection import check_for_risk
-from app.core.ai_provider import chat_completion
+from app.core.ai_provider import chat_completion_with_usage, calculate_cost_usd
 from app.core.clinical_guardrails import check_clinical_boundary, build_system_messages
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -138,8 +139,25 @@ async def post_message(
                 llm_messages.append({"role": msg.role, "content": msg.content})
 
             try:
-                ai_reply_content = await chat_completion(llm_messages)
+                ai_reply_content, prompt_tokens, completion_tokens, total_tokens = await chat_completion_with_usage(llm_messages)
                 ai_risk_flag = False
+
+                # Record Token Telemetry for Super Admin
+                try:
+                    cost = calculate_cost_usd(prompt_tokens, completion_tokens)
+                    token_entry = TokenUsageLog(
+                        user_id=current_user.id,
+                        session_id=chat_session.id,
+                        model="gpt-4o-mini",
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
+                        total_tokens=total_tokens,
+                        estimated_cost_usd=cost,
+                    )
+                    db.add(token_entry)
+                    db.commit()
+                except Exception:
+                    pass
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"AI provider error: {str(e)}")
 

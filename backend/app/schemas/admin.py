@@ -65,4 +65,72 @@ class AdminStats(BaseModel):
     total_mood_entries: int
     total_chat_sessions: int
     total_flagged_messages: int
+    total_counselors: Optional[int] = 0
     mood_distribution: Optional[Dict[str, int]] = None
+
+
+# ── Counselor Management Schemas ─────────────────────────────────────────────
+
+class CounselorCreate(BaseModel):
+    email: str
+    password: str
+    first_name: str
+    last_name: str
+    phone_number: str
+    department_title: Optional[str] = "Guidance Counselor"
+    gender: Optional[str] = "Female"
+
+
+class CounselorRead(BaseModel):
+    id: uuid.UUID
+    email: str
+    full_name: str
+    role: str
+    department_title: Optional[str] = None
+    phone_number: Optional[str] = None
+    gender: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+
+
+class CounselorStatusUpdate(BaseModel):
+    is_active: bool
+
+
+class CounselorPasswordReset(BaseModel):
+    new_password: str
+
+
+# ── AI Token & Cost Telemetry Schemas ────────────────────────────────────────
+
+class DailyTokenPoint(BaseModel):
+    date: str
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    cost_usd: float
+    cost_php: float
+
+
+class TokenTelemetrySummary(BaseModel):
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    total_tokens: int
+    estimated_cost_usd: float
+    estimated_cost_php: float
+    today_tokens: int
+    today_cost_usd: float
+    today_cost_php: float
+    daily_trends: List[DailyTokenPoint]
+
+
+class SystemHealthTelemetry(BaseModel):
+    status: str
+    database_connected: bool
+    pool_size: int
+    pool_checked_out: int
+    pool_overflow: int
+    total_counselors: int
+    total_students: int
+    total_tokens_consumed: int
+

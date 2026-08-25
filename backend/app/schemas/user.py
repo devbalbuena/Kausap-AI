@@ -28,9 +28,9 @@ class UserCreate(BaseModel):
 
     @field_validator("role")
     @classmethod
-    def no_admin_self_register(cls, v: UserRole) -> UserRole:
-        if v == UserRole.admin:
-            raise ValueError("Cannot register as admin — admin accounts must be set manually in the database.")
+    def no_privileged_self_register(cls, v: UserRole) -> UserRole:
+        if v in (UserRole.admin, UserRole.counselor):
+            raise ValueError("Cannot self-register as admin or counselor — these accounts must be provisioned by the university administrator.")
         return v
 
 
@@ -54,6 +54,7 @@ class UserRead(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
+    department_title: Optional[str] = None
     created_at: datetime
 
     class Config:

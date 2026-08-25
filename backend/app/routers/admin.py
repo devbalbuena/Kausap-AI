@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Annotated, List, Optional
 import uuid
 
@@ -6,13 +6,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlmodel import Session, select, func
 
-from app.database import get_session
-from app.core.deps import get_current_admin
-from app.models.user import User
+from app.database import get_session, engine
+from app.core.deps import get_current_admin, get_current_counselor_or_admin
+from app.core.security import get_password_hash
+from app.models.user import User, UserRole, GenderEnum
 from app.models.mood import MoodEntry
 from app.models.chat import ChatSession, ChatMessage
 from app.models.audit_log import AuditLog
-from app.schemas.admin import UserSummary, FlaggedMessageRead, UserDetail, AdminStats
+from app.models.token_log import TokenUsageLog
+from app.schemas.admin import (
+    UserSummary, FlaggedMessageRead, UserDetail, AdminStats,
+    CounselorCreate, CounselorRead, CounselorStatusUpdate, CounselorPasswordReset,
+    TokenTelemetrySummary, DailyTokenPoint, SystemHealthTelemetry,
+)
 from app.schemas.audit import AuditLogRead
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -46,7 +52,7 @@ class StatusUpdate(BaseModel):
 
 @router.get("/users", response_model=List[UserSummary])
 def list_users(
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
     email: Optional[str] = None,
     include_deleted: bool = True,
@@ -107,7 +113,7 @@ def list_users(
 @router.get("/users/{user_id}", response_model=UserDetail)
 def get_user_detail(
     user_id: uuid.UUID,
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
 ):
     """Get full details on a specific user, including recent activity."""
@@ -144,12 +150,12 @@ def get_user_detail(
 def update_user_status(
     user_id: uuid.UUID,
     payload: StatusUpdate,
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
 ):
     """Deactivate or reactivate a user account with optional counselor reason."""
     if user_id == admin.id:
-        raise HTTPException(status_code=400, detail="Cannot deactivate your own admin account")
+        raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
 
     u = session.get(User, user_id)
     if not u:
@@ -187,12 +193,12 @@ def update_user_status(
 @router.delete("/users/{user_id}")
 def delete_user(
     user_id: uuid.UUID,
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
 ):
     """Soft delete a user account in compliance with RA 11036 (preserves records)."""
     if user_id == admin.id:
-        raise HTTPException(status_code=400, detail="Cannot delete your own admin account")
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
 
     u = session.get(User, user_id)
     if not u:
@@ -213,7 +219,7 @@ def delete_user(
 @router.post("/users/{user_id}/restore")
 def restore_user(
     user_id: uuid.UUID,
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
 ):
     """Restore a soft-deleted user account."""
@@ -242,7 +248,7 @@ def restore_user(
 def resolve_appeal(
     user_id: uuid.UUID,
     approved: bool,
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
 ):
     """Approve or dismiss a student's reactivation appeal."""
@@ -276,7 +282,7 @@ def resolve_appeal(
 
 @router.get("/flagged-messages", response_model=List[FlaggedMessageRead])
 def list_flagged_messages(
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -312,7 +318,7 @@ def list_flagged_messages(
 @router.patch("/flagged-messages/{message_id}/resolve")
 def resolve_flagged_message(
     message_id: uuid.UUID,
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
 ):
     """Mark a specific flagged message incident as resolved."""
@@ -328,7 +334,7 @@ def resolve_flagged_message(
 
 @router.post("/flagged-messages/resolve-all")
 def resolve_all_flagged_messages(
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
 ):
     """Mark all active crisis flagged messages as resolved."""
@@ -343,7 +349,7 @@ def resolve_all_flagged_messages(
 
 @router.get("/stats", response_model=AdminStats)
 def admin_stats(
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
 ):
     """Get system-wide metrics for the dashboard."""
@@ -352,6 +358,7 @@ def admin_stats(
     total_moods = session.exec(select(func.count()).select_from(MoodEntry)).one()
     total_sessions = session.exec(select(func.count()).select_from(ChatSession)).one()
     total_flagged = session.exec(select(func.count()).select_from(ChatMessage).where(ChatMessage.risk_flag == True)).one()
+    total_counselors = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.counselor)).one()
 
     # Mood level breakdown (1 to 5)
     mood_counts = {
@@ -368,13 +375,14 @@ def admin_stats(
         total_mood_entries=total_moods,
         total_chat_sessions=total_sessions,
         total_flagged_messages=total_flagged,
+        total_counselors=total_counselors,
         mood_distribution=mood_counts,
     )
 
 
 @router.get("/audit-logs", response_model=List[AuditLogRead])
 def list_audit_logs(
-    admin: Annotated[User, Depends(get_current_admin)],
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
     action: Optional[str] = None,
     target_type: Optional[str] = None,
@@ -389,3 +397,255 @@ def list_audit_logs(
         query = query.where(AuditLog.target_type == target_type)
     query = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit)
     return session.exec(query).all()
+
+
+# ── Super Admin: Counselor Workforce Provisioning ───────────────────────────
+
+@router.get("/counselors", response_model=List[CounselorRead])
+def list_counselors(
+    admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """List all registered university guidance counselors (Super Admin only)."""
+    counselors = session.exec(
+        select(User)
+        .where(User.role == UserRole.counselor)
+        .order_by(User.created_at.desc())
+    ).all()
+
+    return [
+        CounselorRead(
+            id=c.id,
+            email=c.email,
+            full_name=c.full_name,
+            role=c.role.value if hasattr(c.role, "value") else str(c.role),
+            department_title=c.department_title or "Guidance Counselor",
+            phone_number=c.phone_number,
+            gender=c.gender.value if hasattr(c.gender, "value") else str(c.gender),
+            is_active=c.is_active,
+            created_at=c.created_at,
+        )
+        for c in counselors
+    ]
+
+
+@router.post("/counselors", response_model=CounselorRead, status_code=status.HTTP_201_CREATED)
+def create_counselor(
+    payload: CounselorCreate,
+    admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Provision a new verified Guidance Counselor account (Super Admin only)."""
+    # Check if email already registered
+    existing = session.exec(select(User).where(User.email == payload.email)).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"An account with email '{payload.email}' already exists.",
+        )
+
+    # Validate gender
+    gender_enum = GenderEnum.female
+    try:
+        if payload.gender:
+            gender_enum = GenderEnum(payload.gender)
+    except Exception:
+        gender_enum = GenderEnum.female
+
+    new_counselor = User(
+        id=uuid.uuid4(),
+        email=payload.email.strip().lower(),
+        hashed_password=get_password_hash(payload.password),
+        role=UserRole.counselor,
+        first_name=payload.first_name.strip(),
+        last_name=payload.last_name.strip(),
+        phone_number=payload.phone_number.strip(),
+        department_title=payload.department_title.strip() if payload.department_title else "Guidance Counselor",
+        birthday=datetime(1990, 1, 1).date(),
+        gender=gender_enum,
+        is_active=True,
+        is_deleted=False,
+    )
+    session.add(new_counselor)
+    session.commit()
+    session.refresh(new_counselor)
+
+    _write_audit(
+        session,
+        admin,
+        "counselor_created",
+        "user",
+        str(new_counselor.id),
+        detail=f"Provisioned verified counselor account: {new_counselor.email} ({new_counselor.department_title})",
+    )
+
+    return CounselorRead(
+        id=new_counselor.id,
+        email=new_counselor.email,
+        full_name=new_counselor.full_name,
+        role=new_counselor.role.value if hasattr(new_counselor.role, "value") else str(new_counselor.role),
+        department_title=new_counselor.department_title,
+        phone_number=new_counselor.phone_number,
+        gender=new_counselor.gender.value if hasattr(new_counselor.gender, "value") else str(new_counselor.gender),
+        is_active=new_counselor.is_active,
+        created_at=new_counselor.created_at,
+    )
+
+
+@router.patch("/counselors/{counselor_id}/status")
+def update_counselor_status(
+    counselor_id: uuid.UUID,
+    payload: CounselorStatusUpdate,
+    admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Activate or deactivate a Counselor account (Super Admin only)."""
+    counselor = session.get(User, counselor_id)
+    if not counselor or counselor.role != UserRole.counselor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Counselor not found")
+
+    counselor.is_active = payload.is_active
+    session.add(counselor)
+    session.commit()
+    session.refresh(counselor)
+
+    action = "counselor_activated" if payload.is_active else "counselor_deactivated"
+    _write_audit(
+        session,
+        admin,
+        action,
+        "user",
+        str(counselor.id),
+        detail=f"Counselor {counselor.email} status changed to {'active' if payload.is_active else 'inactive'}",
+    )
+
+    return {"id": counselor.id, "email": counselor.email, "is_active": counselor.is_active}
+
+
+@router.post("/counselors/{counselor_id}/reset-password")
+def reset_counselor_password(
+    counselor_id: uuid.UUID,
+    payload: CounselorPasswordReset,
+    admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Reset a Counselor's password (Super Admin only)."""
+    counselor = session.get(User, counselor_id)
+    if not counselor or counselor.role != UserRole.counselor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Counselor not found")
+
+    counselor.hashed_password = get_password_hash(payload.new_password)
+    session.add(counselor)
+    session.commit()
+
+    _write_audit(
+        session,
+        admin,
+        "counselor_password_reset",
+        "user",
+        str(counselor.id),
+        detail=f"Temporary password reset issued for counselor: {counselor.email}",
+    )
+
+    return {"message": f"Password reset successfully for {counselor.email}"}
+
+
+# ── Super Admin: AI Token & Cost Telemetry ───────────────────────────────────
+
+@router.get("/telemetry/tokens", response_model=TokenTelemetrySummary)
+def get_token_telemetry(
+    admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Get aggregated OpenAI token metrics and estimated costs (Super Admin only)."""
+    logs = session.exec(select(TokenUsageLog).order_by(TokenUsageLog.created_at.desc())).all()
+
+    total_prompt = sum(l.prompt_tokens for l in logs)
+    total_completion = sum(l.completion_tokens for l in logs)
+    total_tokens = sum(l.total_tokens for l in logs)
+    total_cost_usd = sum(l.estimated_cost_usd for l in logs)
+    total_cost_php = total_cost_usd * 57.50
+
+    # Today's tokens
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_logs = [l for l in logs if l.created_at >= today_start]
+    today_tokens = sum(l.total_tokens for l in today_logs)
+    today_cost_usd = sum(l.estimated_cost_usd for l in today_logs)
+    today_cost_php = today_cost_usd * 57.50
+
+    # Aggregate daily trends for the past 7 days
+    daily_map = {}
+    for i in range(6, -1, -1):
+        d_str = (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")
+        daily_map[d_str] = {"prompt": 0, "completion": 0, "total": 0, "cost_usd": 0.0}
+
+    for l in logs:
+        d_str = l.created_at.strftime("%Y-%m-%d")
+        if d_str in daily_map:
+            daily_map[d_str]["prompt"] += l.prompt_tokens
+            daily_map[d_str]["completion"] += l.completion_tokens
+            daily_map[d_str]["total"] += l.total_tokens
+            daily_map[d_str]["cost_usd"] += l.estimated_cost_usd
+
+    daily_points = [
+        DailyTokenPoint(
+            date=d,
+            prompt_tokens=v["prompt"],
+            completion_tokens=v["completion"],
+            total_tokens=v["total"],
+            cost_usd=round(v["cost_usd"], 6),
+            cost_php=round(v["cost_usd"] * 57.50, 4),
+        )
+        for d, v in sorted(daily_map.items())
+    ]
+
+    return TokenTelemetrySummary(
+        total_prompt_tokens=total_prompt,
+        total_completion_tokens=total_completion,
+        total_tokens=total_tokens,
+        estimated_cost_usd=round(total_cost_usd, 6),
+        estimated_cost_php=round(total_cost_php, 4),
+        today_tokens=today_tokens,
+        today_cost_usd=round(today_cost_usd, 6),
+        today_cost_php=round(today_cost_php, 4),
+        daily_trends=daily_points,
+    )
+
+
+# ── Super Admin: System Health & Observability ───────────────────────────────
+
+@router.get("/telemetry/system-health", response_model=SystemHealthTelemetry)
+def get_system_health(
+    admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Get infrastructure health, connection pool status, and account tallies (Super Admin only)."""
+    pool_size = 20
+    pool_checked_out = 0
+    pool_overflow = 0
+    db_connected = True
+
+    try:
+        pool = engine.pool
+        pool_size = getattr(pool, "size", lambda: 20)()
+        pool_checked_out = getattr(pool, "checkedout", lambda: 0)()
+        pool_overflow = getattr(pool, "overflow", lambda: 0)()
+    except Exception:
+        db_connected = False
+
+    total_counselors = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.counselor)).one()
+    total_students = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.client)).one()
+    token_sum = session.exec(select(func.sum(TokenUsageLog.total_tokens))).one()
+    total_tokens_consumed = int(token_sum) if token_sum else 0
+
+    return SystemHealthTelemetry(
+        status="Operational • Neon Serverless Active",
+        database_connected=db_connected,
+        pool_size=pool_size,
+        pool_checked_out=pool_checked_out,
+        pool_overflow=pool_overflow,
+        total_counselors=total_counselors,
+        total_students=total_students,
+        total_tokens_consumed=total_tokens_consumed,
+    )
+
