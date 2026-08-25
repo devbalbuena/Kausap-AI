@@ -15,6 +15,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/deactivated_account_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/counselor/counselor_dashboard_screen.dart';
 import 'screens/splash/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -115,6 +116,8 @@ class _AppStartup extends StatelessWidget {
       Widget home;
       if (user['role'] == 'admin') {
         home = const AdminDashboardScreen();
+      } else if (user['role'] == 'counselor') {
+        home = const CounselorDashboardScreen();
       } else {
         home = HomeScreen(user: user);
       }

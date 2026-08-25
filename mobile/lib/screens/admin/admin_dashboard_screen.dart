@@ -9,6 +9,8 @@ import 'admin_users_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
 import 'admin_articles_screen.dart';
+import 'admin_counselors_screen.dart';
+import 'admin_telemetry_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -121,7 +123,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Admin Control Center',
+                  'Super Admin Console',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 15,
@@ -130,7 +132,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
                 Text(
-                  'Kausap AI Student Platform',
+                  'FSUU • System & Workforce Control',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
@@ -246,6 +248,165 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // ── Super Admin Hero Section: Token Telemetry & Counselor Provisioning ──
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x1A000000), blurRadius: 10, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.token_rounded, color: Color(0xFF38BDF8), size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              "OpenAI Token & Cost Meter",
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        InkWell(
+                          onTap: () {
+                            HapticService.lightTap();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const AdminTelemetryScreen()),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              children: [
+                                Text(
+                                  "View Telemetry",
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 12),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Real-time token monitoring & GPT-4o-mini budget tracking for student AI conversations.",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: Color(0xFF94A3B8),
+                        fontSize: 11.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              HapticService.lightTap();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const AdminCounselorsScreen()),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(20),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF38BDF8), size: 16),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      "Provision Staff",
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              HapticService.lightTap();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const AdminTelemetryScreen()),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(20),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.insights_rounded, color: Color(0xFF38BDF8), size: 16),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      "Neon Pool Health",
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -594,10 +755,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(height: 8),
               _buildQuickActionTile(
-                icon: Icons.person_search_rounded,
+                icon: Icons.person_add_alt_1_rounded,
                 iconColor: const Color(0xFF0284C7),
                 iconBg: const Color(0xFFE0F2FE),
-                title: 'User Management Directory',
+                title: 'Counselor Workforce Manager',
+                subtitle: 'Provision guidance counselor accounts & manage active credentials',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminCounselorsScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildQuickActionTile(
+                icon: Icons.token_rounded,
+                iconColor: const Color(0xFF0D9488),
+                iconBg: const Color(0xFFCCFBF1),
+                title: 'OpenAI Token & Cost Telemetry',
+                subtitle: 'Monitor real-time token usage, USD & PHP budget trends, and Neon pool',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminTelemetryScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              _buildQuickActionTile(
+                icon: Icons.person_search_rounded,
+                iconColor: const Color(0xFF3B82F6),
+                iconBg: const Color(0xFFEFF6FF),
+                title: 'Student Directory & Accounts',
                 subtitle: 'Search students, monitor engagement & manage account status',
                 onTap: () {
                   HapticService.lightTap();

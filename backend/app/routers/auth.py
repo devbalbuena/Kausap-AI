@@ -81,7 +81,8 @@ def login(credentials: LoginRequest, session: Annotated[Session, Depends(get_ses
             detail="This account has been deleted or archived. Please contact the Guidance Office for restoration.",
         )
 
-    token = create_access_token(data={"sub": str(user.id), "role": user.role})
+    role_str = user.role.value if hasattr(user.role, "value") else str(user.role)
+    token = create_access_token(data={"sub": str(user.id), "role": role_str})
     return Token(access_token=token)
 
 

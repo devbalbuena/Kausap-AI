@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
 import '../auth/login_screen.dart';
+import '../counselor/counselor_dashboard_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_articles_screen.dart';
 import 'admin_users_screen.dart';
@@ -831,7 +832,12 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
         children: [
           _buildNavItem(Icons.dashboard_rounded, 'Dashboard', false, () {
             HapticService.lightTap();
-            Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+            final role = context.read<AuthProvider>().currentUser?['role'];
+            if (role == 'counselor') {
+              Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const CounselorDashboardScreen()));
+            } else {
+              Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+            }
           }),
           _buildNavItem(Icons.article_rounded, 'Articles', false, () {
             HapticService.lightTap();
