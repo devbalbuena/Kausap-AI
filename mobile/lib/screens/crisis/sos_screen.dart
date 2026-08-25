@@ -14,8 +14,18 @@ class SosScreen extends StatefulWidget {
 
 class _SosScreenState extends State<SosScreen> {
   bool _isSendingAlert = false;
+  DateTime? _lastAlertSentAt;
 
   Future<void> _sendSosAlert(BuildContext context) async {
+    if (_lastAlertSentAt != null && DateTime.now().difference(_lastAlertSentAt!).inSeconds < 15) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An emergency alert was already dispatched recently. Guidance team is notified.'),
+          backgroundColor: Color(0xFFD97706),
+        ),
+      );
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -71,6 +81,7 @@ class _SosScreenState extends State<SosScreen> {
           'content': '🚨 EMERGENCY SOS DISTRESS ALERT: Student requested immediate guidance crisis support. I feel hopeless and in need of urgent help.'
         },
       );
+      _lastAlertSentAt = DateTime.now();
       if (!mounted) return;
       
       showDialog(

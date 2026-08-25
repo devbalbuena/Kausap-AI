@@ -113,7 +113,7 @@ async def post_message(
     # ── Layer 1 Response: Crisis safety message ────────────────────────────────
     if is_risk:
         ai_reply_content = SAFETY_MESSAGE
-        ai_risk_flag = True
+        ai_risk_flag = False  # Assistant safety response is NOT a student crisis trigger
 
     else:
         # ── Layer 2: Clinical boundary guardrail check ─────────────────────────
@@ -205,7 +205,7 @@ def trigger_sos_alert(
         session_id=session.id,
         role="assistant",
         content=f"Your emergency distress alert has been logged with highest priority for the guidance team. If you are in immediate physical danger, please immediately dial NCMH 1553 (Toll-Free 24/7) or 911. Help is available.",
-        risk_flag=True
+        risk_flag=False  # Assistant safety response is NOT a student crisis trigger
     )
     db.add(system_reply)
     db.commit()

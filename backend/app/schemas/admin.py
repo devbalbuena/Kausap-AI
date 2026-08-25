@@ -33,9 +33,13 @@ class FlaggedMessageRead(BaseModel):
     session_id: uuid.UUID
     user_id: uuid.UUID
     user_email: str
+    user_name: Optional[str] = None
     role: str
     content: str
     created_at: datetime
+    is_resolved: Optional[bool] = False
+    resolved_at: Optional[datetime] = None
+    resolution_note: Optional[str] = None
 
 
 class UserDetail(BaseModel):
@@ -62,6 +66,8 @@ class UserDetail(BaseModel):
 class AdminStats(BaseModel):
     total_users: int
     total_active_users: int
+    total_students: Optional[int] = 0
+    total_active_students: Optional[int] = 0
     total_mood_entries: int
     total_chat_sessions: int
     total_flagged_messages: int

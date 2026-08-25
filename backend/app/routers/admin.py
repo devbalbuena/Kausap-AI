@@ -284,34 +284,75 @@ def resolve_appeal(
 def list_flagged_messages(
     admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    """List all risk-flagged messages joined with user info."""
-    query = (
+    """List all risk-flagged messages (both active and resolved) joined with user info."""
+    # 1. Fetch active flagged messages (risk_flag == True and role == 'user')
+    active_query = (
         select(ChatMessage, ChatSession, User)
         .join(ChatSession, ChatMessage.session_id == ChatSession.id)
         .join(User, ChatSession.user_id == User.id)
-        .where(ChatMessage.risk_flag == True)
+        .where(ChatMessage.risk_flag == True, ChatMessage.role == "user")
         .order_by(ChatMessage.created_at.desc())
-        .offset(offset)
-        .limit(limit)
     )
-    results = session.exec(query).all()
+    active_results = session.exec(active_query).all()
     
     flagged = []
-    for msg, chat_session, user in results:
+    seen_ids = set()
+    for msg, chat_session, user in active_results:
+        seen_ids.add(msg.id)
         flagged.append(
             FlaggedMessageRead(
                 id=msg.id,
                 session_id=chat_session.id,
                 user_id=user.id,
                 user_email=user.email,
+                user_name=user.full_name or user.email.split('@')[0],
                 role=msg.role,
                 content=msg.content,
-                created_at=msg.created_at
+                created_at=msg.created_at,
+                is_resolved=False,
             )
         )
+    
+    # 2. Fetch resolved triage audit logs (action == "resolve_flag", target_type == "message")
+    audit_query = (
+        select(AuditLog)
+        .where(AuditLog.action == "resolve_flag", AuditLog.target_type == "message")
+        .order_by(AuditLog.created_at.desc())
+        .limit(limit)
+    )
+    resolved_audits = session.exec(audit_query).all()
+
+    for audit in resolved_audits:
+        try:
+            msg_uuid = uuid.UUID(audit.target_id)
+            if msg_uuid in seen_ids:
+                continue
+            seen_ids.add(msg_uuid)
+            msg = session.get(ChatMessage, msg_uuid)
+            if msg:
+                chat_session = session.get(ChatSession, msg.session_id)
+                user = session.get(User, chat_session.user_id) if chat_session else None
+                flagged.append(
+                    FlaggedMessageRead(
+                        id=msg.id,
+                        session_id=msg.session_id,
+                        user_id=user.id if user else audit.admin_id,
+                        user_email=user.email if user else "student@urios.edu.ph",
+                        user_name=user.full_name if user else "Student",
+                        role=msg.role,
+                        content=msg.content,
+                        created_at=msg.created_at,
+                        is_resolved=True,
+                        resolved_at=audit.created_at,
+                        resolution_note=audit.detail or "Resolved by counselor",
+                    )
+                )
+        except Exception:
+            continue
+
     return flagged
 
 
@@ -320,14 +361,26 @@ def resolve_flagged_message(
     message_id: uuid.UUID,
     admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
+    payload: Optional[Dict[str, Any]] = None,
 ):
-    """Mark a specific flagged message incident as resolved."""
+    """Mark a specific flagged message incident as resolved and record in AuditLog."""
     msg = session.get(ChatMessage, message_id)
     if not msg:
         raise HTTPException(status_code=404, detail="Flagged message not found")
     
     msg.risk_flag = False
     session.add(msg)
+    
+    note = (payload or {}).get("resolution_note") or "Crisis triage resolved by counselor."
+    audit = AuditLog(
+        admin_id=admin.id,
+        admin_email=admin.email,
+        action="resolve_flag",
+        target_type="message",
+        target_id=str(message_id),
+        detail=note,
+    )
+    session.add(audit)
     session.commit()
     return {"status": "resolved", "id": str(message_id)}
 
@@ -343,6 +396,15 @@ def resolve_all_flagged_messages(
     for m in messages:
         m.risk_flag = False
         session.add(m)
+        audit = AuditLog(
+            admin_id=admin.id,
+            admin_email=admin.email,
+            action="resolve_flag",
+            target_type="message",
+            target_id=str(m.id),
+            detail="Batch crisis triage resolution completed.",
+        )
+        session.add(audit)
     session.commit()
     return {"status": "all_resolved", "resolved_count": count}
 
@@ -355,9 +417,11 @@ def admin_stats(
     """Get system-wide metrics for the dashboard."""
     total_users = session.exec(select(func.count()).select_from(User)).one()
     total_active = session.exec(select(func.count()).select_from(User).where(User.is_active == True)).one()
+    total_students = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.client)).one()
+    total_active_students = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.client, User.is_active == True)).one()
     total_moods = session.exec(select(func.count()).select_from(MoodEntry)).one()
     total_sessions = session.exec(select(func.count()).select_from(ChatSession)).one()
-    total_flagged = session.exec(select(func.count()).select_from(ChatMessage).where(ChatMessage.risk_flag == True)).one()
+    total_flagged = session.exec(select(func.count()).select_from(ChatMessage).where(ChatMessage.risk_flag == True, ChatMessage.role == "user")).one()
     total_counselors = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.counselor)).one()
 
     # Mood level breakdown (1 to 5)
@@ -372,6 +436,8 @@ def admin_stats(
     return AdminStats(
         total_users=total_users,
         total_active_users=total_active,
+        total_students=total_students,
+        total_active_students=total_active_students,
         total_mood_entries=total_moods,
         total_chat_sessions=total_sessions,
         total_flagged_messages=total_flagged,

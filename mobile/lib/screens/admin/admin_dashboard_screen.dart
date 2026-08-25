@@ -36,10 +36,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _error = null;
     });
     try {
-      final data = await ApiClient().get('/admin/stats');
+      final results = await Future.wait([
+        ApiClient().get('/admin/stats'),
+        ApiClient().get('/admin/users?limit=200'),
+      ]);
+
       if (mounted) {
+        final statsData = Map<String, dynamic>.from(results[0] as Map);
+        final usersData = results[1] is List ? (results[1] as List) : [];
+
+        // Count ONLY students (role == 'client')
+        final students = usersData.where((u) {
+          final role = (u['role'] ?? 'client').toString().toLowerCase();
+          return role == 'client';
+        }).toList();
+
+        final activeStudents = students.where((u) => u['is_active'] == true).length;
+        final totalStudents = students.length;
+
+        statsData['total_students'] = totalStudents;
+        statsData['total_active_students'] = activeStudents;
+
         setState(() {
-          _stats = data as Map<String, dynamic>;
+          _stats = statsData;
           _isLoading = false;
         });
       }
@@ -196,8 +215,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
 
     final flaggedCount = (_stats!['total_flagged_messages'] as num?)?.toInt() ?? 0;
-    final totalUsers = (_stats!['total_users'] as num?)?.toInt() ?? 0;
-    final activeUsers = (_stats!['total_active_users'] as num?)?.toInt() ?? 0;
+    final totalUsers = ((_stats!['total_students'] ?? _stats!['total_users']) as num?)?.toInt() ?? 0;
+    final activeUsers = ((_stats!['total_active_students'] ?? _stats!['total_active_users']) as num?)?.toInt() ?? 0;
     final chatSessions = (_stats!['total_chat_sessions'] as num?)?.toInt() ?? 0;
     final moodEntries = (_stats!['total_mood_entries'] as num?)?.toInt() ?? 0;
     final totalInteractions = chatSessions + moodEntries;

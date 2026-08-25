@@ -35,10 +35,30 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
       _error = null;
     });
     try {
-      final data = await ApiClient().get('/admin/stats');
+      final results = await Future.wait([
+        ApiClient().get('/admin/stats'),
+        ApiClient().get('/admin/users?limit=200'),
+      ]);
+
       if (mounted) {
+        final statsData = Map<String, dynamic>.from(results[0] as Map);
+        final usersData = results[1] is List ? (results[1] as List) : [];
+
+        // Count ONLY students (role == 'client')
+        final students = usersData.where((u) {
+          final role = (u['role'] ?? 'client').toString().toLowerCase();
+          return role == 'client';
+        }).toList();
+
+        final activeStudents = students.where((u) => u['is_active'] == true).length;
+        final totalStudents = students.length;
+
+        // Ensure student metrics strictly reflect students
+        statsData['total_students'] = totalStudents;
+        statsData['total_active_students'] = activeStudents;
+
         setState(() {
-          _stats = data as Map<String, dynamic>;
+          _stats = statsData;
           _isLoading = false;
         });
       }
@@ -260,10 +280,17 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
     }
 
     final flagged = _stats?['total_flagged_messages'] ?? 0;
-    final totalStudents = _stats?['total_users'] ?? 0;
-    final activeStudents = _stats?['total_active_users'] ?? 0;
+    final totalStudents = _stats?['total_students'] ?? _stats?['total_users'] ?? 0;
+    final activeStudents = _stats?['total_active_students'] ?? _stats?['total_active_users'] ?? 0;
     final totalSessions = _stats?['total_chat_sessions'] ?? 0;
     final totalMoods = _stats?['total_mood_entries'] ?? 0;
+
+    final moodDistribution = _stats?['mood_distribution'] as Map<String, dynamic>?;
+    final greatMoods = (moodDistribution?['great'] as num?)?.toInt() ?? 0;
+    final goodMoods = (moodDistribution?['good'] as num?)?.toInt() ?? 0;
+    final okayMoods = (moodDistribution?['okay'] as num?)?.toInt() ?? 0;
+    final downMoods = (moodDistribution?['down'] as num?)?.toInt() ?? 0;
+    final distressedMoods = (moodDistribution?['distressed'] as num?)?.toInt() ?? 0;
 
     return RefreshIndicator(
       onRefresh: _fetchStats,
@@ -467,6 +494,115 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Campus Mood Pulse Snapshot ──
+            const Text(
+              "Campus Mood Pulse (Live)",
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.insights_rounded, color: Color(0xFF0284C7), size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            "Student Emotional Climate",
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        "$totalMoods Total Check-ins",
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  if (totalMoods > 0) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: SizedBox(
+                        height: 6,
+                        child: Row(
+                          children: [
+                            if (greatMoods > 0)
+                              Expanded(
+                                flex: greatMoods,
+                                child: Container(color: const Color(0xFF16A34A)),
+                              ),
+                            if (goodMoods > 0)
+                              Expanded(
+                                flex: goodMoods,
+                                child: Container(color: const Color(0xFF0284C7)),
+                              ),
+                            if (okayMoods > 0)
+                              Expanded(
+                                flex: okayMoods,
+                                child: Container(color: const Color(0xFF64748B)),
+                              ),
+                            if (downMoods > 0)
+                              Expanded(
+                                flex: downMoods,
+                                child: Container(color: const Color(0xFFD97706)),
+                              ),
+                            if (distressedMoods > 0)
+                              Expanded(
+                                flex: distressedMoods,
+                                child: Container(color: const Color(0xFFDC2626)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Row(
+                    children: [
+                      _buildMoodPill("🌟", "Great", greatMoods, totalMoods, const Color(0xFF16A34A)),
+                      const SizedBox(width: 6),
+                      _buildMoodPill("😊", "Good", goodMoods, totalMoods, const Color(0xFF0284C7)),
+                      const SizedBox(width: 6),
+                      _buildMoodPill("😐", "Okay", okayMoods, totalMoods, const Color(0xFF64748B)),
+                      const SizedBox(width: 6),
+                      _buildMoodPill("😔", "Down", downMoods, totalMoods, const Color(0xFFD97706)),
+                      const SizedBox(width: 6),
+                      _buildMoodPill("🚨", "Distressed", distressedMoods, totalMoods, const Color(0xFFDC2626)),
+                    ],
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -737,6 +873,59 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
     );
   }
 
+  Widget _buildMoodPill(String emoji, String label, int count, int total, Color color) {
+    final pct = total > 0 ? ((count / total) * 100).round() : 0;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+        decoration: BoxDecoration(
+          color: color.withAlpha(15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withAlpha(50)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              emoji,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$count',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$pct%',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 9.5,
+                color: color.withAlpha(200),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomNav() {
     return Container(
       height: 62,
@@ -751,6 +940,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
           _buildNavItem(Icons.dashboard_rounded, 'Dashboard', _selectedTabIndex == 0, () {
             HapticService.lightTap();
             setState(() => _selectedTabIndex = 0);
+            _fetchStats();
           }),
           _buildNavItem(Icons.health_and_safety_rounded, 'Triage', _selectedTabIndex == 1, () {
             HapticService.lightTap();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
+import '../../services/clinical_audit_service.dart';
 import '../../utils/haptic_service.dart';
 
 class CounselorStudentsTab extends StatefulWidget {
@@ -264,6 +265,13 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
   Future<void> _approveAppeal(String studentId, String name) async {
     try {
       HapticService.lightTap();
+      await ClinicalAuditService.recordLog(
+        action: 'appeal_approved',
+        targetType: 'Student Account',
+        targetId: studentId,
+        detail: 'Approved reactivation appeal for student $name.',
+      );
+
       await _api.patch(
         '/admin/users/$studentId/reactivate',
         body: {'status': 'active'},
@@ -389,11 +397,22 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
 
     try {
       HapticService.lightTap();
+      final reasonText = reasonCtrl.text.trim();
+
+      await ClinicalAuditService.recordLog(
+        action: newStatus ? 'user_reactivated' : 'user_deactivated',
+        targetType: 'Student Account',
+        targetId: studentId.toString(),
+        detail: newStatus
+            ? 'Reactivated student account for ${student['full_name']}'
+            : 'Deactivated student account for ${student['full_name']}. Reason: $reasonText',
+      );
+
       await _api.patch(
         '/admin/users/$studentId/status',
         body: {
           'is_active': newStatus,
-          'reason': reasonCtrl.text.trim(),
+          'reason': reasonText,
         },
       );
       if (!mounted) return;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/api_client.dart';
 import '../../services/articles_storage_service.dart';
+import '../../services/clinical_audit_service.dart';
 import '../../utils/haptic_service.dart';
 import '../articles/articles_data.dart';
 import '../articles/article_detail_screen.dart';
@@ -19,9 +20,6 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
   List<ArticleModel> _articles = ArticlesData.all;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  String _selectedCategoryFilter = 'All';
-
-  final List<String> _categories = ArticlesData.categories;
 
   @override
   void initState() {
@@ -64,7 +62,17 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
     }
   }
 
-  Future<void> _deleteArticle(ArticleModel article) async {
+  Future<void> _toggleFeatured(ArticleModel a) async {
+    HapticService.lightTap();
+    final updated = a.copyWith(isFeatured: !a.isFeatured);
+    await ArticlesStorageService.saveArticle(updated.toJson());
+    try {
+      await _api.put('/admin/articles/${a.id}', body: {'is_featured': updated.isFeatured}, silent: true);
+    } catch (_) {}
+    _fetchArticles();
+  }
+
+  Future<void> _deleteArticle(String id) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -73,9 +81,9 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
           "Delete Article",
           style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
         ),
-        content: Text(
-          "Are you sure you want to delete '${article.title}'? Students will no longer be able to access it.",
-          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
+        content: const Text(
+          "Are you sure you want to delete this guidance article? Students will no longer be able to access it.",
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
         ),
         actions: [
           TextButton(
@@ -87,6 +95,7 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 36),
             ),
             child: const Text("Delete"),
           ),
@@ -98,15 +107,21 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
 
     try {
       HapticService.lightTap();
-      await ArticlesStorageService.deleteArticle(article.id);
+      await ClinicalAuditService.recordLog(
+        action: 'article_deleted',
+        targetType: 'Psychoeducation Article',
+        targetId: id,
+        detail: 'Deleted psychoeducation article with ID $id.',
+      );
+      await ArticlesStorageService.deleteArticle(id);
       try {
-        await _api.delete('/admin/articles/${article.id}', silent: true);
+        await _api.delete('/admin/articles/$id', silent: true);
       } catch (_) {}
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Article '${article.title}' deleted."),
-          backgroundColor: const Color(0xFF16A34A),
+        const SnackBar(
+          content: Text("Article deleted successfully."),
+          backgroundColor: Color(0xFF16A34A),
         ),
       );
       _fetchArticles();
@@ -121,6 +136,203 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
     }
   }
 
+  void _showEngagementDrawer(ArticleModel a) {
+    HapticService.lightTap();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(4)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      a.title,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (a.isFeatured)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: Text('📌 Featured', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFFF59E0B), fontWeight: FontWeight.w600)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text("By: ${a.author} • ${a.authorRole}", style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B))),
+              const Divider(height: 24),
+
+              // Button to Preview as Student
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a, isPreview: true)),
+                    );
+                  },
+                  icon: const Icon(Icons.remove_red_eye_rounded, size: 18),
+                  label: const Text('View Full Student Experience 📖', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0284C7),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 44),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Stats grid
+              const Text('Engagement Overview', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _engagementStat(Icons.visibility_rounded, '${a.viewCount}', 'Views', const Color(0xFF0284C7)),
+                  const SizedBox(width: 12),
+                  _engagementStat(Icons.share_rounded, '${a.shareCount}', 'Shares', const Color(0xFF7C3AED)),
+                  const SizedBox(width: 12),
+                  _engagementStat(Icons.smart_toy_rounded, '${a.aiDiscussionCount}', 'AI Chats', const Color(0xFF059669)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text('Reactions Breakdown', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+              const SizedBox(height: 10),
+              ...[
+                ('💡', 'Insightful'),
+                ('❤️', 'Helpful'),
+                ('🌿', 'Calming'),
+                ('👏', 'Inspiring'),
+                ('😢', 'Touched'),
+                ('😮', 'Amazing'),
+                ('🤗', 'Comforting'),
+                ('💪', 'Empowering'),
+              ].map((e) {
+                final count = a.reactionCounts[e.$1] ?? 0;
+                final total = a.reactionCounts.values.fold(0, (s, v) => s + v);
+                final pct = total > 0 ? count / total : 0.0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Text(e.$1, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(e.$2, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF374151))),
+                                Text('$count', style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            LinearProgressIndicator(
+                              value: pct,
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              color: const Color(0xFF0284C7),
+                              minHeight: 4,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              if (a.isBuiltIn) ...[
+                const Divider(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lock_rounded, size: 16, color: Color(0xFF0284C7)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This is a built-in institutional article. Tap "+ New Article" to author custom guidance resources.',
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF1D4ED8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _engagementStat(IconData icon, String value, String label, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withAlpha(15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withAlpha(40)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 4),
+            Text(value, style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: color)),
+            Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF64748B))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statChip(String count, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(count, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: color)),
+        ],
+      ),
+    );
+  }
+
   void _openArticleEditor([ArticleModel? article]) {
     final isNew = article == null;
     final titleCtrl = TextEditingController(text: article?.title ?? '');
@@ -133,7 +345,7 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
     String readTime = article?.readTime ?? '4 min read';
     String? base64Image = article?.imageUrl;
 
-    final categories = _categories.where((c) => c != 'All').toList();
+    final categories = ArticlesData.categories.where((c) => c != 'All').toList();
 
     showModalBottomSheet(
       context: context,
@@ -346,6 +558,12 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                       };
 
                       Navigator.pop(ctx);
+                      await ClinicalAuditService.recordLog(
+                        action: article != null ? 'article_updated' : 'article_published',
+                        targetType: 'Psychoeducation Article',
+                        targetId: localJson['id'].toString(),
+                        detail: '${article != null ? 'Updated' : 'Published'} psychoeducation article "$title" in category $category.',
+                      );
                       await ArticlesStorageService.saveArticle(localJson);
                       try {
                         await _api.post('/admin/articles', body: localJson, silent: true);
@@ -363,6 +581,7 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0284C7),
                       foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 44),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -380,204 +599,305 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _articles.where((a) {
-      if (_selectedCategoryFilter != 'All' && a.category != _selectedCategoryFilter) return false;
-      if (_searchQuery.isNotEmpty) {
-        final q = _searchQuery.toLowerCase();
-        return a.title.toLowerCase().contains(q) || a.category.toLowerCase().contains(q) || a.subtitle.toLowerCase().contains(q);
-      }
-      return true;
-    }).toList();
+  Widget _buildArticleCard(ArticleModel a) {
+    final statusColor = a.isBuiltIn
+        ? const Color(0xFF0284C7)
+        : a.status == 'published'
+            ? const Color(0xFF16A34A)
+            : a.status == 'draft'
+                ? const Color(0xFFF59E0B)
+                : const Color(0xFF94A3B8);
+    final statusLabel = a.isBuiltIn ? '🔒 Built-in' : a.status[0].toUpperCase() + a.status.substring(1);
 
-    return Column(
-      children: [
-        // ── Search & New Article Bar ──
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          color: Colors.white,
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                      decoration: InputDecoration(
-                        hintText: "Search articles by title or keyword...",
-                        hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF94A3B8)),
-                        prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                        filled: true,
-                        fillColor: const Color(0xFFF1F5F9),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: a.isFeatured ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0)),
+        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _showEngagementDrawer(a),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Cover Thumbnail / Icon Box
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: a.themeColor.withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: a.themeColor.withAlpha(80)),
                   ),
-                  const SizedBox(width: 10),
-                  ElevatedButton.icon(
-                    onPressed: () => _openArticleEditor(),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text("New Guide", style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // ── Category Horizontal Filter Chips ──
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _categories.map((cat) {
-                    final selected = _selectedCategoryFilter == cat;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text(cat),
-                        selected: selected,
-                        onSelected: (val) {
-                          if (val) setState(() => _selectedCategoryFilter = cat);
-                        },
-                        selectedColor: const Color(0xFFE0F2FE),
-                        backgroundColor: Colors.white,
-                        labelStyle: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                          color: selected ? const Color(0xFF0284C7) : const Color(0xFF64748B),
-                        ),
-                        side: BorderSide(color: selected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0)),
-                      ),
-                    );
-                  }).toList(),
+                  child: a.imageUrl != null && a.imageUrl!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: a.imageUrl!.startsWith('data:image')
+                              ? Image.memory(
+                                  base64Decode(a.imageUrl!.split(',').last),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => Icon(a.categoryIcon, color: a.themeColor, size: 28),
+                                )
+                              : Image.network(
+                                  a.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => Icon(a.categoryIcon, color: a.themeColor, size: 28),
+                                ),
+                        )
+                      : Icon(a.categoryIcon, color: a.themeColor, size: 28),
                 ),
-              ),
-            ],
-          ),
-        ),
+                const SizedBox(width: 12),
 
-        // ── Articles List ──
-        Expanded(
-          child: filtered.isEmpty
-              ? const Center(
-                  child: Text("No articles found matching criteria.", style: TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B))),
-                )
-                  : RefreshIndicator(
-                      onRefresh: _fetchArticles,
-                      color: const Color(0xFF0284C7),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filtered.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 12),
-                        itemBuilder: (ctx, i) {
-                          final art = filtered[i];
-                          return InkWell(
+                // Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Category + Status row
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: a.themeColor.withAlpha(25),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              a.category,
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: a.themeColor),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: statusColor.withAlpha(20),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              statusLabel,
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w600, color: statusColor),
+                            ),
+                          ),
+                          if (a.isFeatured) ...[const SizedBox(width: 4), const Text('📌', style: TextStyle(fontSize: 12))],
+                          const Spacer(),
+                          Text(a.readTime, style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        a.title,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        a.subtitle,
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          // Reaction count
+                          const Icon(Icons.favorite_rounded, size: 12, color: Color(0xFFEC4899)),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${a.reactionCounts.values.fold(0, (s, v) => s + v)}',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(width: 10),
+                          // Views
+                          const Icon(Icons.visibility_rounded, size: 12, color: Color(0xFF64748B)),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${a.viewCount}',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                          ),
+                          const Spacer(),
+                          // Preview Button
+                          GestureDetector(
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: art)),
+                              HapticService.lightTap();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a, isPreview: true)),
                               );
                             },
-                            borderRadius: BorderRadius.circular(16),
                             child: Container(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                                boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1))],
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE0F2FE),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          art.category,
-                                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF0284C7)),
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF64748B)),
-                                            onPressed: () => _openArticleEditor(art),
-                                            tooltip: "Edit",
-                                            constraints: const BoxConstraints(),
-                                            padding: EdgeInsets.zero,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
-                                            onPressed: () => _deleteArticle(art),
-                                            tooltip: "Delete",
-                                            constraints: const BoxConstraints(),
-                                            padding: EdgeInsets.zero,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            art.readTime,
-                                            style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF94A3B8)),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
+                                  Icon(Icons.remove_red_eye_outlined, size: 13, color: Color(0xFF0284C7)),
+                                  SizedBox(width: 4),
                                   Text(
-                                    art.title,
-                                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    art.subtitle,
-                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const Divider(height: 18, color: Color(0xFFF1F5F9)),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "By: ${art.author}",
-                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
-                                      ),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.remove_red_eye_outlined, size: 14, color: Color(0xFF64748B)),
-                                          const SizedBox(width: 4),
-                                          Text("${art.viewCount}", style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-                                          const SizedBox(width: 10),
-                                          const Icon(Icons.share_outlined, size: 14, color: Color(0xFF0284C7)),
-                                          const SizedBox(width: 4),
-                                          Text("${art.shareCount}", style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-                                        ],
-                                      ),
-                                    ],
+                                    'Preview',
+                                    style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF0284C7)),
                                   ),
                                 ],
                               ),
                             ),
-                          );
+                          ),
+                          const SizedBox(width: 8),
+                          if (!a.isBuiltIn) ...[
+                            GestureDetector(
+                              onTap: () => _toggleFeatured(a),
+                              child: Icon(
+                                a.isFeatured ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                                size: 18,
+                                color: a.isFeatured ? const Color(0xFFF59E0B) : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => _openArticleEditor(a),
+                              child: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0284C7)),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => _deleteArticle(a.id),
+                              child: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
+                            ),
+                          ] else ...[
+                            const Icon(Icons.lock_outline_rounded, size: 14, color: Color(0xFF94A3B8)),
+                            const SizedBox(width: 3),
+                            const Text('Built-in', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF94A3B8))),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _articles.where((a) {
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        return a.title.toLowerCase().contains(q) || a.category.toLowerCase().contains(q) || a.subtitle.toLowerCase().contains(q) || a.author.toLowerCase().contains(q);
+      }
+      return true;
+    }).toList();
+
+    final publishedCount = _articles.where((a) => a.status == 'published' && !a.isBuiltIn).length;
+    final draftsCount = _articles.where((a) => a.status == 'draft').length;
+    final archivedCount = _articles.where((a) => a.status == 'archived').length;
+    final builtInCount = _articles.where((a) => a.isBuiltIn).length;
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            // ── Search & Metrics Header ──
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              color: Colors.white,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: "Search articles by title, category, author...",
+                      hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                      filled: true,
+                      fillColor: const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // ── Status Chips ──
+                  Row(
+                    children: [
+                      _statChip('$publishedCount', 'Published', const Color(0xFF16A34A)),
+                      const SizedBox(width: 8),
+                      _statChip('$draftsCount', 'Drafts', const Color(0xFFF59E0B)),
+                      const SizedBox(width: 8),
+                      _statChip('$archivedCount', 'Archived', const Color(0xFF94A3B8)),
+                      const Spacer(),
+                      _statChip('$builtInCount', 'Built-in', const Color(0xFF0284C7)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Articles List ──
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(
+                      child: Text("No articles found matching criteria.", style: TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B))),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _fetchArticles,
+                      color: const Color(0xFF0284C7),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                        itemCount: filtered.length,
+                        itemBuilder: (ctx, i) {
+                          final art = filtered[i];
+                          return _buildArticleCard(art);
                         },
                       ),
                     ),
+            ),
+          ],
+        ),
+
+        // ── Floating Action Button: New Article ──
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: ElevatedButton.icon(
+            onPressed: () => _openArticleEditor(),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text(
+              "New Article",
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0284C7),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 46),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              elevation: 4,
+              shadowColor: const Color(0x400284C7),
+            ),
+          ),
         ),
       ],
     );
