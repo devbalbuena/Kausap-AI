@@ -5,10 +5,10 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
 import '../auth/login_screen.dart';
-import '../admin/admin_articles_screen.dart';
-import '../admin/admin_users_screen.dart';
-import '../admin/admin_moderation_screen.dart';
-import '../admin/admin_system_screen.dart';
+import 'counselor_triage_tab.dart';
+import 'counselor_students_tab.dart';
+import 'counselor_articles_tab.dart';
+import 'counselor_audit_tab.dart';
 
 class CounselorDashboardScreen extends StatefulWidget {
   const CounselorDashboardScreen({super.key});
@@ -18,6 +18,7 @@ class CounselorDashboardScreen extends StatefulWidget {
 }
 
 class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
+  int _selectedTabIndex = 0; // 0: Overview, 1: Triage, 2: Students, 3: Articles, 4: Audit
   bool _isLoading = true;
   Map<String, dynamic>? _stats;
   String? _error;
@@ -99,12 +100,60 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
     );
   }
 
+  String get _appBarTitle {
+    switch (_selectedTabIndex) {
+      case 1:
+        return 'Crisis Triage & Intercepts';
+      case 2:
+        return 'Student Care Directory';
+      case 3:
+        return 'Psychoeducation CMS';
+      case 4:
+        return 'Clinical Audit & Compliance';
+      case 0:
+      default:
+        return 'FSUU Guidance Hub';
+    }
+  }
+
+  String get _appBarSubtitle {
+    final user = context.read<AuthProvider>().currentUser;
+    final counselorName = user != null ? "${user['first_name'] ?? ''} ${user['last_name'] ?? ''}".trim() : 'Counselor';
+    final deptTitle = user?['department_title'] ?? 'Guidance Counselor';
+
+    switch (_selectedTabIndex) {
+      case 1:
+        return 'Review & resolve risk-flagged student distress cases';
+      case 2:
+        return 'Student mood histories & reactivation appeals';
+      case 3:
+        return 'Publish mental health articles for Urian students';
+      case 4:
+        return 'RA 11036 compliance logs of counselor actions';
+      case 0:
+      default:
+        return counselorName.isNotEmpty ? '$counselorName • $deptTitle' : deptTitle;
+    }
+  }
+
+  IconData get _appBarIcon {
+    switch (_selectedTabIndex) {
+      case 1:
+        return Icons.health_and_safety_rounded;
+      case 2:
+        return Icons.people_alt_rounded;
+      case 3:
+        return Icons.auto_stories_rounded;
+      case 4:
+        return Icons.verified_user_rounded;
+      case 0:
+      default:
+        return Icons.volunteer_activism_rounded;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().currentUser;
-    final counselorName = user != null ? "${user['first_name'] ?? ''} ${user['last_name'] ?? ''}".trim() : 'Counselor';
-    final deptTitle = user?['department_title'] ?? 'University Guidance Counselor';
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -118,16 +167,16 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                 color: const Color(0xFFE0F2FE),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.volunteer_activism_rounded, color: Color(0xFF0284C7), size: 20),
+              child: Icon(_appBarIcon, color: const Color(0xFF0284C7), size: 20),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'FSUU Guidance Hub',
-                    style: TextStyle(
+                  Text(
+                    _appBarTitle,
+                    style: const TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 14.5,
                       color: Color(0xFF0F172A),
@@ -135,7 +184,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                     ),
                   ),
                   Text(
-                    counselorName.isNotEmpty ? '$counselorName • $deptTitle' : deptTitle,
+                    _appBarSubtitle,
                     style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 11,
@@ -150,14 +199,15 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Refresh Stats',
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0284C7)),
-            onPressed: () {
-              HapticService.lightTap();
-              _fetchStats();
-            },
-          ),
+          if (_selectedTabIndex == 0)
+            IconButton(
+              tooltip: 'Refresh Stats',
+              icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0284C7)),
+              onPressed: () {
+                HapticService.lightTap();
+                _fetchStats();
+              },
+            ),
           IconButton(
             tooltip: 'Sign Out',
             icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
@@ -165,12 +215,28 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: _buildCurrentTabBody(),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildCurrentTabBody() {
+    switch (_selectedTabIndex) {
+      case 1:
+        return const CounselorTriageTab();
+      case 2:
+        return const CounselorStudentsTab();
+      case 3:
+        return const CounselorArticlesTab();
+      case 4:
+        return const CounselorAuditTab();
+      case 0:
+      default:
+        return _buildOverviewTab();
+    }
+  }
+
+  Widget _buildOverviewTab() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
@@ -260,13 +326,12 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                     ElevatedButton(
                       onPressed: () {
                         HapticService.lightTap();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
-                        );
+                        setState(() => _selectedTabIndex = 1);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFDC2626),
                         foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 34),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
@@ -427,9 +492,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
               badge: flagged > 0 ? "$flagged pending" : null,
               onTap: () {
                 HapticService.lightTap();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
-                );
+                setState(() => _selectedTabIndex = 1);
               },
             ),
             const SizedBox(height: 10),
@@ -442,9 +505,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
               subtitle: "View student mood histories, manage deactivations, and review appeals",
               onTap: () {
                 HapticService.lightTap();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
-                );
+                setState(() => _selectedTabIndex = 2);
               },
             ),
             const SizedBox(height: 10),
@@ -457,9 +518,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
               subtitle: "Author and publish evidence-based mental wellness articles for Urian students",
               onTap: () {
                 HapticService.lightTap();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AdminArticlesScreen()),
-                );
+                setState(() => _selectedTabIndex = 3);
               },
             ),
             const SizedBox(height: 10),
@@ -472,9 +531,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
               subtitle: "Review immutable logs of counselor actions for RA 11036 compliance",
               onTap: () {
                 HapticService.lightTap();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AdminSystemScreen()),
-                );
+                setState(() => _selectedTabIndex = 4);
               },
             ),
 
@@ -507,11 +564,11 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  _buildHotlineRow("FSUU Guidance Center", "(085) 342-1830 / (085) 815-3208"),
+                  _buildHotlineRow("FSUU Guidance Center", "(085) 342-1830", "guidance@urios.edu.ph"),
                   const Divider(height: 14, color: Color(0xFFF1F5F9)),
-                  _buildHotlineRow("National Mental Health (NCMH)", "1553 (Toll-Free, 24/7)"),
+                  _buildHotlineRow("National Center for Mental Health", "1553 / 0917-899-USAP", "ncmh.gov.ph"),
                   const Divider(height: 14, color: Color(0xFFF1F5F9)),
-                  _buildHotlineRow("In Touch Community Services", "(02) 8893-7603 / 0917-800-1123"),
+                  _buildHotlineRow("In Touch Community Services", "+63 917 800 1123", "crisisline@in-touch.org"),
                 ],
               ),
             ),
@@ -556,7 +613,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w700,
-                    fontSize: 16,
+                    fontSize: 17,
                     color: color,
                   ),
                 ),
@@ -564,10 +621,12 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                   title,
                   style: const TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11,
+                    fontSize: 11.5,
                     color: Color(0xFF64748B),
                     fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -588,22 +647,20 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: const [
-            BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1)),
-          ],
+          boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1))],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: iconColor, size: 20),
             ),
             const SizedBox(width: 12),
@@ -618,32 +675,23 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                         style: const TextStyle(
                           fontFamily: 'Poppins',
                           fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                          fontSize: 12.5,
                           color: Color(0xFF0F172A),
                         ),
                       ),
                       if (badge != null) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(6)),
                           child: Text(
                             badge,
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
                           ),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: const TextStyle(
@@ -655,23 +703,34 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
+            const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF94A3B8)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHotlineRow(String label, String number) {
+  Widget _buildHotlineRow(String title, String phone, String email) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+              ),
+              Text(
+                email,
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
         ),
         Text(
-          number,
+          phone,
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: Color(0xFF0284C7), fontWeight: FontWeight.w600),
         ),
       ],
@@ -681,38 +740,33 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
   Widget _buildBottomNav() {
     return Container(
       height: 62,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, -2))],
+        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        boxShadow: [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, -2))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(Icons.dashboard_rounded, 'Dashboard', true, null),
-          _buildNavItem(Icons.health_and_safety_rounded, 'Triage', false, () {
+          _buildNavItem(Icons.dashboard_rounded, 'Dashboard', _selectedTabIndex == 0, () {
             HapticService.lightTap();
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
-            );
+            setState(() => _selectedTabIndex = 0);
           }),
-          _buildNavItem(Icons.people_alt_rounded, 'Students', false, () {
+          _buildNavItem(Icons.health_and_safety_rounded, 'Triage', _selectedTabIndex == 1, () {
             HapticService.lightTap();
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
-            );
+            setState(() => _selectedTabIndex = 1);
           }),
-          _buildNavItem(Icons.auto_stories_rounded, 'Articles', false, () {
+          _buildNavItem(Icons.people_alt_rounded, 'Students', _selectedTabIndex == 2, () {
             HapticService.lightTap();
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AdminArticlesScreen()),
-            );
+            setState(() => _selectedTabIndex = 2);
           }),
-          _buildNavItem(Icons.verified_user_rounded, 'Audit', false, () {
+          _buildNavItem(Icons.auto_stories_rounded, 'Articles', _selectedTabIndex == 3, () {
             HapticService.lightTap();
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AdminSystemScreen()),
-            );
+            setState(() => _selectedTabIndex = 3);
+          }),
+          _buildNavItem(Icons.verified_user_rounded, 'Audit', _selectedTabIndex == 4, () {
+            HapticService.lightTap();
+            setState(() => _selectedTabIndex = 4);
           }),
         ],
       ),
@@ -720,25 +774,31 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
   }
 
   Widget _buildNavItem(IconData icon, String label, bool isSelected, VoidCallback? onTap) {
-    final color = isSelected ? AppColors.primary : const Color(0xFF64748B);
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 10.5,
-              color: color,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+              size: 22,
             ),
-          ),
-        ],
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

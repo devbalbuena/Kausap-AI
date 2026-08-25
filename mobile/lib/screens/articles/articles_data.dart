@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class ArticleModel {
@@ -100,6 +100,8 @@ class ArticleModel {
       } catch (_) {}
     } else if (json['sections'] != null && json['sections'] is List) {
       secList = (json['sections'] as List).map((s) => ArticleSection.fromJson(s as Map<String, dynamic>)).toList();
+    } else if (json['content'] != null && json['content'] is List) {
+      secList = (json['content'] as List).map((s) => ArticleSection.fromJson(s as Map<String, dynamic>)).toList();
     }
 
     // Parse reaction counts
@@ -116,7 +118,7 @@ class ArticleModel {
       subtitle: json['subtitle'] as String? ?? '',
       category: cat,
       readTime: json['read_time'] as String? ?? '4 min read',
-      author: json['author'] as String? ?? 'CSU Guidance Center',
+      author: json['author'] as String? ?? 'FSUU Guidance Center',
       authorRole: json['author_role'] as String? ?? 'Counselor',
       imageUrl: json['image_url'] as String?,
       categoryIcon: ArticlesData.iconForCategory(cat),
