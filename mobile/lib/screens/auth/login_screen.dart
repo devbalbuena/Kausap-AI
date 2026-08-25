@@ -13,6 +13,7 @@ import '../signup/client_signup_step1_screen.dart';
 import 'forgot_password_screen.dart';
 import 'deactivated_account_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../counselor/counselor_dashboard_screen.dart';
 
 /// Clean, Generic Login Screen for Students and Administrators.
 /// Automatically detects Admin accounts on successful login.
@@ -83,6 +84,11 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (user['role'] == 'admin') {
           Navigator.of(context).pushAndRemoveUntil(
             slideRoute(const AdminDashboardScreen()),
+            (route) => false,
+          );
+        } else if (user['role'] == 'counselor') {
+          Navigator.of(context).pushAndRemoveUntil(
+            slideRoute(const CounselorDashboardScreen()),
             (route) => false,
           );
         } else {

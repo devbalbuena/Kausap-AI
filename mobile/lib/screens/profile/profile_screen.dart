@@ -199,7 +199,6 @@ class ProfileScreen extends StatelessWidget {
     final fullName = user?['full_name'] ?? 'User';
     final email = user?['email'] ?? '';
     final role = user?['role'] ?? 'Student';
-    final isClient = role == 'client' || role == 'Client' || role == 'Student';
     final avatarUrl = user?['avatar_url'] ?? '';
 
     return Scaffold(
@@ -289,7 +288,9 @@ class ProfileScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          isClient ? 'Student' : role.toString().toUpperCase(),
+                          role.toString().toLowerCase() == 'counselor'
+                              ? 'Guidance Counselor'
+                              : (role.toString().toLowerCase() == 'admin' ? 'Super Admin' : 'Student'),
                           style: const TextStyle(
                             fontFamily: 'Urbanist',
                             fontSize: 11,

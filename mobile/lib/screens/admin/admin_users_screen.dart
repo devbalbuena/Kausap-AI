@@ -475,7 +475,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       radius: 26,
                       backgroundColor: isDeleted
                           ? const Color(0xFFF1F5F9)
-                          : (isAdmin ? const Color(0xFFF3E8FF) : const Color(0xFFE0F2FE)),
+                          : (isAdmin
+                              ? const Color(0xFFF3E8FF)
+                              : (role == 'counselor' ? const Color(0xFFCCFBF1) : const Color(0xFFE0F2FE))),
                       child: Text(
                         name.isNotEmpty ? name[0].toUpperCase() : 'U',
                         style: TextStyle(
@@ -484,7 +486,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           fontWeight: FontWeight.w700,
                           color: isDeleted
                               ? const Color(0xFF64748B)
-                              : (isAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0284C7)),
+                              : (isAdmin
+                                  ? const Color(0xFF7C3AED)
+                                  : (role == 'counselor' ? const Color(0xFF0D9488) : const Color(0xFF0284C7))),
                         ),
                       ),
                     ),
@@ -806,21 +810,58 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Widget _buildRoleBadge(String role) {
-    final isAdmin = role.toLowerCase() == 'admin';
+    final r = role.toLowerCase();
+    if (r == 'admin') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3E8FF),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFE9D5FF)),
+        ),
+        child: const Text(
+          "Admin",
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF7C3AED),
+          ),
+        ),
+      );
+    } else if (r == 'counselor') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFCCFBF1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFF99F6E4)),
+        ),
+        child: const Text(
+          "Counselor",
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0D9488),
+          ),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: isAdmin ? const Color(0xFFF3E8FF) : const Color(0xFFE0F2FE),
+        color: const Color(0xFFE0F2FE),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: isAdmin ? const Color(0xFFE9D5FF) : const Color(0xFFBAE6FD)),
+        border: Border.all(color: const Color(0xFFBAE6FD)),
       ),
-      child: Text(
-        isAdmin ? "Admin" : "Student",
+      child: const Text(
+        "Student",
         style: TextStyle(
           fontFamily: 'Poppins',
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: isAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0284C7),
+          color: Color(0xFF0284C7),
         ),
       ),
     );
