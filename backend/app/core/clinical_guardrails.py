@@ -19,6 +19,7 @@ editing this single file (Layered Architecture — NFR Clean Code).
 """
 
 import re
+from typing import Optional
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HARDENED SYSTEM PROMPT
@@ -156,13 +157,13 @@ def check_clinical_boundary(text: str) -> tuple[bool, str | None]:
     return False, None
 
 
-def build_system_messages() -> list[dict]:
+def build_system_messages(user_context: Optional[str] = None) -> list[dict]:
     """
     Return the hardened system message list that must always be prepended
     to every LLM conversation. This ensures the system prompt cannot be
     overridden by user messages.
-
-    Returns:
-        A list containing the single hardened system message dict.
     """
-    return [{"role": "system", "content": KAUSAP_SYSTEM_PROMPT}]
+    prompt = KAUSAP_SYSTEM_PROMPT
+    if user_context:
+        prompt += f"\n\n[STUDENT CULTURAL & PERSONAL PROFILE]\n{user_context}\nUse this cultural and personal context naturally to be relatable and empathetic to Filipino university student life, without diagnosing or prescribing."
+    return [{"role": "system", "content": prompt}]

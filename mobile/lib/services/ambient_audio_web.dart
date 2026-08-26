@@ -154,3 +154,31 @@ void setAmbientVolume(double volume) {
     """]);
   } catch (_) {}
 }
+
+void playBreathingChime(int phaseIndex) {
+  try {
+    final freqs = [528.0, 396.0, 261.63];
+    final freq = freqs[phaseIndex % freqs.length];
+    js.context.callMethod('eval', ["""
+      try {
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          var ctx = window._kausapChimeCtx || new AudioCtx();
+          window._kausapChimeCtx = ctx;
+          if (ctx.state === 'suspended') { ctx.resume(); }
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime($freq, ctx.currentTime);
+          gain.gain.setValueAtTime(0.18, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 1.4);
+        }
+      } catch(e) {}
+    """]);
+  } catch (_) {}
+}
+

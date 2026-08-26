@@ -52,6 +52,9 @@ class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
         'phone_number': widget.signupData['phone_number'],
         'birthday': bday,
         'gender': widget.signupData['gender'],
+        'nationality': widget.signupData['nationality'] ?? 'Filipino',
+        if (widget.signupData['hobbies'] != null)
+          'hobbies': widget.signupData['hobbies'],
         'occupation': widget.signupData['occupation'],
         if (widget.signupData['address'] != null)
           'address': widget.signupData['address'],

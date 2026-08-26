@@ -27,6 +27,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _avatarUrl;
   late DateTime _birthday;
   late String _gender;
+  late String _nationality;
+  late List<String> _selectedHobbies;
   bool _isSaving = false;
 
   final List<String> _presetAvatars = [
@@ -36,6 +38,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     'https://api.dicebear.com/7.x/notionists/png?seed=Mia&backgroundColor=e2e8f0',
     'https://api.dicebear.com/7.x/notionists/png?seed=Leo&backgroundColor=e2e8f0',
     'https://api.dicebear.com/7.x/notionists/png?seed=Zoe&backgroundColor=e2e8f0',
+  ];
+
+  final List<String> _availableHobbies = [
+    '📚 Reading',
+    '🎵 Music',
+    '🎮 Gaming',
+    '🏃 Sports & Fitness',
+    '🎨 Art & Drawing',
+    '✍️ Journaling',
+    '🧘 Meditation',
+    '🍳 Cooking',
+    '🌿 Nature & Outdoors',
+    '🎬 Movies & Series',
   ];
 
   @override
@@ -52,6 +67,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _birthday = DateTime(2000, 1, 1);
     }
     _gender = user?['gender'] ?? 'Prefer not to say';
+    _nationality = user?['nationality'] ?? 'Filipino';
+    final rawHobbies = user?['hobbies']?.toString() ?? '';
+    _selectedHobbies = rawHobbies.isNotEmpty
+        ? rawHobbies.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+        : ['📚 Reading', '🎵 Music'];
     _avatarUrl = user?['avatar_url'];
   }
 
@@ -249,6 +269,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  void _showNationalityDialog() {
+    final nationalities = ['Filipino', 'Dual Citizen', 'International Student', 'Other'];
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Select Nationality', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: nationalities.map((n) => ListTile(
+              title: Text(n, style: const TextStyle(fontFamily: 'Inter')),
+              trailing: _nationality == n ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20) : null,
+              onTap: () {
+                setState(() {
+                  _nationality = n;
+                });
+                Navigator.pop(context);
+              },
+            )).toList(),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -274,6 +320,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'last_name': lastName,
         'birthday': DateFormat('yyyy-MM-dd').format(_birthday),
         'gender': _gender,
+        'nationality': _nationality,
+        'hobbies': _selectedHobbies.join(', '),
         'avatar_url': avatarValue,
       });
 
@@ -522,6 +570,76 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     ],
                                   ),
                                 ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Nationality Selector
+                              _buildFieldLabel('Nationality & Cultural Background'),
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: _showNationalityDialog,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF9FAFB),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0x1AC0C9C2)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        _nationality,
+                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500),
+                                      ),
+                                      const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppColors.textSecondary),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Hobbies & Coping Outlets
+                              _buildFieldLabel('Hobbies & Coping Outlets (Select all that apply)'),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Helps Kausap AI suggest personalized grounding metaphors & self-care ideas.',
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _availableHobbies.map((hobby) {
+                                  final isSelected = _selectedHobbies.contains(hobby);
+                                  return FilterChip(
+                                    label: Text(hobby),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _selectedHobbies.add(hobby);
+                                        } else {
+                                          _selectedHobbies.remove(hobby);
+                                        }
+                                      });
+                                    },
+                                    selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                                    checkmarkColor: AppColors.primary,
+                                    backgroundColor: const Color(0xFFF1F5F9),
+                                    labelStyle: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                      color: isSelected ? AppColors.primary : const Color(0xFF334155),
+                                    ),
+                                    side: BorderSide(
+                                      color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                                      width: isSelected ? 1.5 : 1.0,
+                                    ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  );
+                                }).toList(),
                               ),
                             ],
                           ),

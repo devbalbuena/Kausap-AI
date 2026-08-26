@@ -17,6 +17,7 @@ import '../../config/api_config.dart';
 import '../profile/profile_screen.dart';
 import '../profile/assessment_history_screen.dart';
 import '../assessment/screener_flow_screen.dart';
+import '../crisis/crisis_resources_sheet.dart';
 
 class StudentInsightsScreen extends StatefulWidget {
   const StudentInsightsScreen({super.key});
@@ -1120,29 +1121,49 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+            child: InkWell(
+              onTap: () {
+                HapticService.lightTap();
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const CrisisResourcesSheet(),
+                );
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: const Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.support_agent_rounded, color: Color(0xFFDC2626), size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      "24/7 Crisis Support",
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                    Row(
+                      children: [
+                        Icon(Icons.support_agent_rounded, color: Color(0xFFDC2626), size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "24/7 Crisis Support & Hotlines",
+                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 18),
+                      ],
                     ),
+                    SizedBox(height: 6),
+                    Text(
+                      "Tap to access full directory of campus guidance & national emergency lines:",
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                    SizedBox(height: 8),
+                    Text("• FSUU Guidance: (085) 342-1830", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                    SizedBox(height: 4),
+                    Text("• NCMH Toll-Free: 1553 / 0917-899-8727", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
+                    SizedBox(height: 4),
+                    Text("• Hopeline PH: 0917-558-4673", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
                   ],
                 ),
-                SizedBox(height: 6),
-                Text(
-                  "If you need immediate confidential support, free hotlines are available 24/7:",
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
-                ),
-                SizedBox(height: 8),
-                Text("• NCMH Toll-Free: 1553 / 0917-899-8727", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
-                SizedBox(height: 4),
-                Text("• Hopeline PH: 0917-558-4673", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
-              ],
+              ),
             ),
           ),
         ],

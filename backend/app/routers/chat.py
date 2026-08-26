@@ -131,9 +131,19 @@ async def post_message(
             db.refresh(chat_session)
             sorted_messages = sorted(chat_session.messages, key=lambda m: m.created_at)
 
-            # build_system_messages() returns the hardened clinical boundary system prompt.
+            # Construct student cultural & personal context
+            cultural_parts = []
+            if current_user.full_name:
+                cultural_parts.append(f"Student Name: {current_user.full_name}")
+            if getattr(current_user, 'nationality', None):
+                cultural_parts.append(f"Nationality: {current_user.nationality}")
+            if getattr(current_user, 'hobbies', None):
+                cultural_parts.append(f"Hobbies & Coping Outlets: {current_user.hobbies}")
+            context_str = ", ".join(cultural_parts) if cultural_parts else None
+
+            # build_system_messages() returns the hardened clinical boundary system prompt with cultural context.
             # It ALWAYS anchors the first message, regardless of conversation history.
-            llm_messages = build_system_messages()
+            llm_messages = build_system_messages(user_context=context_str)
 
             for msg in sorted_messages:
                 llm_messages.append({"role": msg.role, "content": msg.content})

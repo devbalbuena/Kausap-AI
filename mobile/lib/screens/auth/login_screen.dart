@@ -202,7 +202,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Password', style: AppTextStyles.label),
+                                Flexible(
+                                  child: Text('Password', style: AppTextStyles.label, overflow: TextOverflow.ellipsis),
+                                ),
+                                const SizedBox(width: 8),
                                 GestureDetector(
                                   onTap: () {
                                     HapticService.lightTap();

@@ -22,6 +22,80 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
   final TextEditingController _resolvedSearchCtrl = TextEditingController();
   bool _showArchivedResolved = false;
 
+  // Dynamic Emergency Hotlines State
+  static const List<Map<String, dynamic>> _fallbackHotlines = [
+    {
+      "id": "fsuu-default-1",
+      "name": "FSUU Guidance Center Emergency Line",
+      "phone": "(085) 342-1830",
+      "email": "guidance@urios.edu.ph",
+      "description": "Main Campus, Father Saturnino Urios University, Butuan City",
+      "category": "campus",
+      "type": "call",
+      "is_active": true,
+      "sort_order": 1,
+    },
+    {
+      "id": "ncmh-default-2",
+      "name": "National Center for Mental Health (NCMH)",
+      "phone": "1553 / 0917-899-8727",
+      "email": "ncmh.gov.ph",
+      "description": "24/7 National Mental Health Crisis Hotline (Toll-Free Nationwide)",
+      "category": "national",
+      "type": "call",
+      "is_active": true,
+      "sort_order": 2,
+    },
+    {
+      "id": "hopeline-default-3",
+      "name": "Hopeline Philippines",
+      "phone": "0917-558-4673 / (02) 8804-4673",
+      "email": "hopeline@ngf-hope.org",
+      "description": "24/7 Suicide Prevention & Crisis Support Line",
+      "category": "national",
+      "type": "call",
+      "is_active": true,
+      "sort_order": 3,
+    },
+    {
+      "id": "intouch-default-4",
+      "name": "In Touch Community Services",
+      "phone": "+63 917 800 1123 / +63 2 8893 7603",
+      "email": "crisisline@in-touch.org",
+      "description": "Crisis Line Philippines 24/7 Multilingual Support",
+      "category": "national",
+      "type": "call",
+      "is_active": true,
+      "sort_order": 4,
+    },
+    {
+      "id": "911-default-5",
+      "name": "Philippine Emergency Hotline (911)",
+      "phone": "911",
+      "email": null,
+      "description": "National Emergency First Responders, Police & Ambulance",
+      "category": "emergency",
+      "type": "call",
+      "is_active": true,
+      "sort_order": 5,
+    },
+    {
+      "id": "text-crisis-default-6",
+      "name": "Text Crisis Support Line",
+      "phone": "09178626820",
+      "email": null,
+      "description": "Text HELLO to this number for confidential SMS chat support",
+      "category": "national",
+      "type": "sms",
+      "is_active": true,
+      "sort_order": 6,
+    },
+  ];
+
+  List<Map<String, dynamic>> _hotlinesList = [];
+  bool _isLoadingHotlines = false;
+  String _selectedHotlineCategory = 'all';
+
   static const String _resolvedStorageKey = 'counselor_resolved_triage_logs_v1';
 
   final List<String> _clinicalActionPresets = [
@@ -35,8 +109,15 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
   @override
   void initState() {
     super.initState();
+    _hotlinesList = List<Map<String, dynamic>>.from(_fallbackHotlines);
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index == 2 && mounted) {
+        _fetchHotlines();
+      }
+    });
     _fetchFlaggedMessages();
+    _fetchHotlines();
   }
 
   @override
@@ -936,41 +1017,491 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     );
   }
 
+  Future<void> _fetchHotlines() async {
+    setState(() => _isLoadingHotlines = true);
+    try {
+      final res = await _api.get('/crisis/hotlines');
+      if (mounted && res is List) {
+        setState(() {
+          _hotlinesList = res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _isLoadingHotlines = false;
+        });
+        return;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _isLoadingHotlines = false);
+  }
+
+  Future<void> _deleteHotline(String id, String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.archive_outlined, color: Color(0xFFDC2626), size: 22),
+            SizedBox(width: 8),
+            Text('Archive Hotline?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to archive "$name"? It will be hidden from student SOS & profile screens while preserving audit records.',
+          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(0, 38),
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Archive', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      HapticService.heavyTap();
+      try {
+        await _api.delete('/admin/hotlines/$id');
+        if (mounted) {
+          setState(() {
+            _hotlinesList.removeWhere((h) => h['id'] == id || h['name'] == name);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Hotline "$name" archived successfully (soft deleted).'),
+              backgroundColor: const Color(0xFF16A34A),
+            ),
+          );
+          _fetchHotlines();
+        }
+      } catch (e) {
+        if (mounted) {
+          final String errMsg = e is ApiException ? e.message : e.toString().replaceAll('ApiException: ', '');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to archive hotline: $errMsg'),
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showHotlineDialog([Map<String, dynamic>? existing]) async {
+    final isEditing = existing != null;
+    final nameCtrl = TextEditingController(text: existing?['name'] ?? '');
+    final phoneCtrl = TextEditingController(text: existing?['phone'] ?? '');
+    final emailCtrl = TextEditingController(text: existing?['email'] ?? '');
+    final descCtrl = TextEditingController(text: existing?['description'] ?? '');
+    String category = existing?['category'] ?? 'campus';
+    String type = existing?['type'] ?? 'call';
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isEditing ? const Color(0xFFE0F2FE) : const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isEditing ? Icons.edit_note_rounded : Icons.add_call,
+                  color: isEditing ? const Color(0xFF0284C7) : const Color(0xFF16A34A),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                isEditing ? 'Edit Emergency Hotline' : 'Add Emergency Hotline',
+                style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 440,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This contact will immediately sync to Student SOS, Profile & Insights menus in real time.',
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Category Selector
+                  const Text('Category Scope', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: category,
+                        isExpanded: true,
+                        items: const [
+                          DropdownMenuItem(value: 'campus', child: Text('🏫 Campus Guidance / Clinic')),
+                          DropdownMenuItem(value: 'national', child: Text('🇵🇭 National 24/7 Crisis Hotline')),
+                          DropdownMenuItem(value: 'emergency', child: Text('🚑 Local Emergency / 911 First Responders')),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) setDialogState(() => category = v);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Name
+                  const Text('Hotline Name *', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. FSUU Guidance Center Emergency Line',
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Phone Number
+                  const Text('Phone / Hotline Number *', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: phoneCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. (085) 342-1830 or 1553',
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Email
+                  const Text('Email Address (Optional)', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: emailCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. guidance@urios.edu.ph',
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Description
+                  const Text('Location / Operating Hours', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Main Campus, Father Saturnino Urios University, Butuan City',
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Type
+                  Row(
+                    children: [
+                      const Text('Contact Type: ', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: const Text('📞 Call', style: TextStyle(fontSize: 11)),
+                        selected: type == 'call',
+                        onSelected: (s) {
+                          if (s) setDialogState(() => type = 'call');
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        label: const Text('💬 SMS', style: TextStyle(fontSize: 11)),
+                        selected: type == 'sms',
+                        onSelected: (s) {
+                          if (s) setDialogState(() => type = 'sms');
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      final phone = phoneCtrl.text.trim();
+                      if (name.isEmpty || phone.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please provide both Hotline Name and Phone number.')),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSaving = true);
+                      try {
+                        final payload = {
+                          "name": name,
+                          "phone": phone,
+                          "email": emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+                          "description": descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
+                          "category": category,
+                          "type": type,
+                          "is_active": true,
+                          "sort_order": category == 'campus' ? 1 : (category == 'national' ? 2 : 3),
+                        };
+
+                        if (isEditing) {
+                          await _api.put('/admin/hotlines/${existing['id']}', body: payload);
+                        } else {
+                          await _api.post('/admin/hotlines', body: payload);
+                        }
+
+                        if (dialogCtx.mounted) {
+                          Navigator.pop(dialogCtx);
+                        }
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isEditing ? 'Hotline updated successfully!' : 'New hotline added & synchronized!'),
+                            backgroundColor: const Color(0xFF16A34A),
+                          ),
+                        );
+                        await _fetchHotlines();
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (!mounted) return;
+                        final String errMsg = e is ApiException ? e.message : e.toString().replaceAll('ApiException: ', '');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to save hotline: $errMsg'), backgroundColor: const Color(0xFFDC2626)),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(0, 40),
+                backgroundColor: const Color(0xFF0284C7),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isSaving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(isEditing ? 'Save Changes' : 'Add Hotline', style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildHotlinesTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final filteredHotlines = _hotlinesList.where((h) {
+      if (_selectedHotlineCategory == 'all') return true;
+      return (h['category'] ?? '').toString().toLowerCase() == _selectedHotlineCategory;
+    }).toList();
+
+    return Column(
       children: [
-        _buildHotlineCard(
-          "FSUU Guidance Center Emergency Line",
-          "(085) 342-1830",
-          "guidance@urios.edu.ph",
-          "Main Campus, Father Saturnino Urios University, Butuan City",
-          Icons.school_rounded,
-          const Color(0xFF0284C7),
+        // Top Action Header & Category Filters
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Live Crisis & Hotline Directory',
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
+                      ),
+                      Text(
+                        'Synchronized across student SOS and guidance workflows',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showHotlineDialog(),
+                    icon: const Icon(Icons.add_rounded, size: 16),
+                    label: const Text('+ Add Hotline'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      backgroundColor: const Color(0xFF0284C7),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Filter Category Chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildHotlineFilterChip('All Directories', 'all'),
+                    const SizedBox(width: 8),
+                    _buildHotlineFilterChip('🏫 Campus', 'campus'),
+                    const SizedBox(width: 8),
+                    _buildHotlineFilterChip('🇵🇭 National 24/7', 'national'),
+                    const SizedBox(width: 8),
+                    _buildHotlineFilterChip('🚑 Emergency 911', 'emergency'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        _buildHotlineCard(
-          "National Center for Mental Health (NCMH)",
-          "1553 (Toll-free nationwide) / 0917-899-USAP",
-          "ncmh.gov.ph",
-          "24/7 National Mental Health Crisis Hotline",
-          Icons.health_and_safety_rounded,
-          const Color(0xFF16A34A),
-        ),
-        const SizedBox(height: 12),
-        _buildHotlineCard(
-          "In Touch Community Services",
-          "+63 917 800 1123 / +63 2 8893 7603",
-          "crisisline@in-touch.org",
-          "Crisis Line Philippines 24/7 Support",
-          Icons.support_agent_rounded,
-          const Color(0xFF7C3AED),
+
+        // Hotlines List
+        Expanded(
+          child: _isLoadingHotlines
+              ? const Center(child: CircularProgressIndicator())
+              : filteredHotlines.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.phone_disabled_rounded, size: 40, color: Color(0xFF94A3B8)),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No hotlines found in this category.',
+                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            onPressed: () => _showHotlineDialog(),
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('Add New Hotline'),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(0, 36),
+                              backgroundColor: const Color(0xFF0284C7),
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _fetchHotlines,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredHotlines.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final h = filteredHotlines[index];
+                          return _buildDynamicHotlineCard(h);
+                        },
+                      ),
+                    ),
         ),
       ],
     );
   }
 
-  Widget _buildHotlineCard(String title, String phone, String email, String subtitle, IconData icon, Color color) {
+  Widget _buildHotlineFilterChip(String label, String category) {
+    final isSelected = _selectedHotlineCategory == category;
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        setState(() => _selectedHotlineCategory = category);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDynamicHotlineCard(Map<String, dynamic> hotline) {
+    final name = hotline['name']?.toString() ?? 'Emergency Contact';
+    final phone = hotline['phone']?.toString() ?? '';
+    final email = hotline['email']?.toString();
+    final description = hotline['description']?.toString() ?? '';
+    final category = hotline['category']?.toString() ?? 'national';
+    final type = hotline['type']?.toString() ?? 'call';
+    final id = hotline['id']?.toString() ?? '';
+
+    Color themeColor;
+    IconData icon;
+    String badgeLabel;
+
+    if (category == 'campus') {
+      themeColor = const Color(0xFF0284C7);
+      icon = Icons.school_rounded;
+      badgeLabel = 'Campus Resource';
+    } else if (category == 'emergency') {
+      themeColor = const Color(0xFFDC2626);
+      icon = Icons.emergency_rounded;
+      badgeLabel = 'Emergency 911';
+    } else {
+      themeColor = const Color(0xFF16A34A);
+      icon = type == 'sms' ? Icons.sms_rounded : Icons.health_and_safety_rounded;
+      badgeLabel = 'National 24/7';
+    }
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -985,52 +1516,99 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withAlpha(25),
+              color: themeColor.withAlpha(25),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: themeColor, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: themeColor.withAlpha(20),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badgeLabel,
+                        style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 10, color: themeColor),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
-                ),
+                if (description.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    description,
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.phone_rounded, size: 14, color: Color(0xFF0284C7)),
+                    Icon(type == 'sms' ? Icons.sms_outlined : Icons.phone_rounded, size: 14, color: themeColor),
                     const SizedBox(width: 4),
                     Text(
                       phone,
-                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5, color: Color(0xFF0284C7)),
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5, color: themeColor),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.email_outlined, size: 14, color: Color(0xFF64748B)),
-                    const SizedBox(width: 4),
-                    Text(
-                      email,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
+                if (email != null && email.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(Icons.email_outlined, size: 14, color: Color(0xFF64748B)),
+                      const SizedBox(width: 4),
+                      Text(
+                        email,
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
+          ),
+          const SizedBox(width: 8),
+
+          // Actions: Edit & Delete
+          Column(
+            children: [
+              IconButton(
+                tooltip: 'Edit Hotline',
+                icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF0284C7)),
+                onPressed: () => _showHotlineDialog(hotline),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(height: 10),
+              IconButton(
+                tooltip: 'Remove Hotline',
+                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
+                onPressed: () => _deleteHotline(id, name),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 }
+

@@ -26,6 +26,8 @@ class UserSummary(BaseModel):
     birthday: Optional[str] = None
     gender: Optional[str] = None
     occupation: Optional[str] = None
+    nationality: Optional[str] = "Filipino"
+    hobbies: Optional[str] = None
 
 
 class FlaggedMessageRead(BaseModel):
@@ -139,4 +141,15 @@ class SystemHealthTelemetry(BaseModel):
     total_counselors: int
     total_students: int
     total_tokens_consumed: int
+
+
+class DistressPatternAlert(BaseModel):
+    user_id: uuid.UUID
+    full_name: str
+    email: str
+    consecutive_days: int
+    latest_mood_level: int
+    latest_mood_label: str
+    latest_note: Optional[str] = None
+    latest_date: str
 

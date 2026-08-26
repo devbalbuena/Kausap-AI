@@ -57,6 +57,8 @@ def register(payload: RegisterRequest, session: Annotated[Session, Depends(get_s
         address=payload.address,
         bio=payload.bio,
         avatar_url=payload.avatar_url,
+        nationality=payload.nationality or "Filipino",
+        hobbies=payload.hobbies,
         occupation=payload.occupation,
     )
     session.add(user)

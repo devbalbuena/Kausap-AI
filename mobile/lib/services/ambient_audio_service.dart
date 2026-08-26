@@ -108,4 +108,9 @@ class AmbientAudioService {
     }
     _notify();
   }
+
+  void playChime(int phaseIndex) {
+    platform_audio.playBreathingChime(phaseIndex);
+  }
 }
+

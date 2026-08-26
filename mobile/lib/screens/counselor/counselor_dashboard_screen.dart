@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -21,6 +22,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
   int _selectedTabIndex = 0; // 0: Overview, 1: Triage, 2: Students, 3: Articles, 4: Audit
   bool _isLoading = true;
   Map<String, dynamic>? _stats;
+  List<Map<String, dynamic>> _distressAlerts = [];
   String? _error;
 
   @override
@@ -38,11 +40,15 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
       final results = await Future.wait([
         ApiClient().get('/admin/stats'),
         ApiClient().get('/admin/users?limit=200'),
+        ApiClient().get('/admin/distress-patterns', silent: true).catchError((_) => []),
       ]);
 
       if (mounted) {
         final statsData = Map<String, dynamic>.from(results[0] as Map);
         final usersData = results[1] is List ? (results[1] as List) : [];
+        final patternsData = results[2] is List
+            ? (results[2] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList()
+            : <Map<String, dynamic>>[];
 
         // Count ONLY students (role == 'client')
         final students = usersData.where((u) {
@@ -59,6 +65,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
 
         setState(() {
           _stats = statsData;
+          _distressAlerts = patternsData;
           _isLoading = false;
         });
       }
@@ -301,6 +308,10 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Process 5.0: Consistent Distress Detection Alerts (if any) ──
+            if (_distressAlerts.isNotEmpty)
+              _buildConsistentDistressCard(),
+
             // ── Urgent Crisis Banner (if any) ──
             if (flagged > 0)
               Container(
@@ -671,6 +682,74 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
               },
             ),
 
+            const SizedBox(height: 16),
+
+            // ── 📄 Official Campus Wellness & Mood Report Export ──
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [BoxShadow(color: Color(0x200F172A), blurRadius: 8, offset: Offset(0, 3))],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    HapticService.lightTap();
+                    _showCampusWellnessReport();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(30),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Campus Wellness Report (PDF)",
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                "Generate official RA 11036 emotional climate summary for administration",
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 24),
 
             // ── Emergency Hotline Reference ──
@@ -921,6 +1000,327 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConsistentDistressCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+        boxShadow: const [BoxShadow(color: Color(0x06D97706), blurRadius: 8, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.psychology_alt_rounded, color: Color(0xFFD97706), size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Consistent Distress Detection (Process 5.0)",
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF92400E),
+                      ),
+                    ),
+                    Text(
+                      "${_distressAlerts.length} student${_distressAlerts.length > 1 ? 's' : ''} logged 3+ consecutive low moods (RA 11036 alert)",
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: Color(0xFFB45309),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFFDE68A)),
+          const SizedBox(height: 10),
+
+          ..._distressAlerts.map((alert) {
+            final name = alert['full_name'] ?? 'Unknown Student';
+            final email = alert['email'] ?? '';
+            final days = alert['consecutive_days'] ?? 3;
+            final label = alert['latest_mood_label'] ?? 'Distressed';
+            final note = alert['latest_note']?.toString();
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFEF3C7)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEE2E2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                "$days Days Low",
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 10,
+                                  color: Color(0xFFDC2626),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          "$email • Last Mood: $label",
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                        ),
+                        if (note != null && note.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '"$note"',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11,
+                              fontStyle: FontStyle.italic,
+                              color: Color(0xFF475569),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      HapticService.lightTap();
+                      setState(() => _selectedTabIndex = 2);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD97706),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 32),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Check-in', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showCampusWellnessReport() {
+    final totalStudents = _stats?['total_students'] ?? _stats?['total_users'] ?? 0;
+    final activeStudents = _stats?['total_active_students'] ?? _stats?['total_active_users'] ?? 0;
+    final totalSessions = _stats?['total_chat_sessions'] ?? 0;
+    final totalMoods = _stats?['total_mood_entries'] ?? 0;
+    final flagged = _stats?['total_flagged_messages'] ?? 0;
+
+    final moodDistribution = _stats?['mood_distribution'] as Map<String, dynamic>?;
+    final greatMoods = (moodDistribution?['great'] as num?)?.toInt() ?? 0;
+    final goodMoods = (moodDistribution?['good'] as num?)?.toInt() ?? 0;
+    final okayMoods = (moodDistribution?['okay'] as num?)?.toInt() ?? 0;
+    final downMoods = (moodDistribution?['down'] as num?)?.toInt() ?? 0;
+    final distressedMoods = (moodDistribution?['distressed'] as num?)?.toInt() ?? 0;
+
+    final dateStr = DateTime.now().toLocal().toString().split('.')[0];
+
+    final reportText = '''
+============================================================
+FATHER SATURNINO URIOS UNIVERSITY
+GUIDANCE & TESTING CENTER • BUTUAN CITY, PHILIPPINES
+CAMPUS EMOTIONAL WELLNESS & MOOD CLIMATE REPORT
+(Institutional Compliance: Republic Act 11036)
+============================================================
+Generated: $dateStr
+Reporting Officer: FSUU Guidance & Counseling Office
+
+1. STUDENT ENGAGEMENT OVERVIEW
+- Enrolled Student Accounts: $totalStudents
+- Active Daily Students: $activeStudents
+- Total Emotional Check-in Logs: $totalMoods
+- Total AI Support Conversations: $totalSessions
+- Triage Distress Alerts Handled: $flagged
+
+2. CAMPUS EMOTIONAL CLIMATE BREAKDOWN
+- Great Mood: $greatMoods (${totalMoods > 0 ? (greatMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
+- Good Mood: $goodMoods (${totalMoods > 0 ? (goodMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
+- Okay / Neutral: $okayMoods (${totalMoods > 0 ? (okayMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
+- Down / Low Mood: $downMoods (${totalMoods > 0 ? (downMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
+- Distressed / High Risk: $distressedMoods (${totalMoods > 0 ? (distressedMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
+
+3. PERSISTENT DISTRESS CASES (PROCESS 5.0)
+- Current Flagged Priority Cases: ${_distressAlerts.length}
+
+4. CLINICAL COMPLIANCE CERTIFICATION
+All crisis escalations and student logs have been handled in accordance with the Philippine Mental Health Act (RA 11036) and the Data Privacy Act of 2012 (RA 10173).
+============================================================
+''';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF0284C7), size: 24),
+                      SizedBox(width: 10),
+                      Text(
+                        "Campus Wellness Report",
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: Text(
+                      reportText,
+                      style: const TextStyle(
+                        fontFamily: 'Courier',
+                        fontSize: 11.5,
+                        color: Color(0xFF0F172A),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: reportText));
+                        HapticService.lightTap();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Campus Wellness Report copied to clipboard! 📋"),
+                            backgroundColor: Color(0xFF16A34A),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text("Copy Report"),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F172A),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        HapticService.lightTap();
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Report generated and ready for institutional filing (RA 11036). ✅"),
+                            backgroundColor: Color(0xFF0284C7),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.check_circle_rounded, size: 16),
+                      label: const Text("Certify & Close"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

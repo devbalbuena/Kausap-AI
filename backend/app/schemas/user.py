@@ -23,7 +23,9 @@ class UserCreate(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
 
-    # Client-only
+    # Client-only cultural profiling & hobbies
+    nationality: Optional[str] = "Filipino"
+    hobbies: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
 
     @field_validator("role")
@@ -53,6 +55,8 @@ class UserRead(BaseModel):
     address: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    nationality: Optional[str] = "Filipino"
+    hobbies: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
     department_title: Optional[str] = None
     created_at: datetime
@@ -74,6 +78,8 @@ class RegisterRequest(BaseModel):
     address: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    nationality: Optional[str] = "Filipino"
+    hobbies: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
 
     @field_validator("role")
@@ -92,3 +98,5 @@ class UserUpdate(BaseModel):
     gender: Optional[GenderEnum] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    nationality: Optional[str] = None
+    hobbies: Optional[str] = None

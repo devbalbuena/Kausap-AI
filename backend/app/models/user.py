@@ -56,7 +56,9 @@ class User(SQLModel, table=True):
     bio: Optional[str] = Field(default=None)
     avatar_url: Optional[str] = Field(default=None)
 
-    # For students/clients — occupation dropdown
+    # For students/clients — cultural profiling & hobbies
+    nationality: Optional[str] = Field(default="Filipino")
+    hobbies: Optional[str] = Field(default=None)
     occupation: Optional[OccupationEnum] = Field(default=None)
 
     # For counselors/staff — guidance department title

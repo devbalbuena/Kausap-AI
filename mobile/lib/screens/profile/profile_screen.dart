@@ -15,6 +15,7 @@ import '../settings/privacy_center_screen.dart';
 import '../../widgets/mood_trends_chart.dart';
 import '../settings/about_screen.dart';
 import '../insights/student_insights_screen.dart';
+import '../crisis/crisis_resources_sheet.dart';
 import 'edit_profile_screen.dart';
 import 'achievements_screen.dart';
 import 'assessment_history_screen.dart';
@@ -27,132 +28,8 @@ class ProfileScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.crisis_alert_rounded, color: Color(0xFFDC2626), size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '24/7 Crisis & Emergency Support',
-                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF0F172A)),
-                          ),
-                          Text(
-                            'Free, confidential mental health help available anytime.',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                _buildCrisisHotlineCard(
-                  name: 'National Center for Mental Health (NCMH)',
-                  hotline: '1553 (Toll-Free) • 0917-899-8727',
-                  desc: '24/7 Free & Confidential Crisis Helpline (Philippines)',
-                  color: const Color(0xFFDC2626),
-                ),
-                const SizedBox(height: 10),
-                _buildCrisisHotlineCard(
-                  name: 'Hopeline Philippines',
-                  hotline: '0917-558-4673 • (02) 8804-4673',
-                  desc: '24/7 Suicide Prevention & Emotional Crisis Line',
-                  color: const Color(0xFF0284C7),
-                ),
-                const SizedBox(height: 10),
-                _buildCrisisHotlineCard(
-                  name: 'National Emergency Hotline',
-                  hotline: '911',
-                  desc: 'For immediate life-threatening medical emergencies',
-                  color: const Color(0xFFEA580C),
-                ),
-                const SizedBox(height: 10),
-                _buildCrisisHotlineCard(
-                  name: 'CSU Guidance & Counseling Office',
-                  hotline: 'csu.guidance@carsu.edu.ph',
-                  desc: 'Caraga State University Student Mental Health Center',
-                  color: const Color(0xFF16A34A),
-                ),
-
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: const Text('Close', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  static Widget _buildCrisisHotlineCard({
-    required String name,
-    required String hotline,
-    required String desc,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withAlpha(20),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.phone_in_talk_rounded, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A))),
-                Text(hotline, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: color)),
-                Text(desc, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-              ],
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => const CrisisResourcesSheet(),
     );
   }
 

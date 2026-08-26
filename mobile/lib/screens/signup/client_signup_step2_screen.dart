@@ -19,7 +19,9 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
   final _formKey = GlobalKey<FormState>();
   final _addressController = TextEditingController();
   final _bioController = TextEditingController();
-  String? _selectedOccupation;
+  String? _selectedOccupation = 'Student';
+  String _selectedNationality = 'Filipino';
+  final List<String> _selectedHobbies = ['📚 Reading', '🎵 Music'];
 
   static const List<String> _occupationOptions = [
     'Student',
@@ -27,6 +29,26 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
     'Self-employed',
     'Unemployed',
     'Other',
+  ];
+
+  static const List<String> _nationalityOptions = [
+    'Filipino',
+    'Dual Citizen',
+    'International Student',
+    'Other',
+  ];
+
+  static const List<String> _availableHobbies = [
+    '📚 Reading',
+    '🎵 Music',
+    '🎮 Gaming',
+    '🏃 Sports & Fitness',
+    '🎨 Art & Drawing',
+    '✍️ Journaling',
+    '🧘 Meditation',
+    '🍳 Cooking',
+    '🌿 Nature & Outdoors',
+    '🎬 Movies & Series',
   ];
 
   @override
@@ -41,6 +63,8 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
     final allData = {
       ...widget.step1Data,
       'occupation': _selectedOccupation,
+      'nationality': _selectedNationality,
+      'hobbies': _selectedHobbies.isNotEmpty ? _selectedHobbies.join(', ') : null,
       'address': _addressController.text.trim().isEmpty
           ? null
           : _addressController.text.trim(),
@@ -108,6 +132,64 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
                             ),
                             const SizedBox(height: 16),
 
+                            // Nationality
+                            _FieldLabel('Nationality'),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              initialValue: _selectedNationality,
+                              style: AppTextStyles.inputText,
+                              decoration: const InputDecoration(
+                                  hintText: 'Select your nationality'),
+                              items: _nationalityOptions
+                                  .map((n) => DropdownMenuItem(
+                                      value: n, child: Text(n)))
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setState(() => _selectedNationality = v ?? 'Filipino'),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Hobbies & Coping Outlets
+                            _FieldLabel('Hobbies & Coping Outlets'),
+                            const SizedBox(height: 4),
+                            Text('Select activities that help you unwind (used for personalized AI coping metaphors)',
+                                style: AppTextStyles.caption.copyWith(fontSize: 11)),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: _availableHobbies.map((hobby) {
+                                final isSelected = _selectedHobbies.contains(hobby);
+                                return FilterChip(
+                                  label: Text(hobby),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        _selectedHobbies.add(hobby);
+                                      } else {
+                                        _selectedHobbies.remove(hobby);
+                                      }
+                                    });
+                                  },
+                                  selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                                  checkmarkColor: AppColors.primary,
+                                  backgroundColor: const Color(0xFFF1F5F9),
+                                  labelStyle: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11.5,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                    color: isSelected ? AppColors.primary : const Color(0xFF334155),
+                                  ),
+                                  side: BorderSide(
+                                    color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                                  ),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 16),
+
                             // Address (optional)
                             _FieldLabel('Address (optional)'),
                             const SizedBox(height: 8),
@@ -115,7 +197,7 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
                               controller: _addressController,
                               style: AppTextStyles.inputText,
                               decoration: const InputDecoration(
-                                  hintText: 'e.g. Makati City, Philippines'),
+                                  hintText: 'e.g. Butuan City, Philippines'),
                               textCapitalization: TextCapitalization.words,
                             ),
                             const SizedBox(height: 16),

@@ -1,7 +1,11 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
-  // Use 10.0.2.2 for Android Emulator connecting to localhost
-  // Use your local IP (e.g. 192.168.x.x) if testing on physical device
-  static const String baseUrl = 'https://kausap-ai.onrender.com';
+  // In debug mode (e.g. Flutter Chrome localhost testing), point to local FastAPI backend
+  // In production/release builds, point to live Render backend
+  static const String baseUrl = kDebugMode
+      ? 'http://127.0.0.1:8000'
+      : 'https://kausap-ai.onrender.com';
 
   // Auth endpoints
   static const String register = '/auth/register';

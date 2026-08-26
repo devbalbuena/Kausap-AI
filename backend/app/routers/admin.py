@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Optional, Dict, Any
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,7 +17,7 @@ from app.models.token_log import TokenUsageLog
 from app.schemas.admin import (
     UserSummary, FlaggedMessageRead, UserDetail, AdminStats,
     CounselorCreate, CounselorRead, CounselorStatusUpdate, CounselorPasswordReset,
-    TokenTelemetrySummary, DailyTokenPoint, SystemHealthTelemetry,
+    TokenTelemetrySummary, DailyTokenPoint, SystemHealthTelemetry, DistressPatternAlert,
 )
 from app.schemas.audit import AuditLogRead
 
@@ -104,7 +104,9 @@ def list_users(
                 phone_number=u.phone_number,
                 birthday=str(u.birthday) if u.birthday else None,
                 gender=u.gender.value if u.gender else None,
-                occupation=u.occupation.value if u.occupation else None,
+                occupation=u.occupation.value if hasattr(u.occupation, 'value') else (str(u.occupation) if u.occupation else None),
+                nationality=getattr(u, 'nationality', 'Filipino') or 'Filipino',
+                hobbies=getattr(u, 'hobbies', None),
             )
         )
     return summaries
@@ -714,4 +716,68 @@ def get_system_health(
         total_students=total_students,
         total_tokens_consumed=total_tokens_consumed,
     )
+
+
+# ── Process 5.0: Consistent Distress Detection (RA 11036) ───────────────────
+
+@router.get("/distress-patterns", response_model=List[DistressPatternAlert])
+def get_consistent_distress_patterns(
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """
+    Process 5.0: Consistent Distress Detection (RA 11036 compliance).
+    Identifies students who have logged persistent low moods (level 1 Distressed or level 2 Down)
+    across 3 or more consecutive check-ins.
+    """
+    students = session.exec(
+        select(User)
+        .where(User.role == UserRole.client)
+        .where(User.is_active == True)
+        .where(User.is_deleted == False)
+    ).all()
+    
+    alerts: List[DistressPatternAlert] = []
+    mood_labels = {
+        1: "Distressed",
+        2: "Down",
+        3: "Okay",
+        4: "Good",
+        5: "Great",
+    }
+
+    for s in students:
+        entries = session.exec(
+            select(MoodEntry)
+            .where(MoodEntry.user_id == s.id)
+            .order_by(MoodEntry.created_at.desc())
+            .limit(10)
+        ).all()
+
+        if not entries:
+            continue
+
+        consecutive_low = 0
+        for entry in entries:
+            if entry.mood_level <= 2:
+                consecutive_low += 1
+            else:
+                break
+
+        if consecutive_low >= 3:
+            latest = entries[0]
+            alerts.append(
+                DistressPatternAlert(
+                    user_id=s.id,
+                    full_name=s.full_name,
+                    email=s.email,
+                    consecutive_days=consecutive_low,
+                    latest_mood_level=latest.mood_level,
+                    latest_mood_label=mood_labels.get(latest.mood_level, "Distressed"),
+                    latest_note=latest.notes,
+                    latest_date=latest.created_at.strftime("%Y-%m-%d %H:%M"),
+                )
+            )
+
+    return alerts
 
