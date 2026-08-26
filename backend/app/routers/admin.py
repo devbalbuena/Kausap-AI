@@ -283,6 +283,7 @@ def resolve_appeal(
 
 
 @router.get("/flagged-messages", response_model=List[FlaggedMessageRead])
+@router.get("/flagged-messages/", response_model=List[FlaggedMessageRead])
 def list_flagged_messages(
     admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
@@ -359,6 +360,7 @@ def list_flagged_messages(
 
 
 @router.patch("/flagged-messages/{message_id}/resolve")
+@router.patch("/flagged-messages/{message_id}/resolve/")
 def resolve_flagged_message(
     message_id: uuid.UUID,
     admin: Annotated[User, Depends(get_current_counselor_or_admin)],
@@ -373,7 +375,7 @@ def resolve_flagged_message(
     msg.risk_flag = False
     session.add(msg)
     
-    note = (payload or {}).get("resolution_note") or "Crisis triage resolved by counselor."
+    note = (payload or {}).get("resolution_note") or f"Crisis triage resolved by {admin.email}."
     audit = AuditLog(
         admin_id=admin.id,
         admin_email=admin.email,
@@ -388,6 +390,7 @@ def resolve_flagged_message(
 
 
 @router.post("/flagged-messages/resolve-all")
+@router.post("/flagged-messages/resolve-all/")
 def resolve_all_flagged_messages(
     admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
