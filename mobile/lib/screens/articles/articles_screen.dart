@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -119,60 +118,118 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
 
   Widget _buildFeaturedHeroCard(ArticleModel article) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article))),
+      onTap: () {
+        HapticService.lightTap();
+        Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
+      },
       child: Container(
-        height: 170,
+        height: 180,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [article.themeColor, article.themeColor.withAlpha(180)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: article.themeColor.withAlpha(80), blurRadius: 16, offset: const Offset(0, 6))],
+          boxShadow: [
+            BoxShadow(
+              color: article.themeColor.withAlpha(90),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Stack(
           children: [
-            Positioned(
-              right: -20, top: -20,
-              child: Icon(article.categoryIcon, size: 130, color: Colors.white.withAlpha(25)),
+            Positioned.fill(
+              child: ArticleCoverImage(
+                imageUrl: article.imageUrl,
+                category: article.category,
+                themeColor: article.themeColor,
+                categoryIcon: article.categoryIcon,
+                height: 180,
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withAlpha(190),
+                      Colors.black.withAlpha(90),
+                      article.themeColor.withAlpha(160),
+                    ],
+                    begin: Alignment.bottomLeft,
+                    end: Alignment.topRight,
+                  ),
+                ),
+              ),
             ),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                         decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(40),
+                          color: const Color(0xFFF59E0B),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text('📌 FEATURED', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.8)),
+                        child: const Text(
+                          '📌 FEATURED',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                         decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(30),
+                          color: Colors.white.withAlpha(45),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(article.category, style: const TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w600, color: Colors.white)),
+                        child: Text(
+                          article.category,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const Spacer(),
-                  Text(article.title,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white, height: 1.3),
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(
+                    article.title,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      height: 1.25,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Text(article.readTime, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white70)),
+                      Text(
+                        article.readTime,
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white70),
+                      ),
                       const SizedBox(width: 10),
-                      Text('By ${article.author}', style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white70)),
+                      Text(
+                        'By ${article.author}',
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white70),
+                      ),
                       const Spacer(),
                       const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
                     ],
@@ -547,21 +604,18 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
   }
 
   Widget _buildArticleCard(ArticleModel article) {
-    final bool hasImage = article.imageUrl != null && article.imageUrl!.isNotEmpty;
-
     return GestureDetector(
       onTap: () {
         HapticService.lightTap();
         Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -571,150 +625,171 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Category & Read Time row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // ── Top Cover Image with Floating Category & Read Time Tags ──
+            Stack(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: article.themeColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(article.categoryIcon, size: 13, color: article.themeColor),
-                      const SizedBox(width: 5),
-                      Text(
-                        article.category,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: article.themeColor,
-                        ),
-                      ),
-                    ],
-                  ),
+                ArticleCoverImage(
+                  imageUrl: article.imageUrl,
+                  category: article.category,
+                  themeColor: article.themeColor,
+                  categoryIcon: article.categoryIcon,
+                  height: 125,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
                 ),
-                Text(
-                  article.readTime,
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Main Content Row (with image thumbnail if available)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        article.title,
-                        style: AppTextStyles.heading2.copyWith(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1F2937),
-                          height: 1.3,
-                        ),
+                // Gradient scrim overlay
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withAlpha(85),
+                          Colors.transparent,
+                          Colors.black.withAlpha(50),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        article.subtitle,
-                        style: AppTextStyles.body.copyWith(
-                          fontSize: 12.5,
-                          color: AppColors.textSecondary,
-                          height: 1.4,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                if (hasImage) ...[
-                  const SizedBox(width: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      color: article.themeColor.withAlpha(20),
-                      child: article.imageUrl!.startsWith('data:image')
-                          ? Image.memory(
-                              base64Decode(article.imageUrl!.split(',').last),
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Icon(article.categoryIcon, color: article.themeColor, size: 28),
-                            )
-                          : Image.network(
-                              article.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Icon(article.categoryIcon, color: article.themeColor, size: 28),
-                            ),
                     ),
                   ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // Author & Read Link
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundColor: article.themeColor.withAlpha(30),
-                      child: Text(
-                        article.author.isNotEmpty ? article.author[0] : 'K',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: article.themeColor,
-                        ),
-                      ),
+                ),
+                // Floating category chip
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(235),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 4),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      article.author,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(article.categoryIcon, size: 12, color: article.themeColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          article.category,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: article.themeColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Read time tag on top right
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(160),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      article.readTime,
                       style: const TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF4B5563),
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Text(
-                      'Read',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
+                        fontSize: 10.5,
+                        color: Colors.white,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(width: 2),
-                    const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
-                  ],
+                  ),
                 ),
               ],
+            ),
+
+            // ── Card Content Body ──
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    article.title,
+                    style: AppTextStyles.heading2.copyWith(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1F2937),
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    article.subtitle,
+                    style: AppTextStyles.body.copyWith(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                      height: 1.35,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  const SizedBox(height: 10),
+
+                  // Author & Read action
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 11,
+                            backgroundColor: article.themeColor.withAlpha(30),
+                            child: Text(
+                              article.author.isNotEmpty ? article.author[0] : 'K',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: article.themeColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            article.author,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF4B5563),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            'Read Article',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),

@@ -6,7 +6,8 @@ import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
-import '../../services/offline_mood_queue.dart';
+import '../../services/articles_storage_service.dart';
+import '../../widgets/cached_avatar.dart';
 import '../auth/login_screen.dart';
 import '../settings/help_faq_screen.dart';
 import '../settings/accessibility_settings_screen.dart';
@@ -16,60 +17,57 @@ import '../settings/notification_settings_screen.dart';
 import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
 import '../settings/privacy_center_screen.dart';
-import '../../widgets/mood_trends_chart.dart';
 import '../settings/about_screen.dart';
-import '../insights/student_insights_screen.dart';
 import '../crisis/crisis_resources_sheet.dart';
-import 'edit_profile_screen.dart';
-import 'achievements_screen.dart';
-import 'assessment_history_screen.dart';
-import '../../widgets/cached_avatar.dart';
+import '../profile/edit_profile_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class CounselorProfileScreen extends StatefulWidget {
+  const CounselorProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<CounselorProfileScreen> createState() => _CounselorProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  int _streak = 1;
-  int _totalMoodLogs = 0;
-  int _screenersCount = 0;
+class _CounselorProfileScreenState extends State<CounselorProfileScreen> {
+  int _activeStudents = 3;
+  int _resolvedAlerts = 0;
+  int _publishedArticles = 0;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserStats();
+    _fetchCounselorStats();
   }
 
-  Future<void> _fetchUserStats() async {
-    // 1. Fetch Streak
+  Future<void> _fetchCounselorStats() async {
     try {
-      final summary = await ApiClient().get(ApiConfig.moodSummary, silent: true);
-      if (summary is Map && summary['streak'] != null) {
-        if (mounted) setState(() => _streak = (summary['streak'] as num).toInt());
-      }
+      // 1. Fetch active students count
+      try {
+        final usersData = await ApiClient().get(ApiConfig.adminUsers, silent: true);
+        if (usersData is List) {
+          final students = usersData.where((u) {
+            final role = (u['role'] ?? 'client').toString().toLowerCase();
+            return role == 'client' || role == 'student';
+          }).toList();
+          if (mounted) setState(() => _activeStudents = students.length);
+        }
+      } catch (_) {}
+
+      // 2. Fetch resolved triage alerts count
+      try {
+        final alerts = await ApiClient().get(ApiConfig.adminFlaggedMessages, silent: true);
+        if (alerts is List) {
+          final resolved = alerts.where((a) => a['is_resolved'] == true).length;
+          if (mounted) setState(() => _resolvedAlerts = resolved);
+        }
+      } catch (_) {}
+
+      // 3. Fetch published articles count
+      try {
+        final articles = await ArticlesStorageService.loadAllArticlesWithEngagement();
+        if (mounted) setState(() => _publishedArticles = articles.length);
+      } catch (_) {}
     } catch (_) {}
-
-    // 2. Fetch Total Mood Logs
-    try {
-      final moods = await ApiClient().get(ApiConfig.mood, silent: true);
-      if (moods is List && mounted) {
-        setState(() => _totalMoodLogs = moods.length);
-      }
-    } catch (_) {}
-
-    // Fallback if offline check-in recorded
-    final offlineMood = await OfflineMoodQueue().getTodayOfflineMood();
-    if (offlineMood != null && _totalMoodLogs == 0 && mounted) {
-      setState(() => _totalMoodLogs = 1);
-    }
-
-    // Default screener count
-    if (mounted) {
-      setState(() => _screenersCount = 2);
-    }
   }
 
   void _showCrisisModal(BuildContext context) {
@@ -84,15 +82,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showLogoutDialog(BuildContext context) {
     HapticService.lightTap();
+    final nav = Navigator.of(context);
+    final auth = context.read<AuthProvider>();
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(
-          'Log Out',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 22),
+            SizedBox(width: 10),
+            Text(
+              'Sign Out',
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ],
         ),
         content: const Text(
-          'Are you sure you want to log out? Your journal entries, mood logs, and clinical assessments remain safe and encrypted.',
+          'Are you sure you want to sign out of the Counselor Guidance Hub? Student care records and crisis flags remain securely encrypted.',
           style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF475569)),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -102,10 +109,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              context.read<AuthProvider>().logout();
-              Navigator.of(context).pushAndRemoveUntil(
+              HapticService.heavyTap();
+              await auth.logout();
+              nav.pushAndRemoveUntil(
                 slideRoute(const LoginScreen()),
                 (route) => false,
               );
@@ -116,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -127,16 +135,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.currentUser;
-    final fullName = user?['full_name'] ?? 'User';
-    final email = user?['email'] ?? '';
-    final role = user?['role'] ?? 'Student';
+    final firstName = user?['first_name'] ?? 'Counselor';
+    final lastName = user?['last_name'] ?? '';
+    final fullName = "$firstName $lastName".trim().isEmpty ? 'Guidance Counselor' : "$firstName $lastName".trim();
+    final email = user?['email'] ?? 'counselor@urios.edu.ph';
+    final deptTitle = user?['department_title'] ?? 'Guidance Counselor III';
     final avatarUrl = user?['avatar_url'] ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
-          'Profile',
+          'Counselor Profile',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
@@ -147,6 +157,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -154,76 +168,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             children: [
-              // ── 1. Hero Profile Card with Quick Stats ──────────────────────
-              _buildHeroProfileCard(
+              // ── 1. Hero Counselor Profile Card ─────────────────────────────
+              _buildHeroCounselorCard(
                 fullName: fullName,
                 email: email,
-                role: role,
+                deptTitle: deptTitle,
                 avatarUrl: avatarUrl,
               ),
               const SizedBox(height: 20),
 
-              // ── 2. My Wellness Journey ─────────────────────────────────────
+              // ── 2. Clinical Care & Campus Protocols ────────────────────────
               _buildSectionContainer(
-                title: 'MY WELLNESS JOURNEY',
+                title: 'CLINICAL CARE & PROTOCOLS',
                 children: [
                   _buildListItem(
-                    icon: Icons.emoji_events_rounded,
-                    iconColor: const Color(0xFFF59E0B),
-                    title: 'Achievements & Milestones',
-                    subtitle: 'Badges & habit milestones',
+                    icon: Icons.health_and_safety_rounded,
+                    iconColor: const Color(0xFFEF4444),
+                    title: 'Crisis Triage & Risk Protocols',
+                    subtitle: 'Real-time AI distress alerts & student escalations',
                     onTap: () {
                       HapticService.lightTap();
-                      Navigator.push(context, slideRoute(const AchievementsScreen()));
+                      Navigator.pop(context);
                     },
                   ),
                   _buildDivider(),
                   _buildListItem(
-                    icon: Icons.assignment_outlined,
+                    icon: Icons.people_alt_rounded,
+                    iconColor: const Color(0xFF0284C7),
+                    title: 'Student Care Directory',
+                    subtitle: 'Emotional mood history & account management',
+                    onTap: () {
+                      HapticService.lightTap();
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDivider(),
+                  _buildListItem(
+                    icon: Icons.verified_user_rounded,
                     iconColor: const Color(0xFF8B5CF6),
-                    title: 'Assessment History (PHQ-9 & GAD-7)',
-                    subtitle: 'Clinical screening log & reports',
+                    title: 'RA 11036 Clinical Audit Trail',
+                    subtitle: 'Immutable compliance logging of triage actions',
                     onTap: () {
                       HapticService.lightTap();
-                      Navigator.push(context, slideRoute(const AssessmentHistoryScreen()));
+                      Navigator.pop(context);
                     },
                   ),
                   _buildDivider(),
                   _buildListItem(
-                    icon: Icons.insights_rounded,
-                    iconColor: const Color(0xFF06B6D4),
-                    title: 'My Mental Health Insights',
-                    subtitle: 'Detailed emotional trends & patterns',
+                    icon: Icons.auto_stories_rounded,
+                    iconColor: const Color(0xFFF59E0B),
+                    title: 'Psychoeducation CMS Articles',
+                    subtitle: 'Publish mental health resources for Urians',
                     onTap: () {
                       HapticService.lightTap();
-                      Navigator.push(context, slideRoute(const StudentInsightsScreen()));
+                      Navigator.pop(context);
                     },
                   ),
                 ],
               ),
               const SizedBox(height: 18),
 
-              // ── 3. Wellness & Mood Trends Chart ───────────────────────────
-              _buildSectionContainer(
-                title: 'WEEKLY MOOD OVERVIEW',
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 6),
-                    child: MoodTrendsChart(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // ── 4. Settings & Controls ─────────────────────────────────────
+              // ── 3. Counselor Settings & Controls ───────────────────────────
               _buildSectionContainer(
                 title: 'SETTINGS & CONTROLS',
                 children: [
                   _buildListItem(
                     icon: Icons.notifications_outlined,
                     iconColor: const Color(0xFF6366F1),
-                    title: 'Notifications & Reminders',
-                    subtitle: 'Quiet hours & daily check-in nudges',
+                    title: 'Triage Alerts & Notifications',
+                    subtitle: 'Sound chimes & urgent escalation alerts',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const NotificationSettingsScreen()));
@@ -233,8 +246,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildListItem(
                     icon: Icons.shield_outlined,
                     iconColor: const Color(0xFF10B981),
-                    title: 'Privacy Controls & Shield',
-                    subtitle: 'Confidentiality & quick escape settings',
+                    title: 'Confidentiality & Privacy Shield',
+                    subtitle: 'Data protection & ethical boundaries',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const PrivacyCenterScreen()));
@@ -256,7 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.palette_outlined,
                     iconColor: const Color(0xFFEC4899),
                     title: 'Appearance & Theme',
-                    subtitle: 'Color schemes & dark mode',
+                    subtitle: 'High contrast & color schemes',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const AppearanceSettingsScreen()));
@@ -278,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.accessibility_new_rounded,
                     iconColor: const Color(0xFF14B8A6),
                     title: 'Accessibility & Comfort',
-                    subtitle: 'Text size & high contrast modes',
+                    subtitle: 'Text size & accessibility tools',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const AccessibilitySettingsScreen()));
@@ -288,8 +301,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildListItem(
                     icon: Icons.gavel_rounded,
                     iconColor: const Color(0xFF64748B),
-                    title: 'Terms & Legal Policies',
-                    subtitle: 'Student privacy & campus ethical policies',
+                    title: 'Campus Ethical Policies & RA 11036',
+                    subtitle: 'Philippine Mental Health Law compliance',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const PrivacyScreen()));
@@ -299,11 +312,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 18),
 
-              // ── 5. Support & Emergency ─────────────────────────────────────
+              // ── 4. Campus Emergency & Support ──────────────────────────────
               _buildSectionContainer(
-                title: 'CAMPUS SUPPORT & EMERGENCY',
+                title: 'CAMPUS SUPPORT & DIRECTORY',
                 children: [
-                  // Highlighted Crisis Hotlines row
                   Container(
                     margin: const EdgeInsets.only(bottom: 6),
                     decoration: BoxDecoration(
@@ -314,8 +326,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _buildListItem(
                       icon: Icons.health_and_safety_rounded,
                       iconColor: const Color(0xFFEF4444),
-                      title: '24/7 Crisis Resources & Hotlines',
-                      subtitle: 'FSUU Guidance Office & emergency lines',
+                      title: 'FSUU Crisis Hotlines & Clinic Directory',
+                      subtitle: 'Guidance center, clinic, & 911 lines',
                       onTap: () => _showCrisisModal(context),
                     ),
                   ),
@@ -323,8 +335,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildListItem(
                     icon: Icons.help_outline_rounded,
                     iconColor: const Color(0xFF0284C7),
-                    title: 'Frequently Asked Questions (FAQ)',
-                    subtitle: 'How Kausap AI helps your mental health',
+                    title: 'Counselor Guidelines & Manual (FAQ)',
+                    subtitle: 'Procedures for managing student risk alerts',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const HelpFaqScreen()));
@@ -334,8 +346,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildListItem(
                     icon: Icons.info_outline_rounded,
                     iconColor: const Color(0xFF475569),
-                    title: 'About Kausap AI',
-                    subtitle: 'FSUU Campus Wellness Shield • v1.0.0',
+                    title: 'About Kausap AI Portal',
+                    subtitle: 'FSUU Guidance Center • Version 1.0.0',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const AboutScreen()));
@@ -345,14 +357,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 24),
 
-              // ── 6. Log Out Button ──────────────────────────────────────────
+              // ── 5. Sign Out Button ─────────────────────────────────────────
               SizedBox(
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: () => _showLogoutDialog(context),
                   icon: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFFDC2626)),
                   label: const Text(
-                    'Log Out',
+                    'Sign Out of Guidance Hub',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w600,
@@ -377,17 +389,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── Hero Profile Card Widget ───────────────────────────────────────────────
-  Widget _buildHeroProfileCard({
+  // ── Hero Counselor Card Widget ─────────────────────────────────────────────
+  Widget _buildHeroCounselorCard({
     required String fullName,
     required String email,
-    required String role,
+    required String deptTitle,
     required String avatarUrl,
   }) {
-    final roleLabel = role.toString().toLowerCase() == 'counselor'
-        ? 'Guidance Counselor'
-        : (role.toString().toLowerCase() == 'admin' ? 'Super Admin' : 'Student');
-
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -406,7 +414,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              // Avatar with camera/edit badge
+              // Avatar with camera badge
               Stack(
                 children: [
                   CachedAvatar(
@@ -427,7 +435,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4.5),
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: const Color(0xFF0284C7),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
@@ -442,7 +450,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
               const SizedBox(width: 14),
-              // Name, Email, Role
+              // Name, Email, Department
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,7 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
-                        fontSize: 17,
+                        fontSize: 16.5,
                         color: Color(0xFF0F172A),
                       ),
                     ),
@@ -461,7 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       email,
                       style: const TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 12.5,
+                        fontSize: 12,
                         color: Color(0xFF64748B),
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -470,21 +478,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(20),
+                        color: const Color(0xFFE0F2FE),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.school_rounded, size: 12, color: AppColors.primary),
+                          const Icon(Icons.shield_rounded, size: 12, color: Color(0xFF0284C7)),
                           const SizedBox(width: 4),
-                          Text(
-                            '$roleLabel • FSUU',
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
+                          Flexible(
+                            child: Text(
+                              '$deptTitle • FSUU',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0284C7),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -504,21 +515,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildQuickStatItem(
-                emoji: '🔥',
-                value: '$_streak Day',
-                label: 'Streak',
+                emoji: '👥',
+                value: '$_activeStudents',
+                label: 'Students',
               ),
               Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
               _buildQuickStatItem(
-                emoji: '🌿',
-                value: '$_totalMoodLogs',
-                label: 'Check-ins',
+                emoji: '🚨',
+                value: '$_resolvedAlerts',
+                label: 'Resolved',
               ),
               Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
               _buildQuickStatItem(
-                emoji: '📋',
-                value: '$_screenersCount',
-                label: 'Screeners',
+                emoji: '📚',
+                value: '$_publishedArticles',
+                label: 'Articles',
               ),
             ],
           ),
@@ -535,19 +546,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (mounted) setState(() {});
                 });
               },
-              icon: const Icon(Icons.edit_note_rounded, size: 17, color: AppColors.primary),
+              icon: const Icon(Icons.edit_note_rounded, size: 17, color: Color(0xFF0284C7)),
               label: const Text(
-                'Edit Profile Details',
+                'Edit Counselor Details',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+                  color: Color(0xFF0284C7),
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.primary.withAlpha(90)),
-                backgroundColor: AppColors.primary.withAlpha(10),
+                side: const BorderSide(color: Color(0xFFBAE6FD)),
+                backgroundColor: const Color(0xFFF0F9FF),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),

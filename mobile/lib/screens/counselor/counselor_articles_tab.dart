@@ -19,6 +19,7 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
   final ApiClient _api = ApiClient();
   List<ArticleModel> _articles = ArticlesData.all;
   String _searchQuery = '';
+  String _selectedStatusFilter = 'all'; // 'all' | 'published' | 'draft' | 'archived'
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -72,7 +73,32 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
     _fetchArticles();
   }
 
-  Future<void> _deleteArticle(String id) async {
+  Future<void> _toggleArchive(ArticleModel a) async {
+    HapticService.lightTap();
+    final isArchiving = a.status != 'archived';
+    await ArticlesStorageService.archiveArticle(a.id, isArchiving);
+    try {
+      await _api.put('/admin/articles/${a.id}', body: {'status': isArchiving ? 'archived' : 'published'}, silent: true);
+    } catch (_) {}
+    await ClinicalAuditService.recordLog(
+      action: isArchiving ? 'article_archived' : 'article_restored',
+      targetType: 'Psychoeducation Article',
+      targetId: a.id,
+      detail: '${isArchiving ? 'Archived' : 'Restored'} psychoeducation article "${a.title}".',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isArchiving ? 'Article "${a.title}" archived.' : 'Article "${a.title}" restored to published.'),
+          backgroundColor: isArchiving ? const Color(0xFF64748B) : const Color(0xFF16A34A),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+    _fetchArticles();
+  }
+
+  Future<void> _deleteArticle(String id, String title) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -81,9 +107,9 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
           "Delete Article",
           style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
         ),
-        content: const Text(
-          "Are you sure you want to delete this guidance article? Students will no longer be able to access it.",
-          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
+        content: Text(
+          'Are you sure you want to delete "$title"? Students will no longer be able to access it.',
+          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
         ),
         actions: [
           TextButton(
@@ -111,7 +137,7 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
         action: 'article_deleted',
         targetType: 'Psychoeducation Article',
         targetId: id,
-        detail: 'Deleted psychoeducation article with ID $id.',
+        detail: 'Deleted psychoeducation article "$title" (ID: $id).',
       );
       await ArticlesStorageService.deleteArticle(id);
       try {
@@ -119,9 +145,10 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
       } catch (_) {}
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Article deleted successfully."),
-          backgroundColor: Color(0xFF16A34A),
+        SnackBar(
+          content: Text('Article "$title" deleted successfully.'),
+          backgroundColor: const Color(0xFF16A34A),
+          duration: const Duration(seconds: 2),
         ),
       );
       _fetchArticles();
@@ -179,29 +206,52 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
               Text("By: ${a.author} • ${a.authorRole}", style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B))),
               const Divider(height: 24),
 
-              // Button to Preview as Student
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a, isPreview: true)),
-                    );
-                  },
-                  icon: const Icon(Icons.remove_red_eye_rounded, size: 18),
-                  label: const Text('View Full Student Experience 📖', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0284C7),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(0, 44),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
+              // Action Buttons: Preview & Edit
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: a, isPreview: true)),
+                          );
+                        },
+                        icon: const Icon(Icons.remove_red_eye_rounded, size: 16),
+                        label: const Text('Preview 📖', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0284C7),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _openArticleEditor(a);
+                        },
+                        icon: const Icon(Icons.edit_rounded, size: 16),
+                        label: const Text('Edit Article ✏️', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0284C7),
+                          side: const BorderSide(color: Color(0xFF0284C7)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Stats grid
               const Text('Engagement Overview', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
@@ -263,29 +313,6 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                   ),
                 );
               }),
-              if (a.isBuiltIn) ...[
-                const Divider(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFBFDBFE)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.lock_rounded, size: 16, color: Color(0xFF0284C7)),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'This is a built-in institutional article. Tap "+ New Article" to author custom guidance resources.',
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF1D4ED8)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -314,32 +341,21 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
     );
   }
 
-  Widget _statChip(String count, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(60)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(count, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: color)),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: color)),
-        ],
-      ),
-    );
-  }
-
   void _openArticleEditor([ArticleModel? article]) {
     final isNew = article == null;
     final titleCtrl = TextEditingController(text: article?.title ?? '');
     final subtitleCtrl = TextEditingController(text: article?.subtitle ?? '');
-    final headingCtrl = TextEditingController(text: article?.sections.isNotEmpty == true ? article!.sections.first.heading : 'Key Insights');
-    final bodyCtrl = TextEditingController(text: article?.sections.isNotEmpty == true ? article!.sections.first.content : '');
-    final pointsCtrl = TextEditingController(text: article?.sections.isNotEmpty == true && article!.sections.first.keyPoints != null ? article.sections.first.keyPoints!.join('\n') : '');
+    final headingCtrl = TextEditingController(
+      text: article?.sections.isNotEmpty == true ? article!.sections.first.heading : 'Key Insights',
+    );
+    final bodyCtrl = TextEditingController(
+      text: article?.sections.isNotEmpty == true ? article!.sections.first.content : '',
+    );
+    final pointsCtrl = TextEditingController(
+      text: article?.sections.isNotEmpty == true && article!.sections.first.keyPoints != null
+          ? article.sections.first.keyPoints!.join('\n')
+          : '',
+    );
     final authorCtrl = TextEditingController(text: article?.author ?? 'FSUU Guidance Center');
     String category = article?.category ?? 'Student Burnout';
     String readTime = article?.readTime ?? '4 min read';
@@ -507,89 +523,70 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final title = titleCtrl.text.trim();
-                      final subtitle = subtitleCtrl.text.trim();
-                      final heading = headingCtrl.text.trim();
-                      final body = bodyCtrl.text.trim();
-                      final author = authorCtrl.text.trim();
 
-                      if (title.isEmpty || subtitle.isEmpty || body.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Please fill in Title, Subtitle, and Main Content body."),
-                            backgroundColor: Color(0xFFDC2626),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final rawPoints = pointsCtrl.text
-                          .split('\n')
-                          .map((p) => p.trim())
-                          .where((p) => p.isNotEmpty)
-                          .toList();
-
-                      final sections = [
-                        ArticleSection(
-                          heading: heading.isNotEmpty ? heading : 'Key Insights',
-                          content: body,
-                          keyPoints: rawPoints.isNotEmpty ? rawPoints : null,
+                // ── Action Buttons (Publish vs Save as Draft) ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async => _saveArticleFromEditor(
+                          isDraft: true,
+                          article: article,
+                          title: titleCtrl.text.trim(),
+                          subtitle: subtitleCtrl.text.trim(),
+                          heading: headingCtrl.text.trim(),
+                          body: bodyCtrl.text.trim(),
+                          pointsText: pointsCtrl.text,
+                          author: authorCtrl.text.trim(),
+                          category: category,
+                          readTime: readTime,
+                          base64Image: base64Image,
+                          dialogContext: ctx,
                         ),
-                      ];
-
-                      final localJson = {
-                        'id': article?.id ?? 'counselor_${DateTime.now().millisecondsSinceEpoch}',
-                        'title': title,
-                        'subtitle': subtitle,
-                        'category': category,
-                        'status': 'published',
-                        'read_time': readTime,
-                        'author': author.isNotEmpty ? author : 'FSUU Guidance Center',
-                        'author_role': 'Guidance Counselor',
-                        'image_url': base64Image,
-                        'theme_color_hex': '#0284C7',
-                        'content_json': jsonEncode(sections.map((s) => s.toJson()).toList()),
-                        'is_published': true,
-                        'sections': sections.map((s) => s.toJson()).toList(),
-                      };
-
-                      Navigator.pop(ctx);
-                      await ClinicalAuditService.recordLog(
-                        action: article != null ? 'article_updated' : 'article_published',
-                        targetType: 'Psychoeducation Article',
-                        targetId: localJson['id'].toString(),
-                        detail: '${article != null ? 'Updated' : 'Published'} psychoeducation article "$title" in category $category.',
-                      );
-                      await ArticlesStorageService.saveArticle(localJson);
-                      try {
-                        await _api.post('/admin/articles', body: localJson, silent: true);
-                      } catch (_) {}
-
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(
-                          content: Text("Article '$title' published successfully!"),
-                          backgroundColor: const Color(0xFF16A34A),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFF59E0B),
+                          side: const BorderSide(color: Color(0xFFF59E0B)),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                      );
-                      _fetchArticles();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 44),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: const Text(
+                          "Save as Draft",
+                          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ),
                     ),
-                    child: Text(
-                      isNew ? "Publish Psychoeducation Guide" : "Save Changes",
-                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: () async => _saveArticleFromEditor(
+                          isDraft: false,
+                          article: article,
+                          title: titleCtrl.text.trim(),
+                          subtitle: subtitleCtrl.text.trim(),
+                          heading: headingCtrl.text.trim(),
+                          body: bodyCtrl.text.trim(),
+                          pointsText: pointsCtrl.text,
+                          author: authorCtrl.text.trim(),
+                          category: category,
+                          readTime: readTime,
+                          base64Image: base64Image,
+                          dialogContext: ctx,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0284C7),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          isNew ? "Publish Guide" : "Save Changes",
+                          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -599,15 +596,98 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
     );
   }
 
+  Future<void> _saveArticleFromEditor({
+    required bool isDraft,
+    required ArticleModel? article,
+    required String title,
+    required String subtitle,
+    required String heading,
+    required String body,
+    required String pointsText,
+    required String author,
+    required String category,
+    required String readTime,
+    required String? base64Image,
+    required BuildContext dialogContext,
+  }) async {
+    if (title.isEmpty || subtitle.isEmpty || body.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please fill in Title, Subtitle, and Main Content body."),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    final rawPoints = pointsText
+        .split('\n')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+
+    final sections = [
+      ArticleSection(
+        heading: heading.isNotEmpty ? heading : 'Key Insights',
+        content: body,
+        keyPoints: rawPoints.isNotEmpty ? rawPoints : null,
+      ),
+    ];
+
+    final status = isDraft ? 'draft' : 'published';
+    final isPublished = !isDraft;
+
+    final localJson = {
+      'id': article?.id ?? 'counselor_${DateTime.now().millisecondsSinceEpoch}',
+      'title': title,
+      'subtitle': subtitle,
+      'category': category,
+      'status': status,
+      'read_time': readTime,
+      'author': author.isNotEmpty ? author : 'FSUU Guidance Center',
+      'author_role': 'Guidance Counselor',
+      'image_url': base64Image,
+      'theme_color_hex': '#0284C7',
+      'content_json': jsonEncode(sections.map((s) => s.toJson()).toList()),
+      'is_published': isPublished,
+      'is_featured': article?.isFeatured ?? false,
+      'sections': sections.map((s) => s.toJson()).toList(),
+    };
+
+    Navigator.pop(dialogContext);
+
+    await ClinicalAuditService.recordLog(
+      action: article != null ? 'article_updated' : (isDraft ? 'article_draft_saved' : 'article_published'),
+      targetType: 'Psychoeducation Article',
+      targetId: localJson['id'].toString(),
+      detail: '${article != null ? 'Updated' : (isDraft ? 'Saved draft of' : 'Published')} psychoeducation article "$title" in category $category.',
+    );
+
+    await ArticlesStorageService.saveArticle(localJson);
+    try {
+      await _api.post('/admin/articles', body: localJson, silent: true);
+    } catch (_) {}
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isDraft ? 'Draft "$title" saved.' : "Article '$title' published successfully!"),
+        backgroundColor: isDraft ? const Color(0xFFF59E0B) : const Color(0xFF16A34A),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    _fetchArticles();
+  }
+
   Widget _buildArticleCard(ArticleModel a) {
-    final statusColor = a.isBuiltIn
-        ? const Color(0xFF0284C7)
-        : a.status == 'published'
-            ? const Color(0xFF16A34A)
-            : a.status == 'draft'
-                ? const Color(0xFFF59E0B)
-                : const Color(0xFF94A3B8);
-    final statusLabel = a.isBuiltIn ? '🔒 Built-in' : a.status[0].toUpperCase() + a.status.substring(1);
+    final statusColor = a.status == 'published'
+        ? const Color(0xFF16A34A)
+        : a.status == 'draft'
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF64748B);
+    final statusLabel = a.status.isNotEmpty
+        ? a.status[0].toUpperCase() + a.status.substring(1)
+        : 'Published';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -615,7 +695,9 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: a.isFeatured ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0)),
+          color: a.isFeatured ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0),
+          width: a.isFeatured ? 1.5 : 1,
+        ),
         boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
       ),
       child: Material(
@@ -628,31 +710,26 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Cover Thumbnail / Icon Box
+                // Cover Thumbnail
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 68,
+                  height: 68,
                   decoration: BoxDecoration(
                     color: a.themeColor.withAlpha(30),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: a.themeColor.withAlpha(80)),
                   ),
-                  child: a.imageUrl != null && a.imageUrl!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: a.imageUrl!.startsWith('data:image')
-                              ? Image.memory(
-                                  base64Decode(a.imageUrl!.split(',').last),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => Icon(a.categoryIcon, color: a.themeColor, size: 28),
-                                )
-                              : Image.network(
-                                  a.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => Icon(a.categoryIcon, color: a.themeColor, size: 28),
-                                ),
-                        )
-                      : Icon(a.categoryIcon, color: a.themeColor, size: 28),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ArticleCoverImage(
+                      imageUrl: a.imageUrl,
+                      category: a.category,
+                      themeColor: a.themeColor,
+                      categoryIcon: a.categoryIcon,
+                      height: 68,
+                      width: 68,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
 
@@ -687,7 +764,10 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                               style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w600, color: statusColor),
                             ),
                           ),
-                          if (a.isFeatured) ...[const SizedBox(width: 4), const Text('📌', style: TextStyle(fontSize: 12))],
+                          if (a.isFeatured) ...[
+                            const SizedBox(width: 4),
+                            const Text('📌', style: TextStyle(fontSize: 12)),
+                          ],
                           const Spacer(),
                           Text(a.readTime, style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
                         ],
@@ -707,6 +787,8 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 8),
+
+                      // Metric Stats & Actions
                       Row(
                         children: [
                           // Reaction count
@@ -725,6 +807,7 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                             style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
                           ),
                           const Spacer(),
+
                           // Preview Button
                           GestureDetector(
                             onTap: () {
@@ -754,30 +837,41 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          if (!a.isBuiltIn) ...[
-                            GestureDetector(
-                              onTap: () => _toggleFeatured(a),
-                              child: Icon(
-                                a.isFeatured ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                                size: 18,
-                                color: a.isFeatured ? const Color(0xFFF59E0B) : const Color(0xFF94A3B8),
-                              ),
+
+                          // Action: Pin / Featured
+                          GestureDetector(
+                            onTap: () => _toggleFeatured(a),
+                            child: Icon(
+                              a.isFeatured ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                              size: 18,
+                              color: a.isFeatured ? const Color(0xFFF59E0B) : const Color(0xFF94A3B8),
                             ),
-                            const SizedBox(width: 10),
-                            GestureDetector(
-                              onTap: () => _openArticleEditor(a),
-                              child: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0284C7)),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Action: Edit
+                          GestureDetector(
+                            onTap: () => _openArticleEditor(a),
+                            child: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0284C7)),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Action: Archive / Restore
+                          GestureDetector(
+                            onTap: () => _toggleArchive(a),
+                            child: Icon(
+                              a.status == 'archived' ? Icons.unarchive_rounded : Icons.archive_outlined,
+                              size: 18,
+                              color: const Color(0xFF64748B),
                             ),
-                            const SizedBox(width: 10),
-                            GestureDetector(
-                              onTap: () => _deleteArticle(a.id),
-                              child: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
-                            ),
-                          ] else ...[
-                            const Icon(Icons.lock_outline_rounded, size: 14, color: Color(0xFF94A3B8)),
-                            const SizedBox(width: 3),
-                            const Text('Built-in', style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF94A3B8))),
-                          ],
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Action: Delete
+                          GestureDetector(
+                            onTap: () => _deleteArticle(a.id, a.title),
+                            child: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
+                          ),
                         ],
                       ),
                     ],
@@ -791,26 +885,81 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
     );
   }
 
+  Widget _buildFilterTab(String filterKey, String label, int count, Color color) {
+    final isSelected = _selectedStatusFilter == filterKey;
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        setState(() => _selectedStatusFilter = filterKey);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withAlpha(16),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : color.withAlpha(45),
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: color.withAlpha(40), blurRadius: 6, offset: const Offset(0, 2))]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$count',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : color,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.white : color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _articles.where((a) {
+      if (_selectedStatusFilter != 'all') {
+        if (a.status != _selectedStatusFilter) return false;
+      }
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
-        return a.title.toLowerCase().contains(q) || a.category.toLowerCase().contains(q) || a.subtitle.toLowerCase().contains(q) || a.author.toLowerCase().contains(q);
+        return a.title.toLowerCase().contains(q) ||
+            a.category.toLowerCase().contains(q) ||
+            a.subtitle.toLowerCase().contains(q) ||
+            a.author.toLowerCase().contains(q);
       }
       return true;
     }).toList();
 
-    final publishedCount = _articles.where((a) => a.status == 'published' && !a.isBuiltIn).length;
+    final totalCount = _articles.length;
+    final publishedCount = _articles.where((a) => a.status == 'published').length;
     final draftsCount = _articles.where((a) => a.status == 'draft').length;
     final archivedCount = _articles.where((a) => a.status == 'archived').length;
-    final builtInCount = _articles.where((a) => a.isBuiltIn).length;
 
     return Stack(
       children: [
         Column(
           children: [
-            // ── Search & Metrics Header ──
+            // ── Search & Filter Tabs Header ──
             Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               color: Colors.white,
@@ -839,17 +988,20 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // ── Status Chips ──
-                  Row(
-                    children: [
-                      _statChip('$publishedCount', 'Published', const Color(0xFF16A34A)),
-                      const SizedBox(width: 8),
-                      _statChip('$draftsCount', 'Drafts', const Color(0xFFF59E0B)),
-                      const SizedBox(width: 8),
-                      _statChip('$archivedCount', 'Archived', const Color(0xFF94A3B8)),
-                      const Spacer(),
-                      _statChip('$builtInCount', 'Built-in', const Color(0xFF0284C7)),
-                    ],
+                  // ── Interactive Status Tabs ──
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterTab('all', 'All', totalCount, const Color(0xFF0F172A)),
+                        const SizedBox(width: 8),
+                        _buildFilterTab('published', 'Published', publishedCount, const Color(0xFF16A34A)),
+                        const SizedBox(width: 8),
+                        _buildFilterTab('draft', 'Drafts', draftsCount, const Color(0xFFF59E0B)),
+                        const SizedBox(width: 8),
+                        _buildFilterTab('archived', 'Archived', archivedCount, const Color(0xFF64748B)),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -858,8 +1010,30 @@ class _CounselorArticlesTabState extends State<CounselorArticlesTab> {
             // ── Articles List ──
             Expanded(
               child: filtered.isEmpty
-                  ? const Center(
-                      child: Text("No articles found matching criteria.", style: TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B))),
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _selectedStatusFilter == 'archived'
+                                ? Icons.archive_outlined
+                                : _selectedStatusFilter == 'draft'
+                                    ? Icons.edit_note_rounded
+                                    : Icons.article_outlined,
+                            size: 40,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _selectedStatusFilter == 'archived'
+                                ? "No archived articles."
+                                : _selectedStatusFilter == 'draft'
+                                    ? "No drafts saved."
+                                    : "No articles found matching criteria.",
+                            style: const TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
                     )
                   : RefreshIndicator(
                       onRefresh: _fetchArticles,

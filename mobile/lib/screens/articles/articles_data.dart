@@ -48,34 +48,53 @@ class ArticleModel {
     this.isBuiltIn = false,
   });
 
+  String get effectiveImageUrl {
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) {
+      return imageUrl!.trim();
+    }
+    return ArticlesData.defaultCoverForCategory(category);
+  }
+
   ArticleModel copyWith({
+    String? title,
+    String? subtitle,
+    String? category,
+    String? readTime,
+    String? author,
+    String? authorRole,
+    String? imageUrl,
+    IconData? categoryIcon,
+    Color? themeColor,
+    List<ArticleSection>? sections,
+    bool? isPublished,
     String? status,
     bool? isFeatured,
     Map<String, int>? reactionCounts,
     int? viewCount,
     int? shareCount,
     int? aiDiscussionCount,
+    bool? isBuiltIn,
   }) {
     return ArticleModel(
       id: id,
-      title: title,
-      subtitle: subtitle,
-      category: category,
-      readTime: readTime,
-      author: author,
-      authorRole: authorRole,
-      imageUrl: imageUrl,
-      categoryIcon: categoryIcon,
-      themeColor: themeColor,
-      sections: sections,
-      isPublished: isPublished,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      category: category ?? this.category,
+      readTime: readTime ?? this.readTime,
+      author: author ?? this.author,
+      authorRole: authorRole ?? this.authorRole,
+      imageUrl: imageUrl ?? this.imageUrl,
+      categoryIcon: categoryIcon ?? this.categoryIcon,
+      themeColor: themeColor ?? this.themeColor,
+      sections: sections ?? this.sections,
+      isPublished: isPublished ?? this.isPublished,
       status: status ?? this.status,
       isFeatured: isFeatured ?? this.isFeatured,
       reactionCounts: reactionCounts ?? this.reactionCounts,
       viewCount: viewCount ?? this.viewCount,
       shareCount: shareCount ?? this.shareCount,
       aiDiscussionCount: aiDiscussionCount ?? this.aiDiscussionCount,
-      isBuiltIn: isBuiltIn,
+      isBuiltIn: isBuiltIn ?? this.isBuiltIn,
     );
   }
 
@@ -220,6 +239,24 @@ class ArticlesData {
     }
   }
 
+  static String defaultCoverForCategory(String category) {
+    switch (category) {
+      case 'Student Burnout':
+        return 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=700&auto=format&fit=crop&q=80';
+      case 'Anxiety & Coping':
+        return 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=700&auto=format&fit=crop&q=80';
+      case 'Family & Relations':
+        return 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=700&auto=format&fit=crop&q=80';
+      case 'Crisis Prevention':
+        return 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=700&auto=format&fit=crop&q=80';
+      case 'Campus Wellness':
+        return 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=700&auto=format&fit=crop&q=80';
+      case 'Mental Awareness':
+      default:
+        return 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=700&auto=format&fit=crop&q=80';
+    }
+  }
+
   static List<ArticleModel> mergeWithDefaults(List<ArticleModel> dynamicArticles) {
     final existingIds = dynamicArticles.map((a) => a.id).toSet();
     final combined = List<ArticleModel>.from(dynamicArticles);
@@ -240,10 +277,11 @@ class ArticlesData {
       readTime: '4 min read',
       author: 'Dr. Kim Vance',
       authorRole: 'Clinical Psychologist',
+      imageUrl: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=700&auto=format&fit=crop&q=80',
       categoryIcon: Icons.school_rounded,
-      themeColor: Color(0xFF0284C7),
+      themeColor: const Color(0xFF0284C7),
       isBuiltIn: true,
-      sections: [
+      sections: const [
         ArticleSection(
           heading: 'What is Student Burnout?',
           content:
@@ -275,10 +313,11 @@ class ArticlesData {
       readTime: '5 min read',
       author: 'Coach Jeon',
       authorRole: 'CBT Wellness Coach',
+      imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=700&auto=format&fit=crop&q=80',
       categoryIcon: Icons.psychology_rounded,
-      themeColor: Color(0xFF7C3AED),
+      themeColor: const Color(0xFF7C3AED),
       isBuiltIn: true,
-      sections: [
+      sections: const [
         ArticleSection(
           heading: 'Understanding Thought Distortions',
           content:
@@ -309,10 +348,11 @@ class ArticlesData {
       readTime: '4 min read',
       author: 'Dr. Min Santos',
       authorRole: 'Family & Youth Counselor',
+      imageUrl: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=700&auto=format&fit=crop&q=80',
       categoryIcon: Icons.diversity_3_rounded,
-      themeColor: Color(0xFF059669),
+      themeColor: const Color(0xFF059669),
       isBuiltIn: true,
-      sections: [
+      sections: const [
         ArticleSection(
           heading: 'The Cultural Context of Boundaries',
           content:
@@ -343,10 +383,11 @@ class ArticlesData {
       readTime: '3 min read',
       author: 'Kausap Clinical Team',
       authorRole: 'Crisis Intervention Specialists',
+      imageUrl: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=700&auto=format&fit=crop&q=80',
       categoryIcon: Icons.emergency_rounded,
-      themeColor: Color(0xFFDC2626),
+      themeColor: const Color(0xFFDC2626),
       isBuiltIn: true,
-      sections: [
+      sections: const [
         ArticleSection(
           heading: 'Why Awareness Saves Lives',
           content:
@@ -366,7 +407,7 @@ class ArticlesData {
         ArticleSection(
           heading: 'Immediate 24/7 Support Resources in the Philippines',
           content:
-              'Never hesitate to call or share these free confidential resources:\nâ€¢ NCMH Crisis Helpline: 1553 (Toll-free 24/7) or 0917-899-8727\nâ€¢ Hopeline Philippines: (02) 8804-4673 / 0917-558-4673\nâ€¢ In Touch Community: 0917-800-1123\nâ€¢ National Emergency Services: 911',
+              'Never hesitate to call or share these free confidential resources:\n• NCMH Crisis Helpline: 1553 (Toll-free 24/7) or 0917-899-8727\n• Hopeline Philippines: (02) 8804-4673 / 0917-558-4673\n• In Touch Community: 0917-800-1123\n• National Emergency Services: 911',
         ),
       ],
     ),
@@ -378,10 +419,11 @@ class ArticlesData {
       readTime: '4 min read',
       author: 'Dr. Min Santos',
       authorRole: 'Sleep Specialist',
+      imageUrl: 'https://images.unsplash.com/photo-1511295742362-92c96b124e52?w=700&auto=format&fit=crop&q=80',
       categoryIcon: Icons.bedtime_rounded,
-      themeColor: Color(0xFF4F46E5),
+      themeColor: const Color(0xFF4F46E5),
       isBuiltIn: true,
-      sections: [
+      sections: const [
         ArticleSection(
           heading: 'Sleep and Memory Consolidation',
           content:
@@ -401,4 +443,102 @@ class ArticlesData {
       ],
     ),
   ];
+}
+
+class ArticleCoverImage extends StatelessWidget {
+  final String? imageUrl;
+  final String category;
+  final Color themeColor;
+  final IconData categoryIcon;
+  final double height;
+  final double? width;
+  final BorderRadius? borderRadius;
+  final BoxFit fit;
+
+  const ArticleCoverImage({
+    super.key,
+    required this.imageUrl,
+    required this.category,
+    required this.themeColor,
+    required this.categoryIcon,
+    required this.height,
+    this.width,
+    this.borderRadius,
+    this.fit = BoxFit.cover,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveUrl = (imageUrl != null && imageUrl!.trim().isNotEmpty)
+        ? imageUrl!.trim()
+        : ArticlesData.defaultCoverForCategory(category);
+
+    final fallback = Container(
+      width: width ?? double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [themeColor, themeColor.withAlpha(180)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(categoryIcon, size: height * 0.35, color: Colors.white.withAlpha(120)),
+      ),
+    );
+
+    Widget imageWidget;
+    if (effectiveUrl.startsWith('data:image')) {
+      try {
+        final bytes = base64Decode(effectiveUrl.split(',').last);
+        imageWidget = Image.memory(
+          bytes,
+          width: width ?? double.infinity,
+          height: height,
+          fit: fit,
+          errorBuilder: (_, _, _) => fallback,
+        );
+      } catch (_) {
+        imageWidget = fallback;
+      }
+    } else {
+      imageWidget = Image.network(
+        effectiveUrl,
+        width: width ?? double.infinity,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, _, _) => fallback,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            width: width ?? double.infinity,
+            height: height,
+            color: themeColor.withAlpha(25),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: themeColor,
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    if (borderRadius != null) {
+      return ClipRRect(
+        borderRadius: borderRadius!,
+        child: imageWidget,
+      );
+    }
+    return imageWidget;
+  }
 }

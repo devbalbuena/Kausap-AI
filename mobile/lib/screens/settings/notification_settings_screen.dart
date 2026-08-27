@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/notification_prefs_service.dart';
+import '../../services/notification_service.dart';
 import '../../utils/haptic_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -211,6 +212,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   HapticService.lightTap();
                                   await NotificationPrefsService.setPushEnabled(v);
                                   setState(() => _pushNotifications = v);
+                                  await NotificationService().getUnreadCount();
                                 },
                               ),
                               _buildDivider(),
@@ -269,6 +271,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   HapticService.lightTap();
                                   await NotificationPrefsService.setDailyCheckins(v);
                                   setState(() => _dailyCheckins = v);
+                                  await NotificationService().getUnreadCount();
                                 },
                               ),
                               if (_dailyCheckins) ...[
@@ -290,6 +293,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   HapticService.lightTap();
                                   await NotificationPrefsService.setMindfulnessReminders(v);
                                   setState(() => _mindfulnessReminders = v);
+                                  await NotificationService().getUnreadCount();
                                 },
                               ),
                               _buildDivider(),
@@ -303,6 +307,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   HapticService.lightTap();
                                   await NotificationPrefsService.setStreakAlerts(v);
                                   setState(() => _streakAlerts = v);
+                                  await NotificationService().getUnreadCount();
                                 },
                               ),
                             ]),
@@ -322,6 +327,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   HapticService.lightTap();
                                   await NotificationPrefsService.setQuietHoursEnabled(v);
                                   setState(() => _quietHoursEnabled = v);
+                                  await NotificationService().getUnreadCount();
                                 },
                               ),
                               if (_quietHoursEnabled) ...[

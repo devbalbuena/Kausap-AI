@@ -4,12 +4,13 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
-import '../auth/login_screen.dart';
 import 'counselor_triage_tab.dart';
 import 'counselor_students_tab.dart';
 import 'counselor_articles_tab.dart';
 import 'counselor_audit_tab.dart';
+import 'counselor_profile_screen.dart';
 
 class CounselorDashboardScreen extends StatefulWidget {
   const CounselorDashboardScreen({super.key});
@@ -79,53 +80,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
     }
   }
 
-  void _logout() {
-    HapticService.lightTap();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Row(
-          children: [
-            Icon(Icons.logout_rounded, color: Color(0xFFC62828), size: 22),
-            SizedBox(width: 10),
-            Text(
-              "Sign Out",
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
-            ),
-          ],
-        ),
-        content: const Text(
-          "Are you sure you want to sign out of the Counselor Guidance Hub?",
-          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel", style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              HapticService.heavyTap();
-              await context.read<AuthProvider>().logout();
-              if (!mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC62828),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text("Sign Out", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   String get _appBarTitle {
     switch (_selectedTabIndex) {
@@ -235,10 +190,45 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                 _fetchStats();
               },
             ),
-          IconButton(
-            tooltip: 'Sign Out',
-            icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
-            onPressed: _logout,
+          Semantics(
+            label: 'Counselor Profile',
+            button: true,
+            child: GestureDetector(
+              onTap: () async {
+                HapticService.lightTap();
+                await Navigator.push(context, slideRoute(const CounselorProfileScreen()));
+                _fetchStats();
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12, left: 4),
+                child: Consumer<AuthProvider>(
+                  builder: (context, auth, _) {
+                    final user = auth.currentUser;
+                    final name = user != null ? "${user['first_name'] ?? ''} ${user['last_name'] ?? ''}".trim() : 'Counselor';
+                    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'C';
+                    final avatarUrl = user?['avatar_url'] as String?;
+                    return CircleAvatar(
+                      radius: 17,
+                      backgroundColor: const Color(0xFF0284C7).withAlpha(30),
+                      backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                          ? NetworkImage(avatarUrl)
+                          : null,
+                      child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                          ? Text(
+                              initial,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: Color(0xFF0284C7),
+                              ),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+              ),
+            ),
           ),
         ],
       ),

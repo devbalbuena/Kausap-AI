@@ -8,6 +8,7 @@ import '../screens/articles/articles_data.dart';
 /// (views, reactions, shares, AI chats) appear immediately across admin and student screens.
 class ArticlesStorageService {
   static const _storageKey = 'kausap_articles_local_v1';
+  static const _deletedKey = 'kausap_articles_deleted_ids_v1';
   static const _engagementPrefix = 'kausap_article_engagement_';
 
   /// Load all locally stored admin-created articles.
@@ -28,14 +29,26 @@ class ArticlesStorageService {
     }
   }
 
-  /// Load all articles (both dynamic and built-in) enriched with real persistent engagement metrics.
+  /// Load all articles (both dynamic and default) enriched with real persistent engagement metrics.
   static Future<List<ArticleModel>> loadAllArticlesWithEngagement() async {
+    final prefs = await SharedPreferences.getInstance();
+    final deletedList = prefs.getStringList(_deletedKey) ?? [];
+    final deletedIds = deletedList.toSet();
+
     final local = await loadLocalArticles();
     final localIds = local.map((a) => a.id).toSet();
-    final List<ArticleModel> fullList = List.from(local);
+    final List<ArticleModel> fullList = [];
 
+    // Add local (customized/created/archived) articles unless deleted
+    for (final a in local) {
+      if (!deletedIds.contains(a.id)) {
+        fullList.add(a);
+      }
+    }
+
+    // Add institutional guidance articles unless overridden locally or deleted
     for (final b in ArticlesData.all) {
-      if (!localIds.contains(b.id)) {
+      if (!localIds.contains(b.id) && !deletedIds.contains(b.id)) {
         fullList.add(await attachEngagement(b));
       }
     }
@@ -187,11 +200,21 @@ class ArticlesStorageService {
   static Future<void> saveArticle(Map<String, dynamic> articleJson) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // If re-saving an article, remove from deleted IDs list if present
+      final id = articleJson['id'] as String?;
+      if (id != null) {
+        final deletedList = prefs.getStringList(_deletedKey) ?? [];
+        if (deletedList.contains(id)) {
+          deletedList.remove(id);
+          await prefs.setStringList(_deletedKey, deletedList);
+        }
+      }
+
       final raw = prefs.getString(_storageKey);
       List<dynamic> list = raw != null ? jsonDecode(raw) as List<dynamic> : [];
 
       // Replace if id already exists, otherwise add
-      final id = articleJson['id'] as String?;
       final idx = list.indexWhere((e) => (e as Map<String, dynamic>)['id'] == id);
       if (idx >= 0) {
         list[idx] = articleJson;
@@ -208,10 +231,31 @@ class ArticlesStorageService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_storageKey);
-      if (raw == null) return;
-      List<dynamic> list = jsonDecode(raw) as List<dynamic>;
-      list.removeWhere((e) => (e as Map<String, dynamic>)['id'] == id);
-      await prefs.setString(_storageKey, jsonEncode(list));
+      if (raw != null) {
+        List<dynamic> list = jsonDecode(raw) as List<dynamic>;
+        list.removeWhere((e) => (e as Map<String, dynamic>)['id'] == id);
+        await prefs.setString(_storageKey, jsonEncode(list));
+      }
+
+      // Record in deletedIds so default institutional articles won't reappear
+      final deletedList = prefs.getStringList(_deletedKey) ?? [];
+      if (!deletedList.contains(id)) {
+        deletedList.add(id);
+        await prefs.setStringList(_deletedKey, deletedList);
+      }
+    } catch (_) {}
+  }
+
+  /// Archive or unarchive an article.
+  static Future<void> archiveArticle(String id, bool archive) async {
+    try {
+      final all = await loadAllArticlesWithEngagement();
+      final idx = all.indexWhere((a) => a.id == id);
+      if (idx >= 0) {
+        final article = all[idx];
+        final updated = article.copyWith(status: archive ? 'archived' : 'published');
+        await saveArticle(updated.toJson());
+      }
     } catch (_) {}
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'notification_prefs_service.dart';
 
 // Conditional import for web audio
 import 'ambient_audio_web.dart' if (dart.library.io) 'ambient_audio_stub.dart' as platform_audio;
@@ -111,6 +112,42 @@ class AmbientAudioService {
 
   void playChime(int phaseIndex) {
     platform_audio.playBreathingChime(phaseIndex);
+  }
+
+  void playNotificationChime() {
+    platform_audio.playNotificationChime();
+  }
+
+  static Future<void> playNotificationChimeIfAllowed() async {
+    try {
+      final pushEnabled = await NotificationPrefsService.getPushEnabled();
+      if (!pushEnabled) return;
+
+      final quietHours = await NotificationPrefsService.getQuietHoursEnabled();
+      if (quietHours) {
+        final now = DateTime.now();
+        final startStr = await NotificationPrefsService.getQuietHoursStart();
+        final endStr = await NotificationPrefsService.getQuietHoursEnd();
+
+        final startParts = startStr.split(':');
+        final endParts = endStr.split(':');
+        if (startParts.length == 2 && endParts.length == 2) {
+          final startMin = (int.tryParse(startParts[0]) ?? 22) * 60 + (int.tryParse(startParts[1]) ?? 0);
+          final endMin = (int.tryParse(endParts[0]) ?? 7) * 60 + (int.tryParse(endParts[1]) ?? 0);
+          final currentMin = now.hour * 60 + now.minute;
+
+          bool inQuiet = false;
+          if (startMin > endMin) {
+            inQuiet = currentMin >= startMin || currentMin < endMin;
+          } else {
+            inQuiet = currentMin >= startMin && currentMin < endMin;
+          }
+          if (inQuiet) return; // Muted during quiet hours!
+        }
+      }
+
+      platform_audio.playNotificationChime();
+    } catch (_) {}
   }
 }
 

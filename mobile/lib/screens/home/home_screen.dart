@@ -27,6 +27,7 @@ import '../articles/articles_data.dart';
 import '../articles/articles_screen.dart';
 import '../articles/article_detail_screen.dart';
 import '../../services/articles_storage_service.dart';
+import '../../services/ambient_audio_service.dart';
 
 /// Client Home Screen — Figma: "Client/Home"
 /// Sections: Header, Streak, Daily Check-in, Chat, Upcoming Session,
@@ -39,7 +40,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   int _navIndex = 0;
   int _unreadCount = 0;
   int _streak = 0;
@@ -60,12 +61,39 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ArticleModel> _homeArticles = ArticlesData.all;
   
   final NotificationService _notificationService = NotificationService();
+  late AnimationController _bellAnimController;
+  late Animation<double> _bellRotationAnim;
+  late Animation<double> _badgeScaleAnim;
+  bool _hasPlayedEntryChime = false;
 
   String get _firstName => widget.user['first_name'] ?? 'User';
 
   @override
   void initState() {
     super.initState();
+    _bellAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+
+    // Smooth rotational bell wiggle (rings left and right with natural decay)
+    _bellRotationAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: -0.25).chain(CurveTween(curve: Curves.easeOut)), weight: 10),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.25, end: 0.25).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.25, end: -0.18).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.18, end: 0.18).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.18, end: -0.08).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.08, end: 0.08).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.08, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 15),
+    ]).animate(_bellAnimController);
+
+    // Pop & elastic bounce for badge
+    _badgeScaleAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.30).chain(CurveTween(curve: Curves.easeOutBack)), weight: 40),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.30, end: 0.90).chain(CurveTween(curve: Curves.easeInOut)), weight: 30),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.90, end: 1.0).chain(CurveTween(curve: Curves.easeOut)), weight: 30),
+    ]).animate(_bellAnimController);
+
     _fetchQuickEscapePref();
     _fetchUnreadCount();
     _fetchStreak();
@@ -98,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _bellAnimController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -532,17 +561,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchUnreadCount() async {
     final connectivity = ConnectivityService();
+    int count = 0;
     if (!connectivity.isOnline) {
       // Serve cached count when offline
       final cached = await CacheService.readMap('home_unread_count');
       if (cached != null && mounted) {
-        setState(() => _unreadCount = (cached['count'] as int?) ?? 0);
+        count = (cached['count'] as int?) ?? 0;
+        setState(() => _unreadCount = count);
+        if (count > 0) _ringBellAndChime();
       }
       return;
     }
     try {
-      final count = await _notificationService.getUnreadCount();
-      if (mounted) setState(() => _unreadCount = count);
+      count = await _notificationService.getUnreadCount();
+      if (mounted) {
+        setState(() => _unreadCount = count);
+        if (count > 0) _ringBellAndChime();
+      }
       // Cache the result
       await CacheService.saveMap(
         'home_unread_count',
@@ -553,8 +588,19 @@ class _HomeScreenState extends State<HomeScreen> {
       // Fallback to cache on error
       final cached = await CacheService.readMap('home_unread_count');
       if (cached != null && mounted) {
-        setState(() => _unreadCount = (cached['count'] as int?) ?? 0);
+        count = (cached['count'] as int?) ?? 0;
+        setState(() => _unreadCount = count);
+        if (count > 0) _ringBellAndChime();
       }
+    }
+  }
+
+  void _ringBellAndChime() {
+    if (!mounted) return;
+    _bellAnimController.forward(from: 0);
+    if (!_hasPlayedEntryChime) {
+      _hasPlayedEntryChime = true;
+      AmbientAudioService.playNotificationChimeIfAllowed();
     }
   }
 
@@ -738,26 +784,76 @@ class _HomeScreenState extends State<HomeScreen> {
             button: true,
             child: GestureDetector(
               onTap: () async {
+                HapticService.lightTap();
                 await Navigator.of(context).push(slideRoute(const NotificationsScreen()));
                 _fetchUnreadCount();
               },
-              child: Stack(
-                children: [
-                  const Icon(Icons.notifications_outlined,
-                      color: AppColors.textPrimary, size: 24),
-                  if (_unreadCount > 0)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: 9,
-                        height: 9,
-                        decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle),
-                      ),
-                    ),
-                ],
+              child: ValueListenableBuilder<int>(
+                valueListenable: _notificationService.unreadCountNotifier,
+                builder: (context, count, _) {
+                  final displayCount = count;
+                  return AnimatedBuilder(
+                    animation: _bellAnimController,
+                    builder: (context, _) {
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Transform.rotate(
+                            angle: displayCount > 0 ? _bellRotationAnim.value : 0.0,
+                            origin: const Offset(0, -6),
+                            child: Icon(
+                              displayCount > 0
+                                  ? Icons.notifications_active_rounded
+                                  : Icons.notifications_outlined,
+                              color: displayCount > 0
+                                  ? AppColors.primary
+                                  : AppColors.textPrimary,
+                              size: 24,
+                            ),
+                          ),
+                          if (displayCount > 0)
+                            Positioned(
+                              right: -5,
+                              top: -4,
+                              child: Transform.scale(
+                                scale: _bellAnimController.isAnimating
+                                    ? _badgeScaleAnim.value
+                                    : 1.0,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.white, width: 1.5),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x33EF4444),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                  child: Center(
+                                    child: Text(
+                                      displayCount > 9 ? '9+' : '$displayCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w800,
+                                        fontFamily: 'Poppins',
+                                        height: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ),
@@ -1650,7 +1746,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Text(subtitleText, style: AppTextStyles.subheading),
         const SizedBox(height: 12),
         SizedBox(
-          height: 180,
+          height: 222,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: previewArticles.length,
@@ -1659,10 +1755,12 @@ class _HomeScreenState extends State<HomeScreen> {
               final article = previewArticles[index];
               final isMoodRec = targetCategories.contains(article.category);
               return GestureDetector(
-                onTap: () => Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article))),
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
+                },
                 child: Container(
-                  width: 245,
-                  padding: const EdgeInsets.all(16),
+                  width: 250,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -1676,7 +1774,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
@@ -1685,83 +1783,146 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // ── Top Cover Image Banner with Overlays ──
+                      Stack(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: article.themeColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              article.category,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: article.themeColor,
+                          ArticleCoverImage(
+                            imageUrl: article.imageUrl,
+                            category: article.category,
+                            themeColor: article.themeColor,
+                            categoryIcon: article.categoryIcon,
+                            height: 98,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          // Dark gradient overlay for readable tags
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.black.withAlpha(85),
+                                    Colors.transparent,
+                                    Colors.black.withAlpha(50),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
                               ),
                             ),
                           ),
-                          if (article.isFeatured)
-                            const Text('📌 Featured', style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B)))
-                          else if (isMoodRec)
-                            const Text('🌿 For You', style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF059669)))
-                          else
-                            Text(
-                              article.readTime,
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 10,
-                                color: AppColors.textSecondary,
+                          // Category Chip on top left
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7.5, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(235),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(article.categoryIcon, size: 10.5, color: article.themeColor),
+                                  const SizedBox(width: 3.5),
+                                  Text(
+                                    article.category,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: article.themeColor,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                          ),
+                          // Badge on top right (Featured / For You / Read time)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: article.isFeatured
+                                    ? const Color(0xFFF59E0B)
+                                    : Colors.black.withAlpha(150),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                article.isFeatured
+                                    ? '📌 Featured'
+                                    : isMoodRec
+                                        ? '🌿 For You'
+                                        : article.readTime,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        article.title,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1F2937),
-                          height: 1.3,
+
+                      // ── Body & Title ──
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                article.title,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1F2937),
+                                  height: 1.25,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const Spacer(),
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 10,
+                                    backgroundColor: article.themeColor.withAlpha(30),
+                                    child: Text(
+                                      article.author.isNotEmpty ? article.author[0] : 'C',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: article.themeColor,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      article.author,
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 11,
+                                        color: Color(0xFF4B5563),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 10,
-                            backgroundColor: article.themeColor.withAlpha(30),
-                            child: Text(
-                              article.author.isNotEmpty ? article.author[0] : 'C',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                color: article.themeColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              article.author,
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 11,
-                                color: Color(0xFF4B5563),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
-                        ],
                       ),
                     ],
                   ),

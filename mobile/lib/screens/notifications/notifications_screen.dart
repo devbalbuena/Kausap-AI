@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/notification_service.dart';
-import '../../services/api_client.dart';
-import '../../config/api_config.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../journal/daily_journal_screen.dart';
 import '../insights/student_insights_screen.dart';
@@ -30,18 +28,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     setState(() => _isLoading = true);
     try {
       final data = await _service.getNotifications();
-      if (data.isNotEmpty) {
-        if (mounted) setState(() { _notifications = data; _isLoading = false; });
-        return;
-      }
-    } catch (_) {}
-
-    // Dynamic fallback generation based on user's real account state
-    try {
-      final dynamicList = await _generateDynamicNotifications();
       if (mounted) {
         setState(() {
-          _notifications = dynamicList;
+          _notifications = data;
           _isLoading = false;
         });
       }
@@ -50,76 +39,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _generateDynamicNotifications() async {
-    final list = <Map<String, dynamic>>[];
-    final now = DateTime.now();
-    final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
-    // 1. Check if mood logged today
-    bool moodLogged = false;
-    int moodCount = 0;
-    try {
-      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
-      if (moodData is List) {
-        moodCount = moodData.length;
-        moodLogged = moodData.any((e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false);
-      }
-    } catch (_) {}
-
-    if (!moodLogged) {
-      list.add({
-        'id': 'notif_daily_mood',
-        'type': 'mood',
-        'title': '🌿 Daily Wellness Check-in',
-        'body': 'How are you feeling today? Tap to record your mood in 1 tap.',
-        'is_read': false,
-        'created_at': now.subtract(const Duration(minutes: 45)).toIso8601String(),
-      });
-    } else {
-      list.add({
-        'id': 'notif_mood_done',
-        'type': 'mood',
-        'title': '✨ Daily Mood Logged',
-        'body': 'Great job tracking your emotional wellness today! Check out your trends.',
-        'is_read': true,
-        'created_at': now.subtract(const Duration(hours: 2)).toIso8601String(),
-      });
-    }
-
-    // 2. Streak alert
-    if (moodCount >= 2) {
-      list.add({
-        'id': 'notif_streak',
-        'type': 'alert',
-        'title': '🔥 Streak Milestone!',
-        'body': 'You are maintaining your consistency! Keep up your daily check-in habits.',
-        'is_read': false,
-        'created_at': now.subtract(const Duration(hours: 5)).toIso8601String(),
-      });
-    }
-
-    // 3. Clinical screener check-in invitation
-    list.add({
-      'id': 'notif_screener',
-      'type': 'assessment',
-      'title': '📋 Clinical Self-Assessment Ready',
-      'body': 'Take a quick 2-minute PHQ-9 or GAD-7 screener to gain deep emotional insights.',
-      'is_read': false,
-      'created_at': now.subtract(const Duration(days: 1)).toIso8601String(),
-    });
-
-    // 4. Daily journal reminder
-    list.add({
-      'id': 'notif_journal',
-      'type': 'journal',
-      'title': '📖 Evening Reflection',
-      'body': 'Take a few minutes to write or voice record your thoughts in your Daily Journal.',
-      'is_read': true,
-      'created_at': now.subtract(const Duration(days: 2)).toIso8601String(),
-    });
-
-    return list;
-  }
 
   Future<void> _markAsRead(Map<String, dynamic> notification) async {
     if (notification['is_read'] == true) return;
@@ -166,12 +86,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (isoDate == null) return '';
     try {
       final dt = DateTime.parse(isoDate).toLocal();
-      final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) return 'Just now';
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+
+      if (diff.inMinutes < 5) return 'Just now';
       if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-      if (diff.inHours < 24) return '${diff.inHours}h ago';
-      if (diff.inDays == 1) return 'Yesterday';
-      return DateFormat('MMM d').format(dt);
+
+      final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+      if (isToday) {
+        return 'Today, ${DateFormat('h:mm a').format(dt)}';
+      }
+
+      final yesterday = now.subtract(const Duration(days: 1));
+      final isYesterday = dt.year == yesterday.year && dt.month == yesterday.month && dt.day == yesterday.day;
+      if (isYesterday) {
+        return 'Yesterday, ${DateFormat('h:mm a').format(dt)}';
+      }
+
+      return DateFormat('MMM d, h:mm a').format(dt);
     } catch (_) {
       return '';
     }

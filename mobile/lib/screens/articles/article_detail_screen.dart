@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -140,12 +139,12 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
   void _toggleReaction(int index) async {
     HapticService.lightTap();
 
-    // ── Admin Preview Mode Check ──
+    // ── Preview Mode Check ──
     if (widget.isPreview) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('👁️ Reactions are disabled in Admin Preview mode.'),
+          content: Text('👁️ Reactions are disabled in Preview mode.'),
           backgroundColor: Color(0xFF0F172A),
           duration: Duration(seconds: 2),
         ),
@@ -325,7 +324,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
   @override
   Widget build(BuildContext context) {
     final article = widget.article;
-    final bool hasImage = article.imageUrl != null && article.imageUrl!.isNotEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
@@ -336,7 +334,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
             slivers: [
           // Header App Bar with Hero Image / Gradient Banner
           SliverAppBar(
-            expandedHeight: hasImage ? 220 : 180,
+            expandedHeight: 230,
             pinned: true,
             backgroundColor: article.themeColor,
             elevation: 0,
@@ -351,7 +349,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: Colors.black.withValues(alpha: 0.35),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
@@ -368,7 +366,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: Colors.black.withValues(alpha: 0.35),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.share_rounded, color: Colors.white, size: 18),
@@ -394,7 +392,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: Colors.black.withValues(alpha: 0.35),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -410,27 +408,20 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (hasImage)
-                    article.imageUrl!.startsWith('data:image')
-                        ? Image.memory(base64Decode(article.imageUrl!.split(',').last), fit: BoxFit.cover)
-                        : Image.network(article.imageUrl!, fit: BoxFit.cover)
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [article.themeColor, article.themeColor.withValues(alpha: 0.8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                    ),
+                  ArticleCoverImage(
+                    imageUrl: article.imageUrl,
+                    category: article.category,
+                    themeColor: article.themeColor,
+                    categoryIcon: article.categoryIcon,
+                    height: 230,
+                  ),
                   // Dark Vignette Gradient
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.black.withValues(alpha: hasImage ? 0.3 : 0.1),
-                          Colors.black.withValues(alpha: hasImage ? 0.75 : 0.4),
+                          Colors.black.withValues(alpha: 0.35),
+                          Colors.black.withValues(alpha: 0.75),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -818,7 +809,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                                           children: [
                                             Icon(Icons.remove_red_eye_rounded, color: Color(0xFF0284C7)),
                                             SizedBox(width: 8),
-                                            Text('Admin Preview Mode', style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700)),
+                                            Text('Preview Mode', style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700)),
                                           ],
                                         ),
                                         content: Text(
@@ -917,7 +908,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
           ),
         ),
       ),
-      // Admin Preview Floating Banner
+      // Preview Floating Banner
       if (widget.isPreview)
         Positioned(
           bottom: 16,
@@ -937,7 +928,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'Admin Preview Mode (Read-Only)',
+                      'Preview Mode (Read-Only)',
                       style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
                     ),
                   ),

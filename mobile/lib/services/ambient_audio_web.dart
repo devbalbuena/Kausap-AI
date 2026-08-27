@@ -182,3 +182,44 @@ void playBreathingChime(int phaseIndex) {
   } catch (_) {}
 }
 
+void playNotificationChime() {
+  try {
+    js.context.callMethod('eval', ["""
+      try {
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          var ctx = window._kausapNotifCtx || new AudioCtx();
+          window._kausapNotifCtx = ctx;
+          if (ctx.state === 'suspended') { ctx.resume(); }
+          
+          var t = ctx.currentTime;
+          
+          // First tone: E5 (659.25 Hz)
+          var osc1 = ctx.createOscillator();
+          var gain1 = ctx.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(659.25, t);
+          gain1.gain.setValueAtTime(0.14, t);
+          gain1.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+          osc1.connect(gain1);
+          gain1.connect(ctx.destination);
+          osc1.start(t);
+          osc1.stop(t + 0.55);
+
+          // Second tone: A5 (880.00 Hz) - peaceful crystal chime
+          var osc2 = ctx.createOscillator();
+          var gain2 = ctx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(880.00, t + 0.10);
+          gain2.gain.setValueAtTime(0.18, t + 0.10);
+          gain2.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.start(t + 0.10);
+          osc2.stop(t + 1.1);
+        }
+      } catch(e) {}
+    """]);
+  } catch (_) {}
+}
+
