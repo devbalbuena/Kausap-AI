@@ -1,5 +1,6 @@
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 import uuid
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -9,19 +10,23 @@ from app.database import get_session
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
+from app.models.mood import MoodEntry
 from app.models.token_log import TokenUsageLog
 from app.schemas.chat import ChatMessageCreate, ChatMessageRead, ChatSessionRead
 from app.core.risk_detection import check_for_risk
 from app.core.ai_provider import chat_completion_with_usage, calculate_cost_usd
 from app.core.clinical_guardrails import check_clinical_boundary, build_system_messages
+from app.core.config import settings
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
-SAFETY_MESSAGE = """I'm really glad you reached out, and I want you to know you don't have to go through this alone. What you're feeling matters, and there are people ready to help right now.
+SAFETY_MESSAGE = """I'm really glad you reached out, and I want you to know you don't have to go through this alone. What you're feeling matters, and there are caring people ready to support you right now.
 
-You can call the National Center for Mental Health (NCMH) Crisis Hotline anytime, 24/7, for free: 1553 (or 0917-899-8727), or Hopeline Philippines: 0917-558-4673.
+You can call the National Center for Mental Health (NCMH) Crisis Hotline anytime, 24/7, for free:
+📞 **1553** (or 0917-899-8727)
+💬 **Hopeline Philippines**: 0917-558-4673
 
-You can also reach out to the CSU Guidance & Counseling Office or dial 911 immediately if you are in immediate danger."""
+You can also connect directly with the **FSUU Guidance & Counseling Office** or dial 911 if you are in immediate danger. Please stay safe — your life is important. 💙"""
 
 
 class SosAlertResponse(BaseModel):
@@ -90,138 +95,148 @@ async def post_message(
     """
     Post a new message to a chat session and return the AI's reply.
 
-    Three-layer clinical protection pipeline:
-      Layer 1 — Crisis risk detection (suicide/self-harm keywords)
-      Layer 2 — Clinical boundary check (prescription/diagnosis requests)
-      Layer 3 — Hardened system prompt injected into every LLM call
+    Pipeline:
+      1. Crisis risk detection (suicide/self-harm keywords)
+      2. Rate limiting check (protect tokens & encourage healthy student pacing)
+      3. Clinical boundary check (medication/diagnosis requests)
+      4. Hardened system prompt with Carl Rogers Person-Centered Empathy & mood context
     """
     chat_session = _get_own_session(session_id, current_user, db)
 
     # ── Layer 1: Crisis risk detection ────────────────────────────────────────
     is_risk = check_for_risk(payload.content)
 
-    # ── Save user message to DB (before any processing) ───────────────────────
+    # ── Save user message to DB ───────────────────────────────────────────────
     user_msg = ChatMessage(
         session_id=chat_session.id,
         role="user",
         content=payload.content,
-        risk_flag=is_risk
+        risk_flag=is_risk,
     )
     db.add(user_msg)
     db.commit()
 
-    # ── Layer 1 Response: Crisis safety message ────────────────────────────────
     if is_risk:
         ai_reply_content = SAFETY_MESSAGE
-        ai_risk_flag = False  # Assistant safety response is NOT a student crisis trigger
+        ai_risk_flag = False
 
     else:
-        # ── Layer 2: Clinical boundary guardrail check ─────────────────────────
-        # Intercepts requests for medication prescription or formal diagnosis
-        # BEFORE they reach the LLM. The AI never sees boundary-violating prompts.
-        is_boundary_violation, boundary_response = check_clinical_boundary(payload.content)
+        # ── Rate Limiting Check (Token & Pacing Protection) ───────────────────
+        one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+        recent_msgs = db.exec(
+            select(ChatMessage)
+            .where(ChatMessage.session_id == chat_session.id)
+            .where(ChatMessage.role == "user")
+            .where(ChatMessage.created_at >= one_hour_ago)
+        ).all()
 
-        if is_boundary_violation:
-            # Return compassionate redirect — AI is bypassed entirely.
-            # Flagged in DB so counselors can see students who need clinical referral.
-            ai_reply_content = boundary_response  # type: ignore[assignment]
-            ai_risk_flag = False  # Not a crisis — a clinical referral case
+        if len(recent_msgs) > settings.RATE_LIMIT_MESSAGES_PER_HOUR:
+            student_name = current_user.first_name or current_user.full_name or "kaibigan"
+            ai_reply_content = (
+                f"Pahinga muna tayo nang sandali, {student_name}. 💙\n\n"
+                "Nakapagbahagi ka na ng maraming saloobin ngayong oras na ito. "
+                "Subukan nating uminom ng kaunting tubig, mag-relax, at magpahinga ng 10-15 minuto. "
+                "Nandito pa rin ako pagbalik mo para ipagpatuloy ang ating kwentuhan!"
+            )
+            ai_risk_flag = False
         else:
-            # ── Layer 3: Hardened system prompt + Normal AI conversation ───────
-            db.refresh(chat_session)
-            sorted_messages = sorted(chat_session.messages, key=lambda m: m.created_at)
+            # ── Layer 2: Clinical boundary guardrail check ─────────────────────
+            is_boundary_violation, boundary_response = check_clinical_boundary(payload.content)
 
-            # Construct student cultural & personal context
-            cultural_parts = []
-            if current_user.full_name:
-                cultural_parts.append(f"Student Name: {current_user.full_name}")
-            if getattr(current_user, 'nationality', None):
-                cultural_parts.append(f"Nationality: {current_user.nationality}")
-            if getattr(current_user, 'hobbies', None):
-                cultural_parts.append(f"Hobbies & Coping Outlets: {current_user.hobbies}")
-            context_str = ", ".join(cultural_parts) if cultural_parts else None
-
-            # build_system_messages() returns the hardened clinical boundary system prompt with cultural context.
-            # It ALWAYS anchors the first message, regardless of conversation history.
-            llm_messages = build_system_messages(user_context=context_str)
-
-            for msg in sorted_messages:
-                llm_messages.append({"role": msg.role, "content": msg.content})
-
-            try:
-                ai_reply_content, prompt_tokens, completion_tokens, total_tokens = await chat_completion_with_usage(llm_messages)
+            if is_boundary_violation:
+                ai_reply_content = boundary_response or "Please connect with a healthcare professional."
                 ai_risk_flag = False
+            else:
+                # ── Layer 3: Empathy Engine + Gemini 2.5 LLM Generation ─────────
+                db.refresh(chat_session)
+                sorted_messages = sorted(chat_session.messages, key=lambda m: m.created_at)
 
-                # Record Token Telemetry for Super Admin
+                # Fetch today's mood entry for context
+                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+                today_mood_entry = db.exec(
+                    select(MoodEntry)
+                    .where(MoodEntry.user_id == current_user.id)
+                    .where(MoodEntry.created_at >= today_start)
+                    .order_by(MoodEntry.created_at.desc())
+                ).first()
+                mood_level = today_mood_entry.mood_level if today_mood_entry else None
+
+                # Build student cultural profile context
+                cultural_parts = []
+                if current_user.full_name:
+                    cultural_parts.append(f"Full Name: {current_user.full_name}")
+                if getattr(current_user, "department", None):
+                    cultural_parts.append(f"University Program: {current_user.department}")
+                if getattr(current_user, "year_level", None):
+                    cultural_parts.append(f"Year Level: {current_user.year_level}")
+                if getattr(current_user, "hobbies", None):
+                    cultural_parts.append(f"Coping Outlets: {current_user.hobbies}")
+
+                context_str = ", ".join(cultural_parts) if cultural_parts else None
+
+                student_display_name = current_user.first_name or (
+                    current_user.full_name.split()[0] if current_user.full_name else None
+                )
+
+                # Generate system prompt with Person-Centered Empathy & persona
+                llm_messages = build_system_messages(
+                    user_context=context_str,
+                    persona=payload.persona or "buddy",
+                    student_name=student_display_name,
+                    mood_level=mood_level,
+                )
+
+                # Append recent messages (keep last 12 turns for token efficiency)
+                recent_history = sorted_messages[-12:]
+                for msg in recent_history:
+                    llm_messages.append({"role": msg.role, "content": msg.content})
+
                 try:
-                    cost = calculate_cost_usd(prompt_tokens, completion_tokens)
-                    token_entry = TokenUsageLog(
-                        user_id=current_user.id,
-                        session_id=chat_session.id,
-                        model="gpt-4o-mini",
-                        prompt_tokens=prompt_tokens,
-                        completion_tokens=completion_tokens,
-                        total_tokens=total_tokens,
-                        estimated_cost_usd=cost,
+                    ai_reply_content, prompt_tokens, completion_tokens, total_tokens = await chat_completion_with_usage(
+                        llm_messages, max_tokens=settings.DEFAULT_MAX_TOKENS
                     )
-                    db.add(token_entry)
-                    db.commit()
-                except Exception:
-                    pass
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"AI provider error: {str(e)}")
+                    ai_risk_flag = False
+
+                    # Record Token Telemetry for Admin
+                    try:
+                        cost = calculate_cost_usd(prompt_tokens, completion_tokens)
+                        token_entry = TokenUsageLog(
+                            user_id=current_user.id,
+                            session_id=chat_session.id,
+                            model="gemini-2.5-flash",
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
+                            total_tokens=total_tokens,
+                            estimated_cost_usd=cost,
+                        )
+                        db.add(token_entry)
+                        db.commit()
+                    except Exception:
+                        pass
+                except Exception as e:
+                    raise HTTPException(status_code=500, detail=f"AI provider error: {str(e)}")
 
     # ── Save Assistant reply to DB ─────────────────────────────────────────────
     ai_msg = ChatMessage(
         session_id=chat_session.id,
         role="assistant",
         content=ai_reply_content,
-        risk_flag=ai_risk_flag
+        risk_flag=ai_risk_flag,
     )
     db.add(ai_msg)
     db.commit()
     db.refresh(ai_msg)
-
     return ai_msg
 
 
-@router.post("/sos-alert", response_model=SosAlertResponse, status_code=status.HTTP_201_CREATED)
-def trigger_sos_alert(
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_session(
+    session_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_session)],
 ):
-    """Trigger an immediate 1-tap SOS distress alert from the student to the campus guidance & admin network."""
-    # 1. Create a dedicated SOS session
-    session = ChatSession(
-        user_id=current_user.id,
-        topic="🚨 EMERGENCY SOS DISTRESS ALERT"
-    )
-    db.add(session)
+    """Delete a chat session and all its messages."""
+    chat_session = _get_own_session(session_id, current_user, db)
+    db.delete(chat_session)
     db.commit()
-    db.refresh(session)
-
-    # 2. Add flagged student distress message
-    student_name = current_user.full_name or current_user.email
-    user_alert_msg = ChatMessage(
-        session_id=session.id,
-        role="user",
-        content=f"🚨 EMERGENCY SOS DISTRESS ALERT: Student {student_name} ({current_user.email}) requested immediate crisis support via 1-Tap SOS.",
-        risk_flag=True
-    )
-    db.add(user_alert_msg)
-
-    # 3. Add system reassurance response
-    system_reply = ChatMessage(
-        session_id=session.id,
-        role="assistant",
-        content=f"Your emergency distress alert has been logged with highest priority for the guidance team. If you are in immediate physical danger, please immediately dial NCMH 1553 (Toll-Free 24/7) or 911. Help is available.",
-        risk_flag=False  # Assistant safety response is NOT a student crisis trigger
-    )
-    db.add(system_reply)
-    db.commit()
-
-    return SosAlertResponse(
-        status="alert_sent",
-        message="Emergency SOS distress alert registered and escalated to crisis triage.",
-        session_id=session.id
-    )
+    return None

@@ -351,10 +351,42 @@ def list_flagged_messages(
                         is_resolved=True,
                         resolved_at=audit.created_at,
                         resolution_note=audit.detail or "Resolved by counselor",
+                        flag_reason="Crisis Trigger Resolved",
+                        risk_level="red",
                     )
                 )
         except Exception:
             continue
+
+    # 3. Include active distress pattern alerts (2-day Yellow and 3-day Red)
+    distress_alerts = get_consistent_distress_patterns(admin=admin, session=session)
+    for da in distress_alerts:
+        distress_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"distress_{da.user_id}_{da.consecutive_days}")
+        if distress_id in seen_ids:
+            continue
+        seen_ids.add(distress_id)
+
+        is_red = da.risk_level == "red"
+        reason_text = f"{da.consecutive_days}-Day Persistent Distress Alert" if is_red else f"{da.consecutive_days}-Day Low Mood Trend"
+        excerpt = f"Student has logged {da.consecutive_days} consecutive days of rough/low mood (Latest: {da.latest_mood_label} - Level {da.latest_mood_level}/5)."
+        if da.latest_note:
+            excerpt += f' Note: "{da.latest_note}"'
+
+        flagged.append(
+            FlaggedMessageRead(
+                id=distress_id,
+                session_id=None,
+                user_id=da.user_id,
+                user_email=da.email,
+                user_name=da.full_name,
+                role="user",
+                content=excerpt,
+                created_at=datetime.utcnow(),
+                is_resolved=False,
+                flag_reason=reason_text,
+                risk_level=da.risk_level,
+            )
+        )
 
     return flagged
 
@@ -730,8 +762,8 @@ def get_consistent_distress_patterns(
 ):
     """
     Process 5.0: Consistent Distress Detection (RA 11036 compliance).
-    Identifies students who have logged persistent low moods (level 1 Distressed or level 2 Down)
-    across 3 or more consecutive check-ins.
+    Identifies students who have logged persistent low moods (level 1 Distressed or level 2 Down/Rough)
+    across 2 consecutive check-ins (Yellow Warning) or 3+ consecutive check-ins (Red Alert).
     """
     students = session.exec(
         select(User)
@@ -739,11 +771,11 @@ def get_consistent_distress_patterns(
         .where(User.is_active == True)
         .where(User.is_deleted == False)
     ).all()
-    
+
     alerts: List[DistressPatternAlert] = []
     mood_labels = {
         1: "Distressed",
-        2: "Down",
+        2: "Rough",
         3: "Okay",
         4: "Good",
         5: "Great",
@@ -767,20 +799,25 @@ def get_consistent_distress_patterns(
             else:
                 break
 
-        if consecutive_low >= 3:
+        if consecutive_low >= 2:
             latest = entries[0]
+            is_red = consecutive_low >= 3
             alerts.append(
                 DistressPatternAlert(
                     user_id=s.id,
-                    full_name=s.full_name,
+                    full_name=s.full_name or s.email.split('@')[0],
                     email=s.email,
                     consecutive_days=consecutive_low,
                     latest_mood_level=latest.mood_level,
-                    latest_mood_label=mood_labels.get(latest.mood_level, "Distressed"),
-                    latest_note=latest.notes,
+                    latest_mood_label=mood_labels.get(latest.mood_level, "Rough"),
+                    latest_note=latest.note,
                     latest_date=latest.created_at.strftime("%Y-%m-%d %H:%M"),
+                    risk_level="red" if is_red else "yellow",
+                    severity="High Risk (Urgent)" if is_red else "Moderate Risk",
+                    recommended_action="Immediate psychological intake recommended" if is_red else "Monitor trends & conduct gentle check-in",
                 )
             )
 
     return alerts
+
 

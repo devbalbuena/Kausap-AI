@@ -1,9 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/avatar_model.dart';
 import '../../theme/app_theme.dart';
-import '../../utils/app_routes.dart';
-import '../subscription/upgrade_plan_screen.dart';
+import '../../utils/haptic_service.dart';
 
 class SelectAvatarScreen extends StatefulWidget {
   final AvatarModel currentAvatar;
@@ -17,7 +17,9 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
   static const _storage = FlutterSecureStorage();
   late AvatarModel _selected;
   List<AvatarModel> _customAvatars = [];
-  bool _isPro = false;
+  int _selectedFilterIndex = 0; // 0: All, 1: Campus Peers, 2: Premium Specialists, 3: My Custom
+
+  final List<String> _filters = ['All', '🌱 Campus Peers', '👑 Premium Specialists', '✨ My Custom'];
 
   @override
   void initState() {
@@ -27,33 +29,48 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
   }
 
   Future<void> _loadCustomAvatars() async {
-    final pro = await _storage.read(key: 'is_pro_member');
-    final customName = await _storage.read(key: 'custom_avatar_name');
-    final customPrompt = await _storage.read(key: 'custom_avatar_prompt');
-
-    if (mounted) {
-      setState(() {
-        _isPro = pro == 'true';
-        if (customName != null && customName.isNotEmpty) {
+    try {
+      final jsonStr = await _storage.read(key: 'custom_avatars_list_json');
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(jsonStr);
+        final loaded = list.map((item) => AvatarModel.fromJson(item as Map<String, dynamic>)).toList();
+        if (mounted) {
+          setState(() {
+            _customAvatars = loaded;
+          });
+        }
+      }
+    } catch (_) {
+      // Fallback if legacy single avatar exists
+      final customName = await _storage.read(key: 'custom_avatar_name');
+      final customPrompt = await _storage.read(key: 'custom_avatar_prompt');
+      if (mounted && customName != null && customName.isNotEmpty) {
+        setState(() {
           _customAvatars = [
             AvatarModel(
               id: 'custom_user_avatar',
               name: customName,
+              roleTitle: 'Custom Companion',
               tier: 'basic',
               imagePath: 'assets/avatars/avatar_basic_kim.png',
               systemPrompt: customPrompt ?? 'You are $customName, a personalized mental wellness AI companion.',
+              bio: 'Your personalized custom AI wellness companion.',
+              sampleQuote: '"Nandito ako para makinig sa\'yo anumang oras."',
+              specialties: const ['Personalized Support'],
             ),
           ];
-        }
-      });
+        });
+      }
     }
   }
 
-  Future<void> _onTapAvatar(AvatarModel avatar) async {
-    if (avatar.isPremium && !_isPro) {
-      _showUpgradeDialog();
-      return;
-    }
+  Future<void> _saveCustomAvatarsList() async {
+    final list = _customAvatars.map((a) => a.toJson()).toList();
+    await _storage.write(key: 'custom_avatars_list_json', value: jsonEncode(list));
+  }
+
+  Future<void> _onSelectAvatar(AvatarModel avatar) async {
+    HapticService.lightTap();
     setState(() => _selected = avatar);
     await _storage.write(key: 'selected_chatbot_avatar_id', value: avatar.id);
     if (mounted) {
@@ -61,52 +78,230 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
     }
   }
 
-  void _showUpgradeDialog() {
-    showDialog(
+  void _showAvatarDetailSheet(AvatarModel avatar) {
+    HapticService.mediumTap();
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Text('👑 ', style: TextStyle(fontSize: 20)),
-            const SizedBox(width: 4),
-            Text('Premium Avatar', style: AppTextStyles.heading2),
-          ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        content: Text(
-          'This specialist avatar is available with Kausap AI Pro. Upgrade your plan to unlock all premium AI personas and exclusive features.',
-          style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Avatar Preview Circle
+              Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: avatar.isMascot ? const Color(0x330077B6) : Colors.black.withAlpha(25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: avatar.isMascot
+                        ? Container(
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 48),
+                            ),
+                          )
+                        : ClipOval(
+                            child: Image.asset(
+                              avatar.imagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: const Color(0xFFEEF2FF),
+                                child: const Icon(Icons.person, color: AppColors.primary, size: 44),
+                              ),
+                            ),
+                          ),
+                  ),
+                  if (avatar.isPremium)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFF59E0B)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('👑', style: TextStyle(fontSize: 10)),
+                          SizedBox(width: 2),
+                          Text(
+                            'SPECIALIST',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFB45309),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                avatar.name,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                avatar.roleTitle,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0284C7),
+                ),
+              ),
+              const SizedBox(height: 14),
+              // Bio & Quote
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      avatar.bio,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        color: Color(0xFF334155),
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('💬 ', style: TextStyle(fontSize: 12)),
+                        Expanded(
+                          child: Text(
+                            avatar.sampleQuote,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.5,
+                              fontStyle: FontStyle.italic,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              // Specialty Chips
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                alignment: WrapAlignment.center,
+                children: avatar.specialties.map((tag) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '# $tag',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF4F46E5),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+              // Select Action Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _onSelectAvatar(avatar);
+                  },
+                  icon: const Icon(Icons.check_circle_rounded, size: 18),
+                  label: Text(_selected.id == avatar.id ? 'Already Selected' : 'Chat with ${avatar.name}'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Maybe Later', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.of(context).push(slideRoute(const UpgradePlanScreen()));
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Upgrade Plan'),
-          ),
-        ],
       ),
     );
   }
 
-  void _showCreateCustomAvatarSheet() {
-    final nameController = TextEditingController();
-    String selectedPersona = 'Empathetic & Nurturing';
-    final personas = [
-      'Empathetic & Nurturing',
-      'Cognitive & Solution-Focused',
-      'Casual & Sibling/Friend Vibe',
-      'Mindful & Zen Coach',
+  void _showCreateCustomAvatarSheet({AvatarModel? editAvatar}) {
+    final nameController = TextEditingController(text: editAvatar?.name ?? '');
+    String selectedRole = editAvatar?.roleTitle ?? 'Encouraging Study Buddy';
+    String selectedImagePath = editAvatar?.imagePath ?? 'assets/avatars/avatar_basic_kim.png';
+
+    final styles = [
+      {'title': 'Encouraging Study Buddy', 'desc': 'Focus on study motivation, deadlines & steady pacing'},
+      {'title': 'Gentle Venting Listener', 'desc': 'Safe emotional sanctuary to express feelings without judgment'},
+      {'title': 'Mindful & Calming Guide', 'desc': 'Grounding, relaxation, anti-panic, and deep breathing'},
+      {'title': 'Practical Goal Coach', 'desc': 'Step-by-step clarity, time management, and habit building'},
+    ];
+
+    final avatarIcons = [
+      {'path': 'assets/avatars/avatar_basic_kim.png', 'label': 'Ate Style'},
+      {'path': 'assets/avatars/avatar_basic_park.png', 'label': 'Kuya Style'},
+      {'path': 'assets/avatars/avatar_premium_kim.png', 'label': 'Mentor Style'},
+      {'path': 'assets/avatars/avatar_premium_jeon.png', 'label': 'Guide Style'},
     ];
 
     showModalBottomSheet(
@@ -120,135 +315,249 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('✨', style: TextStyle(fontSize: 22)),
-                  const SizedBox(width: 8),
-                  Text('Create Custom Companion', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              Text('Companion Name', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: nameController,
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Maya, Coach Leo, Ate Sarah',
-                  hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.textSecondary),
-                  filled: true,
-                  fillColor: const Color(0xFFF3F4F6),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Text('Personality & Tone', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: personas.map((p) {
-                  final isSel = selectedPersona == p;
-                  return GestureDetector(
-                    onTap: () => setSheetState(() => selectedPersona = p),
+                  Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
-                        color: isSel ? AppColors.primary : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: isSel ? AppColors.primary : const Color(0x22000000)),
-                      ),
-                      child: Text(
-                        p,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isSel ? Colors.white : const Color(0xFF374151),
-                        ),
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) return;
-
-                    final prompt = 'You are $name, a $selectedPersona mental wellness companion for the user. Always be warm, safe, and helpful.';
-                    await _storage.write(key: 'custom_avatar_name', value: name);
-                    await _storage.write(key: 'custom_avatar_prompt', value: prompt);
-
-                    final custom = AvatarModel(
-                      id: 'custom_user_avatar',
-                      name: name,
-                      tier: 'basic',
-                      imagePath: 'assets/avatars/avatar_basic_kim.png',
-                      systemPrompt: prompt,
-                    );
-
-                    if (mounted) {
-                      setState(() {
-                        _customAvatars = [custom];
-                      });
-                    }
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    await _onTapAvatar(custom);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Save & Select Companion', style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE0F2FE),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            editAvatar != null ? 'Edit Companion' : 'Create Custom Companion',
+                            style: AppTextStyles.heading2.copyWith(fontSize: 17),
+                          ),
+                        ],
+                      ),
+                      if (editAvatar != null)
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 22),
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            _deleteCustomAvatar(editAvatar.id);
+                          },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('1. Choose Companion Look', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: avatarIcons.map((item) {
+                      final isSelected = selectedImagePath == item['path'];
+                      return GestureDetector(
+                        onTap: () => setSheetState(() => selectedImagePath = item['path']!),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 54,
+                              height: 54,
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected ? AppColors.primary : Colors.transparent,
+                                  width: 2.5,
+                                ),
+                              ),
+                              child: ClipOval(
+                                child: Image.asset(item['path']!, fit: BoxFit.cover),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item['label']!,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? AppColors.primary : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('2. Companion Name', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g., Ate Kim, Mentor Dan, Bestie Sam',
+                      prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primary),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('3. Support Personality', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  ...styles.map((s) {
+                    final isSel = selectedRole == s['title'];
+                    return GestureDetector(
+                      onTap: () => setSheetState(() => selectedRole = s['title']!),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSel ? const Color(0xFFEEF2FF) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isSel ? AppColors.primary : const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSel ? Icons.radio_button_checked : Icons.radio_button_off,
+                              color: isSel ? AppColors.primary : const Color(0xFF94A3B8),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s['title']!,
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12.5,
+                                      color: isSel ? AppColors.primary : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    s['desc']!,
+                                    style: const TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 11,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final name = nameController.text.trim();
+                        if (name.isEmpty) return;
+
+                        final prompt = 'You are $name, a $selectedRole for the student. Always be warm, supportive, empathetic, and culturally relatable in Taglish.';
+                        final newId = editAvatar?.id ?? 'custom_${DateTime.now().millisecondsSinceEpoch}';
+
+                        final newCompanion = AvatarModel(
+                          id: newId,
+                          name: name,
+                          roleTitle: selectedRole,
+                          tier: 'basic',
+                          imagePath: selectedImagePath,
+                          systemPrompt: prompt,
+                          bio: 'Custom AI companion created by you with $selectedRole support style.',
+                          sampleQuote: '"Nandito ako para sa\'yo, kumusta ka today?"',
+                          specialties: [selectedRole, 'Personal Companion'],
+                        );
+
+                        if (editAvatar != null) {
+                          final idx = _customAvatars.indexWhere((a) => a.id == editAvatar.id);
+                          if (idx != -1) {
+                            _customAvatars[idx] = newCompanion;
+                          }
+                        } else {
+                          _customAvatars.add(newCompanion);
+                        }
+
+                        await _saveCustomAvatarsList();
+                        if (mounted) setState(() {});
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        await _onSelectAvatar(newCompanion);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text(
+                        editAvatar != null ? 'Save Changes' : 'Create & Chat with Companion',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  Future<void> _deleteCustomAvatar(String id) async {
+    _customAvatars.removeWhere((a) => a.id == id);
+    await _saveCustomAvatarsList();
+    if (_selected.id == id) {
+      _selected = AvatarData.defaultAvatar;
+      await _storage.write(key: 'selected_chatbot_avatar_id', value: _selected.id);
+    }
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    final basicAvatars = [
-      ...AvatarData.all.where((a) => !a.isPremium),
-      ..._customAvatars,
-    ];
-    final premiumAvatars = AvatarData.all.where((a) => a.isPremium).toList();
+    // Filter avatars based on selected tab
+    List<AvatarModel> displayedAvatars = [];
+    if (_selectedFilterIndex == 0) {
+      // All
+      displayedAvatars = [...AvatarData.all, ..._customAvatars];
+    } else if (_selectedFilterIndex == 1) {
+      // Campus Peers
+      displayedAvatars = AvatarData.all.where((a) => !a.isPremium).toList();
+    } else if (_selectedFilterIndex == 2) {
+      // Premium Specialists
+      displayedAvatars = AvatarData.all.where((a) => a.isPremium).toList();
+    } else if (_selectedFilterIndex == 3) {
+      // My Custom
+      displayedAvatars = _customAvatars;
+    }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FF),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────
+            // ── Top Header ───────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Row(
@@ -256,40 +565,66 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      width: 36,
-                      height: 36,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [
+                        boxShadow: const [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
+                            color: Color(0x10000000),
                             blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            offset: Offset(0, 2),
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Color(0xFF191C21)),
+                      child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Color(0xFF1E293B)),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Text('Select Avatar', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+                  const SizedBox(width: 14),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select AI Companion',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Choose who you want to talk with today',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
 
-            // ── Create Custom Avatar Banner ──────────────────────────────
+            // ── Create Custom Avatar Action Bar ──────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: GestureDetector(
-                onTap: _showCreateCustomAvatarSheet,
+                onTap: () => _showCreateCustomAvatarSheet(),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEEF2FF),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEEF2FF), Color(0xFFE0F2FE)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.primary.withAlpha(60)),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
+                    ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -297,10 +632,11 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                       const Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text(
-                        'Create Custom Companion Avatar',
+                        '+ Create Custom Companion Persona',
                         style: AppTextStyles.body.copyWith(
                           color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
                         ),
                       ),
                     ],
@@ -309,61 +645,103 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
               ),
             ),
 
-            // ── Scrollable Avatar Grid ───────────────────────────────────
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                children: [
-                  // Basic Section
-                  Text('Basic Personas', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
-                  const SizedBox(height: 12),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.85,
+            // ── Filter Chips Row ─────────────────────────────────────────
+            Container(
+              height: 38,
+              margin: const EdgeInsets.only(top: 4, bottom: 8),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: _filters.length,
+                itemBuilder: (context, idx) {
+                  final isSelected = _selectedFilterIndex == idx;
+                  return GestureDetector(
+                    onTap: () {
+                      HapticService.lightTap();
+                      setState(() => _selectedFilterIndex = idx);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withAlpha(50),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        _filters[idx],
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? Colors.white : const Color(0xFF475569),
+                        ),
+                      ),
                     ),
-                    itemCount: basicAvatars.length,
-                    itemBuilder: (_, i) => _AvatarCard(
-                      avatar: basicAvatars[i],
-                      isSelected: _selected.id == basicAvatars[i].id,
-                      onTap: () => _onTapAvatar(basicAvatars[i]),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Premium Section
-                  Row(
-                    children: [
-                      Text('Specialist Personas', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
-                      const SizedBox(width: 8),
-                      const Text('👑', style: TextStyle(fontSize: 14)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.85,
-                    ),
-                    itemCount: premiumAvatars.length,
-                    itemBuilder: (_, i) => _AvatarCard(
-                      avatar: premiumAvatars[i],
-                      isSelected: _selected.id == premiumAvatars[i].id,
-                      isProUnlocked: _isPro,
-                      onTap: () => _onTapAvatar(premiumAvatars[i]),
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
+            ),
+
+            // ── Avatars Grid ─────────────────────────────────────────────
+            Expanded(
+              child: displayedAvatars.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.person_add_alt_1_rounded, size: 48, color: Color(0xFFCBD5E1)),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No custom companions yet',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Tap the button above to build your own persona!',
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                          ),
+                        ],
+                      ),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.78,
+                      ),
+                      itemCount: displayedAvatars.length,
+                      itemBuilder: (_, i) {
+                        final avatar = displayedAvatars[i];
+                        final isCustom = avatar.id.startsWith('custom_');
+                        return _AvatarCard(
+                          avatar: avatar,
+                          isSelected: _selected.id == avatar.id,
+                          isCustom: isCustom,
+                          onTap: () => _onSelectAvatar(avatar),
+                          onInfoTap: () => _showAvatarDetailSheet(avatar),
+                          onEditTap: isCustom ? () => _showCreateCustomAvatarSheet(editAvatar: avatar) : null,
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -375,14 +753,18 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
 class _AvatarCard extends StatelessWidget {
   final AvatarModel avatar;
   final bool isSelected;
-  final bool isProUnlocked;
+  final bool isCustom;
   final VoidCallback onTap;
+  final VoidCallback onInfoTap;
+  final VoidCallback? onEditTap;
 
   const _AvatarCard({
     required this.avatar,
     required this.isSelected,
-    this.isProUnlocked = false,
+    this.isCustom = false,
     required this.onTap,
+    required this.onInfoTap,
+    this.onEditTap,
   });
 
   @override
@@ -391,171 +773,177 @@ class _AvatarCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            width: 2,
+            color: isSelected
+                ? AppColors.primary
+                : (avatar.isPremium ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
+            width: isSelected ? 2.5 : (avatar.isPremium ? 1.5 : 1),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
+              color: isSelected
+                  ? AppColors.primary.withAlpha(25)
+                  : (avatar.isPremium ? const Color(0x10D97706) : const Color(0x06000000)),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Stack(
-              alignment: Alignment.topRight,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: avatar.isMascot
-                        ? const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
-                          )
-                        : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: avatar.isMascot ? const Color(0x330077B6) : Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: avatar.isMascot
-                      ? Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Positioned(
-                              top: 10,
-                              child: Container(
-                                width: 52,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    top: BorderSide(color: Colors.white.withAlpha(220), width: 4),
-                                  ),
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                                ),
-                              ),
-                            ),
-                            const Positioned(
-                              left: 12,
-                              top: 35,
-                              child: CircleAvatar(radius: 7, backgroundColor: Colors.white),
-                            ),
-                            const Positioned(
-                              right: 12,
-                              top: 35,
-                              child: CircleAvatar(radius: 7, backgroundColor: Colors.white),
-                            ),
-                            // Eyes & Smile
-                            CustomPaint(
-                              size: const Size(80, 80),
-                              painter: _MascotAvatarIconPainter(),
-                            ),
-                          ],
-                        )
-                      : ClipOval(
-                          child: Image.asset(
-                            avatar.imagePath,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                              color: const Color(0xFFEEF2FF),
-                              child: const Icon(Icons.person, color: AppColors.primary, size: 40),
-                            ),
-                          ),
-                        ),
-                ),
-                if (avatar.isPremium && !isProUnlocked)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFC107),
-                        shape: BoxShape.circle,
+            // Top Right Badges (Crown or Info icon)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Row(
+                children: [
+                  if (avatar.isPremium)
+                    Container(
+                      margin: const EdgeInsets.only(right: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text('👑', style: TextStyle(fontSize: 10)),
                     ),
+                  GestureDetector(
+                    onTap: onInfoTap,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF64748B)),
+                    ),
                   ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              avatar.name,
-              style: AppTextStyles.body.copyWith(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF191C21),
+
+            // Main Content
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 66,
+                    height: 66,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: avatar.isMascot
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
+                            )
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: avatar.isMascot ? const Color(0x330077B6) : Colors.black.withAlpha(20),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: avatar.isMascot
+                        ? Container(
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 36),
+                            ),
+                          )
+                        : ClipOval(
+                            child: Image.asset(
+                              avatar.imagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: const Color(0xFFEEF2FF),
+                                child: const Icon(Icons.person, color: AppColors.primary, size: 34),
+                              ),
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    avatar.name,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                      color: Color(0xFF0F172A),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    avatar.roleTitle,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10,
+                      color: avatar.isPremium ? const Color(0xFFB45309) : const Color(0xFF64748B),
+                      fontWeight: avatar.isPremium ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  if (isSelected)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Active ✓',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0284C7),
+                        ),
+                      ),
+                    )
+                  else if (isCustom)
+                    GestureDetector(
+                      onTap: onEditTap,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Edit ✏️',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              textAlign: TextAlign.center,
             ),
-            if (avatar.isPremium)
-              Text(
-                isProUnlocked ? 'Unlocked' : 'Pro Specialist',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 11,
-                  color: isProUnlocked ? const Color(0xFF10B981) : const Color(0xFFFFC107),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            if (avatar.isMascot)
-              Text(
-                'Animated Companion',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 11,
-                  color: const Color(0xFF0284C7),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
           ],
         ),
       ),
     );
   }
-}
-
-class _MascotAvatarIconPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final eyePaint = Paint()..color = Colors.white;
-    final strokePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
-      ..strokeCap = StrokeCap.round;
-    final blushPaint = Paint()..color = const Color(0xFFFFB4A2).withAlpha(180);
-
-    // Round sparkling eyes
-    canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.42), 6.5, eyePaint);
-    canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.42), 6.5, eyePaint);
-
-    final glintPaint = Paint()..color = Colors.white;
-    canvas.drawCircle(Offset(size.width * 0.33, size.height * 0.39), 2.5, glintPaint);
-    canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.39), 2.5, glintPaint);
-
-    // Rosy cheeks
-    canvas.drawCircle(Offset(size.width * 0.20, size.height * 0.56), 5.5, blushPaint);
-    canvas.drawCircle(Offset(size.width * 0.80, size.height * 0.56), 5.5, blushPaint);
-
-    // Upbeat smile
-    final mouth = Path()
-      ..moveTo(size.width * 0.38, size.height * 0.58)
-      ..quadraticBezierTo(size.width * 0.50, size.height * 0.72, size.width * 0.62, size.height * 0.58);
-    canvas.drawPath(mouth, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MascotAvatarIconPainter oldDelegate) => false;
 }

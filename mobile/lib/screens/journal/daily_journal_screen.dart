@@ -9,10 +9,15 @@ import 'package:intl/intl.dart';
 import 'dart:js' as js;
 
 import '../../theme/app_theme.dart';
+import '../../services/api_client.dart';
+import '../../config/api_config.dart';
+import '../../utils/haptic_service.dart';
 import 'journal_history_screen.dart';
 
 class DailyJournalScreen extends StatefulWidget {
-  const DailyJournalScreen({super.key});
+  final Map<String, dynamic>? entryToEdit;
+
+  const DailyJournalScreen({super.key, this.entryToEdit});
 
   @override
   State<DailyJournalScreen> createState() => _DailyJournalScreenState();
@@ -22,15 +27,42 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
   final TextEditingController _journalController = TextEditingController();
   final _storage = const FlutterSecureStorage();
   final DateTime _today = DateTime.now();
-  bool _isLoading = true;
+  
   bool _isSaving = false;
   bool _isListening = false;
   Timer? _speechTimer;
 
+  String _selectedMoodTag = '🌿 Calm';
+  String? _activePrompt;
+
+  static const List<String> _moodTags = [
+    '🌿 Calm',
+    '😊 Grateful',
+    '💭 Reflective',
+    '⚡ Stressed',
+    '💪 Motivated',
+    '🌧️ Down',
+  ];
+
+  static const List<String> _promptTemplates = [
+    '🌟 Best moment of my day:',
+    '💖 3 things I am grateful for today:',
+    '🧠 What is on my mind right now:',
+    '🎯 One small win I had today:',
+    '🍃 How I took care of myself today:',
+  ];
+
+  bool get _isEditing => widget.entryToEdit != null;
+
   @override
   void initState() {
     super.initState();
-    _loadTodayJournal();
+    if (_isEditing) {
+      final entry = widget.entryToEdit!;
+      _journalController.text = entry['content']?.toString() ?? '';
+      _selectedMoodTag = entry['mood_tag']?.toString() ?? entry['type']?.toString() ?? '🌿 Calm';
+      _activePrompt = entry['prompt']?.toString();
+    }
   }
 
   @override
@@ -39,25 +71,6 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     _stopSpeechRecognition();
     _journalController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadTodayJournal() async {
-    setState(() => _isLoading = true);
-    final dateKey = DateFormat('yyyy-MM-dd').format(_today);
-    
-    try {
-      final savedJournal = await _storage.read(key: 'journal_$dateKey');
-      if (mounted) {
-        setState(() {
-          if (savedJournal != null && savedJournal.isNotEmpty) {
-            _journalController.text = savedJournal;
-          }
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   /// Voice dictation toggle for web & mobile
@@ -158,6 +171,49 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     }
   }
 
+  void _insertPrompt(String prompt) {
+    HapticService.lightTap();
+    setState(() {
+      _activePrompt = prompt;
+      final current = _journalController.text.trim();
+      if (current.isEmpty) {
+        _journalController.text = '$prompt\n- ';
+      } else {
+        _journalController.text = '$current\n\n$prompt\n- ';
+      }
+      _journalController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _journalController.text.length),
+      );
+    });
+  }
+
+  void _clearDraft() {
+    if (_journalController.text.trim().isEmpty) return;
+    HapticService.lightTap();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Clear Draft?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+        content: const Text('Are you sure you want to clear your current writing?', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _journalController.clear();
+                _activePrompt = null;
+              });
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveJournal() async {
     final content = _journalController.text.trim();
     if (content.isEmpty) {
@@ -169,49 +225,106 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
 
     setState(() => _isSaving = true);
     _stopSpeechRecognition();
+    HapticService.mediumTap();
 
     final dateKey = DateFormat('yyyy-MM-dd').format(_today);
+    final nowIso = DateTime.now().toIso8601String();
     
     try {
-      await _storage.write(key: 'journal_$dateKey', value: content);
+      if (_isEditing) {
+        // Edit existing entry
+        final entryId = widget.entryToEdit!['id']?.toString() ?? '';
+        if (entryId.isNotEmpty && entryId.contains('-') && entryId.length > 20) {
+          try {
+            await ApiClient().put(
+              '${ApiConfig.journal}/$entryId',
+              body: {
+                'content': content,
+                'mood_tag': _selectedMoodTag,
+                'prompt': _activePrompt,
+              },
+              silent: true,
+            );
+          } catch (_) {}
+        }
+      } else {
+        // Create brand new separate entry
+        try {
+          await ApiClient().post(
+            ApiConfig.journal,
+            body: {
+              'content': content,
+              'entry_date': dateKey,
+              'mood_tag': _selectedMoodTag,
+              'prompt': _activePrompt,
+            },
+            silent: true,
+          );
+        } catch (_) {}
+      }
 
-      // Append to unified journal_history
+      // Persist to local storage for offline resilience
+      await _storage.write(key: 'journal_$dateKey', value: content);
+      await _storage.write(key: 'journal_mood_$dateKey', value: _selectedMoodTag);
+
+      // Append/Update unified journal_history in local storage
       final rawHistory = await _storage.read(key: 'journal_history');
       final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) as List : [];
-      history.removeWhere((e) => e['date'] == dateKey);
-      history.insert(0, {
-        'id': dateKey,
-        'date': dateKey,
-        'type': 'freeform',
-        'content': content,
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      
+      if (_isEditing) {
+        final entryId = widget.entryToEdit!['id']?.toString();
+        final idx = history.indexWhere((e) => e['id']?.toString() == entryId);
+        if (idx != -1) {
+          history[idx]['content'] = content;
+          history[idx]['mood_tag'] = _selectedMoodTag;
+          history[idx]['type'] = _selectedMoodTag;
+          history[idx]['prompt'] = _activePrompt;
+        }
+      } else {
+        history.insert(0, {
+          'id': 'local_${DateTime.now().millisecondsSinceEpoch}',
+          'date': dateKey,
+          'entry_date': dateKey,
+          'type': _selectedMoodTag,
+          'mood_tag': _selectedMoodTag,
+          'content': content,
+          'prompt': _activePrompt,
+          'created_at': nowIso,
+        });
+      }
       await _storage.write(key: 'journal_history', value: jsonEncode(history));
     } catch (_) {}
 
     if (mounted) {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Journal saved! ✅ Daily quest updated.'),
-          backgroundColor: Color(0xFF22C55E),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(_isEditing ? 'Journal entry updated! ✅' : 'New journal entry saved! ✅ Daily quest updated.'),
+          backgroundColor: const Color(0xFF22C55E),
+          duration: const Duration(seconds: 2),
         ),
       );
-      Navigator.pop(context, true); // Pop with true so Home refreshes quests
+      Navigator.pop(context, true); // Return true to update home quest counter
     }
+  }
+
+  int _getWordCount() {
+    final text = _journalController.text.trim();
+    if (text.isEmpty) return 0;
+    return text.split(RegExp(r'\s+')).length;
   }
 
   @override
   Widget build(BuildContext context) {
     final dateDisplay = DateFormat('EEEE, MMMM d, yyyy').format(_today);
+    final wordCount = _getWordCount();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
-          'Daily Journal',
-          style: TextStyle(
+        title: Text(
+          _isEditing ? 'Edit Journal' : 'Daily Journal',
+          style: const TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
@@ -226,232 +339,300 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          if (!_isEditing) ...[
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined, color: Color(0xFF64748B), size: 22),
+              tooltip: 'Clear Draft',
+              onPressed: _clearDraft,
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.history_rounded, color: AppColors.primary, size: 24),
             tooltip: 'View Past Journals',
             onPressed: () async {
               _stopSpeechRecognition();
-              await Navigator.push(
+              final res = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const JournalHistoryScreen()),
               );
-              _loadTodayJournal();
+              if (res == true && mounted) {
+                // If an action occurred in history, refresh state
+              }
             },
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Today Date Banner
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withAlpha(4), blurRadius: 6, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Row(
                   children: [
-                    // Today Date Banner (Clean, without redundant button)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.all(7),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 6, offset: const Offset(0, 2)),
-                        ],
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.calendar_today_rounded, color: Color(0xFFD97706), size: 18),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "TODAY'S JOURNAL",
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 10.5,
-                                    letterSpacing: 0.5,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  dateDisplay,
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      child: const Icon(Icons.calendar_today_rounded, color: Color(0xFFD97706), size: 16),
                     ),
-
-                    const SizedBox(height: 18),
-
-                    // Prompt Title
-                    const Text(
-                      'How was your day?',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Write down your thoughts, reflections, or whatever is on your mind.',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        color: Color(0xFF64748B),
-                        fontSize: 13,
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Journal Text Input Area with Single Smart Mic
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: _isListening ? const Color(0xFFEF4444) : const Color(0xFFE2E8F0),
-                            width: _isListening ? 2 : 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isEditing ? "EDITING ENTRY" : "NEW ENTRY • TODAY",
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 10,
+                              letterSpacing: 0.5,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 3)),
-                          ],
-                        ),
-                        child: Stack(
-                          children: [
-                            TextField(
-                              controller: _journalController,
-                              maxLines: null,
-                              expands: true,
-                              textAlignVertical: TextAlignVertical.top,
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14.5,
-                                height: 1.55,
-                                color: Color(0xFF1E293B),
-                              ),
-                              decoration: InputDecoration(
-                                hintText: _isListening
-                                    ? '🎙️ Listening... Speak naturally to dictate your journal entry.'
-                                    : 'Start typing here, or tap the microphone to speak your thoughts...',
-                                hintStyle: TextStyle(
-                                  color: _isListening ? const Color(0xFFEF4444) : const Color(0xFF94A3B8),
-                                  fontStyle: _isListening ? FontStyle.italic : FontStyle.normal,
-                                ),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 70),
-                              ),
+                          Text(
+                            dateDisplay,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: Color(0xFF1E293B),
                             ),
-
-                            // Single Smart Mic Dictation Button inside Text Box
-                            Positioned(
-                              bottom: 12,
-                              left: 14,
-                              right: 14,
-                              child: Row(
-                                children: [
-                                  if (_isListening)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFEE2E2),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.fiber_manual_record_rounded, color: Color(0xFFEF4444), size: 12),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'Listening...',
-                                            style: TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: Color(0xFFEF4444),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  const Spacer(),
-
-                                  // Voice Dictation Tap Button
-                                  Tooltip(
-                                    message: _isListening ? 'Stop Dictation' : 'Start Voice Dictation',
-                                    child: Material(
-                                      color: _isListening ? const Color(0xFFEF4444) : AppColors.primary,
-                                      shape: const CircleBorder(),
-                                      child: InkWell(
-                                        onTap: _toggleSpeechRecognition,
-                                        customBorder: const CircleBorder(),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(12.0),
-                                          child: Icon(
-                                            _isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                                            color: Colors.white,
-                                            size: 22,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 18),
-
-                    // Save Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _isSaving ? null : _saveJournal,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 0,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '$wordCount words',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
                         ),
-                        child: _isSaving
-                            ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text(
-                                'Save Entry & Complete Quest',
-                                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 15),
-                              ),
                       ),
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 12),
+
+              // Mood Tag Selector
+              const Text(
+                'Emotional Tone',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12.5,
+                  color: Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                height: 34,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _moodTags.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 8),
+                  itemBuilder: (ctx, i) {
+                    final tag = _moodTags[i];
+                    final isSelected = _selectedMoodTag == tag;
+                    return ChoiceChip(
+                      label: Text(tag),
+                      selected: isSelected,
+                      onSelected: (val) {
+                        if (val) setState(() => _selectedMoodTag = tag);
+                      },
+                      selectedColor: const Color(0xFFE0F2FE),
+                      backgroundColor: Colors.white,
+                      labelStyle: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF475569),
+                      ),
+                      side: BorderSide(
+                        color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Reflection Starter Prompts Chips
+              const Text(
+                'Starter Prompts (Tap to add)',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12.5,
+                  color: Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                height: 32,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _promptTemplates.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 8),
+                  itemBuilder: (ctx, i) {
+                    final prompt = _promptTemplates[i];
+                    return ActionChip(
+                      label: Text(prompt),
+                      onPressed: () => _insertPrompt(prompt),
+                      backgroundColor: Colors.white,
+                      labelStyle: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF0284C7),
+                      ),
+                      side: const BorderSide(color: Color(0xFFBAE6FD)),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Journal Text Input Area
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: _isListening ? const Color(0xFFEF4444) : const Color(0xFFE2E8F0),
+                      width: _isListening ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 3)),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      TextField(
+                        controller: _journalController,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14.5,
+                          color: Color(0xFF0F172A),
+                          height: 1.55,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: _isEditing
+                              ? 'Edit your journal entry...'
+                              : 'Write down your thoughts, reflections, or speak into the mic...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            color: Colors.grey.shade400,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 60),
+                        ),
+                      ),
+
+                      // Mic Button
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: Tooltip(
+                          message: _isListening ? 'Stop Recording' : 'Voice-to-Text Dictation',
+                          child: InkWell(
+                            onTap: _toggleSpeechRecognition,
+                            borderRadius: BorderRadius.circular(30),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _isListening ? const Color(0xFFEF4444) : AppColors.primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (_isListening ? const Color(0xFFEF4444) : AppColors.primary).withAlpha(80),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Save / Update Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveJournal,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : Text(
+                          _isEditing ? 'Update Journal Entry' : 'Save Entry & Complete Quest',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

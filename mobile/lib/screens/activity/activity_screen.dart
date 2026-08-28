@@ -7,28 +7,35 @@ import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_client.dart';
+import '../../config/api_config.dart';
+import '../../services/offline_mood_queue.dart';
 import '../profile/profile_screen.dart';
 import 'activity_start_screen.dart';
 
 // ── Data model for an activity ──────────────────────────────────────────────
 class ActivityItem {
+  final String id;
   final String title;
   final String description;
   final String duration;
   final String difficulty;
   final String category;
   final IconData icon;
+  final List<Color> gradient;
   final List<ActivityTag> tags;
   final String whatIsThis;
   final List<ActivityStep> steps;
 
   const ActivityItem({
+    required this.id,
     required this.title,
     required this.description,
     required this.duration,
     required this.difficulty,
     required this.category,
     required this.icon,
+    required this.gradient,
     required this.tags,
     required this.whatIsThis,
     required this.steps,
@@ -61,100 +68,182 @@ class ActivityStep {
   });
 }
 
-// ── Static data matching Figma ───────────────────────────────────────────────
+// ── Expanded Activity Library Tailored for Student Mental Health ────────────
 const activityList = [
   ActivityItem(
-    title: '4-7-8 Breathing',
-    description: 'A quick technique to reduce anxiety and promote better sleep.',
+    id: '4-7-8-breathing',
+    title: '4-7-8 Relaxing Breath',
+    description: 'A quick, powerful technique to ease anxiety and prepare for restful sleep.',
     duration: '5 min',
     difficulty: 'Easy',
     category: 'Breathing',
     icon: Icons.air_rounded,
+    gradient: [Color(0xFF0D9488), Color(0xFF14B8A6)],
     tags: [
-      ActivityTag(label: 'Anxiety', bg: AppColors.tagGreenBg, border: AppColors.tagGreenBorder, text: AppColors.tagGreenText),
-      ActivityTag(label: 'Stress', bg: AppColors.tagOrangeBg, border: Color(0x1A712611), text: AppColors.tagOrangeText),
-      ActivityTag(label: 'Sleep issues', bg: AppColors.tagBlueBg, border: Color(0x4DC0C9C2), text: AppColors.tagBlueText),
+      ActivityTag(label: 'Anxiety', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
+      ActivityTag(label: 'Stress', bg: Color(0xFFFFEDD5), border: Color(0xFFFED7AA), text: Color(0xFF9A3412)),
+      ActivityTag(label: 'Sleep', bg: Color(0xFFE0E7FF), border: Color(0xFFC7D2FE), text: Color(0xFF3730A3)),
     ],
     whatIsThis:
-        'The 4-7-8 breathing technique, also known as "relaxing breath," involves breathing in for 4 seconds, '
-        'holding the breath for 7 seconds, and exhaling for 8 seconds. This pattern aims to reduce anxiety or help '
-        'people get to sleep. It acts as a natural tranquilizer for the nervous system, bringing your body into a state of deep relaxation.',
+        'The 4-7-8 breathing technique, developed by Dr. Andrew Weil, involves inhaling for 4 seconds, '
+        'holding for 7 seconds, and exhaling slowly for 8 seconds. It serves as a natural tranquilizer for your nervous system.',
     steps: [
-      ActivityStep(number: 1, title: 'Inhale', description: 'Close your mouth and inhale quietly through your nose to a mental count of four.'),
-      ActivityStep(number: 2, title: 'Hold', description: 'Hold your breath for a count of seven.'),
-      ActivityStep(number: 3, title: 'Exhale', description: 'Exhale completely through your mouth, making a whoosh sound to a count of eight.'),
-      ActivityStep(number: 4, title: 'Repeat', description: 'This completes one cycle. Repeat the cycle three more times for a total of four breaths.'),
+      ActivityStep(number: 1, title: 'Inhale Quietly', description: 'Close your mouth and inhale quietly through your nose for 4 seconds.'),
+      ActivityStep(number: 2, title: 'Hold Breath', description: 'Hold your breath comfortably for a count of 7 seconds.'),
+      ActivityStep(number: 3, title: 'Exhale Completely', description: 'Exhale completely through your mouth with a gentle whoosh sound for 8 seconds.'),
+      ActivityStep(number: 4, title: 'Repeat Cycles', description: 'Repeat this sequence for 4 cycles to feel your heart rate stabilize.'),
     ],
   ),
   ActivityItem(
-    title: 'Guided Meditation',
-    description: 'Find your center with a soothing voice guiding you through deep relaxation.',
+    id: 'box-breathing',
+    title: 'Box Breathing (4-4-4-4)',
+    description: 'Master your focus and calm pre-exam panic with equal-duration breathing.',
+    duration: '5 min',
+    difficulty: 'Easy',
+    category: 'Breathing',
+    icon: Icons.grid_view_rounded,
+    gradient: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+    tags: [
+      ActivityTag(label: 'Focus', bg: Color(0xFFE0F2FE), border: Color(0xFFBAE6FD), text: Color(0xFF0369A1)),
+      ActivityTag(label: 'Exam Prep', bg: Color(0xFFFEF3C7), border: Color(0xFFFDE68A), text: Color(0xFF92400E)),
+      ActivityTag(label: 'Grounding', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
+    ],
+    whatIsThis:
+        'Also known as square breathing, Box Breathing is used by top performers and first responders '
+        'to heighten mental clarity, lower cortisol, and instantly regain control during high-stress moments.',
+    steps: [
+      ActivityStep(number: 1, title: 'Inhale', description: 'Breathe in slowly through your nose for 4 seconds, feeling your lungs fill.'),
+      ActivityStep(number: 2, title: 'Hold', description: 'Hold your breath gently at the top for 4 seconds without straining.'),
+      ActivityStep(number: 3, title: 'Exhale', description: 'Release the air smoothly through your mouth for 4 seconds.'),
+      ActivityStep(number: 4, title: 'Hold Empty', description: 'Hold your lungs empty for 4 seconds before the next breath.'),
+    ],
+  ),
+  ActivityItem(
+    id: '5-4-3-2-1-grounding',
+    title: '5-4-3-2-1 Sensory Grounding',
+    description: 'Halt overthinking and panic spirals by connecting with your immediate physical senses.',
+    duration: '7 min',
+    difficulty: 'Easy',
+    category: 'Grounding',
+    icon: Icons.nature_people_rounded,
+    gradient: [Color(0xFF059669), Color(0xFF34D399)],
+    tags: [
+      ActivityTag(label: 'Overthinking', bg: Color(0xFFF3E8FF), border: Color(0xFFDDD6FE), text: Color(0xFF6B21A8)),
+      ActivityTag(label: 'Panic Reset', bg: Color(0xFFFFE4E6), border: Color(0xFFFECDD3), text: Color(0xFF9F1239)),
+      ActivityTag(label: 'Mindfulness', bg: Color(0xFFE0F2FE), border: Color(0xFFBAE6FD), text: Color(0xFF0369A1)),
+    ],
+    whatIsThis:
+        'The 5-4-3-2-1 technique is an evidence-based grounding exercise that reconnects your racing mind '
+        'to the present environment by activating all five physical senses one by one.',
+    steps: [
+      ActivityStep(number: 1, title: '5 Things You See', description: 'Look around and notice 5 distinct objects or colors in your room.'),
+      ActivityStep(number: 2, title: '4 Things You Feel', description: 'Notice 4 physical sensations: your feet on the floor, clothing texture, chair support.'),
+      ActivityStep(number: 3, title: '3 Things You Hear', description: 'Listen closely for 3 background sounds around you.'),
+      ActivityStep(number: 4, title: '2 Things You Smell', description: 'Inhale gently and notice 2 subtle scents (fresh air, book, coffee).'),
+      ActivityStep(number: 5, title: '1 Thing You Taste / Love', description: 'Focus on a taste or anchor on 1 thing you are grateful for today.'),
+    ],
+  ),
+  ActivityItem(
+    id: 'guided-meditation',
+    title: 'Guided Body Scan & Calm',
+    description: 'Release deep physical tension in your shoulders and neck after long study sessions.',
     duration: '15 min',
     difficulty: 'Medium',
     category: 'Meditation',
     icon: Icons.self_improvement_rounded,
+    gradient: [Color(0xFF4F46E5), Color(0xFF818CF8)],
     tags: [
-      ActivityTag(label: 'Stress', bg: AppColors.tagOrangeBg, border: Color(0x1A712611), text: AppColors.tagOrangeText),
-      ActivityTag(label: 'Anxiety', bg: AppColors.tagGreenBg, border: AppColors.tagGreenBorder, text: AppColors.tagGreenText),
+      ActivityTag(label: 'Tension Relief', bg: Color(0xFFE0E7FF), border: Color(0xFFC7D2FE), text: Color(0xFF3730A3)),
+      ActivityTag(label: 'Stress', bg: Color(0xFFFFEDD5), border: Color(0xFFFED7AA), text: Color(0xFF9A3412)),
+      ActivityTag(label: 'Restoration', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
     ],
     whatIsThis:
-        'Guided meditation is a form of meditation where a narrator guides you through a relaxing mental journey. '
-        'It helps quiet the mind, reduce stress hormones, and cultivate a deeper sense of inner peace and self-awareness.',
+        'A body scan meditation systematically directs focused attention to different areas of your body, '
+        'noticing sensations without judgment to release accumulated academic fatigue and tightness.',
     steps: [
-      ActivityStep(number: 1, title: 'Find a comfortable position', description: 'Sit or lie down in a relaxed position. Close your eyes.'),
-      ActivityStep(number: 2, title: 'Focus on your breath', description: 'Take a few deep breaths, letting go of tension with each exhale.'),
-      ActivityStep(number: 3, title: 'Follow the guide', description: 'Listen carefully and allow the words to paint a calming picture in your mind.'),
-      ActivityStep(number: 4, title: 'Return gently', description: 'When the session ends, slowly bring your awareness back to the room.'),
+      ActivityStep(number: 1, title: 'Settle In', description: 'Sit comfortably or lie down. Soften your jaw and let your eyes close.'),
+      ActivityStep(number: 2, title: 'Scan from Feet Up', description: 'Notice sensations in your toes, moving gently up through your legs.'),
+      ActivityStep(number: 3, title: 'Release Shoulders', description: 'Exhale deeply, dropping your shoulders and unclasping your hands.'),
+      ActivityStep(number: 4, title: 'Full Body Peace', description: 'Feel your entire body resting in calm, grounded stillness.'),
     ],
   ),
   ActivityItem(
-    title: 'Gratitude Journal',
-    description: 'Reflect on three things you are grateful for today to shift your perspective.',
+    id: 'self-compassion-break',
+    title: 'Self-Compassion & Affirmation Break',
+    description: 'Cultivate kindness towards yourself when facing tough academic challenges or burnout.',
+    duration: '8 min',
+    difficulty: 'Easy',
+    category: 'Meditation',
+    icon: Icons.favorite_rounded,
+    gradient: [Color(0xFF9333EA), Color(0xFFC084FC)],
+    tags: [
+      ActivityTag(label: 'Self-Care', bg: Color(0xFFFCE7F3), border: Color(0xFFFBCFE8), text: Color(0xFF9D174D)),
+      ActivityTag(label: 'Burnout', bg: Color(0xFFFEF3C7), border: Color(0xFFFDE68A), text: Color(0xFF92400E)),
+      ActivityTag(label: 'Confidence', bg: Color(0xFFE0F2FE), border: Color(0xFFBAE6FD), text: Color(0xFF0369A1)),
+    ],
+    whatIsThis:
+        'Designed by Dr. Kristin Neff, this practice helps students acknowledge difficult moments '
+        'with kindness rather than harsh self-criticism, fostering emotional resilience and motivation.',
+    steps: [
+      ActivityStep(number: 1, title: 'Acknowledge the Struggle', description: 'Place a warm hand over your heart and silently say: "This is a moment of challenge."'),
+      ActivityStep(number: 2, title: 'Common Humanity', description: 'Remind yourself: "Struggling is part of the human journey. I am not alone."'),
+      ActivityStep(number: 3, title: 'Kind Affirmation', description: 'Offer yourself comforting words: "May I be kind to myself and give myself patience."'),
+    ],
+  ),
+  ActivityItem(
+    id: 'gratitude-journal',
+    title: 'Gratitude & Perspective Shift',
+    description: 'Anchor on positive wins and small campus blessings to boost long-term happiness.',
     duration: '10 min',
     difficulty: 'Easy',
     category: 'Journaling',
     icon: Icons.edit_note_rounded,
+    gradient: [Color(0xFFD97706), Color(0xFFFBBF24)],
     tags: [
-      ActivityTag(label: 'Mood', bg: AppColors.tagGreenBg, border: AppColors.tagGreenBorder, text: AppColors.tagGreenText),
-      ActivityTag(label: 'Mindfulness', bg: AppColors.tagBlueBg, border: Color(0x4DC0C9C2), text: AppColors.tagBlueText),
+      ActivityTag(label: 'Perspective', bg: Color(0xFFFEF3C7), border: Color(0xFFFDE68A), text: Color(0xFF92400E)),
+      ActivityTag(label: 'Happiness', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
+      ActivityTag(label: 'Mindset', bg: Color(0xFFE0F2FE), border: Color(0xFFBAE6FD), text: Color(0xFF0369A1)),
     ],
     whatIsThis:
-        'Gratitude journaling is the practice of regularly writing down things you are thankful for. '
-        'Research shows it can significantly increase well-being, improve sleep, and reduce stress by shifting focus from what is wrong to what is right.',
+        'Gratitude journaling trains your brain to notice everyday blessings. '
+        'Clinical studies show 10 minutes of gratitude significantly improves mood, sleep quality, and academic stamina.',
     steps: [
-      ActivityStep(number: 1, title: 'Open your journal', description: 'Find a quiet space and open a blank page.'),
-      ActivityStep(number: 2, title: 'Write 3 gratitudes', description: 'Write down 3 specific things you are grateful for today, and why.'),
-      ActivityStep(number: 3, title: 'Reflect', description: 'Spend a moment really feeling the appreciation for each item you wrote.'),
+      ActivityStep(number: 1, title: 'Reflect on 3 Wins', description: 'Think of 3 specific moments or people that made today lighter.'),
+      ActivityStep(number: 2, title: 'Write the Why', description: 'Write down why each moment was meaningful to your well-being.'),
+      ActivityStep(number: 3, title: 'Savor the Feeling', description: 'Take 30 seconds to truly appreciate these gifts in your life.'),
     ],
   ),
   ActivityItem(
-    title: 'Mindful Walking',
-    description: 'Connect with nature and your body through a structured, observant walk.',
-    duration: '20 min',
+    id: 'mindful-walking',
+    title: 'Mindful Campus Walk',
+    description: 'Transform your walk between classes into a revitalizing mindfulness session.',
+    duration: '15 min',
     difficulty: 'Easy',
     category: 'Exercise',
     icon: Icons.directions_walk_rounded,
+    gradient: [Color(0xFFE11D48), Color(0xFFFB7185)],
     tags: [
-      ActivityTag(label: 'Stress', bg: AppColors.tagOrangeBg, border: Color(0x1A712611), text: AppColors.tagOrangeText),
-      ActivityTag(label: 'Energy', bg: AppColors.tagGreenBg, border: AppColors.tagGreenBorder, text: AppColors.tagGreenText),
+      ActivityTag(label: 'Movement', bg: Color(0xFFFFE4E6), border: Color(0xFFFECDD3), text: Color(0xFF9F1239)),
+      ActivityTag(label: 'Energy', bg: Color(0xFFFEF3C7), border: Color(0xFFFDE68A), text: Color(0xFF92400E)),
+      ActivityTag(label: 'Nature', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
     ],
     whatIsThis:
-        'Mindful walking combines gentle physical exercise with mindfulness. '
-        'Instead of walking on autopilot, you consciously pay attention to your body movements, breath, and surroundings to ground yourself in the present moment.',
+        'Mindful walking bridges active physical movement with present-moment awareness. '
+        'It energizes your body, reduces mental fog, and connects you with your campus surroundings.',
     steps: [
-      ActivityStep(number: 1, title: 'Start slow', description: 'Begin walking at a slow, comfortable pace.'),
-      ActivityStep(number: 2, title: 'Focus on your feet', description: 'Notice how each foot lifts, moves forward, and makes contact with the ground.'),
-      ActivityStep(number: 3, title: 'Engage your senses', description: 'Notice what you see, hear, smell, and feel around you without judgment.'),
-      ActivityStep(number: 4, title: 'Return to breath', description: 'Whenever your mind wanders, gently return focus to your breathing and steps.'),
+      ActivityStep(number: 1, title: 'Pace & Posture', description: 'Walk at a steady, relaxed pace. Keep your gaze soft and shoulders relaxed.'),
+      ActivityStep(number: 2, title: 'Feel Footsteps', description: 'Pay attention to the rhythm of your heels touching the ground.'),
+      ActivityStep(number: 3, title: 'Observe Nature', description: 'Notice the breeze, rustling trees, and sunlight without getting distracted by your phone.'),
     ],
   ),
 ];
 
-const _categories = ['All', 'Meditation', 'Breathing', 'Journaling', 'Exercise'];
+const _categories = ['All', 'Favorites ❤️', 'Breathing', 'Meditation', 'Grounding', 'Journaling', 'Exercise'];
 
 // ── Main Activity Screen ─────────────────────────────────────────────────────
 class ActivityScreen extends StatefulWidget {
-  const ActivityScreen({super.key});
+  final VoidCallback? onActivityCompleted;
+  const ActivityScreen({super.key, this.onActivityCompleted});
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
@@ -166,12 +255,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   Map<String, bool> _completedToday = {};
+  Set<String> _favoriteIds = {};
   int _activityStreak = 0;
+  int _totalMindfulMinutesThisWeek = 0;
+  int? _todayMoodLevel;
 
   @override
   void initState() {
     super.initState();
     _loadCompletions();
+    _loadFavorites();
+    _loadStatsAndMood();
   }
 
   @override
@@ -180,17 +274,81 @@ class _ActivityScreenState extends State<ActivityScreen> {
     super.dispose();
   }
 
-  /// Reads per-activity completion keys for today and updates [_completedToday] and [_activityStreak].
+  Future<void> _loadFavorites() async {
+    try {
+      final raw = await _storage.read(key: 'favorite_activities');
+      if (raw != null) {
+        final list = List<String>.from(jsonDecode(raw));
+        if (mounted) setState(() => _favoriteIds = list.toSet());
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite(String activityId) async {
+    HapticService.lightTap();
+    setState(() {
+      if (_favoriteIds.contains(activityId)) {
+        _favoriteIds.remove(activityId);
+      } else {
+        _favoriteIds.add(activityId);
+      }
+    });
+    await _storage.write(key: 'favorite_activities', value: jsonEncode(_favoriteIds.toList()));
+  }
+
+  Future<void> _loadStatsAndMood() async {
+    // Check mood from API or offline
+    try {
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
+      if (moodData is List) {
+        final todayEntries = moodData.where((e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false).toList();
+        if (todayEntries.isNotEmpty && mounted) {
+          setState(() {
+            _todayMoodLevel = (todayEntries.first['mood_level'] as num?)?.toInt();
+          });
+        }
+      }
+    } catch (_) {}
+
+    if (_todayMoodLevel == null) {
+      final offline = await OfflineMoodQueue().getTodayOfflineMood();
+      if (offline != null && mounted) setState(() => _todayMoodLevel = offline);
+    }
+
+    // Calculate mindful minutes this week
+    try {
+      final rawHistory = await _storage.read(key: 'activity_history');
+      if (rawHistory != null) {
+        final history = jsonDecode(rawHistory) as List;
+        final now = DateTime.now();
+        final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+        int totalSecs = 0;
+
+        for (final item in history) {
+          final dateStr = item['date'] as String?;
+          if (dateStr != null) {
+            final entryDate = DateTime.tryParse(dateStr);
+            if (entryDate != null && entryDate.isAfter(monday.subtract(const Duration(days: 1)))) {
+              final dur = (item['durationSeconds'] as num?)?.toInt() ?? 300;
+              totalSecs += dur;
+            }
+          }
+        }
+        if (mounted) setState(() => _totalMindfulMinutesThisWeek = (totalSecs / 60).round());
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadCompletions() async {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final Map<String, bool> result = {};
     for (final a in activityList) {
-      final id = a.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-');
-      final val = await _storage.read(key: 'activity_${id}_$today');
-      result[id] = val == 'completed';
+      final val = await _storage.read(key: 'activity_${a.id}_$today');
+      result[a.id] = val == 'completed';
     }
 
-    // Calculate dynamic activity streak from activity_history
+    // Dynamic activity streak from activity_history
     int streak = 0;
     try {
       final rawHistory = await _storage.read(key: 'activity_history');
@@ -198,28 +356,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
         final history = jsonDecode(rawHistory) as List;
         final Set<String> activeDates = {};
         for (final item in history) {
-          final date = item['date'] as String?;
-          if (date != null && date.length >= 10) {
-            activeDates.add(date.substring(0, 10));
+          final dateStr = item['date'] as String?;
+          if (dateStr != null && dateStr.isNotEmpty) {
+            activeDates.add(dateStr);
           }
         }
-
         final now = DateTime.now();
-        final todayStr = DateFormat('yyyy-MM-dd').format(now);
-        final yesterdayStr = DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 1)));
-
-        final startDay = activeDates.contains(todayStr)
-            ? now
-            : (activeDates.contains(yesterdayStr) ? now.subtract(const Duration(days: 1)) : null);
-
-        if (startDay != null) {
-          for (int i = 0; i < 365; i++) {
-            final check = DateFormat('yyyy-MM-dd').format(startDay.subtract(Duration(days: i)));
-            if (activeDates.contains(check)) {
-              streak++;
-            } else {
-              break;
-            }
+        for (int i = 0; i < 365; i++) {
+          final checkDate = now.subtract(Duration(days: i));
+          final key = DateFormat('yyyy-MM-dd').format(checkDate);
+          if (activeDates.contains(key)) {
+            streak++;
+          } else {
+            break;
           }
         }
       }
@@ -233,318 +382,314 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }
   }
 
-  /// Navigate to ActivityStartScreen then reload completions when returning.
-  Future<void> _openActivity(ActivityItem activity) async {
-    await Navigator.of(context).push(slideUpRoute(ActivityStartScreen(activity: activity)));
-    _loadCompletions();
+  ActivityItem _getRecommendedActivity() {
+    if (_todayMoodLevel != null) {
+      if (_todayMoodLevel! <= 1) {
+        return activityList.firstWhere((a) => a.id == '5-4-3-2-1-grounding');
+      } else if (_todayMoodLevel! == 2) {
+        return activityList.firstWhere((a) => a.id == 'box-breathing');
+      } else if (_todayMoodLevel! == 3) {
+        return activityList.firstWhere((a) => a.id == 'self-compassion-break');
+      } else {
+        return activityList.firstWhere((a) => a.id == 'gratitude-journal');
+      }
+    }
+    return activityList[0]; // Default 4-7-8
   }
-
-  /// Show the activity history bottom sheet.
-  void _showHistory() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const ActivityHistorySheet(),
-    );
-  }
-
-  String _activityId(ActivityItem a) =>
-      a.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-');
 
   List<ActivityItem> get _filteredActivities {
-    final category = _categories[_selectedCategory];
-    return activityList.where((a) {
-      final matchesCategory = category == 'All' || a.category == category;
-      final matchesSearch = _searchQuery.isEmpty ||
-          a.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          a.description.toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+    return activityList.where((activity) {
+      // Category filter
+      if (_selectedCategory == 1) {
+        // Favorites
+        if (!_favoriteIds.contains(activity.id)) return false;
+      } else if (_selectedCategory > 1) {
+        final cat = _categories[_selectedCategory].toLowerCase();
+        if (activity.category.toLowerCase() != cat) return false;
+      }
+
+      // Search filter
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final matchTitle = activity.title.toLowerCase().contains(q);
+        final matchDesc = activity.description.toLowerCase().contains(q);
+        final matchTags = activity.tags.any((t) => t.label.toLowerCase().contains(q));
+        if (!matchTitle && !matchDesc && !matchTags) return false;
+      }
+      return true;
     }).toList();
+  }
+
+  Future<void> _openActivity(ActivityItem activity) async {
+    HapticService.lightTap();
+    await Navigator.of(context).push(
+      slideRoute(ActivityStartScreen(activity: activity)),
+    );
+    await _loadCompletions();
+    await _loadStatsAndMood();
+    widget.onActivityCompleted?.call();
   }
 
   @override
   Widget build(BuildContext context) {
+    final filtered = _filteredActivities;
+    final recommended = _getRecommendedActivity();
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FF),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: Column(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: _buildHeader(),
-            ),
+            _buildHeader(),
             const SizedBox(height: 16),
-            // Title section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildTitleSection(),
-            ),
+            _buildSearchBar(),
+            const SizedBox(height: 14),
+            _buildCategoryChips(),
             const SizedBox(height: 16),
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildSearchBar(),
-            ),
-            const SizedBox(height: 12),
-            // Category tabs (horizontally scrollable)
-            _buildCategoryTabs(),
-            const SizedBox(height: 16),
-            // Scrollable content
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+
+            // Spotlight Recommended Hero Card (if on All tab and no active search)
+            if (_selectedCategory == 0 && _searchQuery.isEmpty) ...[
+              _buildSpotlightHeroCard(recommended),
+              const SizedBox(height: 16),
+              _buildMindfulStatsBar(),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Streak card
-                  _buildStreakCard(),
-                  const SizedBox(height: 10),
-                  // Activity cards
-                  ..._filteredActivities.map((activity) => _buildActivityCard(activity)),
-                  if (_filteredActivities.isEmpty)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(40),
-                        child: Text(
-                          'No activities found.',
-                          style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ),
+                  const Text(
+                    'All Mindfulness Exercises',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
                     ),
+                  ),
+                  Text(
+                    '${filtered.length} activities',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
+            ],
+
+            // Activity List Cards
+            if (filtered.isEmpty)
+              _buildEmptyState()
+            else
+              ...filtered.map((activity) => _buildActivityCard(activity)),
           ],
         ),
       ),
     );
   }
 
+  // ── Header (Title + Activity History + Avatar) ──────────────────────────
   Widget _buildHeader() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 27,
-              height: 27,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 15),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0284C7), Color(0xFF0D9488)],
             ),
-            const SizedBox(width: 8),
-            Text(
-              'Kausap AI',
-              style: AppTextStyles.brandName.copyWith(color: AppColors.primary, fontSize: 20),
-            ),
-          ],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.self_improvement_rounded, color: Colors.white, size: 20),
         ),
-        Row(
-          children: [
-            // History button
-            Semantics(
-              label: 'View activity history',
-              button: true,
-              child: GestureDetector(
-                onTap: _showHistory,
-                child: const Icon(Icons.history_rounded,
-                    color: AppColors.textPrimary, size: 24),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Mindfulness Hub',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(width: 12),
-            const Icon(Icons.notifications_outlined, color: AppColors.textPrimary, size: 24),
-            const SizedBox(width: 12),
-            Consumer<AuthProvider>(
-              builder: (context, auth, _) {
-                final user = auth.currentUser ?? {};
-                final name = user['first_name'] ?? 'U';
-                final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-                final avatarUrl = user['avatar_url'] as String?;
-                final avatar = CircleAvatar(
-                  radius: 17,
-                  backgroundColor: AppColors.primary.withAlpha(30),
-                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
-                      ? NetworkImage(avatarUrl)
-                      : null,
-                  child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
-                      ? Text(
-                          initial,
-                          style: AppTextStyles.label.copyWith(
-                              color: AppColors.primary, fontWeight: FontWeight.w700),
-                        )
-                      : null,
-                );
-                return PopupMenuButton<String>(
-                  offset: const Offset(0, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 8,
-                  child: avatar,
-                  onSelected: (value) {
-                    if (value == 'profile') {
-                      HapticService.lightTap();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                      );
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem<String>(
-                      value: 'profile',
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: AppColors.primary.withAlpha(20),
-                            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
-                                ? NetworkImage(avatarUrl)
-                                : null,
-                            child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
-                                ? Text(initial,
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
-                                : null,
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
-                              const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
+              Text(
+                'Find your center with guided exercises',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11.5,
+                  color: Color(0xFF64748B),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.history_rounded, color: Color(0xFF334155), size: 22),
+          tooltip: 'Activity History',
+          onPressed: () {
+            HapticService.lightTap();
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const ActivityHistorySheet(),
+            );
+          },
+        ),
+        Consumer<AuthProvider>(
+          builder: (context, auth, _) {
+            final user = auth.currentUser;
+            final name = user?['first_name'] ?? 'U';
+            final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+            final avatarUrl = user?['avatar_url'] as String?;
+
+            return GestureDetector(
+              onTap: () {
+                HapticService.lightTap();
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
               },
-            ),
-          ],
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primary.withAlpha(25),
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                    ? Text(
+                        initial,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                      )
+                    : null,
+              ),
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildTitleSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Activities',
-          style: AppTextStyles.heading1.copyWith(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.64,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Find your center with guided exercises.',
-          style: AppTextStyles.body.copyWith(
-            color: const Color(0xFF414751),
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-
+  // ── Search Bar ────────────────────────────────────────────────────────────
   Widget _buildSearchBar() {
     return Container(
-      height: 40,
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F2FF),
-        borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: const Color(0x1F3D405B)),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
-          const Icon(Icons.search_rounded, color: Color(0xFF727272), size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() => _searchQuery = v),
-              style: AppTextStyles.body.copyWith(fontSize: 12),
-              decoration: InputDecoration(
-                hintText: 'Search Activities...',
-                hintStyle: AppTextStyles.body.copyWith(
-                  fontSize: 12,
-                  color: const Color(0xFF727272),
-                  fontWeight: FontWeight.w500,
-                ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-                filled: false,
-              ),
-            ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
           ),
         ],
       ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (val) => setState(() => _searchQuery = val.trim()),
+        style: const TextStyle(fontFamily: 'Inter', fontSize: 13.5, color: Color(0xFF0F172A)),
+        decoration: InputDecoration(
+          hintText: 'Search breathing, meditation, grounding...',
+          hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF94A3B8)),
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF94A3B8), size: 20),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear_rounded, size: 18, color: Color(0xFF94A3B8)),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
     );
   }
 
-  Widget _buildCategoryTabs() {
-    return SizedBox(
-      height: 36,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(left: 24),
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final selected = index == _selectedCategory;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedCategory = index),
-            child: Container(
-              margin: const EdgeInsets.only(right: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : AppColors.categoryChipBg,
-                borderRadius: BorderRadius.circular(9999),
-                border: selected
-                    ? null
-                    : Border.all(color: const Color(0x33C0C9C2)),
-                boxShadow: selected
-                    ? [const BoxShadow(color: Color(0x0D000000), blurRadius: 1, offset: Offset(0, 1))]
-                    : null,
-              ),
-              child: Text(
-                _categories[index],
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: selected ? Colors.white : const Color(0xFF404944),
-                  letterSpacing: 0.14,
+  // ── Category Chips ────────────────────────────────────────────────────────
+  Widget _buildCategoryChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _categories.asMap().entries.map((entry) {
+          final index = entry.key;
+          final label = entry.value;
+          final isSelected = index == _selectedCategory;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                HapticService.lightTap();
+                setState(() => _selectedCategory = index);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFF0284C7) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF0284C7).withAlpha(60),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? Colors.white : const Color(0xFF475569),
+                  ),
                 ),
               ),
             ),
           );
-        },
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildStreakCard() {
+  // ── Spotlight Recommended Hero Card ───────────────────────────────────────
+  Widget _buildSpotlightHeroCard(ActivityItem activity) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(25),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.streakCardBg,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.streakCardBorder),
-        boxShadow: const [
+        gradient: LinearGradient(
+          colors: [
+            activity.gradient.first,
+            activity.gradient.last.withAlpha(230),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x140078D4),
-            blurRadius: 24,
-            offset: Offset(0, 4),
+            color: activity.gradient.first.withAlpha(80),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -552,173 +697,420 @@ class _ActivityScreenState extends State<ActivityScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('🌿', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 8),
-              Text(
-                'Consistency Key',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.streakCardText,
-                  letterSpacing: 0.14,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(50),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withAlpha(80)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('✨', style: TextStyle(fontSize: 12)),
+                    SizedBox(width: 4),
+                    Text(
+                      'Recommended for You Today',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _toggleFavorite(activity.id),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    _favoriteIds.contains(activity.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: _favoriteIds.contains(activity.id) ? const Color(0xFFFFE4E6) : Colors.white70,
+                    size: 22,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           Text(
-            _activityStreak == 0
-                ? 'Start your activity streak!'
-                : (_activityStreak == 1
-                    ? '1-day activity streak!'
-                    : '$_activityStreak-day activity streak!'),
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: AppColors.streakCardTitle,
+            activity.title,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              height: 1.2,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            _activityStreak == 0
-                ? 'Complete an exercise today to build your daily habit.'
-                : "Keep nurturing your mind. You're doing great.",
-            style: TextStyle(
+            activity.description,
+            style: const TextStyle(
               fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: AppColors.streakCardBody,
+              fontSize: 12.5,
+              color: Colors.white,
+              height: 1.35,
             ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(35),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, color: Colors.white, size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          activity.duration,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(35),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      activity.difficulty,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () => _openActivity(activity),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x22000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.play_arrow_rounded, size: 18, color: activity.gradient.first),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Start Now',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: activity.gradient.first,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActivityCard(ActivityItem activity) {
-    final id = _activityId(activity);
-    final isDone = _completedToday[id] ?? false;
-
-    return GestureDetector(
-      onTap: () => _openActivity(activity),
-      child: Stack(
-        clipBehavior: Clip.none,
+  // ── Mindful Stats Bar ─────────────────────────────────────────────────────
+  Widget _buildMindfulStatsBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          Container(
-            margin: const EdgeInsets.only(top: 10),
-            padding: const EdgeInsets.all(25),
-            decoration: BoxDecoration(
-              color: isDone ? const Color(0xFFF0FDF4) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDone
-                    ? const Color(0xFF22C55E).withAlpha(80)
-                    : const Color(0x1AC0C9C2),
+          Row(
+            children: [
+              Text(_activityStreak > 0 ? '🔥' : '🌱', style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _activityStreak == 1 ? '1 Day' : '$_activityStreak Days',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                  ),
+                  const Text('Active Streak', style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
+                ],
               ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x140078D4),
-                  blurRadius: 24,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
+            ],
+          ),
+          Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+          Row(
+            children: [
+              const Text('⏱️', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$_totalMindfulMinutesThisWeek mins',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                  ),
+                  const Text('This Week', style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Activity Card ─────────────────────────────────────────────────────────
+  Widget _buildActivityCard(ActivityItem activity) {
+    final isDone = _completedToday[activity.id] ?? false;
+    final isFav = _favoriteIds.contains(activity.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: isDone ? const Color(0xFFF0FDF4) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDone ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+          width: isDone ? 1.5 : 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _openActivity(activity),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title row
+                // Top Row: Category tag + Favorite button
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Text(
-                        activity.title,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF3D405B),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: activity.gradient),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(activity.icon, color: Colors.white, size: 16),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Text(
+                          activity.category.toUpperCase(),
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: activity.gradient.first,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
-                    if (isDone)
-                      const Icon(Icons.check_circle_rounded,
-                          color: Color(0xFF22C55E), size: 22),
+                    Row(
+                      children: [
+                        if (isDone)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 12),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Completed',
+                                  style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _toggleFavorite(activity.id),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                              color: isFav ? const Color(0xFFEF4444) : const Color(0xFF94A3B8),
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
+                ),
+                const SizedBox(height: 10),
+
+                // Title & Description
+                Text(
+                  activity.title,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   activity.description,
                   style: const TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF3D405B),
-                    height: 1.43,
+                    fontSize: 12.5,
+                    color: Color(0xFF64748B),
+                    height: 1.35,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
+
+                // Tag Chips
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: activity.tags.map((tag) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: tag.bg,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: tag.border),
+                      ),
+                      child: Text(
+                        tag.label,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: tag.text,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                // Bottom Meta Row: Duration + Difficulty + Action Button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.access_time_rounded,
-                            size: 13, color: Color(0xFF707479)),
+                        const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF64748B)),
                         const SizedBox(width: 4),
                         Text(
                           activity.duration,
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF707479),
-                          ),
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
+                        Container(width: 4, height: 4, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFCBD5E1))),
+                        const SizedBox(width: 10),
                         Text(
                           activity.difficulty,
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF707479),
-                          ),
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
                         ),
                       ],
                     ),
-                    // Start / Done button
-                    GestureDetector(
-                      onTap: () => _openActivity(activity),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isDone
-                              ? const Color(0xFFDCFCE7)
-                              : AppColors.categoryChipBg,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          isDone ? 'Done ✓' : 'Start',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDone
-                                ? const Color(0xFF16A34A)
-                                : AppColors.primary,
-                            letterSpacing: 0.14,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isDone ? const Color(0xFFDCFCE7) : const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isDone ? 'Do Again' : 'Start ➔',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDone ? const Color(0xFF16A34A) : const Color(0xFF0284C7),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: const Column(
+        children: [
+          Text('🔍', style: TextStyle(fontSize: 40)),
+          SizedBox(height: 12),
+          Text(
+            'No matching activities found',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Try adjusting your search or category filter.',
+            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
           ),
         ],
       ),
@@ -746,155 +1138,148 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
   }
 
   Future<void> _loadHistory() async {
-    final raw = await _storage.read(key: 'activity_history');
-    if (mounted) {
-      setState(() {
-        _history = raw != null
-            ? List<Map<String, dynamic>>.from(
-                (jsonDecode(raw) as List).cast<Map<String, dynamic>>())
-            : [];
-        _isLoading = false;
-      });
-    }
-  }
-
-  String _formatDate(String dateStr) {
     try {
-      final d = DateTime.parse(dateStr);
-      final today = DateTime.now();
-      final yesterday = today.subtract(const Duration(days: 1));
-      if (d.year == today.year && d.month == today.month && d.day == today.day) {
-        return 'Today';
+      final raw = await _storage.read(key: 'activity_history');
+      if (raw != null) {
+        final list = List<Map<String, dynamic>>.from(
+          (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+        if (mounted) {
+          setState(() {
+            _history = list;
+            _isLoading = false;
+          });
+          return;
+        }
       }
-      if (d.year == yesterday.year &&
-          d.month == yesterday.month &&
-          d.day == yesterday.day) {
-        return 'Yesterday';
-      }
-      return DateFormat('MMM d, yyyy').format(d);
-    } catch (_) {
-      return dateStr;
-    }
-  }
-
-  String _formatDuration(int seconds) {
-    if (seconds < 60) return '${seconds}s';
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return s > 0 ? '${m}m ${s}s' : '${m}m';
+    } catch (_) {}
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.72,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         children: [
-          // Handle
           const SizedBox(height: 12),
           Container(
-            width: 40,
+            width: 44,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.divider,
+              color: const Color(0xFFCBD5E1),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 16),
-          // Title
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.history_rounded,
-                    color: AppColors.primary, size: 22),
-                const SizedBox(width: 8),
-                Text('Activity History', style: AppTextStyles.heading2),
+                const Row(
+                  children: [
+                    Icon(Icons.history_rounded, color: Color(0xFF0284C7), size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Activity History',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${_history.length} sessions',
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          // Content
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _history.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('🌱',
-                                style: TextStyle(fontSize: 40)),
-                            const SizedBox(height: 12),
+                            Text('🧘', style: TextStyle(fontSize: 48)),
+                            SizedBox(height: 12),
                             Text(
-                              'No activities completed yet.\nStart one now!',
-                              style: AppTextStyles.subheading.copyWith(
-                                  color: AppColors.textSecondary),
-                              textAlign: TextAlign.center,
+                              'No activity logs yet',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Complete an exercise today to start tracking!',
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
                             ),
                           ],
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                        padding: const EdgeInsets.all(20),
                         itemCount: _history.length,
-                        separatorBuilder: (context, index) =>
-                            const Divider(height: 1),
+                        separatorBuilder: (context, index) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
-                          final entry = _history[index];
-                          final dateLabel = _formatDate(
-                              entry['date'] as String? ?? '');
-                          final duration = _formatDuration(
-                              (entry['durationSeconds'] as num?)?.toInt() ?? 0);
-                          return ListTile(
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 8),
-                            leading: Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withAlpha(20),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.self_improvement_rounded,
-                                color: AppColors.primary,
-                                size: 22,
-                              ),
+                          final item = _history[index];
+                          final title = item['title'] as String? ?? 'Mindfulness Session';
+                          final dateStr = item['date'] as String? ?? '';
+                          final dur = (item['durationSeconds'] as num?)?.toInt() ?? 300;
+                          final mins = (dur / 60).round();
+
+                          return Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
-                            title: Text(
-                              entry['title'] as String? ?? 'Activity',
-                              style: AppTextStyles.body.copyWith(
-                                  fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Text(
-                              dateLabel,
-                              style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.textSecondary),
-                            ),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDCFCE7),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                duration,
-                                style: const TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF16A34A),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        title,
+                                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        dateStr,
+                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: Text(
+                                    '$mins mins',
+                                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF0284C7)),
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },

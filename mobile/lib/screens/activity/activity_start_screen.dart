@@ -4,14 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/haptic_service.dart';
+import '../../services/ambient_audio_service.dart';
 import 'activity_screen.dart';
 import 'widgets/breathing_player_widget.dart';
 import 'widgets/meditation_player_widget.dart';
 import 'widgets/gratitude_journal_widget.dart';
 import 'widgets/mindful_walking_widget.dart';
+import 'widgets/grounding_player_widget.dart';
 
 // ── Activity Start Screen ─────────────────────────────────────────────────────
-// Phases: idle → active (countdown) → done
+// Phases: idle → active (interactive player) → done
 class ActivityStartScreen extends StatefulWidget {
   final ActivityItem activity;
 
@@ -21,7 +24,7 @@ class ActivityStartScreen extends StatefulWidget {
   State<ActivityStartScreen> createState() => _ActivityStartScreenState();
 }
 
-enum _Phase { idle, active, done }
+enum _Phase { idle, active }
 
 class _ActivityStartScreenState extends State<ActivityStartScreen>
     with SingleTickerProviderStateMixin {
@@ -34,7 +37,6 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
   bool _canFinish = false; // unlocks after 30s
   Timer? _timer;
 
-  // Animated ring controller
   late AnimationController _ringController;
 
   @override
@@ -56,17 +58,16 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     super.dispose();
   }
 
-  // Parse "5 min", "15 min", "20 min" → seconds
   int _parseDurationSeconds(String dur) {
     final match = RegExp(r'(\d+)').firstMatch(dur);
     final minutes = int.tryParse(match?.group(1) ?? '5') ?? 5;
     return minutes * 60;
   }
 
-  String get _activityId =>
-      widget.activity.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-');
+  String get _activityId => widget.activity.id;
 
   void _startActivity() {
+    HapticService.mediumTap();
     setState(() {
       _phase = _Phase.active;
       _secondsRemaining = _totalSeconds;
@@ -100,36 +101,192 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     // Also mark mindfulness quest for the day
     await _storage.write(key: 'mindfulness_$today', value: 'completed');
 
-    // Append to history log
-    await _appendHistory(today);
-
+    // Show post-exercise reflection dialog before popping
     if (!mounted) return;
-    setState(() => _phase = _Phase.done);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.activity.title} completed! 🎉'),
-        backgroundColor: const Color(0xFF22C55E),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    Navigator.pop(context);
+    await _showCompletionReflectionDialog(today);
   }
 
-  Future<void> _appendHistory(String date) async {
+  Future<void> _appendHistory(String date, {String? moodFeedback}) async {
     final raw = await _storage.read(key: 'activity_history');
     final List<dynamic> history = raw != null ? jsonDecode(raw) as List : [];
     history.insert(0, {
       'id': _activityId,
       'title': widget.activity.title,
       'date': date,
-      'durationSeconds': _elapsedSeconds,
+      'durationSeconds': _elapsedSeconds > 0 ? _elapsedSeconds : _totalSeconds,
+      'moodFeedback': moodFeedback ?? 'Refreshed',
+      'completedAt': DateTime.now().toIso8601String(),
     });
-    // Keep max 200 entries
     final trimmed = history.take(200).toList();
     await _storage.write(key: 'activity_history', value: jsonEncode(trimmed));
   }
 
+  Future<void> _showCompletionReflectionDialog(String today) async {
+    HapticService.success();
+    AmbientAudioService.instance.playNotificationChime();
+
+    String? selectedFeedback;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            elevation: 16,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDCFCE7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Text('🌟', style: TextStyle(fontSize: 32)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Session Completed! 🎉',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Great job taking time for your mental wellness with "${widget.activity.title}".',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      color: Color(0xFF64748B),
+                      height: 1.35,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'How are you feeling right now?',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 3 Quick feedback options
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildFeedbackOption(
+                        emoji: '🧘',
+                        label: 'Much Calmer',
+                        isSelected: selectedFeedback == 'Much Calmer',
+                        onTap: () {
+                          HapticService.lightTap();
+                          setDialogState(() => selectedFeedback = 'Much Calmer');
+                        },
+                      ),
+                      _buildFeedbackOption(
+                        emoji: '🙂',
+                        label: 'A Bit Better',
+                        isSelected: selectedFeedback == 'A Bit Better',
+                        onTap: () {
+                          HapticService.lightTap();
+                          setDialogState(() => selectedFeedback = 'A Bit Better');
+                        },
+                      ),
+                      _buildFeedbackOption(
+                        emoji: '😐',
+                        label: 'About Same',
+                        isSelected: selectedFeedback == 'About Same',
+                        onTap: () {
+                          HapticService.lightTap();
+                          setDialogState(() => selectedFeedback = 'About Same');
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: () async {
+                        final nav = Navigator.of(context);
+                        await _appendHistory(today, moodFeedback: selectedFeedback);
+                        if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                        if (mounted) nav.pop();
+                      },
+                      child: const Text(
+                        'Done & Claim Quest ✅',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFeedbackOption({
+    required String emoji,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE0F2FE) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 22)),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF475569),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
@@ -143,16 +300,16 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
           context: context,
           builder: (dialogCtx) => AlertDialog(
             title: const Text('Stop activity?'),
-            content: const Text(
-                'Your progress won\'t be saved if you leave now.'),
+            content: const Text('Your progress won\'t be saved if you leave now.'),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx, false),
-                  child: const Text('Keep going')),
+                onPressed: () => Navigator.pop(dialogCtx, false),
+                child: const Text('Keep going'),
+              ),
               TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx, true),
-                  child: const Text('Leave',
-                      style: TextStyle(color: Colors.red))),
+                onPressed: () => Navigator.pop(dialogCtx, true),
+                child: const Text('Leave', style: TextStyle(color: Colors.red)),
+              ),
             ],
           ),
         );
@@ -163,7 +320,7 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FF),
+        backgroundColor: const Color(0xFFF8FAFC),
         body: AnimatedSwitcher(
           duration: const Duration(milliseconds: 380),
           switchInCurve: Curves.easeOutCubic,
@@ -188,7 +345,7 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     );
   }
 
-  // ── Idle Phase (original detail view + Start button) ──────────────────────
+  // ── Idle Phase (Detail view + Start button) ───────────────────────────────
   Widget _buildIdlePhase() {
     return Stack(
       children: [
@@ -196,7 +353,7 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
           slivers: [
             SliverToBoxAdapter(child: _buildHeroHeader()),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   _buildTags(),
@@ -207,15 +364,15 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
                       widget.activity.whatIsThis,
                       style: const TextStyle(
                         fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                        color: Color(0xFF404944),
-                        height: 1.71,
+                        fontSize: 13.5,
+                        color: Color(0xFF475569),
+                        height: 1.5,
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
                   _buildSection(
-                    title: 'How it works',
+                    title: 'How to practice',
                     child: Column(
                       children: widget.activity.steps.map(_buildStep).toList(),
                     ),
@@ -225,20 +382,24 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
             ),
           ],
         ),
-        // Back button
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.only(left: 8, top: 4),
-            child: Material(
-              color: Colors.white.withAlpha(40),
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).pop(),
-                child: const Padding(
-                  padding: EdgeInsets.all(10),
-                  child: Icon(Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white, size: 18),
+        // Back Button
+        Positioned(
+          top: 44,
+          left: 16,
+          child: Semantics(
+            label: 'Back',
+            button: true,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.black.withAlpha(50),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
                 ),
               ),
             ),
@@ -246,9 +407,11 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
         ),
         // Start button
         Positioned(
-          left: 0, right: 0, bottom: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           child: _buildBottomBar(
-            label: 'Start Activity',
+            label: 'Start Exercise ➔',
             icon: Icons.play_arrow_rounded,
             enabled: true,
             onTap: _startActivity,
@@ -258,7 +421,7 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     );
   }
 
-  // ── Active Phase (smart player routing) ──────────────────────────────────
+  // ── Active Phase (Smart player routing) ───────────────────────────────────
   Widget _buildActivePhase() {
     final cat = widget.activity.category.toLowerCase();
     final title = widget.activity.title.toLowerCase();
@@ -268,7 +431,12 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
         activity: widget.activity,
         onComplete: _completeActivity,
       );
-    } else if (cat == 'meditation' || title.contains('meditation')) {
+    } else if (cat == 'grounding' || title.contains('grounding')) {
+      return GroundingPlayerWidget(
+        activity: widget.activity,
+        onComplete: _completeActivity,
+      );
+    } else if (cat == 'meditation' || title.contains('meditation') || title.contains('compassion')) {
       return MeditationPlayerWidget(
         activity: widget.activity,
         onComplete: _completeActivity,
@@ -341,7 +509,7 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
                   children: [
                     Text(
                       '$mins:$secs',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 48,
                         fontWeight: FontWeight.w700,
@@ -394,7 +562,7 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     );
   }
 
-  // ── Shared bottom action bar ───────────────────────────────────────────────
+  // ── Bottom action bar ──────────────────────────────────────────────────────
   Widget _buildBottomBar({
     required String label,
     required IconData icon,
@@ -409,8 +577,8 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
             : const BorderRadius.vertical(top: Radius.circular(14)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(31),
-            blurRadius: 5.5,
+            color: Colors.black.withAlpha(25),
+            blurRadius: 6,
             offset: const Offset(0, -2),
           ),
         ],
@@ -418,31 +586,26 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          padding: const EdgeInsets.all(16),
           child: SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: ElevatedButton.icon(
               onPressed: enabled ? onTap : null,
-              icon: Icon(icon, color: Colors.white),
+              icon: Icon(icon, color: Colors.white, size: 20),
               label: Text(
                 label,
                 style: const TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Poppins',
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w700,
                   color: Colors.white,
-                  letterSpacing: 0.14,
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    enabled ? AppColors.primary : AppColors.textSecondary,
+                backgroundColor: enabled ? const Color(0xFF0284C7) : AppColors.textSecondary,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.textSecondary.withAlpha(80),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
               ),
             ),
@@ -452,90 +615,74 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     );
   }
 
-  // ── Reusable sub-widgets ───────────────────────────────────────────────────
+  // ── Hero Header ────────────────────────────────────────────────────────────
   Widget _buildHeroHeader() {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: widget.activity.gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
         boxShadow: [
           BoxShadow(
-              color: Color(0x0D000000), blurRadius: 2, offset: Offset(0, 1)),
+            color: widget.activity.gradient.first.withAlpha(60),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(16, 80, 16, 40),
+      padding: const EdgeInsets.fromLTRB(20, 80, 20, 36),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: 72,
+            height: 72,
             decoration: BoxDecoration(
-              color: const Color(0x4C005DA7),
+              color: Colors.white.withAlpha(35),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withAlpha(25)),
+              border: Border.all(color: Colors.white.withAlpha(50), width: 2),
             ),
             child: Icon(widget.activity.icon, color: Colors.white, size: 36),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             widget.activity.title,
             style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
+              fontFamily: 'Poppins',
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
               color: Colors.white,
-              letterSpacing: -0.7,
+              letterSpacing: -0.4,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(26),
-              borderRadius: BorderRadius.circular(9999),
+              color: Colors.black.withAlpha(35),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.access_time_rounded,
-                    color: Colors.white, size: 15),
+                const Icon(Icons.access_time_rounded, color: Colors.white, size: 14),
                 const SizedBox(width: 6),
                 Text(
-                  '${widget.activity.duration} minutes',
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                    letterSpacing: 0.14,
-                  ),
+                  widget.activity.duration,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Text(
-                    '•',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      color: Colors.white.withAlpha(128),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Text('•', style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 14)),
                 ),
-                const Icon(Icons.trending_up_rounded,
-                    color: Colors.white, size: 15),
-                const SizedBox(width: 4),
                 Text(
                   widget.activity.difficulty,
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                    letterSpacing: 0.14,
-                  ),
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
                 ),
               ],
             ),
@@ -551,20 +698,19 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
       runSpacing: 6,
       children: widget.activity.tags.map((tag) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
             color: tag.bg,
-            borderRadius: BorderRadius.circular(9999),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: tag.border),
           ),
           child: Text(
             tag.label,
             style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontFamily: 'Poppins',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
               color: tag.text,
-              letterSpacing: 0.14,
             ),
           ),
         );
@@ -579,10 +725,10 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
         Text(
           title,
           style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF3D405B),
+            fontFamily: 'Poppins',
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
           ),
         ),
         const SizedBox(height: 10),
@@ -593,30 +739,31 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
 
   Widget _buildStep(ActivityStep step) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 26,
+            height: 26,
             decoration: BoxDecoration(
-              color: const Color(0xFFE6E6FF),
-              borderRadius: BorderRadius.circular(9999),
+              color: const Color(0xFFE0F2FE),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFBAE6FD)),
             ),
-            alignment: Alignment.center,
-            child: Text(
-              '${step.number}',
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF3D405B),
-                letterSpacing: 0.14,
+            child: Center(
+              child: Text(
+                '${step.number}',
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0284C7),
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,22 +771,20 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
                 Text(
                   step.title,
                   style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF3D405B),
-                    letterSpacing: 0.14,
+                    fontFamily: 'Poppins',
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1E293B),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   step.description,
                   style: const TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF3D405B),
-                    height: 1.43,
+                    fontSize: 12.5,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
                   ),
                 ),
               ],

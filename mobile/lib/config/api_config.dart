@@ -50,4 +50,9 @@ class ApiConfig {
 
   // Settings endpoints
   static const String changePassword = '/auth/change-password';
+
+  // Journal endpoints
+  static const String journal = '/journal';
+  static const String journalToday = '/journal/today';
 }
+

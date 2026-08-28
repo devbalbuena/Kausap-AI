@@ -11,6 +11,8 @@ from app.models.user import User
 from app.models.mood import MoodEntry
 from app.schemas.mood import MoodEntryCreate, MoodEntryRead, MoodEntryUpdate, MoodSummary
 
+from app.models.notification import Notification, NotificationType
+
 router = APIRouter(prefix="/mood", tags=["Mood"])
 
 
@@ -52,6 +54,59 @@ def create_mood_entry(
     session.add(entry)
     session.commit()
     session.refresh(entry)
+
+    # ── Multi-Tier Consecutive Rough Mood Escalation (RA 11036) ──
+    try:
+        recent = session.exec(
+            select(MoodEntry)
+            .where(MoodEntry.user_id == current_user.id)
+            .order_by(MoodEntry.created_at.desc())
+            .limit(7)
+        ).all()
+
+        consecutive_rough = 0
+        for r in recent:
+            if r.mood_level <= 2:
+                consecutive_rough += 1
+            else:
+                break
+
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        existing_alert = session.exec(
+            select(Notification)
+            .where(
+                Notification.user_id == current_user.id,
+                Notification.type == NotificationType.alert,
+                Notification.created_at >= today_start,
+            )
+        ).first()
+
+        if not existing_alert:
+            if consecutive_rough == 2:
+                # 🟡 2-day consecutive rough mood: Send gentle caring check-in
+                caring_notif = Notification(
+                    user_id=current_user.id,
+                    title="🌿 Gentle Check-in",
+                    body="We noticed you've been feeling down lately. Take a deep breath, explore calming exercises, or chat with Kausap AI.",
+                    type=NotificationType.alert,
+                    is_read=False,
+                )
+                session.add(caring_notif)
+                session.commit()
+            elif consecutive_rough >= 3:
+                # 🚨 3-day consecutive rough mood: Send high-priority guidance support prompt
+                urgent_notif = Notification(
+                    user_id=current_user.id,
+                    title="💙 Caring Guidance Support",
+                    body="You've had 3 tough days in a row. Remember that our FSUU guidance counselors and 24/7 hotlines are always here for you. Tap to reach out.",
+                    type=NotificationType.alert,
+                    is_read=False,
+                )
+                session.add(urgent_notif)
+                session.commit()
+    except Exception:
+        pass
+
     return entry
 
 

@@ -9,9 +9,15 @@ class Settings(BaseSettings):
 
     # LLM provider keys
     OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+
+    # Token protection & rate limits
+    RATE_LIMIT_MESSAGES_PER_HOUR: int = 30
+    DEFAULT_MAX_TOKENS: int = 600
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

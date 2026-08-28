@@ -7,6 +7,7 @@ from sqlmodel import SQLModel
 
 class ChatMessageCreate(BaseModel):
     content: str
+    persona: Optional[str] = "buddy"
 
 
 class ChatMessageRead(SQLModel):

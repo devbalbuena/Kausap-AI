@@ -17,6 +17,7 @@ class NotificationBase(SQLModel):
     body: str
     type: NotificationType = Field(default=NotificationType.system)
     is_read: bool = Field(default=False)
+    is_deleted: bool = Field(default=False)
 
 
 class Notification(NotificationBase, table=True):

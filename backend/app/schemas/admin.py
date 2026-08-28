@@ -32,7 +32,7 @@ class UserSummary(BaseModel):
 
 class FlaggedMessageRead(BaseModel):
     id: uuid.UUID
-    session_id: uuid.UUID
+    session_id: Optional[uuid.UUID] = None
     user_id: uuid.UUID
     user_email: str
     user_name: Optional[str] = None
@@ -42,6 +42,8 @@ class FlaggedMessageRead(BaseModel):
     is_resolved: Optional[bool] = False
     resolved_at: Optional[datetime] = None
     resolution_note: Optional[str] = None
+    flag_reason: Optional[str] = "Crisis Trigger"
+    risk_level: Optional[str] = "red"
 
 
 class UserDetail(BaseModel):
@@ -152,4 +154,7 @@ class DistressPatternAlert(BaseModel):
     latest_mood_label: str
     latest_note: Optional[str] = None
     latest_date: str
+    risk_level: str = "red"  # "yellow" (2 days) | "red" (3+ days)
+    severity: str = "High Risk"
+    recommended_action: str = "Immediate intake outreach recommended"
 

@@ -50,17 +50,12 @@ class NotificationService {
 
     try {
       final response = await _apiClient.get(ApiConfig.notifications, silent: true);
-      if (response is List && response.isNotEmpty) {
+      if (response is List) {
         rawList = List<Map<String, dynamic>>.from(
           response.map((e) => Map<String, dynamic>.from(e as Map)),
         );
       }
     } catch (_) {}
-
-    // Fallback dynamic generator if server returned empty list
-    if (rawList.isEmpty) {
-      rawList = await _generateDynamicFallback();
-    }
 
     // Apply locally persisted read state (for fallback & offline resilience)
     final readIds = await _getReadIds();
@@ -143,6 +138,27 @@ class NotificationService {
       );
     } catch (_) {}
 
+    unreadCountNotifier.value = 0;
+  }
+
+  /// Delete a single notification.
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      await _apiClient.delete(
+        '${ApiConfig.notifications}/$notificationId',
+        silent: true,
+      );
+    } catch (_) {}
+  }
+
+  /// Clear all notifications.
+  Future<void> clearAllNotifications() async {
+    try {
+      await _apiClient.delete(
+        '${ApiConfig.notifications}/clear-all',
+        silent: true,
+      );
+    } catch (_) {}
     unreadCountNotifier.value = 0;
   }
 

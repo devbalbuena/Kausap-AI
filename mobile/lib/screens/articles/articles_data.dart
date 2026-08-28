@@ -312,7 +312,7 @@ class ArticlesData {
       category: 'Anxiety & Coping',
       readTime: '5 min read',
       author: 'Coach Jeon',
-      authorRole: 'CBT Wellness Coach',
+      authorRole: 'Mindful Wellness Coach',
       imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=700&auto=format&fit=crop&q=80',
       categoryIcon: Icons.psychology_rounded,
       themeColor: const Color(0xFF7C3AED),
@@ -334,7 +334,7 @@ class ArticlesData {
           ],
         ),
         ArticleSection(
-          heading: 'The CBT "Triple-Column" Technique',
+          heading: 'The 3-Column Thought Reflection Technique',
           content:
               'Whenever a distressing thought surfaces: 1) Write down the automatic thought, 2) Identify the distortion label, and 3) Write a rational, balanced alternative based on objective reality.',
         ),

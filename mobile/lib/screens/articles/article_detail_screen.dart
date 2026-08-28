@@ -787,7 +787,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Our confidential CBT companion can guide you through tailored exercises and personal coping strategies.',
+                        'Our confidential AI wellness companion can guide you through tailored exercises and personal coping strategies.',
                         style: TextStyle(fontFamily: 'Inter', color: Color(0xFF475569), fontSize: 12, height: 1.4),
                         textAlign: TextAlign.center,
                       ),

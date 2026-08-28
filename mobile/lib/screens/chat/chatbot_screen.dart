@@ -18,7 +18,6 @@ import 'chat_history_screen.dart';
 import 'voice_call_screen.dart';
 import '../articles/articles_screen.dart';
 import '../profile/profile_screen.dart';
-import '../subscription/upgrade_plan_screen.dart';
 import '../../services/voice_audio_service.dart';
 import '../../services/offline_mood_queue.dart';
 
@@ -116,9 +115,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       'prompt': "I'm having trouble falling asleep because my mind won't stop racing.",
     },
     {
-      'title': 'Help me reframe a negative thought 💡',
-      'desc': 'Cognitive reframing for balance and self-compassion',
-      'prompt': 'Can you help me practice CBT thought reframing on a negative thought I keep having?',
+      'title': 'Help me reframe a stressful thought 💡',
+      'desc': 'Positive thought reframing for emotional balance',
+      'prompt': 'Can you help me reframe a stressful thought I keep having and find a more balanced perspective?',
     },
   ];
 
@@ -127,7 +126,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     '🌿 Calming Breath',
     '💭 Just Venting',
     '😴 Insomnia',
-    '💡 CBT Reframe',
+    '💡 Positive Reframe',
     '🛡️ 5-4-3-2-1 Grounding',
   ];
 
@@ -193,30 +192,48 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   Future<void> _loadSavedAvatar() async {
     final avatarId = await _storage.read(key: 'selected_chatbot_avatar_id');
-    final customName = await _storage.read(key: 'custom_avatar_name');
-    final customPrompt = await _storage.read(key: 'custom_avatar_prompt');
     final showPrompts = await _storage.read(key: 'show_chatbot_quick_prompts');
 
     if (showPrompts != null && mounted) {
       setState(() => _showQuickPrompts = showPrompts == 'true');
     }
 
-    if (avatarId == 'custom_user_avatar' && customName != null && customName.isNotEmpty) {
-      if (mounted) {
+    if (avatarId != null) {
+      // 1. Check built-in & premium avatar roster
+      final found = AvatarData.findById(avatarId);
+      if (found != null && mounted) {
+        setState(() => _currentAvatar = found);
+        return;
+      }
+
+      // 2. Check multi-custom avatar storage
+      try {
+        final jsonStr = await _storage.read(key: 'custom_avatars_list_json');
+        if (jsonStr != null && jsonStr.isNotEmpty) {
+          final List<dynamic> list = jsonDecode(jsonStr);
+          final customList = list.map((item) => AvatarModel.fromJson(item as Map<String, dynamic>)).toList();
+          final customMatch = customList.where((a) => a.id == avatarId).firstOrNull;
+          if (customMatch != null && mounted) {
+            setState(() => _currentAvatar = customMatch);
+            return;
+          }
+        }
+      } catch (_) {}
+
+      // 3. Fallback to legacy custom companion
+      final customName = await _storage.read(key: 'custom_avatar_name');
+      final customPrompt = await _storage.read(key: 'custom_avatar_prompt');
+      if (customName != null && customName.isNotEmpty && mounted) {
         setState(() {
           _currentAvatar = AvatarModel(
             id: 'custom_user_avatar',
             name: customName,
+            roleTitle: 'Custom Companion',
             tier: 'basic',
             imagePath: 'assets/avatars/avatar_basic_kim.png',
             systemPrompt: customPrompt ?? 'You are $customName, a personalized mental wellness companion.',
           );
         });
-      }
-    } else if (avatarId != null) {
-      final found = AvatarData.findById(avatarId);
-      if (found != null && mounted) {
-        setState(() => _currentAvatar = found);
       }
     }
   }
@@ -420,7 +437,22 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     try {
       final sessionId = await _ensureSession();
       final endpoint = '${ApiConfig.chatSessions}/$sessionId/messages';
-      final data = await ApiClient().post(endpoint, body: {'content': trimmed.isEmpty ? '[Photo attachment]' : trimmed});
+      String personaKey = 'buddy';
+      if (_currentAvatar.id.contains('maya')) {
+        personaKey = 'maya';
+      } else if (_currentAvatar.id.contains('ben')) {
+        personaKey = 'ben';
+      } else if (_currentAvatar.id.contains('santos')) {
+        personaKey = 'santos';
+      }
+
+      final data = await ApiClient().post(
+        endpoint,
+        body: {
+          'content': trimmed.isEmpty ? '[Photo attachment]' : trimmed,
+          'persona': personaKey,
+        },
+      );
       final aiContent = data['content'] as String? ?? '…';
 
       if (!mounted) return;
@@ -942,7 +974,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 const SizedBox(height: 4),
                 Text(
                   _currentAvatar.isMascot
-                      ? 'Your 24/7 confidential CBT companion for student wellness. How can I help support you today?'
+                      ? 'Your 24/7 confidential companion for student wellness. How can I help support you today?'
                       : 'Your ${_currentAvatar.isPremium ? 'Specialist' : 'Companion'} for student mental wellness. How can I support you today?',
                   style: TextStyle(
                     fontFamily: 'Inter',
@@ -1698,7 +1730,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         borderRadius: BorderRadius.circular(16),
         shadowColor: Colors.black.withAlpha(50),
         child: Container(
-          width: 210,
+          width: 235,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -1727,14 +1759,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
               _MenuDivider(),
               _MenuItem(
-                icon: Icons.credit_card_outlined,
-                label: 'Upgrade Plan',
-                iconColor: const Color(0xFFD97706),
-                labelColor: const Color(0xFFD97706),
-                onTap: () {
-                  setState(() => _showMenu = false);
-                  Navigator.of(context).push(slideRoute(const UpgradePlanScreen()));
-                },
+                icon: Icons.emergency_rounded,
+                label: 'Crisis & Hotlines (24/7)',
+                iconColor: const Color(0xFFDC2626),
+                labelColor: const Color(0xFFDC2626),
+                onTap: _showHotlinesSheet,
               ),
               _MenuDivider(),
               _MenuItem(
@@ -1757,6 +1786,92 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 },
               ),
               const SizedBox(height: 4),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showHotlinesSheet() {
+    setState(() => _showMenu = false);
+    HapticService.mediumTap();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.support_agent_rounded, color: Color(0xFFDC2626), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '24/7 Student Support Hotlines',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        Text(
+                          'Free, confidential mental health assistance',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _buildHotlineRow('📞 NCMH Crisis Helpline', '1553 (Toll-Free 24/7) / 0917-899-8727'),
+              const SizedBox(height: 8),
+              _buildHotlineRow('🤝 Hopeline Philippines', '(02) 8804-4673 / 0917-558-4673'),
+              const SizedBox(height: 8),
+              _buildHotlineRow('🏫 FSUU Guidance Office', '(085) 342-1830 • guidance@urios.edu.ph'),
+              const SizedBox(height: 8),
+              _buildHotlineRow('🚨 Emergency Services', '911'),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1823,12 +1938,16 @@ class _MenuItem extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: iconColor ?? AppColors.textPrimary),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: labelColor ?? AppColors.textPrimary,
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: labelColor ?? AppColors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

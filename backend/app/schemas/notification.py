@@ -11,4 +11,6 @@ class NotificationRead(BaseModel):
     body: str
     type: NotificationType
     is_read: bool
+    is_deleted: bool = False
     created_at: datetime
+

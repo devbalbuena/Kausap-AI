@@ -157,26 +157,69 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
       final localResolved = await _loadLocalResolved();
       final resolvedIds = localResolved.map((r) => r['id'].toString()).toSet();
 
-      final res = await _api.get('/admin/flagged-messages');
-      if (mounted) {
-        final remote = res is List ? res : [];
-        final List<Map<String, dynamic>> combined = [];
+      final results = await Future.wait([
+        _api.get('/admin/flagged-messages', silent: true).catchError((_) => []),
+        _api.get('/admin/distress-patterns', silent: true).catchError((_) => []),
+      ]);
 
-        // Active alerts from remote (not yet marked resolved locally)
-        for (final item in remote) {
+      if (mounted) {
+        final remoteFlagged = results[0] is List ? (results[0] as List) : [];
+        final remotePatterns = results[1] is List ? (results[1] as List) : [];
+
+        final List<Map<String, dynamic>> combined = [];
+        final Set<String> seenIds = {};
+
+        // 1. Process Flagged Messages
+        for (final item in remoteFlagged) {
           final map = Map<String, dynamic>.from(item as Map);
           final idStr = map['id'].toString();
           if (resolvedIds.contains(idStr)) {
             continue;
           }
-          if (map['is_resolved'] == true) {
-            combined.add(map);
-          } else {
-            combined.add(map);
-          }
+          seenIds.add(idStr);
+          combined.add(map);
         }
 
-        // Add all locally saved resolved logs
+        // 2. Process Distress Patterns (Yellow & Red)
+        for (final pat in remotePatterns) {
+          final map = Map<String, dynamic>.from(pat as Map);
+          final userId = map['user_id']?.toString() ?? '';
+          final latestDate = map['latest_date']?.toString() ?? 'today';
+          final distressId = 'distress_${userId}_$latestDate';
+
+          if (resolvedIds.contains(distressId) || seenIds.contains(distressId)) {
+            continue;
+          }
+          seenIds.add(distressId);
+
+          final consecutiveDays = map['consecutive_days'] ?? 2;
+          final isRed = map['risk_level'] == 'red' || consecutiveDays >= 3;
+          final riskLevel = isRed ? 'red' : 'yellow';
+          final reasonText = isRed
+              ? '$consecutiveDays-Day Persistent Distress Alert'
+              : '$consecutiveDays-Day Low Mood Trend';
+
+          final excerpt = map['latest_note'] != null && map['latest_note'].toString().trim().isNotEmpty
+              ? 'Student logged $consecutiveDays consecutive days of rough mood. Note: "${map['latest_note']}"'
+              : 'Student has logged $consecutiveDays consecutive days of low/rough mood (${map['latest_mood_label'] ?? "Rough"} - Level ${map['latest_mood_level'] ?? 2}/5).';
+
+          combined.add({
+            'id': distressId,
+            'user_id': userId,
+            'user_email': map['email'] ?? '',
+            'user_name': map['full_name'] ?? 'Student',
+            'role': 'user',
+            'content': excerpt,
+            'created_at': latestDate,
+            'is_resolved': false,
+            'flag_reason': reasonText,
+            'risk_level': riskLevel,
+            'severity': map['severity'] ?? (isRed ? 'High Risk' : 'Moderate Risk'),
+            'consecutive_days': consecutiveDays,
+          });
+        }
+
+        // 3. Add all locally saved resolved logs
         for (final loc in localResolved) {
           combined.add(loc);
         }
@@ -195,6 +238,35 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _unresolveFlag(Map<String, dynamic> item) async {
+    final flagId = item['id'].toString();
+    final studentName = item['user_name'] ?? item['user_email'] ?? 'Student';
+
+    HapticService.lightTap();
+    final localResolved = await _loadLocalResolved();
+    localResolved.removeWhere((r) => r['id'].toString() == flagId);
+    await _saveLocalResolved(localResolved);
+
+    await ClinicalAuditService.recordLog(
+      action: 'reopen_triage',
+      targetType: 'Student Distress Case',
+      targetId: flagId,
+      detail: 'Reopened triage case for $studentName back to active review.',
+    );
+
+    _fetchFlaggedMessages();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Case for $studentName moved back to Active Queue."),
+          backgroundColor: const Color(0xFF0284C7),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -684,15 +756,26 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
           final excerpt = rawExcerpt.isNotEmpty ? rawExcerpt : "🚨 1-Tap Campus SOS Emergency Assistance Triggered";
           final createdAt = item['created_at']?.toString().split('T')[0] ?? 'Today';
 
-          final isHighRisk = reason.toLowerCase().contains('suicide') || reason.toLowerCase().contains('harm') || reason.toLowerCase().contains('crisis') || excerpt.contains('SOS');
+          final riskLevel = (item['risk_level'] ?? '').toString().toLowerCase();
+          final isYellow = riskLevel == 'yellow' || reason.toLowerCase().contains('2-day') || reason.toLowerCase().contains('low mood');
+          final isHighRisk = (!isYellow) && (riskLevel == 'red' || reason.toLowerCase().contains('suicide') || reason.toLowerCase().contains('harm') || reason.toLowerCase().contains('crisis') || reason.toLowerCase().contains('persistent') || excerpt.contains('SOS'));
+
+          final cardBorderColor = isHighRisk ? const Color(0xFFFCA5A5) : (isYellow ? const Color(0xFFFDE68A) : const Color(0xFFFED7AA));
+          final iconBgColor = isHighRisk ? const Color(0xFFFEE2E2) : (isYellow ? const Color(0xFFFEF3C7) : const Color(0xFFFFEDD5));
+          final iconColor = isHighRisk ? const Color(0xFFDC2626) : (isYellow ? const Color(0xFFD97706) : const Color(0xFFD97706));
+          final iconData = isHighRisk ? Icons.emergency_rounded : Icons.warning_amber_rounded;
+          final badgeBgColor = isHighRisk ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB);
+          final badgeBorderColor = isHighRisk ? const Color(0xFFFCA5A5) : const Color(0xFFFDE68A);
+          final badgeTextColor = isHighRisk ? const Color(0xFFDC2626) : const Color(0xFFD97706);
+          final badgeLabel = isHighRisk ? "🚨 $reason" : "⚠️ $reason";
 
           return Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isHighRisk ? const Color(0xFFFCA5A5) : const Color(0xFFFED7AA)),
-              boxShadow: const [BoxShadow(color: Color(0x08EF4444), blurRadius: 6, offset: Offset(0, 2))],
+              border: Border.all(color: cardBorderColor, width: isHighRisk ? 1.5 : 1.0),
+              boxShadow: [BoxShadow(color: isHighRisk ? const Color(0x08EF4444) : const Color(0x08D97706), blurRadius: 6, offset: const Offset(0, 2))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -705,12 +788,12 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: isHighRisk ? const Color(0xFFFEE2E2) : const Color(0xFFFFEDD5),
+                            color: iconBgColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
-                            isHighRisk ? Icons.emergency_rounded : Icons.warning_amber_rounded,
-                            color: isHighRisk ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+                            iconData,
+                            color: iconColor,
                             size: 16,
                           ),
                         ),
@@ -733,17 +816,17 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: isHighRisk ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB),
+                        color: badgeBgColor,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: isHighRisk ? const Color(0xFFFCA5A5) : const Color(0xFFFDE68A)),
+                        border: Border.all(color: badgeBorderColor),
                       ),
                       child: Text(
-                        isHighRisk ? "🚨 $reason" : "⚠️ $reason",
+                        badgeLabel,
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
-                          color: isHighRisk ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+                          color: badgeTextColor,
                         ),
                       ),
                     ),
@@ -961,7 +1044,16 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  if (!isArchived)
+                                  if (!isArchived) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.restart_alt_rounded, size: 18, color: Color(0xFF0284C7)),
+                                      tooltip: "Reopen Case (Move back to Active Queue)",
+                                      visualDensity: VisualDensity.compact,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () => _unresolveFlag(item),
+                                    ),
+                                    const SizedBox(width: 4),
                                     IconButton(
                                       icon: const Icon(Icons.archive_outlined, size: 18, color: Color(0xFF94A3B8)),
                                       tooltip: "Archive Record (Soft Delete)",
@@ -969,7 +1061,8 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                       onPressed: () => _archiveResolvedLog(item),
-                                    )
+                                    ),
+                                  ]
                                   else
                                     Row(
                                       mainAxisSize: MainAxisSize.min,

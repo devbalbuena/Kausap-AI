@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/notification_service.dart';
+import '../../utils/haptic_service.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../journal/daily_journal_screen.dart';
 import '../insights/student_insights_screen.dart';
@@ -39,8 +40,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-
-
   Future<void> _markAsRead(Map<String, dynamic> notification) async {
     if (notification['is_read'] == true) return;
     try {
@@ -52,6 +51,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _markAllAsRead() async {
+    HapticService.lightTap();
     try {
       await _service.markAllAsRead();
     } catch (_) {}
@@ -71,26 +71,106 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _deleteNotification(Map<String, dynamic> notif) async {
+    HapticService.lightTap();
+    final id = notif['id']?.toString() ?? '';
+    setState(() {
+      _notifications.removeWhere((n) => n['id']?.toString() == id);
+    });
+
+    if (id.isNotEmpty) {
+      await _service.deleteNotification(id);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Notification removed.'),
+          backgroundColor: Color(0xFF334155),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _clearAllNotifications() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Clear All Notifications',
+          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: const Text(
+          'Are you sure you want to clear all notifications from your inbox?',
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    HapticService.mediumTap();
+    setState(() => _notifications.clear());
+    await _service.clearAllNotifications();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Inbox cleared. ✨'),
+          backgroundColor: Color(0xFF0F172A),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   void _handleNotificationTap(Map<String, dynamic> notif) {
     _markAsRead(notif);
     final type = notif['type']?.toString().toLowerCase() ?? '';
+    final title = notif['title']?.toString().toLowerCase() ?? '';
 
-    if (type == 'mood' || type == 'assessment') {
+    if (title.contains('check-in') || title.contains('mood') || type == 'mood') {
+      Navigator.pop(context, 'open_mood');
+    } else if (title.contains('assessment') || title.contains('phq') || title.contains('gad') || type == 'session' || type == 'assessment') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentInsightsScreen()));
-    } else if (type == 'journal') {
+    } else if (title.contains('journal') || title.contains('reflection') || type == 'journal') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const DailyJournalScreen()));
+    } else if (title.contains('streak') || type == 'alert') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentInsightsScreen()));
+    } else {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentInsightsScreen()));
     }
   }
 
   String _timeAgo(String? isoDate) {
-    if (isoDate == null) return '';
+    if (isoDate == null || isoDate.isEmpty) return '';
     try {
-      final dt = DateTime.parse(isoDate).toLocal();
+      final String parsedIso = (isoDate.endsWith('Z') || isoDate.contains('+'))
+          ? isoDate
+          : '${isoDate}Z';
+      final dt = DateTime.parse(parsedIso).toLocal();
       final now = DateTime.now();
       final diff = now.difference(dt);
 
-      if (diff.inMinutes < 5) return 'Just now';
-      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inMinutes < 5 && diff.inMinutes >= 0) return 'Just now';
+      if (diff.inMinutes < 60 && diff.inMinutes >= 0) return '${diff.inMinutes}m ago';
 
       final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
       if (isToday) {
@@ -167,21 +247,42 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
         centerTitle: true,
         actions: [
-          if (hasUnread)
-            TextButton.icon(
-              onPressed: _markAllAsRead,
-              icon: const Icon(Icons.done_all_rounded, size: 16, color: AppColors.primary),
-              label: const Text(
-                'Mark all read',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
+          if (_notifications.isNotEmpty)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF64748B)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              onSelected: (val) {
+                if (val == 'read_all') {
+                  _markAllAsRead();
+                } else if (val == 'clear_all') {
+                  _clearAllNotifications();
+                }
+              },
+              itemBuilder: (ctx) => [
+                if (hasUnread)
+                  const PopupMenuItem(
+                    value: 'read_all',
+                    child: Row(
+                      children: [
+                        Icon(Icons.done_all_rounded, size: 18, color: Color(0xFF16A34A)),
+                        SizedBox(width: 8),
+                        Text('Mark all as read', style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                const PopupMenuItem(
+                  value: 'clear_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_sweep_rounded, size: 18, color: Color(0xFFDC2626)),
+                      SizedBox(width: 8),
+                      Text('Clear all notifications', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFFDC2626))),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: Center(
@@ -200,7 +301,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           itemCount: _notifications.length,
                           itemBuilder: (context, index) {
                             final notif = _notifications[index];
-                            return _buildNotificationCard(notif);
+                            return _buildDismissibleCard(notif);
                           },
                         ),
                       ),
@@ -215,6 +316,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       icon: Icons.notifications_off_rounded,
       title: 'You\'re all caught up!',
       description: 'No new notifications right now. We will notify you when wellness reminders or counselor notes arrive.',
+    );
+  }
+
+  Widget _buildDismissibleCard(Map<String, dynamic> notif) {
+    final id = notif['id']?.toString() ?? UniqueKey().toString();
+    return Dismissible(
+      key: Key(id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEF4444),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 22),
+      ),
+      onDismissed: (_) => _deleteNotification(notif),
+      child: _buildNotificationCard(notif),
     );
   }
 
