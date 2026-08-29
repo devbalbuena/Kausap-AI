@@ -8,6 +8,7 @@ from sqlmodel import SQLModel
 class ChatMessageCreate(BaseModel):
     content: str
     persona: Optional[str] = "buddy"
+    custom_system_prompt: Optional[str] = None
 
 
 class ChatMessageRead(SQLModel):

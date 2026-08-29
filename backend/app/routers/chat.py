@@ -15,7 +15,7 @@ from app.models.token_log import TokenUsageLog
 from app.schemas.chat import ChatMessageCreate, ChatMessageRead, ChatSessionRead
 from app.core.risk_detection import check_for_risk
 from app.core.ai_provider import chat_completion_with_usage, calculate_cost_usd
-from app.core.clinical_guardrails import check_clinical_boundary, build_system_messages
+from app.core.clinical_guardrails import check_clinical_boundary, build_system_messages, get_persona_temperature
 from app.core.config import settings
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -179,12 +179,17 @@ async def post_message(
                 )
 
                 # Generate system prompt with Person-Centered Empathy & persona
+                active_persona = payload.persona or "buddy"
                 llm_messages = build_system_messages(
                     user_context=context_str,
-                    persona=payload.persona or "buddy",
+                    persona=active_persona,
                     student_name=student_display_name,
                     mood_level=mood_level,
+                    custom_system_prompt=payload.custom_system_prompt,
                 )
+
+                # Per-persona temperature tuning
+                persona_temperature = get_persona_temperature(active_persona)
 
                 # Append recent messages (keep last 12 turns for token efficiency)
                 recent_history = sorted_messages[-12:]
@@ -193,7 +198,7 @@ async def post_message(
 
                 try:
                     ai_reply_content, prompt_tokens, completion_tokens, total_tokens = await chat_completion_with_usage(
-                        llm_messages, max_tokens=settings.DEFAULT_MAX_TOKENS
+                        llm_messages, max_tokens=settings.DEFAULT_MAX_TOKENS, temperature=persona_temperature
                     )
                     ai_risk_flag = False
 

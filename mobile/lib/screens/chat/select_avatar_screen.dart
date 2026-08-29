@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/avatar_model.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
+import '../../widgets/chat/custom_avatar_painter.dart';
+import '../subscription/upgrade_plan_screen.dart';
+import 'custom_avatar_studio_screen.dart';
 
 class SelectAvatarScreen extends StatefulWidget {
   final AvatarModel currentAvatar;
@@ -120,28 +124,30 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                         ),
                       ],
                     ),
-                    child: avatar.isMascot
-                        ? Container(
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
-                              ),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 48),
-                            ),
-                          )
-                        : ClipOval(
-                            child: Image.asset(
-                              avatar.imagePath,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: const Color(0xFFEEF2FF),
-                                child: const Icon(Icons.person, color: AppColors.primary, size: 44),
-                              ),
-                            ),
-                          ),
+                    child: avatar.customConfig != null
+                        ? CustomAvatarWidget(config: avatar.customConfig!, size: 84)
+                        : (avatar.isMascot
+                            ? Container(
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 48),
+                                ),
+                              )
+                            : ClipOval(
+                                child: Image.asset(
+                                  avatar.imagePath,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => Container(
+                                    color: const Color(0xFFEEF2FF),
+                                    child: const Icon(Icons.person, color: AppColors.primary, size: 44),
+                                  ),
+                                ),
+                              )),
                   ),
                   if (avatar.isPremium)
                     Container(
@@ -270,7 +276,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   icon: const Icon(Icons.check_circle_rounded, size: 18),
                   label: Text(_selected.id == avatar.id ? 'Already Selected' : 'Chat with ${avatar.name}'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: avatar.isPremium ? const Color(0xFFD97706) : AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -278,6 +284,59 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   ),
                 ),
               ),
+              if (avatar.id.startsWith('custom_') || avatar.customConfig != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _openCustomAvatarStudio(editAvatar: avatar);
+                        },
+                        icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
+                        label: const Text('Edit Persona', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.primary)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          side: const BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await _deleteCustomAvatar(avatar.id);
+                      },
+                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                      tooltip: 'Delete Custom Avatar',
+                    ),
+                  ],
+                ),
+              ],
+              if (avatar.isPremium) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.of(context).push(slideRoute(const UpgradePlanScreen()));
+                    },
+                    icon: const Text('👑', style: TextStyle(fontSize: 14)),
+                    label: const Text(
+                      'View Kausap Premium Subscription Plans',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFB45309),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -285,243 +344,16 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
     );
   }
 
-  void _showCreateCustomAvatarSheet({AvatarModel? editAvatar}) {
-    final nameController = TextEditingController(text: editAvatar?.name ?? '');
-    String selectedRole = editAvatar?.roleTitle ?? 'Encouraging Study Buddy';
-    String selectedImagePath = editAvatar?.imagePath ?? 'assets/avatars/avatar_basic_kim.png';
-
-    final styles = [
-      {'title': 'Encouraging Study Buddy', 'desc': 'Focus on study motivation, deadlines & steady pacing'},
-      {'title': 'Gentle Venting Listener', 'desc': 'Safe emotional sanctuary to express feelings without judgment'},
-      {'title': 'Mindful & Calming Guide', 'desc': 'Grounding, relaxation, anti-panic, and deep breathing'},
-      {'title': 'Practical Goal Coach', 'desc': 'Step-by-step clarity, time management, and habit building'},
-    ];
-
-    final avatarIcons = [
-      {'path': 'assets/avatars/avatar_basic_kim.png', 'label': 'Ate Style'},
-      {'path': 'assets/avatars/avatar_basic_park.png', 'label': 'Kuya Style'},
-      {'path': 'assets/avatars/avatar_premium_kim.png', 'label': 'Mentor Style'},
-      {'path': 'assets/avatars/avatar_premium_jeon.png', 'label': 'Guide Style'},
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setSheetState) => Container(
-          padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE0F2FE),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 20),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            editAvatar != null ? 'Edit Companion' : 'Create Custom Companion',
-                            style: AppTextStyles.heading2.copyWith(fontSize: 17),
-                          ),
-                        ],
-                      ),
-                      if (editAvatar != null)
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 22),
-                          onPressed: () async {
-                            Navigator.pop(ctx);
-                            _deleteCustomAvatar(editAvatar.id);
-                          },
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('1. Choose Companion Look', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: avatarIcons.map((item) {
-                      final isSelected = selectedImagePath == item['path'];
-                      return GestureDetector(
-                        onTap: () => setSheetState(() => selectedImagePath = item['path']!),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 54,
-                              height: 54,
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected ? AppColors.primary : Colors.transparent,
-                                  width: 2.5,
-                                ),
-                              ),
-                              child: ClipOval(
-                                child: Image.asset(item['path']!, fit: BoxFit.cover),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item['label']!,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? AppColors.primary : const Color(0xFF64748B),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('2. Companion Name', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      hintText: 'e.g., Ate Kim, Mentor Dan, Bestie Sam',
-                      prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primary),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('3. Support Personality', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  ...styles.map((s) {
-                    final isSel = selectedRole == s['title'];
-                    return GestureDetector(
-                      onTap: () => setSheetState(() => selectedRole = s['title']!),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSel ? const Color(0xFFEEF2FF) : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isSel ? AppColors.primary : const Color(0xFFE2E8F0)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isSel ? Icons.radio_button_checked : Icons.radio_button_off,
-                              color: isSel ? AppColors.primary : const Color(0xFF94A3B8),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    s['title']!,
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12.5,
-                                      color: isSel ? AppColors.primary : const Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                  Text(
-                                    s['desc']!,
-                                    style: const TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 11,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final name = nameController.text.trim();
-                        if (name.isEmpty) return;
-
-                        final prompt = 'You are $name, a $selectedRole for the student. Always be warm, supportive, empathetic, and culturally relatable in Taglish.';
-                        final newId = editAvatar?.id ?? 'custom_${DateTime.now().millisecondsSinceEpoch}';
-
-                        final newCompanion = AvatarModel(
-                          id: newId,
-                          name: name,
-                          roleTitle: selectedRole,
-                          tier: 'basic',
-                          imagePath: selectedImagePath,
-                          systemPrompt: prompt,
-                          bio: 'Custom AI companion created by you with $selectedRole support style.',
-                          sampleQuote: '"Nandito ako para sa\'yo, kumusta ka today?"',
-                          specialties: [selectedRole, 'Personal Companion'],
-                        );
-
-                        if (editAvatar != null) {
-                          final idx = _customAvatars.indexWhere((a) => a.id == editAvatar.id);
-                          if (idx != -1) {
-                            _customAvatars[idx] = newCompanion;
-                          }
-                        } else {
-                          _customAvatars.add(newCompanion);
-                        }
-
-                        await _saveCustomAvatarsList();
-                        if (mounted) setState(() {});
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        await _onSelectAvatar(newCompanion);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text(
-                        editAvatar != null ? 'Save Changes' : 'Create & Chat with Companion',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+  Future<void> _openCustomAvatarStudio({AvatarModel? editAvatar}) async {
+    HapticService.lightTap();
+    final result = await Navigator.push<AvatarModel>(
+      context,
+      MaterialPageRoute(builder: (_) => CustomAvatarStudioScreen(editAvatar: editAvatar)),
     );
+    if (result != null) {
+      await _loadCustomAvatars();
+      await _onSelectAvatar(result);
+    }
   }
 
   Future<void> _deleteCustomAvatar(String id) async {
@@ -612,7 +444,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: GestureDetector(
-                onTap: () => _showCreateCustomAvatarSheet(),
+                onTap: () => _openCustomAvatarStudio(),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -694,6 +526,76 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
               ),
             ),
 
+            if (_selectedFilterIndex == 2)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticService.lightTap();
+                    Navigator.push(context, slideRoute(const UpgradePlanScreen()));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFEF3C7), Color(0xFFFFFBEB)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x0A000000), blurRadius: 6, offset: Offset(0, 2)),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('👑', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Unlock All Premium Specialists',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                              Text(
+                                'Unlimited deep clinical & CBT guidance',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  color: Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'View Plans',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
             // ── Avatars Grid ─────────────────────────────────────────────
             Expanded(
               child: displayedAvatars.isEmpty
@@ -738,7 +640,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                           isCustom: isCustom,
                           onTap: () => _onSelectAvatar(avatar),
                           onInfoTap: () => _showAvatarDetailSheet(avatar),
-                          onEditTap: isCustom ? () => _showCreateCustomAvatarSheet(editAvatar: avatar) : null,
+                          onEditTap: isCustom ? () => _openCustomAvatarStudio(editAvatar: avatar) : null,
                         );
                       },
                     ),
@@ -795,7 +697,7 @@ class _AvatarCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Top Right Badges (Crown or Info icon)
+            // Top Right Badges (Crown, Edit button, or Info icon)
             Positioned(
               top: 0,
               right: 0,
@@ -810,6 +712,35 @@ class _AvatarCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text('👑', style: TextStyle(fontSize: 10)),
+                    ),
+                  if (isCustom || avatar.customConfig != null)
+                    GestureDetector(
+                      onTap: onEditTap,
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF2FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.primary.withAlpha(90)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit_outlined, size: 10, color: AppColors.primary),
+                            SizedBox(width: 2),
+                            Text(
+                              'Edit',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   GestureDetector(
                     onTap: onInfoTap,
@@ -836,7 +767,7 @@ class _AvatarCard extends StatelessWidget {
                     height: 66,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: avatar.isMascot
+                      gradient: avatar.isMascot && avatar.customConfig == null
                           ? const LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
@@ -851,28 +782,30 @@ class _AvatarCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: avatar.isMascot
-                        ? Container(
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
-                              ),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 36),
-                            ),
-                          )
-                        : ClipOval(
-                            child: Image.asset(
-                              avatar.imagePath,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: const Color(0xFFEEF2FF),
-                                child: const Icon(Icons.person, color: AppColors.primary, size: 34),
-                              ),
-                            ),
-                          ),
+                    child: avatar.customConfig != null
+                        ? CustomAvatarWidget(config: avatar.customConfig!, size: 66)
+                        : (avatar.isMascot
+                            ? Container(
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 36),
+                                ),
+                              )
+                            : ClipOval(
+                                child: Image.asset(
+                                  avatar.imagePath,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => Container(
+                                    color: const Color(0xFFEEF2FF),
+                                    child: const Icon(Icons.person, color: AppColors.primary, size: 34),
+                                  ),
+                                ),
+                              )),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -902,38 +835,67 @@ class _AvatarCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   if (isSelected)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Active ✓',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0284C7),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0F2FE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Active ✓',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ),
                         ),
-                      ),
+                        if (isCustom || avatar.customConfig != null) ...[
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: onEditTap,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                              ),
+                              child: const Text(
+                                'Edit ✏️',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     )
-                  else if (isCustom)
+                  else if (isCustom || avatar.customConfig != null)
                     GestureDetector(
                       onTap: onEditTap,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: const Color(0xFFEEF2FF),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.primary.withAlpha(70)),
                         ),
                         child: const Text(
                           'Edit ✏️',
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 9.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF475569),
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),

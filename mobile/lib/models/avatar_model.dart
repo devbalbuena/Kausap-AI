@@ -9,6 +9,7 @@ class AvatarModel {
   final String bio;
   final String sampleQuote;
   final List<String> specialties;
+  final Map<String, dynamic>? customConfig;
 
   const AvatarModel({
     required this.id,
@@ -20,10 +21,12 @@ class AvatarModel {
     this.bio = 'Your confidential companion for emotional support and student wellness.',
     this.sampleQuote = '"Nandito lang ako para sa\'yo. Hinga tayo nang malalim."',
     this.specialties = const ['Emotional Support', 'Active Listening'],
+    this.customConfig,
   });
 
   bool get isPremium => tier == 'premium';
-  bool get isMascot => id == 'mascot_buddy' || id == 'buddy';
+  bool get isMascot => id == 'mascot_buddy' || id == 'buddy' || (customConfig != null && customConfig!['type'] == 'mascot');
+  bool get isCustomVectorAvatar => customConfig != null;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -35,6 +38,7 @@ class AvatarModel {
     'bio': bio,
     'sampleQuote': sampleQuote,
     'specialties': specialties,
+    'customConfig': customConfig,
   };
 
   factory AvatarModel.fromJson(Map<String, dynamic> json) => AvatarModel(
@@ -47,6 +51,7 @@ class AvatarModel {
     bio: json['bio'] as String? ?? 'Personal custom AI companion.',
     sampleQuote: json['sampleQuote'] as String? ?? '"I am right here to support you."',
     specialties: (json['specialties'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const ['Peer Support'],
+    customConfig: json['customConfig'] != null ? Map<String, dynamic>.from(json['customConfig'] as Map) : null,
   );
 }
 

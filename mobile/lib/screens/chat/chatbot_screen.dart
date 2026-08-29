@@ -16,10 +16,11 @@ import '../../models/avatar_model.dart';
 import 'select_avatar_screen.dart';
 import 'chat_history_screen.dart';
 import 'voice_call_screen.dart';
-import '../articles/articles_screen.dart';
-import '../profile/profile_screen.dart';
+import 'custom_avatar_studio_screen.dart';
+import '../subscription/upgrade_plan_screen.dart';
 import '../../services/voice_audio_service.dart';
 import '../../services/offline_mood_queue.dart';
+import '../../widgets/chat/custom_avatar_painter.dart';
 
 /// A single message in the chat (either user or assistant).
 class _ChatMessage {
@@ -52,6 +53,15 @@ class _ChatMessage {
   );
 }
 
+/// Emotional state of Kausap Buddy Mascot for real-time reactivity
+enum MascotEmotion {
+  neutral,
+  thinking,
+  comforting,
+  joyful,
+  celebrating,
+}
+
 class ChatbotScreen extends StatefulWidget {
   final String? initialMessage;
   final int? contextualMoodLevel;
@@ -77,6 +87,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   String? _sessionId;
   bool _isTyping = false;
   bool _showMenu = false;
+  MascotEmotion _mascotEmotion = MascotEmotion.neutral;
 
   // Voice recording & TTS states
   bool _isRecordingVoice = false;
@@ -428,6 +439,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     setState(() {
       _messages.add(_ChatMessage(role: 'user', content: trimmed, imagePath: imagePath, imageBytes: imageBytes));
       _isTyping = true;
+      _mascotEmotion = MascotEmotion.thinking;
     });
     _scrollToBottom();
 
@@ -437,28 +449,55 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     try {
       final sessionId = await _ensureSession();
       final endpoint = '${ApiConfig.chatSessions}/$sessionId/messages';
+
+      // Complete persona key mapping for all built-in avatars
       String personaKey = 'buddy';
-      if (_currentAvatar.id.contains('maya')) {
+      final avatarId = _currentAvatar.id.toLowerCase();
+      if (avatarId.contains('maya') || avatarId == 'ate_maya') {
         personaKey = 'maya';
-      } else if (_currentAvatar.id.contains('ben')) {
+      } else if (avatarId.contains('ben') || avatarId == 'kuya_ben') {
         personaKey = 'ben';
-      } else if (_currentAvatar.id.contains('santos')) {
+      } else if (avatarId.contains('santos') || avatarId == 'doc_santos') {
         personaKey = 'santos';
+      } else if (avatarId.contains('leo') || avatarId == 'coach_leo') {
+        personaKey = 'coach_leo';
+      } else if (avatarId.contains('grace') || avatarId == 'tita_grace') {
+        personaKey = 'tita_grace';
+      } else if (avatarId.contains('gabriel') || avatarId == 'prof_gabriel') {
+        personaKey = 'prof_gabriel';
+      } else if (avatarId.contains('serena') || avatarId.contains('zen') || avatarId == 'serena_zen') {
+        personaKey = 'serena_zen';
+      } else if (avatarId.contains('alex') || avatarId == 'coach_alex') {
+        personaKey = 'coach_alex';
+      } else if (avatarId.contains('mascot') || avatarId.contains('buddy')) {
+        personaKey = 'buddy';
+      }
+
+      // For custom avatars, send their full personality prompt to the backend
+      final bool isCustomAvatar = _currentAvatar.isCustomVectorAvatar ||
+          avatarId.startsWith('custom_');
+      final String? customPrompt = isCustomAvatar ? _currentAvatar.systemPrompt : null;
+
+      final Map<String, dynamic> requestBody = {
+        'content': trimmed.isEmpty ? '[Photo attachment]' : trimmed,
+        'persona': personaKey,
+      };
+      if (customPrompt != null) {
+        requestBody['custom_system_prompt'] = customPrompt;
       }
 
       final data = await ApiClient().post(
         endpoint,
-        body: {
-          'content': trimmed.isEmpty ? '[Photo attachment]' : trimmed,
-          'persona': personaKey,
-        },
+        body: requestBody,
       );
       final aiContent = data['content'] as String? ?? '…';
+      final resolvedEmotion = _detectMascotEmotion(trimmed, aiContent);
 
       if (!mounted) return;
       setState(() {
         _messages.add(_ChatMessage(role: 'assistant', content: aiContent, isCrisis: isCrisis));
         _isTyping = false;
+        _mascotEmotion = resolvedEmotion;
       });
       _saveSessionToHistory();
       _scrollToBottom();
@@ -469,6 +508,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         isCrisis: isCrisis,
         hasImage: imageBytes != null || imagePath != null,
       );
+      final resolvedEmotion = _detectMascotEmotion(trimmed, fallbackResponse);
+
       if (!mounted) return;
       setState(() {
         _messages.add(_ChatMessage(
@@ -477,9 +518,86 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           isCrisis: isCrisis,
         ));
         _isTyping = false;
+        _mascotEmotion = resolvedEmotion;
       });
       _saveSessionToHistory();
       _scrollToBottom();
+    }
+  }
+
+  MascotEmotion _detectMascotEmotion(String userText, [String? aiText]) {
+    final combined = '${userText.toLowerCase()} ${aiText?.toLowerCase() ?? ''}';
+
+    // 1. Celebrating & High Milestone
+    final celebratingKeywords = [
+      'passed', 'pasa', 'graduate', 'congrats', 'congratulation', 'nanalo', 'won', 'champion', 'perfect score', '100%', 'we did it', 'success', 'celebrate', 'tagumpay'
+    ];
+    for (final k in celebratingKeywords) {
+      if (combined.contains(k)) return MascotEmotion.celebrating;
+    }
+
+    // 2. Joyful & Gratitude / Relief
+    final joyfulKeywords = [
+      'happy', 'masaya', 'salamat', 'thank you', 'thanks', 'relief', 'relieved', 'great', 'magaan', 'okay na', 'better', 'sobrang saya', 'excited', 'love', 'galing', 'gagaan', 'appreciate', 'yay', 'hooray', 'smile', 'gumaan', 'good news'
+    ];
+    for (final k in joyfulKeywords) {
+      if (combined.contains(k)) return MascotEmotion.joyful;
+    }
+
+    // 3. Comforting & Empathy (Sadness, anxiety, burnout, heartbreak, pressure)
+    final comfortingKeywords = [
+      'sad', 'malungkot', 'lungkot', 'iyak', 'umiiyak', 'crying', 'cry', 'pagod', 'pagod na', 'exhausted', 'burnout', 'overwhelm', 'stress', 'anxious', 'anxiety', 'panic', 'takot', 'afraid', 'scared', 'fail', 'bagsak', 'breakup', 'heartbroken', 'lonely', 'mag-isa', 'hirap', 'nahihirapan', 'heavy', 'mabigat', 'hurt', 'nasasaktan', 'depressed', 'depress', 'hopeless', 'lost', 'pressure', 'suicide', 'ayoko na', 'worried', 'drained'
+    ];
+    for (final k in comfortingKeywords) {
+      if (combined.contains(k)) return MascotEmotion.comforting;
+    }
+
+    return MascotEmotion.neutral;
+  }
+
+  String _getMascotSubtitle() {
+    if (_isTyping) return '✨ Kausap Buddy is thinking…';
+    switch (_mascotEmotion) {
+      case MascotEmotion.comforting:
+        return '💜 Here with you • Comforting';
+      case MascotEmotion.joyful:
+        return '🌟 Cheering for you • Joyful';
+      case MascotEmotion.celebrating:
+        return '🎉 Proud of you • Celebrating';
+      case MascotEmotion.thinking:
+        return '✨ Formulating insights…';
+      case MascotEmotion.neutral:
+        return '🌱 Active Mascot Shield';
+    }
+  }
+
+  Color _getMascotSubtitleColor() {
+    if (_isTyping) return const Color(0xFF0284C7);
+    switch (_mascotEmotion) {
+      case MascotEmotion.comforting:
+        return const Color(0xFF9333EA);
+      case MascotEmotion.joyful:
+        return const Color(0xFF059669);
+      case MascotEmotion.celebrating:
+        return const Color(0xFFD97706);
+      case MascotEmotion.thinking:
+        return const Color(0xFF0284C7);
+      case MascotEmotion.neutral:
+        return AppColors.textSecondary;
+    }
+  }
+
+  String _getMascotTapSnackMessage() {
+    switch (_mascotEmotion) {
+      case MascotEmotion.comforting:
+        return "Nandito lang ako para sa'yo, hinga tayo nang malalim. 💜✨";
+      case MascotEmotion.joyful:
+        return "Kaya mo 'yan! I'm always cheering for you! 🌟😄";
+      case MascotEmotion.celebrating:
+        return "Ang galing mo! I'm so proud of your journey! 🎉✨";
+      case MascotEmotion.thinking:
+      case MascotEmotion.neutral:
+        return "I'm right here listening, take your time! 💬🌱";
     }
   }
 
@@ -509,13 +627,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   String _generateEmpatheticFallback(String input, {bool isCrisis = false, bool hasImage = false}) {
     final lower = input.toLowerCase();
+    final name = _currentAvatar.name;
 
     if (isCrisis) {
       return "I hear how heavy things feel right now, and I want you to know you don't have to carry this alone. Your life has immense value, and there is caring support available 24/7. Please connect with someone who can help right now:";
     }
 
     if (hasImage && input.trim().isEmpty) {
-      return "I received your photo! 📸 Whether it's your student ID, school documents, study notes, or something personal you wanted to share, I'm right here with you. What would you like to discuss about it, or how are you feeling right now?";
+      return "I received your photo! 📸 I'm $name, and I'm right here with you. What would you like to talk about, or how are you feeling right now?";
     }
 
     // Family and Relationship Struggles
@@ -529,11 +648,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('toxic') ||
         lower.contains('breakup') ||
         lower.contains('relationship')) {
-      return "Family and relationship struggles can feel especially draining because they touch the people closest to us. It is completely okay to feel hurt, frustrated, or misunderstood. Remember that your feelings are valid, and it is healthy to protect your emotional boundaries. Would you like to talk through what happened, or explore ways to express your feelings safely?";
+      return "Ang bigat siguro ng nararamdaman mo right now when it comes to the people closest to you. 💜 It's completely okay to feel hurt, frustrated, or misunderstood — I'm $name, and nandito lang ako. Would you like to talk through what happened?";
     }
 
     // Depression, Sadness, Feeling Down
-    if (lower.contains('depre') || // matches deprees, depressed, depression
+    if (lower.contains('depre') ||
         lower.contains('sad') ||
         lower.contains('down') ||
         lower.contains('lungkot') ||
@@ -541,7 +660,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('empty') ||
         lower.contains('heavy') ||
         lower.contains('miserable')) {
-      return "Thank you for trusting me and sharing that. When you're carrying a heavy sadness, even small tasks can feel overwhelming. Please remember you don't have to solve everything today—just taking it moment by moment is enough. What is weighing on your heart the most right now?";
+      return "Salamat sa pagtitiwala mo sa akin. 💙 When you're carrying something this heavy, hindi mo kailangang ayusin lahat ngayon — moment by moment lang tayo. I'm $name, and I'm right here. Ano'ng pinakamabigat sa heart mo right now?";
     }
 
     // Academic & School / Exam Stress
@@ -557,7 +676,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('deadline') ||
         lower.contains('prof') ||
         lower.contains('pressure')) {
-      return "Academic pressure can feel so suffocating, especially when expectations are high. But remember: your grades do not define your worth or your future as a person. Let's take a quick reset. Have you taken a break or had water recently? We can break down what you need to study into tiny, manageable 15-minute steps.";
+      return "Naiintindihan ko kung gaano ka-suffocating ang academic pressure, lalo na pag ang daming expectations. 💙 Pero alam mo, your grades don't define your worth. I'm $name — tara, let's break things down into small, manageable steps. Ano'ng pinaka-urgent na kailangan mong gawin?";
     }
 
     // Anxiety & Panic
@@ -568,7 +687,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('takot') ||
         lower.contains('nervous') ||
         lower.contains('overwhelm')) {
-      return "I'm right here with you. Anxiety is your body's alarm system reacting, but you are in a safe space. Let's do a quick grounding check: name 3 things you can see around you, and take a slow breath in for 4 seconds... and out for 6. How is your body feeling right now?";
+      return "Nandito ako, $name. 💙 You're in a safe space right now. Let's try something together: name 3 things you can see around you, then take a slow breath in for 4 seconds... and out for 6. How does your body feel right now?";
     }
 
     // Sleep & Insomnia
@@ -579,7 +698,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('night') ||
         lower.contains('tired') ||
         lower.contains('pagod')) {
-      return "Struggling to sleep when your thoughts are racing is so frustrating. When your mind won't quiet down, try not forcing sleep. Instead, let's do a gentle body scan or write down your thoughts so your brain knows they're safe for tomorrow. Would you like a calming breathing tip?";
+      return "Ang hirap talaga mag-sleep pag ang daming tumatakbo sa isip mo. 🌙 I'm $name — instead of forcing sleep, try mo muna i-write down ang mga thoughts mo para alam ng brain mo safe na 'yun for tomorrow. Gusto mo ba ng calming breathing exercise?";
     }
 
     // Loneliness
@@ -588,7 +707,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('isolated') ||
         lower.contains('walang kausap') ||
         lower.contains('nobody')) {
-      return "Feeling alone can make everything seem darker, but I want you to know I'm right here listening. You are worthy of genuine connection and kindness. Even in quiet moments, you are never truly as alone as it feels. What's been on your mind today?";
+      return "Ang bigat siguro ng pakiramdam na parang walang nakakaintindi. 💜 Pero gusto kong malaman mo — hindi ka nag-iisa. I'm $name, at nandito ako para makinig. What's been on your mind today?";
     }
 
     // Positive / Gratitude
@@ -599,7 +718,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('thank') ||
         lower.contains('masaya') ||
         lower.contains('passed')) {
-      return "I'm so glad to hear that! 🌟 Celebrating these positive moments and giving yourself credit is a huge part of your mental wellness journey. Keep that momentum going—what made you smile today?";
+      return "Ang saya naman! 🌟 Celebrating these moments is such an important part of your journey. I'm $name, and ang proud ko sa'yo! What made you smile today?";
     }
 
     // Greetings
@@ -608,11 +727,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('kamusta') ||
         lower.contains('kumusta') ||
         lower.contains('hey')) {
-      return "Kumusta! 👋 I'm ${_currentAvatar.name}. I'm here as your mental health companion to listen, support, and chat about whatever is on your mind today. How are you feeling right now?";
+      return "Kumusta! 👋 I'm $name, your mental health companion. Nandito lang ako to listen, support, and chat about whatever is on your mind today. How are you feeling right now?";
     }
 
     // Context-sensitive default reflection
-    return "I hear you. Thank you for expressing that with me. It takes real honesty to put our thoughts into words. Tell me more about what you're experiencing with this—I'm here to listen.";
+    return "Salamat sa pagbabahagi, that takes real courage. 💙 I'm $name, at nandito lang ako para makinig. Tell me more about what you're experiencing — take your time.";
   }
 
   void _scrollToBottom() {
@@ -680,12 +799,22 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          // Living Expressive Chat Mascot Avatar (Reacts to isTyping!) or Specialist Avatar Photo
-          if (_currentAvatar.isMascot)
+          // Custom Vector Avatar, Living Expressive Mascot, or Specialist Avatar Photo
+          if (_currentAvatar.customConfig != null)
+            GestureDetector(
+              onTap: () => setState(() => _showMenu = !_showMenu),
+              child: CustomAvatarWidget(
+                config: _currentAvatar.customConfig!,
+                size: 38,
+                isTyping: _isTyping,
+              ),
+            )
+          else if (_currentAvatar.isMascot)
             _ChatCompanionAvatar(
               isTyping: _isTyping,
               avatar: _currentAvatar,
               size: 38,
+              emotion: _mascotEmotion,
               onAvatarTap: () => setState(() => _showMenu = !_showMenu),
             )
           else
@@ -738,7 +867,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             ),
           const SizedBox(width: 10),
 
-          // Left: Brand name + tier
+          // Left: Brand name + tier / dynamic status
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -779,17 +908,21 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   ],
                 ),
                 Text(
-                  _isTyping
-                      ? 'Composing a caring response'
-                      : (_currentAvatar.isPremium
-                          ? '👑 Premium Specialist'
-                          : (_currentAvatar.isMascot ? '🌱 Active Mascot Shield' : '🌱 Basic Companion')),
+                  _currentAvatar.isMascot
+                      ? _getMascotSubtitle()
+                      : (_isTyping
+                          ? 'Composing a caring response'
+                          : (_currentAvatar.isPremium
+                              ? '👑 Premium Specialist'
+                              : '🌱 Basic Companion')),
                   style: AppTextStyles.body.copyWith(
                     fontSize: 11,
-                    color: _currentAvatar.isPremium
-                        ? const Color(0xFFD97706)
-                        : (_isTyping ? const Color(0xFF0284C7) : AppColors.textSecondary),
-                    fontWeight: _currentAvatar.isPremium ? FontWeight.w600 : FontWeight.w500,
+                    color: _currentAvatar.isMascot
+                        ? _getMascotSubtitleColor()
+                        : (_currentAvatar.isPremium
+                            ? const Color(0xFFD97706)
+                            : (_isTyping ? const Color(0xFF0284C7) : AppColors.textSecondary)),
+                    fontWeight: (_currentAvatar.isPremium || _currentAvatar.isMascot) ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
               ],
@@ -895,18 +1028,32 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         children: [
           // Avatar Hero Card with Soft Ambient Glow
           AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 400),
             curve: Curves.easeInOut,
             width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: isSpacious ? 24 : 20, vertical: isSpacious ? 32 : 20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFE0F2FE), Color(0xFFEDE9FE)],
+                colors: _currentAvatar.isMascot
+                    ? (_mascotEmotion == MascotEmotion.comforting
+                        ? const [Color(0xFFF3E8FF), Color(0xFFFCE7F3)]
+                        : (_mascotEmotion == MascotEmotion.joyful || _mascotEmotion == MascotEmotion.celebrating
+                            ? const [Color(0xFFFEF3C7), Color(0xFFD1FAE5)]
+                            : const [Color(0xFFE0F2FE), Color(0xFFEDE9FE)]))
+                    : const [Color(0xFFE0F2FE), Color(0xFFEDE9FE)],
               ),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: const Color(0xFFBAE6FD)),
+              border: Border.all(
+                color: _currentAvatar.isMascot
+                    ? (_mascotEmotion == MascotEmotion.comforting
+                        ? const Color(0xFFE9D5FF)
+                        : (_mascotEmotion == MascotEmotion.joyful || _mascotEmotion == MascotEmotion.celebrating
+                            ? const Color(0xFFFDE68A)
+                            : const Color(0xFFBAE6FD)))
+                    : const Color(0xFFBAE6FD),
+              ),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x120077B6),
@@ -917,17 +1064,34 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             ),
             child: Column(
               children: [
-                if (_currentAvatar.isMascot)
+                if (_currentAvatar.customConfig != null)
+                  CustomAvatarWidget(
+                    config: _currentAvatar.customConfig!,
+                    size: isSpacious ? 104 : 68,
+                  )
+                else if (_currentAvatar.isMascot)
                   _ChatCompanionAvatar(
                     isTyping: false,
                     size: isSpacious ? 104 : 68,
                     avatar: _currentAvatar,
+                    emotion: _mascotEmotion,
                     onAvatarTap: () {
                       HapticService.mediumTap();
+                      setState(() {
+                        if (_mascotEmotion == MascotEmotion.neutral) {
+                          _mascotEmotion = MascotEmotion.joyful;
+                        } else if (_mascotEmotion == MascotEmotion.joyful) {
+                          _mascotEmotion = MascotEmotion.comforting;
+                        } else if (_mascotEmotion == MascotEmotion.comforting) {
+                          _mascotEmotion = MascotEmotion.celebrating;
+                        } else {
+                          _mascotEmotion = MascotEmotion.neutral;
+                        }
+                      });
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: const Text("I'm right here listening, take your time! 💬✨"),
+                          content: Text(_getMascotTapSnackMessage()),
                           backgroundColor: const Color(0xFF0F172A),
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1181,36 +1345,42 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 4, right: 10),
-            child: _currentAvatar.isMascot
-                ? _ChatCompanionAvatar(
-                    isTyping: false,
+            child: _currentAvatar.customConfig != null
+                ? CustomAvatarWidget(
+                    config: _currentAvatar.customConfig!,
                     size: 32,
-                    avatar: _currentAvatar,
                   )
-                : Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(25),
-                          blurRadius: 6,
+                : (_currentAvatar.isMascot
+                    ? _ChatCompanionAvatar(
+                        isTyping: false,
+                        size: 32,
+                        avatar: _currentAvatar,
+                        emotion: _mascotEmotion,
+                      )
+                    : Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(25),
+                              blurRadius: 6,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        _currentAvatar.imagePath,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                          color: const Color(0xFFE4F9FF),
-                          child: const Icon(Icons.smart_toy_rounded,
-                              color: AppColors.primary, size: 18),
+                        child: ClipOval(
+                          child: Image.asset(
+                            _currentAvatar.imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              color: const Color(0xFFE4F9FF),
+                              child: const Icon(Icons.smart_toy_rounded,
+                                  color: AppColors.primary, size: 18),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
+                      )),
           ),
           Flexible(
             child: Column(
@@ -1446,36 +1616,43 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 4, right: 10),
-            child: _currentAvatar.isMascot
-                ? _ChatCompanionAvatar(
-                    isTyping: true,
+            child: _currentAvatar.customConfig != null
+                ? CustomAvatarWidget(
+                    config: _currentAvatar.customConfig!,
                     size: 32,
-                    avatar: _currentAvatar,
+                    isTyping: true,
                   )
-                : Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(25),
-                          blurRadius: 6,
+                : (_currentAvatar.isMascot
+                    ? _ChatCompanionAvatar(
+                        isTyping: true,
+                        size: 32,
+                        avatar: _currentAvatar,
+                        emotion: MascotEmotion.thinking,
+                      )
+                    : Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(25),
+                              blurRadius: 6,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        _currentAvatar.imagePath,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                          color: const Color(0xFFE4F9FF),
-                          child: const Icon(Icons.smart_toy_rounded,
-                              color: AppColors.primary, size: 18),
+                        child: ClipOval(
+                          child: Image.asset(
+                            _currentAvatar.imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              color: const Color(0xFFE4F9FF),
+                              child: const Icon(Icons.smart_toy_rounded,
+                                  color: AppColors.primary, size: 18),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
+                      )),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1758,6 +1935,28 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 onTap: _openSelectAvatar,
               ),
               _MenuDivider(),
+              if (_currentAvatar.customConfig != null || _currentAvatar.id.startsWith('custom_')) ...[
+                _MenuItem(
+                  icon: Icons.edit_note_rounded,
+                  label: 'Edit Companion 🎨',
+                  iconColor: const Color(0xFF7C3AED),
+                  labelColor: const Color(0xFF7C3AED),
+                  onTap: () async {
+                    setState(() => _showMenu = false);
+                    final result = await Navigator.push<AvatarModel>(
+                      context,
+                      MaterialPageRoute(builder: (_) => CustomAvatarStudioScreen(editAvatar: _currentAvatar)),
+                    );
+                    if (result != null && mounted) {
+                      setState(() {
+                        _currentAvatar = result;
+                      });
+                      await _storage.write(key: 'selected_chatbot_avatar_id', value: result.id);
+                    }
+                  },
+                ),
+                _MenuDivider(),
+              ],
               _MenuItem(
                 icon: Icons.emergency_rounded,
                 label: 'Crisis & Hotlines (24/7)',
@@ -1767,22 +1966,37 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
               _MenuDivider(),
               _MenuItem(
-                icon: Icons.article_outlined,
-                label: 'Wellness Articles',
-                iconColor: const Color(0xFF6E6EFF),
+                icon: Icons.workspace_premium_rounded,
+                label: 'Kausap Premium',
+                iconColor: const Color(0xFFF59E0B),
+                labelColor: const Color(0xFFB45309),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('👑', style: TextStyle(fontSize: 10)),
+                      SizedBox(width: 2),
+                      Text(
+                        'PRO',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFB45309),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 onTap: () {
                   setState(() => _showMenu = false);
-                  Navigator.of(context).push(slideRoute(const ArticlesScreen()));
-                },
-              ),
-              _MenuDivider(),
-              _MenuItem(
-                icon: Icons.person_outline_rounded,
-                label: 'My Profile',
-                iconColor: const Color(0xFF0F172A),
-                onTap: () {
-                  setState(() => _showMenu = false);
-                  Navigator.of(context).push(slideRoute(const ProfileScreen()));
+                  Navigator.of(context).push(slideRoute(const UpgradePlanScreen()));
                 },
               ),
               const SizedBox(height: 4),
@@ -1918,6 +2132,7 @@ class _MenuItem extends StatelessWidget {
   final VoidCallback onTap;
   final Color? iconColor;
   final Color? labelColor;
+  final Widget? trailing;
 
   const _MenuItem({
     required this.icon,
@@ -1925,6 +2140,7 @@ class _MenuItem extends StatelessWidget {
     required this.onTap,
     this.iconColor,
     this.labelColor,
+    this.trailing,
   });
 
   @override
@@ -1950,6 +2166,10 @@ class _MenuItem extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: 6),
+              trailing!,
+            ],
           ],
         ),
       ),
@@ -1984,17 +2204,19 @@ class _Dot extends StatelessWidget {
   }
 }
 
-// ── Living Chat Companion Avatar (Reacts to Typing & States) ─────────────────
+// ── Living Chat Companion Avatar (Reacts to Typing & Emotional States) ───────
 class _ChatCompanionAvatar extends StatefulWidget {
   final bool isTyping;
   final double size;
   final AvatarModel avatar;
+  final MascotEmotion emotion;
   final VoidCallback? onAvatarTap;
 
   const _ChatCompanionAvatar({
     required this.isTyping,
     this.size = 38,
     required this.avatar,
+    this.emotion = MascotEmotion.neutral,
     this.onAvatarTap,
   });
 
@@ -2005,13 +2227,14 @@ class _ChatCompanionAvatar extends StatefulWidget {
 class _ChatCompanionAvatarState extends State<_ChatCompanionAvatar> with TickerProviderStateMixin {
   late AnimationController _floatController;
   late AnimationController _wiggleController;
+  late AnimationController _sparkleController;
 
   @override
   void initState() {
     super.initState();
     _floatController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: _getFloatDuration(widget.emotion),
     )..repeat(reverse: true);
 
     _wiggleController = AnimationController(
@@ -2019,17 +2242,31 @@ class _ChatCompanionAvatarState extends State<_ChatCompanionAvatar> with TickerP
       duration: const Duration(milliseconds: 600),
     );
 
-    if (widget.isTyping) {
+    _sparkleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+
+    if (widget.isTyping || widget.emotion == MascotEmotion.thinking) {
       _wiggleController.repeat(reverse: true);
     }
+  }
+
+  Duration _getFloatDuration(MascotEmotion emotion) {
+    if (emotion == MascotEmotion.comforting) return const Duration(milliseconds: 3200); // Soothing slow breathing
+    if (emotion == MascotEmotion.celebrating || emotion == MascotEmotion.joyful) return const Duration(milliseconds: 1600); // Lively upbeat bounce
+    return const Duration(milliseconds: 2400); // Default calm float
   }
 
   @override
   void didUpdateWidget(covariant _ChatCompanionAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isTyping != oldWidget.isTyping) {
-      if (widget.isTyping) {
-        _wiggleController.repeat(reverse: true);
+    if (widget.isTyping != oldWidget.isTyping || widget.emotion != oldWidget.emotion) {
+      _floatController.duration = _getFloatDuration(widget.emotion);
+      if (widget.isTyping || widget.emotion == MascotEmotion.thinking) {
+        if (!_wiggleController.isAnimating) {
+          _wiggleController.repeat(reverse: true);
+        }
       } else {
         _wiggleController.stop();
         _wiggleController.reset();
@@ -2041,25 +2278,65 @@ class _ChatCompanionAvatarState extends State<_ChatCompanionAvatar> with TickerP
   void dispose() {
     _floatController.dispose();
     _wiggleController.dispose();
+    _sparkleController.dispose();
     super.dispose();
+  }
+
+  List<Color> _getGradientColors() {
+    if (widget.isTyping || widget.emotion == MascotEmotion.thinking) {
+      return const [Color(0xFF06B6D4), Color(0xFF8B5CF6)]; // Cyan to Violet
+    }
+    switch (widget.emotion) {
+      case MascotEmotion.comforting:
+        return const [Color(0xFF6366F1), Color(0xFFEC4899)]; // Lavender to Rose
+      case MascotEmotion.joyful:
+        return const [Color(0xFFF59E0B), Color(0xFF10B981)]; // Golden Amber to Emerald
+      case MascotEmotion.celebrating:
+        return const [Color(0xFFFFB703), Color(0xFFFB8500)]; // Radiant Amber-Gold to Sunset
+      case MascotEmotion.thinking:
+        return const [Color(0xFF06B6D4), Color(0xFF8B5CF6)];
+      case MascotEmotion.neutral:
+        return const [Color(0xFF0077B6), Color(0xFF00B4D8)]; // Ocean Blue
+    }
+  }
+
+  Color _getShadowColor() {
+    if (widget.isTyping || widget.emotion == MascotEmotion.thinking) {
+      return const Color(0x668B5CF6);
+    }
+    switch (widget.emotion) {
+      case MascotEmotion.comforting:
+        return const Color(0x55EC4899);
+      case MascotEmotion.joyful:
+        return const Color(0x5510B981);
+      case MascotEmotion.celebrating:
+        return const Color(0x66FB8500);
+      case MascotEmotion.thinking:
+        return const Color(0x668B5CF6);
+      case MascotEmotion.neutral:
+        return const Color(0x330077B6);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final effectiveEmotion = widget.isTyping ? MascotEmotion.thinking : widget.emotion;
     return GestureDetector(
       onTap: widget.onAvatarTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedBuilder(
-        animation: Listenable.merge([_floatController, _wiggleController]),
+        animation: Listenable.merge([_floatController, _wiggleController, _sparkleController]),
         builder: (context, _) {
-          final floatOffset = math.sin(_floatController.value * math.pi * 2) * 2.0;
+          final floatOffset = math.sin(_floatController.value * math.pi * 2) *
+              (effectiveEmotion == MascotEmotion.celebrating ? 3.0 : 2.0);
           final wiggleAngle = widget.isTyping ? (math.sin(_wiggleController.value * math.pi * 2) * 0.08) : 0.0;
 
           return Transform.translate(
             offset: Offset(0, floatOffset),
             child: Transform.rotate(
               angle: wiggleAngle,
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
                 width: widget.size,
                 height: widget.size,
                 decoration: BoxDecoration(
@@ -2067,17 +2344,13 @@ class _ChatCompanionAvatarState extends State<_ChatCompanionAvatar> with TickerP
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: widget.isTyping
-                        ? [const Color(0xFF06B6D4), const Color(0xFF8B5CF6)]
-                        : [const Color(0xFF0077B6), const Color(0xFF00B4D8)],
+                    colors: _getGradientColors(),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: widget.isTyping
-                          ? const Color(0x668B5CF6)
-                          : const Color(0x330077B6),
-                      blurRadius: widget.isTyping ? 12 : 8,
-                      spreadRadius: widget.isTyping ? 2 : 0,
+                      color: _getShadowColor(),
+                      blurRadius: widget.isTyping || effectiveEmotion == MascotEmotion.celebrating ? 14 : 8,
+                      spreadRadius: widget.isTyping || effectiveEmotion == MascotEmotion.celebrating ? 2 : 0,
                       offset: const Offset(0, 2),
                     ),
                   ],
@@ -2116,6 +2389,8 @@ class _ChatCompanionAvatarState extends State<_ChatCompanionAvatar> with TickerP
                       painter: _ChatMascotFacePainter(
                         isTyping: widget.isTyping,
                         progress: _floatController.value,
+                        sparkleProgress: _sparkleController.value,
+                        emotion: effectiveEmotion,
                       ),
                     ),
                   ],
@@ -2132,10 +2407,14 @@ class _ChatCompanionAvatarState extends State<_ChatCompanionAvatar> with TickerP
 class _ChatMascotFacePainter extends CustomPainter {
   final bool isTyping;
   final double progress;
+  final double sparkleProgress;
+  final MascotEmotion emotion;
 
   _ChatMascotFacePainter({
     required this.isTyping,
     required this.progress,
+    this.sparkleProgress = 0.0,
+    this.emotion = MascotEmotion.neutral,
   });
 
   @override
@@ -2144,34 +2423,55 @@ class _ChatMascotFacePainter extends CustomPainter {
     final strokePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.05
+      ..strokeWidth = size.width * 0.055
       ..strokeCap = StrokeCap.round;
-    final blushPaint = Paint()..color = const Color(0xFFFFB4A2).withAlpha(180);
 
-    final isBlinking = !isTyping && progress > 0.48 && progress < 0.52;
+    final blushPaint = Paint()
+      ..color = (emotion == MascotEmotion.comforting
+          ? const Color(0xFFFFC0CB).withAlpha(220)
+          : const Color(0xFFFFB4A2).withAlpha(190));
 
-    if (isTyping) {
+    final isBlinking = !isTyping && emotion == MascotEmotion.neutral && progress > 0.48 && progress < 0.52;
+
+    // ── EYES PAINTING ACCORDING TO EMOTION ──
+    if (isTyping || emotion == MascotEmotion.thinking) {
       // Winking star eye ( ★ ‿ ◕ )
-      final starPath = Path();
-      final cx = size.width * 0.35;
-      final cy = size.height * 0.43;
-      final r = size.width * 0.09;
-      starPath.moveTo(cx, cy - r);
-      starPath.lineTo(cx + r * 0.3, cy - r * 0.3);
-      starPath.lineTo(cx + r, cy);
-      starPath.lineTo(cx + r * 0.3, cy + r * 0.3);
-      starPath.lineTo(cx, cy + r);
-      starPath.lineTo(cx - r * 0.3, cy + r * 0.3);
-      starPath.lineTo(cx - r, cy);
-      starPath.lineTo(cx - r * 0.3, cy - r * 0.3);
-      starPath.close();
-      canvas.drawPath(starPath, eyePaint);
+      _drawStar(canvas, Offset(size.width * 0.35, size.height * 0.43), size.width * 0.095, eyePaint);
 
-      // Right eye: round open eye
+      // Right eye: round open eye with glint
       canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.43), size.width * 0.08, eyePaint);
       canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.40), size.width * 0.03, Paint()..color = Colors.white);
+    } else if (emotion == MascotEmotion.celebrating) {
+      // Dual golden-white stars ( ★ ‿ ★ )
+      _drawStar(canvas, Offset(size.width * 0.35, size.height * 0.42), size.width * 0.095, eyePaint);
+      _drawStar(canvas, Offset(size.width * 0.65, size.height * 0.42), size.width * 0.095, eyePaint);
+
+      // Tiny sparkle floaters
+      final sparkleX = size.width * (0.50 + math.cos(sparkleProgress * math.pi * 2) * 0.35);
+      final sparkleY = size.height * (0.22 + math.sin(sparkleProgress * math.pi * 2) * 0.08);
+      canvas.drawCircle(Offset(sparkleX, sparkleY), size.width * 0.02, Paint()..color = Colors.white.withAlpha(200));
+    } else if (emotion == MascotEmotion.comforting) {
+      // Gentle caring crescent curved eyes ( ◠ ‿ ◠ )
+      final leftArc = Path()
+        ..moveTo(size.width * 0.23, size.height * 0.45)
+        ..quadraticBezierTo(size.width * 0.35, size.height * 0.34, size.width * 0.47, size.height * 0.45);
+      final rightArc = Path()
+        ..moveTo(size.width * 0.53, size.height * 0.45)
+        ..quadraticBezierTo(size.width * 0.65, size.height * 0.34, size.width * 0.77, size.height * 0.45);
+      canvas.drawPath(leftArc, strokePaint);
+      canvas.drawPath(rightArc, strokePaint);
+    } else if (emotion == MascotEmotion.joyful) {
+      // Happy wide crescent eyes ( ^ ‿ ^ )
+      final leftArc = Path()
+        ..moveTo(size.width * 0.24, size.height * 0.46)
+        ..quadraticBezierTo(size.width * 0.35, size.height * 0.33, size.width * 0.46, size.height * 0.46);
+      final rightArc = Path()
+        ..moveTo(size.width * 0.54, size.height * 0.46)
+        ..quadraticBezierTo(size.width * 0.65, size.height * 0.33, size.width * 0.76, size.height * 0.46);
+      canvas.drawPath(leftArc, strokePaint);
+      canvas.drawPath(rightArc, strokePaint);
     } else if (isBlinking) {
-      // Peaceful closed smiling eyes
+      // Peaceful closed smiling eyes during natural blink
       final leftArc = Path()
         ..moveTo(size.width * 0.24, size.height * 0.44)
         ..quadraticBezierTo(size.width * 0.35, size.height * 0.36, size.width * 0.46, size.height * 0.44);
@@ -2181,7 +2481,7 @@ class _ChatMascotFacePainter extends CustomPainter {
       canvas.drawPath(leftArc, strokePaint);
       canvas.drawPath(rightArc, strokePaint);
     } else {
-      // Round sparkling eyes
+      // Default round sparkling open eyes ( • ‿ • )
       canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.42), size.width * 0.08, eyePaint);
       canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.42), size.width * 0.08, eyePaint);
 
@@ -2190,20 +2490,56 @@ class _ChatMascotFacePainter extends CustomPainter {
       canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.39), size.width * 0.03, glintPaint);
     }
 
-    // Rosy Cheeks
-    canvas.drawCircle(Offset(size.width * 0.20, size.height * 0.56), size.width * 0.07, blushPaint);
-    canvas.drawCircle(Offset(size.width * 0.80, size.height * 0.56), size.width * 0.07, blushPaint);
+    // ── ROSY CHEEKS ──
+    final blushRadius = (emotion == MascotEmotion.joyful || emotion == MascotEmotion.celebrating)
+        ? size.width * 0.085
+        : size.width * 0.07;
+    canvas.drawCircle(Offset(size.width * 0.20, size.height * 0.56), blushRadius, blushPaint);
+    canvas.drawCircle(Offset(size.width * 0.80, size.height * 0.56), blushRadius, blushPaint);
 
-    // Warm Upbeat Smile
-    final mouth = Path()
-      ..moveTo(size.width * 0.38, size.height * 0.58)
-      ..quadraticBezierTo(size.width * 0.50, size.height * 0.72, size.width * 0.62, size.height * 0.58);
-    canvas.drawPath(mouth, strokePaint);
+    // ── MOUTH EXPRESSION ACCORDING TO EMOTION ──
+    if (emotion == MascotEmotion.celebrating || emotion == MascotEmotion.joyful) {
+      // Big wide cheerful open beam smile
+      final openMouth = Path()
+        ..moveTo(size.width * 0.34, size.height * 0.57)
+        ..quadraticBezierTo(size.width * 0.50, size.height * 0.75, size.width * 0.66, size.height * 0.57)
+        ..close();
+      canvas.drawPath(openMouth, Paint()..color = Colors.white.withAlpha(230));
+    } else if (emotion == MascotEmotion.comforting) {
+      // Gentle caring reassuring soft curve
+      final mouth = Path()
+        ..moveTo(size.width * 0.38, size.height * 0.59)
+        ..quadraticBezierTo(size.width * 0.50, size.height * 0.69, size.width * 0.62, size.height * 0.59);
+      canvas.drawPath(mouth, strokePaint);
+    } else {
+      // Standard warm upbeat smile
+      final mouth = Path()
+        ..moveTo(size.width * 0.38, size.height * 0.58)
+        ..quadraticBezierTo(size.width * 0.50, size.height * 0.72, size.width * 0.62, size.height * 0.58);
+      canvas.drawPath(mouth, strokePaint);
+    }
+  }
+
+  void _drawStar(Canvas canvas, Offset center, double radius, Paint paint) {
+    final path = Path();
+    path.moveTo(center.dx, center.dy - radius);
+    path.lineTo(center.dx + radius * 0.3, center.dy - radius * 0.3);
+    path.lineTo(center.dx + radius, center.dy);
+    path.lineTo(center.dx + radius * 0.3, center.dy + radius * 0.3);
+    path.lineTo(center.dx, center.dy + radius);
+    path.lineTo(center.dx - radius * 0.3, center.dy + radius * 0.3);
+    path.lineTo(center.dx - radius, center.dy);
+    path.lineTo(center.dx - radius * 0.3, center.dy - radius * 0.3);
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(covariant _ChatMascotFacePainter oldDelegate) =>
-      oldDelegate.isTyping != isTyping || oldDelegate.progress != progress;
+      oldDelegate.isTyping != isTyping ||
+      oldDelegate.progress != progress ||
+      oldDelegate.sparkleProgress != sparkleProgress ||
+      oldDelegate.emotion != emotion;
 }
 
 // ── Animated Equalizer Bars for Active Audio ──────────────────────────────────
