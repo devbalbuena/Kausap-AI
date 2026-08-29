@@ -17,9 +17,9 @@ import '../../services/articles_storage_service.dart';
 import '../../services/ambient_audio_service.dart';
 import '../../widgets/branded_refresh_indicator.dart';
 
-// Modular Home Widgets
 import '../../widgets/home/home_companion_avatar.dart';
 import '../../widgets/home/home_support_modals.dart';
+import '../../widgets/home/mood_influence_sheet.dart';
 import '../../widgets/home/daily_quests_card.dart';
 import '../../widgets/home/home_mood_trends_card.dart';
 import '../../widgets/home/home_streak_card.dart';
@@ -186,13 +186,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     HapticService.mediumTap();
 
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => MoodInfluenceSheet(
+        moodLevel: level,
+        firstName: _firstName,
+        onSave: (factors, note) async {
+          Navigator.pop(ctx);
+          await _submitMoodCheckin(level, factors, note);
+        },
+      ),
+    );
+  }
+
+  Future<void> _submitMoodCheckin(int level, List<String> factors, String? note) async {
     final isOnline = ConnectivityService().isOnline;
 
     if (!isOnline) {
       // ── Option A: Offline Mode — Queue locally and proceed seamlessly ──
       await OfflineMoodQueue().enqueueMood(
         moodLevel: level,
+        emotions: factors.isNotEmpty ? factors : null,
         intensity: level,
+        note: note,
       );
 
       if (mounted) {
@@ -224,8 +242,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try {
       await ApiClient().post(ApiConfig.mood, body: {
         'mood_level': level,
-        'emotions': null,
+        'emotions': factors.isNotEmpty ? factors : null,
         'intensity': level,
+        'note': note,
       });
       if (mounted) {
         setState(() {
@@ -255,7 +274,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // Network failure fallback — enqueue offline
       await OfflineMoodQueue().enqueueMood(
         moodLevel: level,
+        emotions: factors.isNotEmpty ? factors : null,
         intensity: level,
+        note: note,
       );
       if (mounted) {
         setState(() {
@@ -476,6 +497,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
+  DateTime? _parseDateLocal(dynamic created) {
+    if (created == null) return null;
+    try {
+      final str = created.toString();
+      final dt = DateTime.parse(str);
+      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _fetchStreak() async {
     try {
       final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
@@ -483,10 +515,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
       final Set<String> daysWithMood = {};
       for (final entry in moodData) {
-        final created = entry['created_at'] as String?;
-        if (created != null && created.length >= 10) {
-          daysWithMood.add(created.substring(0, 10)); // 'yyyy-MM-dd'
+        final dt = _parseDateLocal(entry['created_at']);
+        if (dt != null) {
+          daysWithMood.add(DateFormat('yyyy-MM-dd').format(dt));
         }
+      }
+      if (_todayMoodLevel != null) {
+        daysWithMood.add(DateFormat('yyyy-MM-dd').format(DateTime.now()));
       }
 
       int streak = 0;
@@ -524,11 +559,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
       for (int i = 0; i < 7; i++) {
         final targetDate = monday.add(Duration(days: i));
-        final dateStr = DateFormat('yyyy-MM-dd').format(targetDate);
 
         final dayEntries = moodData.where((e) {
-          final created = e['created_at'] as String?;
-          return created != null && created.startsWith(dateStr);
+          final dt = _parseDateLocal(e['created_at']);
+          return dt != null &&
+              dt.year == targetDate.year &&
+              dt.month == targetDate.month &&
+              dt.day == targetDate.day;
         }).toList();
 
         if (dayEntries.isNotEmpty) {
@@ -540,6 +577,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final avgLevel = (daySum / dayEntries.length).clamp(1.0, 5.0);
           weeklyMoods[i] = avgLevel;
           totalSum += avgLevel;
+          loggedDays++;
+        }
+      }
+
+      // If user checked in today but it's not yet in the server response, merge it
+      if (_todayMoodLevel != null) {
+        final todayIdx = DateTime.now().weekday - 1;
+        if (weeklyMoods[todayIdx] == null) {
+          weeklyMoods[todayIdx] = _todayMoodLevel!.toDouble();
+          totalSum += _todayMoodLevel!.toDouble();
           loggedDays++;
         }
       }

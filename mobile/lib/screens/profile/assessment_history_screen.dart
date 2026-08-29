@@ -79,9 +79,9 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
             const SizedBox(height: 20),
 
             _buildAssessmentOption(
-              title: 'PHQ-9 (Depression Screener)',
-              subtitle: '9 questions • Measures mood, energy, and depression symptoms',
-              icon: Icons.spa_rounded,
+              title: 'Mood & Energy Check-In (PHQ-9)',
+              subtitle: '9 questions • Reflect on mood, sleep, and energy levels',
+              icon: Icons.wb_sunny_rounded,
               color: const Color(0xFF10B981),
               onTap: () {
                 Navigator.pop(ctx);
@@ -91,13 +91,25 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
             const SizedBox(height: 12),
 
             _buildAssessmentOption(
-              title: 'GAD-7 (Anxiety Screener)',
-              subtitle: '7 questions • Measures anxiety, worry, and nervous tension',
-              icon: Icons.psychology_rounded,
+              title: 'Stress & Peace of Mind Check-In (GAD-7)',
+              subtitle: '7 questions • Check daily worry, nervousness, and tension',
+              icon: Icons.waves_rounded,
               color: const Color(0xFF6366F1),
               onTap: () {
                 Navigator.pop(ctx);
                 _startScreener('gad7');
+              },
+            ),
+            const SizedBox(height: 12),
+
+            _buildAssessmentOption(
+              title: 'Campus Burnout & Fatigue Check-In',
+              subtitle: '6 questions • Assess thesis pressure and academic fatigue',
+              icon: Icons.school_rounded,
+              color: const Color(0xFFD97706),
+              onTap: () {
+                Navigator.pop(ctx);
+                _startScreener('burnout');
               },
             ),
           ],

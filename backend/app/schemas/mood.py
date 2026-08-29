@@ -1,12 +1,12 @@
 from datetime import datetime
 import uuid
-from typing import Optional
+from typing import Optional, Union, List
 from sqlmodel import SQLModel
 
 
 class MoodEntryCreate(SQLModel):
     mood_level: int  # 1-5
-    emotions: Optional[str] = None
+    emotions: Optional[Union[str, List[str]]] = None
     intensity: Optional[int] = None
     note: Optional[str] = None
 
@@ -23,7 +23,7 @@ class MoodEntryRead(SQLModel):
 
 class MoodEntryUpdate(SQLModel):
     mood_level: Optional[int] = None
-    emotions: Optional[str] = None
+    emotions: Optional[Union[str, List[str]]] = None
     intensity: Optional[int] = None
     note: Optional[str] = None
 

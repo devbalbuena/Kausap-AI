@@ -3,7 +3,6 @@ import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import '../services/api_client.dart';
 import '../config/api_config.dart';
-import 'package:intl/intl.dart';
 
 class MoodTrendsChart extends StatefulWidget {
   const MoodTrendsChart({super.key});
@@ -42,6 +41,17 @@ class _MoodTrendsChartState extends State<MoodTrendsChart> {
     }
   }
 
+  DateTime? _parseDateLocal(dynamic created) {
+    if (created == null) return null;
+    try {
+      final str = created.toString();
+      final dt = DateTime.parse(str);
+      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Build spots only for the past 7 days that actually have data.
   /// X-axis index 0 = 6 days ago, index 6 = today.
   List<FlSpot> _getLast7DaySpots() {
@@ -50,11 +60,13 @@ class _MoodTrendsChartState extends State<MoodTrendsChart> {
 
     for (int i = 6; i >= 0; i--) {
       final day = now.subtract(Duration(days: i));
-      final dayStr = DateFormat('yyyy-MM-dd').format(day);
 
       final dayEntries = _entries.where((e) {
-        final created = e['created_at'] as String? ?? '';
-        return created.startsWith(dayStr);
+        final dt = _parseDateLocal(e['created_at']);
+        return dt != null &&
+            dt.year == day.year &&
+            dt.month == day.month &&
+            dt.day == day.day;
       }).toList();
 
       if (dayEntries.isNotEmpty) {

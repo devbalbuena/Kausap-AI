@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
@@ -18,11 +21,10 @@ import '../settings/privacy_screen.dart';
 import '../settings/privacy_center_screen.dart';
 import '../../widgets/mood_trends_chart.dart';
 import '../settings/about_screen.dart';
-import '../insights/student_insights_screen.dart';
 import '../crisis/crisis_resources_sheet.dart';
 import 'edit_profile_screen.dart';
 import 'achievements_screen.dart';
-import 'assessment_history_screen.dart';
+import 'safety_plan_screen.dart';
 import '../../widgets/cached_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -33,7 +35,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _streak = 1;
+  int _streak = 0;
   int _totalMoodLogs = 0;
   int _screenersCount = 0;
 
@@ -43,33 +45,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fetchUserStats();
   }
 
+  DateTime? _parseDateLocal(dynamic created) {
+    if (created == null) return null;
+    try {
+      final str = created.toString();
+      final dt = DateTime.parse(str);
+      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _fetchUserStats() async {
-    // 1. Fetch Streak
+    // 1. Fetch Streak & Total Mood Logs from /mood
     try {
-      final summary = await ApiClient().get(ApiConfig.moodSummary, silent: true);
-      if (summary is Map && summary['streak'] != null) {
-        if (mounted) setState(() => _streak = (summary['streak'] as num).toInt());
+      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
+      if (moodData is List) {
+        final Set<String> daysWithMood = {};
+        for (final entry in moodData) {
+          final dt = _parseDateLocal(entry['created_at']);
+          if (dt != null) {
+            daysWithMood.add(DateFormat('yyyy-MM-dd').format(dt));
+          }
+        }
+
+        // Check today's offline mood if any
+        final offlineMood = await OfflineMoodQueue().getTodayOfflineMood();
+        if (offlineMood != null) {
+          daysWithMood.add(DateFormat('yyyy-MM-dd').format(DateTime.now()));
+        }
+
+        int streak = 0;
+        final today = DateTime.now();
+        for (int i = 0; i < 365; i++) {
+          final checkDay = today.subtract(Duration(days: i));
+          final dayStr = DateFormat('yyyy-MM-dd').format(checkDay);
+          if (daysWithMood.contains(dayStr)) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _streak = streak;
+            _totalMoodLogs = moodData.length + (offlineMood != null && moodData.isEmpty ? 1 : 0);
+          });
+        }
       }
     } catch (_) {}
 
-    // 2. Fetch Total Mood Logs
+    // 2. Fetch Screeners Count from 'assessment_history' in FlutterSecureStorage
     try {
-      final moods = await ApiClient().get(ApiConfig.mood, silent: true);
-      if (moods is List && mounted) {
-        setState(() => _totalMoodLogs = moods.length);
+      const storage = FlutterSecureStorage();
+      final assessRaw = await storage.read(key: 'assessment_history');
+      if (assessRaw != null) {
+        final dynamic decoded = jsonDecode(assessRaw);
+        if (decoded is List && mounted) {
+          setState(() => _screenersCount = decoded.length);
+        }
+      } else if (mounted) {
+        setState(() => _screenersCount = 0);
       }
     } catch (_) {}
-
-    // Fallback if offline check-in recorded
-    final offlineMood = await OfflineMoodQueue().getTodayOfflineMood();
-    if (offlineMood != null && _totalMoodLogs == 0 && mounted) {
-      setState(() => _totalMoodLogs = 1);
-    }
-
-    // Default screener count
-    if (mounted) {
-      setState(() => _screenersCount = 2);
-    }
   }
 
   void _showCrisisModal(BuildContext context) {
@@ -127,7 +166,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.currentUser;
-    final fullName = user?['full_name'] ?? 'User';
+    final firstName = user?['first_name']?.toString() ?? '';
+    final lastName = user?['last_name']?.toString() ?? '';
+    final composedName = '$firstName $lastName'.trim();
+    final fullNameRaw = user?['full_name']?.toString() ?? '';
+    final displayName = composedName.isNotEmpty
+        ? composedName
+        : (fullNameRaw.isNotEmpty ? fullNameRaw : 'Student');
     final email = user?['email'] ?? '';
     final role = user?['role'] ?? 'Student';
     final avatarUrl = user?['avatar_url'] ?? '';
@@ -156,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               // ── 1. Hero Profile Card with Quick Stats ──────────────────────
               _buildHeroProfileCard(
-                fullName: fullName,
+                fullName: displayName,
                 email: email,
                 role: role,
                 avatarUrl: avatarUrl,
@@ -171,7 +216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.emoji_events_rounded,
                     iconColor: const Color(0xFFF59E0B),
                     title: 'Achievements & Milestones',
-                    subtitle: 'Badges & habit milestones',
+                    subtitle: 'Badges, streak levels & wellness milestones',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const AchievementsScreen()));
@@ -179,24 +224,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   _buildDivider(),
                   _buildListItem(
-                    icon: Icons.assignment_outlined,
-                    iconColor: const Color(0xFF8B5CF6),
-                    title: 'Assessment History (PHQ-9 & GAD-7)',
-                    subtitle: 'Clinical screening log & reports',
+                    icon: Icons.shield_rounded,
+                    iconColor: const Color(0xFF10B981),
+                    title: 'Safety Plan & Trusted Contacts',
+                    subtitle: 'Quick emergency contacts & grounding steps',
                     onTap: () {
                       HapticService.lightTap();
-                      Navigator.push(context, slideRoute(const AssessmentHistoryScreen()));
-                    },
-                  ),
-                  _buildDivider(),
-                  _buildListItem(
-                    icon: Icons.insights_rounded,
-                    iconColor: const Color(0xFF06B6D4),
-                    title: 'My Mental Health Insights',
-                    subtitle: 'Detailed emotional trends & patterns',
-                    onTap: () {
-                      HapticService.lightTap();
-                      Navigator.push(context, slideRoute(const StudentInsightsScreen()));
+                      Navigator.push(context, slideRoute(const SafetyPlanScreen()));
                     },
                   ),
                 ],

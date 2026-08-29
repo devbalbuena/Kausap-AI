@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 import uuid
@@ -44,10 +45,17 @@ def create_mood_entry(
     if not (1 <= payload.mood_level <= 5):
         raise HTTPException(status_code=400, detail="mood_level must be between 1 and 5")
 
+    emotions_str = None
+    if payload.emotions is not None:
+        if isinstance(payload.emotions, list):
+            emotions_str = json.dumps(payload.emotions)
+        else:
+            emotions_str = str(payload.emotions)
+
     entry = MoodEntry(
         user_id=current_user.id,
         mood_level=payload.mood_level,
-        emotions=payload.emotions,
+        emotions=emotions_str,
         intensity=payload.intensity,
         note=payload.note,
     )
@@ -191,7 +199,10 @@ def update_mood_entry(
         entry.mood_level = payload.mood_level
 
     if payload.emotions is not None:
-        entry.emotions = payload.emotions
+        if isinstance(payload.emotions, list):
+            entry.emotions = json.dumps(payload.emotions)
+        else:
+            entry.emotions = str(payload.emotions)
         
     if payload.intensity is not None:
         entry.intensity = payload.intensity

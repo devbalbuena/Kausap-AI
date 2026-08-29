@@ -39,7 +39,7 @@ class OfflineMoodQueue {
   /// Save a mood entry to the local queue when offline or if API post fails.
   Future<void> enqueueMood({
     required int moodLevel,
-    String? emotions,
+    dynamic emotions,
     required int intensity,
     String? note,
   }) async {
@@ -150,6 +150,16 @@ class OfflineMoodQueue {
     } finally {
       _isSyncing = false;
     }
+  }
+
+  /// Clear the local offline queue completely
+  Future<void> clearQueue() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_queueKey);
+      await prefs.remove(_lastOfflineMoodDateKey);
+      await prefs.remove('kausap_today_offline_mood_level');
+    } catch (_) {}
   }
 
   void dispose() {

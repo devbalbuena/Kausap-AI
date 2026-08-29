@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
+import '../../services/offline_mood_queue.dart';
 import 'widgets/badge_unlocked_dialog.dart';
 
 class AchievementsScreen extends StatefulWidget {
@@ -27,27 +29,46 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     _loadUserProgress();
   }
 
+  DateTime? _parseDateLocal(dynamic created) {
+    if (created == null) return null;
+    try {
+      final str = created.toString();
+      final dt = DateTime.parse(str);
+      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _loadUserProgress() async {
     try {
       // 1. Fetch Mood Entries
       final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       final List<dynamic> entries = moodData is List ? moodData : [];
-      _totalCheckins = entries.length;
 
-      // Calculate real streak
       final dates = <String>{};
       for (final e in entries) {
-        final c = e['created_at'] as String? ?? '';
-        if (c.length >= 10) dates.add(c.substring(0, 10));
+        final dt = _parseDateLocal(e['created_at']);
+        if (dt != null) {
+          dates.add(DateFormat('yyyy-MM-dd').format(dt));
+        }
       }
+
+      final offlineMood = await OfflineMoodQueue().getTodayOfflineMood();
+      if (offlineMood != null) {
+        dates.add(DateFormat('yyyy-MM-dd').format(DateTime.now()));
+      }
+
+      _totalCheckins = entries.length + (offlineMood != null && entries.isEmpty ? 1 : 0);
+
+      // Calculate real streak backwards from today
       int streak = 0;
-      var cur = DateTime.now();
-      while (true) {
-        final dStr =
-            '${cur.year}-${cur.month.toString().padLeft(2, '0')}-${cur.day.toString().padLeft(2, '0')}';
-        if (dates.contains(dStr)) {
+      final today = DateTime.now();
+      for (int i = 0; i < 365; i++) {
+        final checkDay = today.subtract(Duration(days: i));
+        final dayStr = DateFormat('yyyy-MM-dd').format(checkDay);
+        if (dates.contains(dayStr)) {
           streak++;
-          cur = cur.subtract(const Duration(days: 1));
         } else {
           break;
         }
