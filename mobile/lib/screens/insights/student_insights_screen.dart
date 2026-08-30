@@ -237,28 +237,62 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
   }
 
   // Robust feelings & emotions list extractor (handles List, String, JSON-encoded List, and CSV)
+  static String _cleanEmotionText(String input) {
+    var text = input
+        .replaceAll(r'\ud83d\udcda', '📚')
+        .replaceAll(r'\u26a1', '⚡')
+        .replaceAll(r'\ud83d\ude34', '😴')
+        .replaceAll(r'\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67', '👨‍👩‍👧')
+        .replaceAll(r'\ud83d\udc65', '👥')
+        .replaceAll(r'\ud83d\udcb8', '💸')
+        .replaceAll(r'\ud83c\udf3f', '🌿')
+        .replaceAll(r'\u2764\ufe0f', '❤️')
+        .replaceAll(r'\u2764', '❤️')
+        .replaceAll(r'\u2615', '☕')
+        .replaceAll(r'\ud83e\uddd8', '🧘')
+        .replaceAll(r'\ud83c\udfe0', '🏡')
+        .replaceAll(r'\ud83e\udde0', '🧠')
+        .replaceAll(r'\u2728', '✨');
+    try {
+      text = text.replaceAllMapped(RegExp(r'\\u([0-9a-fA-F]{4})'), (match) {
+        final hex = match.group(1);
+        if (hex != null) {
+          final code = int.parse(hex, radix: 16);
+          return String.fromCharCode(code);
+        }
+        return match.group(0)!;
+      });
+    } catch (_) {}
+    return text.replaceAll(r'\', '').replaceAll('"', '').replaceAll("'", '').trim();
+  }
+
   List<String> _extractEmotionsList(dynamic raw) {
     if (raw == null) return [];
+    List<String> list = [];
     if (raw is List) {
-      return raw.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
-    }
-    if (raw is String) {
+      list = raw.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
+    } else if (raw is String) {
       final str = raw.trim();
       if (str.isEmpty) return [];
       if (str.startsWith('[') && str.endsWith(']')) {
         try {
           final decoded = jsonDecode(str);
           if (decoded is List) {
-            return decoded.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
+            list = decoded.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
           }
         } catch (_) {}
       }
-      if (str.contains(',')) {
-        return str.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+      if (list.isEmpty) {
+        if (str.contains(',')) {
+          list = str.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+        } else {
+          list = [str];
+        }
       }
-      return [str];
+    } else {
+      list = [raw.toString().trim()];
     }
-    return [raw.toString().trim()];
+    return list.map((e) => _cleanEmotionText(e)).where((s) => s.isNotEmpty).toList();
   }
 
   int _computeThisWeekLogsCount() {

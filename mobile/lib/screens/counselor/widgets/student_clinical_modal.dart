@@ -182,17 +182,59 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
     }
   }
 
+  static String _decodeUnicodeEscapes(String input) {
+    // Map known surrogate pairs and escape codes directly for 100% precision
+    var text = input
+        .replaceAll(r'\ud83d\udcda', '📚')
+        .replaceAll(r'\u26a1', '⚡')
+        .replaceAll(r'\ud83d\ude34', '😴')
+        .replaceAll(r'\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67', '👨‍👩‍👧')
+        .replaceAll(r'\ud83d\udc65', '👥')
+        .replaceAll(r'\ud83d\udcb8', '💸')
+        .replaceAll(r'\ud83c\udf3f', '🌿')
+        .replaceAll(r'\u2764\ufe0f', '❤️')
+        .replaceAll(r'\u2764', '❤️')
+        .replaceAll(r'\u2615', '☕')
+        .replaceAll(r'\ud83e\uddd8', '🧘')
+        .replaceAll(r'\ud83c\udfe0', '🏡')
+        .replaceAll(r'\ud83e\udde0', '🧠')
+        .replaceAll(r'\u2728', '✨');
+
+    // Also decode any remaining \uXXXX escape sequences
+    try {
+      text = text.replaceAllMapped(RegExp(r'\\u([0-9a-fA-F]{4})'), (match) {
+        final hex = match.group(1);
+        if (hex != null) {
+          final code = int.parse(hex, radix: 16);
+          return String.fromCharCode(code);
+        }
+        return match.group(0)!;
+      });
+    } catch (_) {}
+
+    // Clean up any lingering backslashes or quotation artifacts
+    return text.replaceAll(r'\', '').replaceAll('"', '').replaceAll("'", '').trim();
+  }
+
   List<String> _parseEmotions(dynamic emotionsData) {
     if (emotionsData == null) return [];
+    List<String> rawList = [];
     if (emotionsData is List) {
-      return emotionsData.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+      rawList = emotionsData.map((e) => e.toString()).toList();
+    } else {
+      final raw = emotionsData.toString();
+      if (raw.startsWith('[') && raw.endsWith(']')) {
+        final clean = raw.substring(1, raw.length - 1);
+        rawList = clean.split(',').map((e) => e.trim()).toList();
+      } else {
+        rawList = raw.split(',').map((e) => e.trim()).toList();
+      }
     }
-    final raw = emotionsData.toString();
-    if (raw.startsWith('[') && raw.endsWith(']')) {
-      final clean = raw.substring(1, raw.length - 1);
-      return clean.split(',').map((e) => e.replaceAll('"', '').replaceAll("'", '').trim()).where((e) => e.isNotEmpty).toList();
-    }
-    return raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+
+    return rawList
+        .map((e) => _decodeUnicodeEscapes(e))
+        .where((e) => e.isNotEmpty)
+        .toList();
   }
 
   @override

@@ -27,6 +27,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
   List<dynamic> _students = [];
   List<Map<String, dynamic>> _distressAlerts = [];
   String? _error;
+  Map<String, dynamic>? _targetStudentForDirectory;
 
   @override
   void initState() {
@@ -245,7 +246,11 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
       case 1:
         return const CounselorTriageTab();
       case 2:
-        return const CounselorStudentsTab();
+        return CounselorStudentsTab(
+          key: ValueKey(_targetStudentForDirectory?['id'] ?? 'student_care_dir'),
+          initialStudent: _targetStudentForDirectory,
+          initialTabIndex: 0,
+        );
       case 3:
         return const CounselorArticlesTab();
       case 4:
@@ -1027,7 +1032,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Consistent Distress Detection (Process 5.0)",
+                      "Consistent Distress Detection",
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
@@ -1036,7 +1041,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                       ),
                     ),
                     Text(
-                      "${_distressAlerts.length} student${_distressAlerts.length > 1 ? 's' : ''} logged 3+ consecutive low moods (RA 11036 alert)",
+                      "${_distressAlerts.length} student${_distressAlerts.length > 1 ? 's' : ''} logged consecutive low moods requiring guidance check-in",
                       style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11,
@@ -1144,18 +1149,16 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                           'mood_entries_count': alert['consecutive_days'] ?? 3,
                         },
                       );
-                      StudentClinicalModal.show(
-                        context,
-                        student: Map<String, dynamic>.from(matched as Map),
-                        onStatusChanged: _fetchStats,
-                        initialTabIndex: 0, // Opens directly into the real emoji mood timeline!
-                      );
+                      setState(() {
+                        _targetStudentForDirectory = Map<String, dynamic>.from(matched as Map);
+                        _selectedTabIndex = 2; // Switches to Student Care Directory!
+                      });
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD97706),
                       foregroundColor: Colors.white,
                       minimumSize: const Size(0, 32),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: const Text('Check-in', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600)),
@@ -1362,7 +1365,10 @@ All crisis escalations and student logs have been handled in accordance with the
           }),
           _buildNavItem(Icons.people_alt_rounded, 'Students', _selectedTabIndex == 2, () {
             HapticService.lightTap();
-            setState(() => _selectedTabIndex = 2);
+            setState(() {
+              _targetStudentForDirectory = null;
+              _selectedTabIndex = 2;
+            });
           }),
           _buildNavItem(Icons.auto_stories_rounded, 'Articles', _selectedTabIndex == 3, () {
             HapticService.lightTap();
