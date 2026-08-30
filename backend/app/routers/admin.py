@@ -892,6 +892,11 @@ def reset_test_chat_sessions(
     session: Annotated[Session, Depends(get_session)],
 ):
     """Purge accumulated test chat sessions and messages back to zero for fresh testing/presentation."""
+    # Delete token logs referencing sessions first
+    tokens = session.exec(select(TokenUsageLog)).all()
+    for t in tokens:
+        session.delete(t)
+
     messages = session.exec(select(ChatMessage)).all()
     msg_count = len(messages)
     for m in messages:
