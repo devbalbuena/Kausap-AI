@@ -443,6 +443,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
 
     final name = user['full_name'] ?? 'User';
+    final email = user['email'] ?? '';
     final bool isDeleted = user['is_deleted'] == true;
     final bool isActive = user['is_active'] != false && !isDeleted;
     final String? deactivationReason = user['deactivation_reason'];

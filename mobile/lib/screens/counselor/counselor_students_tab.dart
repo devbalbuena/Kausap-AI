@@ -81,6 +81,7 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
       student: student,
       onStatusChanged: _fetchStudents,
       initialTabIndex: initialTabIndex,
+    );
   }
 
   @override
