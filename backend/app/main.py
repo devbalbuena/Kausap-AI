@@ -2,13 +2,18 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import sentry_sdk
+try:
+    import sentry_sdk
+    _sentry_available = True
+except ImportError:
+    _sentry_available = False
+
 from app.database import create_db_and_tables
 from app.routers import auth, mood, chat, admin, notification, articles, crisis, journal
 
 # Initialize Sentry error monitoring if SENTRY_DSN is configured
 sentry_dsn = os.getenv("SENTRY_DSN")
-if sentry_dsn:
+if sentry_dsn and _sentry_available:
     sentry_sdk.init(
         dsn=sentry_dsn,
         traces_sample_rate=1.0,
