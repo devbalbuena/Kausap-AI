@@ -86,7 +86,7 @@ class AvatarData {
       name: 'Kuya Ben',
       roleTitle: 'Academic & Thesis Mentor',
       tier: 'basic',
-      imagePath: 'assets/avatars/avatar_basic_park.png',
+      imagePath: 'assets/avatars/avatar_basic_ben.png',
       systemPrompt: 'You are Kuya Ben, an encouraging and steady academic mentor. Help students overcome study stress, thesis panic, and procrastination with gentle kindness and actionable structure.',
       bio: 'A steady and encouraging mentor specializing in overcoming procrastination, thesis anxiety, and study burnout.',
       sampleQuote: '"One step at a time, kaya mo \'yan. Let\'s break down what\'s stressing you into small, manageable pieces."',

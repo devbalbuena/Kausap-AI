@@ -86,6 +86,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   final List<_ChatMessage> _messages = [];
   String? _sessionId;
   bool _isTyping = false;
+  bool _isSending = false; // Prevents duplicate sends while AI is responding
   bool _showMenu = false;
   MascotEmotion _mascotEmotion = MascotEmotion.neutral;
 
@@ -434,9 +435,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Future<void> _sendMessage(String text, {String? imagePath, Uint8List? imageBytes}) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty && imagePath == null && imageBytes == null) return;
+    if (_isSending) return; // 🔒 Block duplicate sends while AI is responding
 
     _inputController.clear();
     setState(() {
+      _isSending = true;
       _messages.add(_ChatMessage(role: 'user', content: trimmed, imagePath: imagePath, imageBytes: imageBytes));
       _isTyping = true;
       _mascotEmotion = MascotEmotion.thinking;
@@ -495,6 +498,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
       if (!mounted) return;
       setState(() {
+        _isSending = false;
         _messages.add(_ChatMessage(role: 'assistant', content: aiContent, isCrisis: isCrisis));
         _isTyping = false;
         _mascotEmotion = resolvedEmotion;
@@ -512,6 +516,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
       if (!mounted) return;
       setState(() {
+        _isSending = false;
         _messages.add(_ChatMessage(
           role: 'assistant',
           content: fallbackResponse,

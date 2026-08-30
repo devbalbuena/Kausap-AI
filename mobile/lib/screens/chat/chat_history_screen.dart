@@ -211,7 +211,10 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                             ),
                           ],
                         ),
-                        child: ListTile(
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(18),
+                          child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           leading: CircleAvatar(
                             backgroundColor: AppColors.primary.withAlpha(25),
@@ -260,6 +263,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                             }
                           },
                         ),
+                      ), // Material
                       ),
                     );
                   },

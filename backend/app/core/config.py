@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # Token protection & rate limits
     RATE_LIMIT_MESSAGES_PER_HOUR: int = 30
-    DEFAULT_MAX_TOKENS: int = 600
+    DEFAULT_MAX_TOKENS: int = 1200
 
     class Config:
         env_file = ".env"
