@@ -108,6 +108,69 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
     });
   }
 
+  void _resetTestChatSessions() {
+    HapticService.lightTap();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.cleaning_services_rounded, color: Color(0xFF7C3AED), size: 22),
+            SizedBox(width: 8),
+            Text(
+              "Reset Test Chat Sessions",
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ],
+        ),
+        content: const Text(
+          "This will purge all accumulated test AI chat sessions and messages back to zero for a clean presentation demo.\n\nStudent mood logs, accounts, and articles will remain intact. Proceed?",
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                final res = await ApiClient().post('/admin/chat-sessions/reset', body: {});
+                final deleted = res['deleted_sessions'] ?? 0;
+                if (!mounted) return;
+                HapticService.heavyTap();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Successfully reset $deleted test chat sessions back to 0! ✨"),
+                    backgroundColor: const Color(0xFF7C3AED),
+                  ),
+                );
+                _fetchAuditLogs();
+                _pingHealth();
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Failed to reset sessions: $e"),
+                    backgroundColor: const Color(0xFFDC2626),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7C3AED),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text("Reset to 0", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showChangePasswordDialog() {
     HapticService.lightTap();
     final oldPasswordController = TextEditingController();
@@ -603,6 +666,24 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _resetTestChatSessions,
+                        icon: const Icon(Icons.cleaning_services_rounded, size: 14, color: Color(0xFF7C3AED)),
+                        label: const Text(
+                          "Reset Test Chat Sessions to 0 (Demo Cleanup)",
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF7C3AED)),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFDDD6FE)),
+                          backgroundColor: const Color(0xFFFAF5FF),
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
                     ),
                   ],
                 ),

@@ -9,6 +9,7 @@ import 'admin_dashboard_screen.dart';
 import 'admin_articles_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
+import '../counselor/widgets/student_clinical_modal.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -428,10 +429,20 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   void _showUserDetailsModal(Map<String, dynamic> user) {
     HapticService.lightTap();
-    final name = user['full_name'] ?? 'User';
-    final email = user['email'] ?? '';
     final role = (user['role'] ?? 'client').toString().toLowerCase();
     final isAdmin = role == 'admin';
+
+    // If it's a student account, open the rich 3-Tab Clinical Modal with real emojis and chat transcripts!
+    if (!isAdmin && role != 'counselor') {
+      StudentClinicalModal.show(
+        context,
+        student: user,
+        onStatusChanged: _fetchUsers,
+      );
+      return;
+    }
+
+    final name = user['full_name'] ?? 'User';
     final bool isDeleted = user['is_deleted'] == true;
     final bool isActive = user['is_active'] != false && !isDeleted;
     final String? deactivationReason = user['deactivation_reason'];

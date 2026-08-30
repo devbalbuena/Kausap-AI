@@ -11,6 +11,7 @@ import 'counselor_students_tab.dart';
 import 'counselor_articles_tab.dart';
 import 'counselor_audit_tab.dart';
 import 'counselor_profile_screen.dart';
+import 'widgets/student_clinical_modal.dart';
 
 class CounselorDashboardScreen extends StatefulWidget {
   const CounselorDashboardScreen({super.key});
@@ -23,6 +24,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
   int _selectedTabIndex = 0; // 0: Overview, 1: Triage, 2: Students, 3: Articles, 4: Audit
   bool _isLoading = true;
   Map<String, dynamic>? _stats;
+  List<dynamic> _students = [];
   List<Map<String, dynamic>> _distressAlerts = [];
   String? _error;
 
@@ -66,6 +68,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
 
         setState(() {
           _stats = statsData;
+          _students = students;
           _distressAlerts = patternsData;
           _isLoading = false;
         });
@@ -1125,7 +1128,28 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                   ElevatedButton(
                     onPressed: () {
                       HapticService.lightTap();
-                      setState(() => _selectedTabIndex = 2);
+                      final alertEmail = (alert['email'] ?? '').toString().toLowerCase();
+                      final alertUserId = alert['user_id']?.toString() ?? '';
+                      final matched = _students.firstWhere(
+                        (u) {
+                          final uId = (u['id'] ?? '').toString();
+                          final uEmail = (u['email'] ?? '').toString().toLowerCase();
+                          return (alertUserId.isNotEmpty && uId == alertUserId) || (alertEmail.isNotEmpty && uEmail == alertEmail);
+                        },
+                        orElse: () => {
+                          'id': alert['user_id'],
+                          'full_name': alert['full_name'],
+                          'email': alert['email'],
+                          'is_active': true,
+                          'mood_entries_count': alert['consecutive_days'] ?? 3,
+                        },
+                      );
+                      StudentClinicalModal.show(
+                        context,
+                        student: Map<String, dynamic>.from(matched as Map),
+                        onStatusChanged: _fetchStats,
+                        initialTabIndex: 0, // Opens directly into the real emoji mood timeline!
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD97706),

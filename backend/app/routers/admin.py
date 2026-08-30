@@ -20,6 +20,8 @@ from app.schemas.admin import (
     TokenTelemetrySummary, DailyTokenPoint, SystemHealthTelemetry, DistressPatternAlert,
 )
 from app.schemas.audit import AuditLogRead
+from app.schemas.mood import MoodEntryRead
+from app.schemas.chat import ChatSessionRead, ChatMessageRead
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -819,5 +821,104 @@ def get_consistent_distress_patterns(
             )
 
     return alerts
+
+
+# ── Student Clinical Drilldown: Mood History & Chat Transcripts ──────────────
+
+@router.get("/users/{user_id}/mood-history", response_model=List[MoodEntryRead])
+def get_student_mood_history(
+    user_id: uuid.UUID,
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
+    session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+):
+    """Retrieve full chronological mood journal entries for a student, including emotions, notes, and emojis."""
+    return session.exec(
+        select(MoodEntry)
+        .where(MoodEntry.user_id == user_id)
+        .order_by(MoodEntry.created_at.desc())
+        .limit(limit)
+    ).all()
+
+
+@router.get("/users/{user_id}/chat-sessions", response_model=List[ChatSessionRead])
+def get_student_chat_sessions(
+    user_id: uuid.UUID,
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
+    session: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+):
+    """Retrieve all AI chat sessions and complete conversation transcripts for clinical review."""
+    sessions = session.exec(
+        select(ChatSession)
+        .where(ChatSession.user_id == user_id)
+        .order_by(ChatSession.created_at.desc())
+        .limit(limit)
+    ).all()
+
+    result = []
+    for s in sessions:
+        msgs = session.exec(
+            select(ChatMessage)
+            .where(ChatMessage.session_id == s.id)
+            .order_by(ChatMessage.created_at.asc())
+        ).all()
+        result.append(
+            ChatSessionRead(
+                id=s.id,
+                user_id=s.user_id,
+                topic=s.topic or "Counseling & Wellness Chat",
+                created_at=s.created_at,
+                messages=[
+                    ChatMessageRead(
+                        id=m.id,
+                        session_id=m.session_id,
+                        role=m.role,
+                        content=m.content,
+                        risk_flag=m.risk_flag,
+                        created_at=m.created_at,
+                    )
+                    for m in msgs
+                ],
+            )
+        )
+    return result
+
+
+@router.delete("/chat-sessions/reset")
+@router.post("/chat-sessions/reset")
+def reset_test_chat_sessions(
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Purge accumulated test chat sessions and messages back to zero for fresh testing/presentation."""
+    messages = session.exec(select(ChatMessage)).all()
+    msg_count = len(messages)
+    for m in messages:
+        session.delete(m)
+
+    sessions = session.exec(select(ChatSession)).all()
+    session_count = len(sessions)
+    for s in sessions:
+        session.delete(s)
+
+    session.commit()
+
+    _write_audit(
+        session,
+        admin,
+        "chat_sessions_reset",
+        "system",
+        "chat_sessions",
+        detail=f"Purged {session_count} test chat sessions and {msg_count} messages for fresh presentation.",
+    )
+
+    return {
+        "status": "success",
+        "message": f"Successfully reset {session_count} chat sessions and {msg_count} messages.",
+        "deleted_sessions": session_count,
+        "deleted_messages": msg_count,
+    }
+
 
 

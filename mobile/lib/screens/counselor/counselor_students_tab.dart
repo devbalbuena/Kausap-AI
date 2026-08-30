@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../services/clinical_audit_service.dart';
 import '../../utils/haptic_service.dart';
+import 'widgets/student_clinical_modal.dart';
 
 class CounselorStudentsTab extends StatefulWidget {
-  const CounselorStudentsTab({super.key});
+  final Map<String, dynamic>? initialStudent;
+  final int initialTabIndex;
+
+  const CounselorStudentsTab({
+    super.key,
+    this.initialStudent,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<CounselorStudentsTab> createState() => _CounselorStudentsTabState();
@@ -19,17 +27,15 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
   final TextEditingController _searchController = TextEditingController();
   String _filter = 'all'; // 'all', 'active', 'deactivated', 'appeals'
 
-  final List<String> _deactivationReasonPresets = [
-    "Temporary wellness leave requested by student",
-    "Account locked pending guidance office consultation",
-    "Student graduated or transferred from FSUU",
-    "Administrative clinical review in progress",
-  ];
-
   @override
   void initState() {
     super.initState();
     _fetchStudents();
+    if (widget.initialStudent != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showStudentDetailModal(widget.initialStudent!, initialTabIndex: widget.initialTabIndex);
+      });
+    }
   }
 
   @override
@@ -68,385 +74,13 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
     }
   }
 
-  void _showStudentDetailModal(Map<String, dynamic> student) {
-    final studentId = student['id'];
-    final name = student['full_name'] ?? 'Student';
-    final email = student['email'] ?? '';
-    final isActive = student['is_active'] != false;
-    final moodCount = student['mood_entries_count'] ?? 0;
-    final chatCount = student['chat_sessions_count'] ?? 0;
-    final flagCount = student['flagged_messages_count'] ?? 0;
-    final appeal = student['reactivation_appeal'];
-    final deactivationReason = student['deactivation_reason'];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: const Color(0xFFE0F2FE),
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF0284C7)),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF0F172A)),
-                        ),
-                        Text(
-                          email,
-                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isActive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      isActive ? "Active" : "Deactivated",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // ── Engagement Stats ──
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildModalStatTile("Mood Logs", "$moodCount", Icons.mood_rounded, const Color(0xFF0284C7), const Color(0xFFE0F2FE)),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildModalStatTile("Chat Sessions", "$chatCount", Icons.forum_rounded, const Color(0xFF7C3AED), const Color(0xFFEDE9FE)),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildModalStatTile("Crisis Flags", "$flagCount", Icons.emergency_rounded, flagCount > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A), flagCount > 0 ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7)),
-                  ),
-                ],
-              ),
-
-              if (deactivationReason != null && deactivationReason.toString().isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFECACA)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.info_outline_rounded, color: Color(0xFFDC2626), size: 16),
-                          SizedBox(width: 6),
-                          Text("Counselor Deactivation Reason:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF991B1B))),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(deactivationReason, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFFB91C1C))),
-                    ],
-                  ),
-                ),
-              ],
-
-              if (appeal != null && appeal.toString().isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.mark_email_unread_outlined, color: Color(0xFFD97706), size: 16),
-                          SizedBox(width: 6),
-                          Text("Student Reactivation Appeal:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF92400E))),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(appeal, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF78350F))),
-                      const SizedBox(height: 10),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          Navigator.pop(ctx);
-                          _approveAppeal(studentId, name);
-                        },
-                        icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF16A34A),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 36),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        label: const Text("Approve & Restore Account", style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 20),
-
-              // ── Action Buttons ──
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _toggleStudentStatus(student);
-                      },
-                      icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_outline_rounded, size: 16),
-                      label: Text(isActive ? "Deactivate Student" : "Activate Student", style: const TextStyle(fontFamily: 'Poppins', fontSize: 12)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: isActive ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                        side: BorderSide(color: isActive ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _approveAppeal(String studentId, String name) async {
-    try {
-      HapticService.lightTap();
-      await ClinicalAuditService.recordLog(
-        action: 'appeal_approved',
-        targetType: 'Student Account',
-        targetId: studentId,
-        detail: 'Approved reactivation appeal for student $name.',
-      );
-
-      await _api.patch(
-        '/admin/users/$studentId/reactivate',
-        body: {'status': 'active'},
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Reactivation appeal approved for $name."),
-          backgroundColor: const Color(0xFF16A34A),
-        ),
-      );
-      _fetchStudents();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to approve appeal: $e"),
-          backgroundColor: const Color(0xFFDC2626),
-        ),
-      );
-    }
-  }
-
-  Future<void> _toggleStudentStatus(Map<String, dynamic> student) async {
-    final studentId = student['id'];
-    final currentStatus = student['is_active'] != false;
-    final newStatus = !currentStatus;
-    final reasonCtrl = TextEditingController(text: _deactivationReasonPresets[0]);
-    String selectedPreset = _deactivationReasonPresets[0];
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: Text(
-            newStatus ? "Reactivate Student Account" : "Deactivate Student Account",
-            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  newStatus
-                      ? "Restore platform access for ${student['full_name']}?"
-                      : "Document the counselor reason for deactivating ${student['full_name']}:",
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
-                ),
-                if (!newStatus) ...[
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Standard Counselor Reasons:",
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5, color: Color(0xFF334155)),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: _deactivationReasonPresets.map((preset) {
-                      final isSelected = selectedPreset == preset;
-                      return InkWell(
-                        onTap: () {
-                          setDialogState(() {
-                            selectedPreset = preset;
-                            reasonCtrl.text = preset;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFFEE2E2) : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0)),
-                          ),
-                          child: Text(
-                            preset,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                              color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF475569),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: reasonCtrl,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      labelText: "Custom Counselor Reason *",
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: newStatus ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                foregroundColor: Colors.white,
-              ),
-              child: Text(newStatus ? "Reactivate" : "Deactivate"),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      HapticService.lightTap();
-      final reasonText = reasonCtrl.text.trim();
-
-      await ClinicalAuditService.recordLog(
-        action: newStatus ? 'user_reactivated' : 'user_deactivated',
-        targetType: 'Student Account',
-        targetId: studentId.toString(),
-        detail: newStatus
-            ? 'Reactivated student account for ${student['full_name']}'
-            : 'Deactivated student account for ${student['full_name']}. Reason: $reasonText',
-      );
-
-      await _api.patch(
-        '/admin/users/$studentId/status',
-        body: {
-          'is_active': newStatus,
-          'reason': reasonText,
-        },
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Student ${student['full_name']} is now ${newStatus ? 'active' : 'deactivated'}."),
-          backgroundColor: newStatus ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-        ),
-      );
-      _fetchStudents();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error updating student status: $e"),
-          backgroundColor: const Color(0xFFDC2626),
-        ),
-      );
-    }
-  }
-
-  Widget _buildModalStatTile(String label, String count, IconData icon, Color color, Color bg) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 4),
-          Text(count, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16, color: color)),
-          Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
-        ],
-      ),
-    );
+  void _showStudentDetailModal(Map<String, dynamic> student, {int initialTabIndex = 0}) {
+    HapticService.lightTap();
+    StudentClinicalModal.show(
+      context,
+      student: student,
+      onStatusChanged: _fetchStudents,
+      initialTabIndex: initialTabIndex,
   }
 
   @override
