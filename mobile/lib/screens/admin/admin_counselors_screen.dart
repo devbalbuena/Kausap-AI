@@ -844,37 +844,68 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.end,
                                           children: [
-                                            SizedBox(
-                                              height: 34,
-                                              child: OutlinedButton.icon(
-                                                onPressed: () => _showResetPasswordModal(c),
-                                                icon: const Icon(Icons.lock_reset_rounded, size: 15),
-                                                label: const Text("Reset PW", style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5)),
-                                                style: OutlinedButton.styleFrom(
-                                                  foregroundColor: const Color(0xFF64748B),
-                                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            // Reset PW Action Button
+                                            InkWell(
+                                              onTap: () => _showResetPasswordModal(c),
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.lock_reset_rounded, size: 15, color: Color(0xFF64748B)),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      "Reset PW",
+                                                      style: TextStyle(
+                                                        fontFamily: 'Poppins',
+                                                        fontSize: 11.5,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: Color(0xFF64748B),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ),
                                             const SizedBox(width: 8),
-                                            SizedBox(
-                                              height: 34,
-                                              child: ElevatedButton.icon(
-                                                onPressed: () => _toggleCounselorStatus(c),
-                                                icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_outline_rounded, size: 15),
-                                                label: Text(
-                                                  isActive ? "Deactivate" : "Activate",
-                                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600),
+                                            // Activate / Deactivate Action Button
+                                            InkWell(
+                                              onTap: () => _toggleCounselorStatus(c),
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: isActive ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: isActive ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC),
+                                                  ),
                                                 ),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: isActive ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
-                                                  foregroundColor: isActive ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                                                  elevation: 0,
-                                                  side: BorderSide(color: isActive ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      isActive ? Icons.block_rounded : Icons.check_circle_outline_rounded,
+                                                      size: 15,
+                                                      color: isActive ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      isActive ? "Deactivate" : "Activate",
+                                                      style: TextStyle(
+                                                        fontFamily: 'Poppins',
+                                                        fontSize: 11.5,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: isActive ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ),
