@@ -9,6 +9,7 @@ import 'admin_dashboard_screen.dart';
 import 'admin_articles_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
+import 'widgets/admin_header_actions.dart';
 import '../counselor/widgets/student_clinical_modal.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -979,6 +980,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             ),
           ],
         ),
+        actions: [
+          AdminHeaderActions(
+            onRefresh: () async {
+              await _fetchUsers();
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

@@ -12,6 +12,7 @@ import 'admin_articles_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_profile_screen.dart';
+import 'widgets/admin_header_actions.dart';
 
 class AdminSystemScreen extends StatefulWidget {
   const AdminSystemScreen({super.key});
@@ -516,20 +517,12 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> with SingleTicker
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: Color(0xFF0284C7), size: 22),
-            tooltip: "Admin Profile",
-            onPressed: () {
-              HapticService.lightTap();
-              Navigator.push(context, slideRoute(const AdminProfileScreen()));
+          AdminHeaderActions(
+            onRefresh: () async {
+              await _pingHealth();
+              await _fetchAuditLogs();
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 20),
-            tooltip: "Sign Out",
-            onPressed: _logout,
-          ),
-          const SizedBox(width: 6),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -721,6 +714,24 @@ class _AdminSystemScreenState extends State<AdminSystemScreen> with SingleTicker
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout_rounded, size: 14, color: Color(0xFFDC2626)),
+              label: const Text(
+                "Sign Out of Admin Console",
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFFDC2626)),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFFFECACA)),
+                backgroundColor: const Color(0xFFFEF2F2),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
           ),
         ],
       ),

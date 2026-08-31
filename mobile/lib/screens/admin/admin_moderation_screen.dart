@@ -10,6 +10,7 @@ import 'admin_dashboard_screen.dart';
 import 'admin_articles_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_system_screen.dart';
+import 'widgets/admin_header_actions.dart';
 
 class FlaggedIncidentItem {
   final String id;
@@ -967,6 +968,14 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
             ),
           ],
         ),
+        actions: [
+          AdminHeaderActions(
+            onRefresh: () async {
+              await _fetchFlaggedMessages();
+              await _fetchHotlines();
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: const Color(0xFFDC2626),

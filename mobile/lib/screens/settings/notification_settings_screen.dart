@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/notification_prefs_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/ambient_audio_service.dart';
 import '../../utils/haptic_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -12,19 +15,29 @@ class NotificationSettingsScreen extends StatefulWidget {
 }
 
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
-  // Permissions (persisted)
+  // General Permissions
   bool _microphoneAccess = true;
   bool _photoLibrary = true;
   bool _cameraAccess = true;
-
-  // Preferences (persisted)
   bool _pushNotifications = true;
+
+  // Student Preferences
   bool _dailyCheckins = true;
   String _dailyCheckinsTime = '20:00';
   bool _mindfulnessReminders = true;
   bool _streakAlerts = true;
 
-  // Quiet Hours (persisted)
+  // Admin Specific Preferences
+  bool _crisisDistressAlerts = true;
+  bool _selfHarmAlerts = true;
+  bool _aiBudgetCapAlerts = true;
+  bool _cloudLatencyAlerts = true;
+  bool _staffProvisionAlerts = true;
+  bool _studentAppealAlerts = true;
+  bool _entryChimeEnabled = true;
+  bool _hapticsEnabled = true;
+
+  // Quiet Hours
   bool _quietHoursEnabled = false;
   String _quietHoursStart = '22:00';
   String _quietHoursEnd = '07:00';
@@ -152,11 +165,15 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final role = (user?['role'] ?? 'client').toString().toLowerCase();
+    final bool isAdmin = role == 'admin' || role == 'superadmin';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
+          constraints: const BoxConstraints(maxWidth: 440),
           child: SafeArea(
             child: Column(
               children: [
@@ -175,7 +192,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
+                                color: Colors.black.withAlpha(15),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -185,9 +202,19 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                         ),
                       ),
                       const SizedBox(width: 16),
-                      Text(
-                        'Notifications',
-                        style: AppTextStyles.heading2.copyWith(fontSize: 18),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isAdmin ? 'System & Alert Notifications' : 'Notifications',
+                            style: AppTextStyles.heading2.copyWith(fontSize: 17),
+                          ),
+                          if (isAdmin)
+                            const Text(
+                              'Master governance & cloud incident alerts',
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                            ),
+                        ],
                       ),
                     ],
                   ),
@@ -199,129 +226,247 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                       : ListView(
                           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                           children: [
-                            // ── App Permissions ──────────────────────────────
-                            _buildSectionLabel('APP PERMISSIONS'),
-                            _buildSettingsCard([
-                              _buildToggleRow(
-                                icon: Icons.notifications_outlined,
-                                iconColor: const Color(0xFF6366F1),
-                                label: 'Push Notifications',
-                                subtitle: 'Receive alerts, reminders, and updates',
-                                value: _pushNotifications,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setPushEnabled(v);
-                                  setState(() => _pushNotifications = v);
-                                  await NotificationService().getUnreadCount();
-                                },
-                              ),
-                              _buildDivider(),
-                              _buildToggleRow(
-                                icon: Icons.mic_outlined,
-                                iconColor: const Color(0xFF0077B6),
-                                label: 'Microphone Access',
-                                subtitle: 'Allow voice dictation, audio notes & calls',
-                                value: _microphoneAccess,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setMicrophoneEnabled(v);
-                                  setState(() => _microphoneAccess = v);
-                                },
-                              ),
-                              _buildDivider(),
-                              _buildToggleRow(
-                                icon: Icons.photo_library_outlined,
-                                iconColor: const Color(0xFF2E9E6B),
-                                label: 'Photo Library',
-                                subtitle: 'Access photos for avatar and journaling',
-                                value: _photoLibrary,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setPhotoLibraryEnabled(v);
-                                  setState(() => _photoLibrary = v);
-                                },
-                              ),
-                              _buildDivider(),
-                              _buildToggleRow(
-                                icon: Icons.camera_alt_outlined,
-                                iconColor: const Color(0xFFE07B39),
-                                label: 'Camera',
-                                subtitle: 'Take profile photos and video sessions',
-                                value: _cameraAccess,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setCameraEnabled(v);
-                                  setState(() => _cameraAccess = v);
-                                },
-                              ),
-                            ]),
-
-                            const SizedBox(height: 24),
-
-                            // ── Notification Preferences ─────────────────────
-                            _buildSectionLabel('WELLNESS NOTIFICATIONS'),
-                            _buildSettingsCard([
-                              _buildToggleRow(
-                                icon: Icons.favorite_border_rounded,
-                                iconColor: const Color(0xFFE11D48),
-                                label: 'Daily Mood Check-ins',
-                                subtitle: 'Friendly nudge to record how you feel',
-                                value: _dailyCheckins,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setDailyCheckins(v);
-                                  setState(() => _dailyCheckins = v);
-                                  await NotificationService().getUnreadCount();
-                                },
-                              ),
-                              if (_dailyCheckins) ...[
-                                _buildDivider(),
-                                _buildTimePickerRow(
-                                  label: 'Daily Reminder Time',
-                                  timeStr: _dailyCheckinsTime,
-                                  onTap: () => _selectCheckinTime(context),
+                            if (isAdmin) ...[
+                              // ── 1. CRISIS & DISTRESS ESCALATIONS ───────────
+                              _buildSectionLabel('CRISIS & DISTRESS ESCALATIONS'),
+                              _buildSettingsCard([
+                                _buildToggleRow(
+                                  icon: Icons.warning_amber_rounded,
+                                  iconColor: const Color(0xFFDC2626),
+                                  label: 'Crisis Distress Flags',
+                                  subtitle: 'Audio chimes & instant push when student distress is detected',
+                                  value: _crisisDistressAlerts,
+                                  onChanged: (v) {
+                                    HapticService.lightTap();
+                                    setState(() => _crisisDistressAlerts = v);
+                                  },
                                 ),
-                              ],
-                              _buildDivider(),
-                              _buildToggleRow(
-                                icon: Icons.spa_outlined,
-                                iconColor: const Color(0xFF2E9E6B),
-                                label: 'Mindfulness & Reflection',
-                                subtitle: 'Reminders for daily journaling & breathing',
-                                value: _mindfulnessReminders,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setMindfulnessReminders(v);
-                                  setState(() => _mindfulnessReminders = v);
-                                  await NotificationService().getUnreadCount();
-                                },
-                              ),
-                              _buildDivider(),
-                              _buildToggleRow(
-                                icon: Icons.local_fire_department_outlined,
-                                iconColor: const Color(0xFFF59E0B),
-                                label: 'Streak & Milestones',
-                                subtitle: 'Celebrate consecutive wellness habits',
-                                value: _streakAlerts,
-                                onChanged: (v) async {
-                                  HapticService.lightTap();
-                                  await NotificationPrefsService.setStreakAlerts(v);
-                                  setState(() => _streakAlerts = v);
-                                  await NotificationService().getUnreadCount();
-                                },
-                              ),
-                            ]),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.emergency_rounded,
+                                  iconColor: const Color(0xFFE11D48),
+                                  label: 'High-Risk Self-Harm Triggers',
+                                  subtitle: 'Immediate alert for self-harm or urgent counseling needs',
+                                  value: _selfHarmAlerts,
+                                  onChanged: (v) {
+                                    HapticService.lightTap();
+                                    setState(() => _selfHarmAlerts = v);
+                                  },
+                                ),
+                              ]),
+                              const SizedBox(height: 20),
 
-                            const SizedBox(height: 24),
+                              // ── 2. AI & CLOUD TELEMETRY ALERTS ─────────────
+                              _buildSectionLabel('AI & CLOUD TELEMETRY ALERTS'),
+                              _buildSettingsCard([
+                                _buildToggleRow(
+                                  icon: Icons.toll_rounded,
+                                  iconColor: const Color(0xFF0284C7),
+                                  label: 'AI Monthly Budget Alerts',
+                                  subtitle: 'Notify when Gemini 2.0 spend approaches 80% of budget cap',
+                                  value: _aiBudgetCapAlerts,
+                                  onChanged: (v) {
+                                    HapticService.lightTap();
+                                    setState(() => _aiBudgetCapAlerts = v);
+                                  },
+                                ),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.cloud_sync_rounded,
+                                  iconColor: const Color(0xFF16A34A),
+                                  label: 'Neon Cloud Latency & Health',
+                                  subtitle: 'Incident alert if database latency exceeds 1,000ms',
+                                  value: _cloudLatencyAlerts,
+                                  onChanged: (v) {
+                                    HapticService.lightTap();
+                                    setState(() => _cloudLatencyAlerts = v);
+                                  },
+                                ),
+                              ]),
+                              const SizedBox(height: 20),
 
-                            // ── Quiet Hours ──────────────────────────────────
-                            _buildSectionLabel('QUIET HOURS (DO NOT DISTURB)'),
+                              // ── 3. WORKFORCE & GOVERNANCE ──────────────────
+                              _buildSectionLabel('WORKFORCE & SECURITY GOVERNANCE'),
+                              _buildSettingsCard([
+                                _buildToggleRow(
+                                  icon: Icons.badge_outlined,
+                                  iconColor: const Color(0xFF7C3AED),
+                                  label: 'Staff Provisioning & Verification',
+                                  subtitle: 'Alerts for counselor onboarding & verification codes',
+                                  value: _staffProvisionAlerts,
+                                  onChanged: (v) {
+                                    HapticService.lightTap();
+                                    setState(() => _staffProvisionAlerts = v);
+                                  },
+                                ),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.mark_email_unread_outlined,
+                                  iconColor: const Color(0xFFD97706),
+                                  label: 'Student Reactivation Appeals',
+                                  subtitle: 'Notifications when deactivated students submit review requests',
+                                  value: _studentAppealAlerts,
+                                  onChanged: (v) {
+                                    HapticService.lightTap();
+                                    setState(() => _studentAppealAlerts = v);
+                                  },
+                                ),
+                              ]),
+                              const SizedBox(height: 20),
+
+                              // ── 4. AUDIO & HAPTIC PREFERENCES ───────────────
+                              _buildSectionLabel('CONSOLE AUDIO & HAPTIC PREFERENCES'),
+                              _buildSettingsCard([
+                                _buildToggleRow(
+                                  icon: Icons.volume_up_outlined,
+                                  iconColor: const Color(0xFF2563EB),
+                                  label: 'Console Entry Audio Chime',
+                                  subtitle: 'Play audio chime upon opening console when alerts are active',
+                                  value: _entryChimeEnabled,
+                                  onChanged: (v) {
+                                    HapticService.lightTap();
+                                    setState(() => _entryChimeEnabled = v);
+                                    if (v) AmbientAudioService.playNotificationChimeIfAllowed();
+                                  },
+                                ),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.vibration_rounded,
+                                  iconColor: const Color(0xFF475569),
+                                  label: 'Haptic Feedback',
+                                  subtitle: 'Tactile vibration response on administrative button actions',
+                                  value: _hapticsEnabled,
+                                  onChanged: (v) {
+                                    HapticService.lightTap();
+                                    setState(() => _hapticsEnabled = v);
+                                  },
+                                ),
+                              ]),
+                              const SizedBox(height: 20),
+                            ] else ...[
+                              // ── Client / Student Permissions & Wellness ─────
+                              _buildSectionLabel('APP PERMISSIONS'),
+                              _buildSettingsCard([
+                                _buildToggleRow(
+                                  icon: Icons.notifications_outlined,
+                                  iconColor: const Color(0xFF6366F1),
+                                  label: 'Push Notifications',
+                                  subtitle: 'Receive alerts, reminders, and updates',
+                                  value: _pushNotifications,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setPushEnabled(v);
+                                    setState(() => _pushNotifications = v);
+                                    await NotificationService().getUnreadCount();
+                                  },
+                                ),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.mic_outlined,
+                                  iconColor: const Color(0xFF0077B6),
+                                  label: 'Microphone Access',
+                                  subtitle: 'Allow voice dictation, audio notes & calls',
+                                  value: _microphoneAccess,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setMicrophoneEnabled(v);
+                                    setState(() => _microphoneAccess = v);
+                                  },
+                                ),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.photo_library_outlined,
+                                  iconColor: const Color(0xFF2E9E6B),
+                                  label: 'Photo Library',
+                                  subtitle: 'Access photos for avatar and journaling',
+                                  value: _photoLibrary,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setPhotoLibraryEnabled(v);
+                                    setState(() => _photoLibrary = v);
+                                  },
+                                ),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.camera_alt_outlined,
+                                  iconColor: const Color(0xFFE07B39),
+                                  label: 'Camera',
+                                  subtitle: 'Take profile photos and video sessions',
+                                  value: _cameraAccess,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setCameraEnabled(v);
+                                    setState(() => _cameraAccess = v);
+                                  },
+                                ),
+                              ]),
+                              const SizedBox(height: 24),
+
+                              _buildSectionLabel('WELLNESS NOTIFICATIONS'),
+                              _buildSettingsCard([
+                                _buildToggleRow(
+                                  icon: Icons.favorite_border_rounded,
+                                  iconColor: const Color(0xFFE11D48),
+                                  label: 'Daily Mood Check-ins',
+                                  subtitle: 'Friendly nudge to record how you feel',
+                                  value: _dailyCheckins,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setDailyCheckins(v);
+                                    setState(() => _dailyCheckins = v);
+                                    await NotificationService().getUnreadCount();
+                                  },
+                                ),
+                                if (_dailyCheckins) ...[
+                                  _buildDivider(),
+                                  _buildTimePickerRow(
+                                    label: 'Daily Reminder Time',
+                                    timeStr: _dailyCheckinsTime,
+                                    onTap: () => _selectCheckinTime(context),
+                                  ),
+                                ],
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.spa_outlined,
+                                  iconColor: const Color(0xFF2E9E6B),
+                                  label: 'Mindfulness & Reflection',
+                                  subtitle: 'Reminders for daily journaling & breathing',
+                                  value: _mindfulnessReminders,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setMindfulnessReminders(v);
+                                    setState(() => _mindfulnessReminders = v);
+                                    await NotificationService().getUnreadCount();
+                                  },
+                                ),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.local_fire_department_outlined,
+                                  iconColor: const Color(0xFFF59E0B),
+                                  label: 'Streak & Milestones',
+                                  subtitle: 'Celebrate consecutive wellness habits',
+                                  value: _streakAlerts,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setStreakAlerts(v);
+                                    setState(() => _streakAlerts = v);
+                                    await NotificationService().getUnreadCount();
+                                  },
+                                ),
+                              ]),
+                              const SizedBox(height: 24),
+                            ],
+
+                            // ── Quiet Hours (Do Not Disturb) ─────────────────
+                            _buildSectionLabel(isAdmin ? 'QUIET HOURS (CRITICAL CRISIS ALERTS REMAIN ACTIVE)' : 'QUIET HOURS (DO NOT DISTURB)'),
                             _buildSettingsCard([
                               _buildToggleRow(
                                 icon: Icons.do_not_disturb_on_rounded,
                                 iconColor: const Color(0xFF6B7280),
                                 label: 'Quiet Hours',
-                                subtitle: 'Mute non-urgent notifications while sleeping',
+                                subtitle: isAdmin
+                                    ? 'Mute routine telemetry notices during off-hours'
+                                    : 'Mute non-urgent notifications while sleeping',
                                 value: _quietHoursEnabled,
                                 onChanged: (v) async {
                                   HapticService.lightTap();
@@ -379,7 +524,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withAlpha(8),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -405,7 +550,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
+              color: iconColor.withAlpha(25),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -465,7 +610,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            const SizedBox(width: 54), // align with toggles
+            const SizedBox(width: 54),
             Expanded(
               child: Text(
                 label,

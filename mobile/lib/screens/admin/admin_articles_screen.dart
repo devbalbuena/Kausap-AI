@@ -13,6 +13,7 @@ import 'admin_dashboard_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
 import 'admin_users_screen.dart';
+import 'widgets/admin_header_actions.dart';
 
 class AdminArticlesScreen extends StatefulWidget {
   const AdminArticlesScreen({super.key});
@@ -162,9 +163,10 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0284C7)),
-            onPressed: _fetchArticles,
+          AdminHeaderActions(
+            onRefresh: () async {
+              await _fetchArticles();
+            },
           ),
         ],
       ),
