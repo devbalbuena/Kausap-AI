@@ -14,7 +14,6 @@ import 'counselor_students_tab.dart';
 import 'counselor_articles_tab.dart';
 import 'counselor_audit_tab.dart';
 import 'counselor_profile_screen.dart';
-import 'widgets/student_clinical_modal.dart';
 
 class CounselorDashboardScreen extends StatefulWidget {
   const CounselorDashboardScreen({super.key});

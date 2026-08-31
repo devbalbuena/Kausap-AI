@@ -536,7 +536,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           child: InkWell(
                             onTap: () {
                               HapticService.lightTap();
-                              _showNeonCloudHealthBottomSheet(context, stats);
+                              _showNeonCloudHealthBottomSheet(context, _stats);
                             },
                             borderRadius: BorderRadius.circular(10),
                             child: Container(
@@ -1265,7 +1265,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     );
   }
 
-  void _showNeonCloudHealthBottomSheet(BuildContext context, AdminStats stats) {
+  void _showNeonCloudHealthBottomSheet(BuildContext context, Map<String, dynamic>? stats) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

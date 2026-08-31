@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
-import '../../services/clinical_audit_service.dart';
 import '../../utils/haptic_service.dart';
 import 'widgets/student_clinical_modal.dart';
 
