@@ -3,8 +3,12 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../services/notification_service.dart';
+import '../../services/ambient_audio_service.dart';
+import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
-import '../auth/login_screen.dart';
+import '../notifications/notifications_screen.dart';
+import 'admin_profile_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
@@ -19,15 +23,69 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   Map<String, dynamic>? _stats;
   String? _error;
 
+  int _unreadCount = 0;
+  final NotificationService _notificationService = NotificationService();
+  late AnimationController _bellAnimController;
+  late Animation<double> _bellRotationAnim;
+  late Animation<double> _badgeScaleAnim;
+  bool _hasPlayedEntryChime = false;
+
   @override
   void initState() {
     super.initState();
+    _bellAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+
+    _bellRotationAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: -0.25).chain(CurveTween(curve: Curves.easeOut)), weight: 10),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.25, end: 0.25).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.25, end: -0.18).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.18, end: 0.18).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.18, end: -0.08).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.08, end: 0.08).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.08, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 15),
+    ]).animate(_bellAnimController);
+
+    _badgeScaleAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.30).chain(CurveTween(curve: Curves.easeOutBack)), weight: 40),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.30, end: 0.90).chain(CurveTween(curve: Curves.easeInOut)), weight: 30),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.90, end: 1.0).chain(CurveTween(curve: Curves.easeOut)), weight: 30),
+    ]).animate(_bellAnimController);
+
     _fetchStats();
+    _fetchUnreadCount();
+  }
+
+  @override
+  void dispose() {
+    _bellAnimController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    try {
+      final count = await _notificationService.getUnreadCount();
+      if (mounted) {
+        setState(() => _unreadCount = count);
+        if (count > 0) _ringBellAndChime();
+      }
+    } catch (_) {}
+  }
+
+  void _ringBellAndChime() {
+    if (!mounted) return;
+    _bellAnimController.forward(from: 0);
+    if (!_hasPlayedEntryChime) {
+      _hasPlayedEntryChime = true;
+      AmbientAudioService.playNotificationChimeIfAllowed();
+    }
   }
 
   Future<void> _fetchStats() async {
@@ -70,54 +128,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         });
       }
     }
-  }
-
-  void _logout() {
-    HapticService.lightTap();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Row(
-          children: [
-            Icon(Icons.logout_rounded, color: Color(0xFFC62828), size: 22),
-            SizedBox(width: 10),
-            Text(
-              "Sign Out",
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
-            ),
-          ],
-        ),
-        content: const Text(
-          "Are you sure you want to sign out of the Administrator Control Center?",
-          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel", style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              HapticService.heavyTap();
-              await context.read<AuthProvider>().logout();
-              if (!mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC62828),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text("Sign Out", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -163,10 +173,142 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
         actions: [
+          // ── Notification Bell with Dynamic Unread Badge ──
+          Semantics(
+            label: _unreadCount > 0 ? 'Notifications, $_unreadCount unread alerts' : 'Notifications',
+            button: true,
+            child: GestureDetector(
+              onTap: () async {
+                HapticService.lightTap();
+                final result = await Navigator.of(context).push(slideRoute(const NotificationsScreen()));
+                _fetchUnreadCount();
+                if (result == 'open_triage') {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const AdminModerationScreen()),
+                  );
+                } else if (result == 'open_students') {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                  );
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _notificationService.unreadCountNotifier,
+                  builder: (context, count, _) {
+                    final displayCount = count;
+                    return AnimatedBuilder(
+                      animation: _bellAnimController,
+                      builder: (context, _) {
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Transform.rotate(
+                              angle: displayCount > 0 ? _bellRotationAnim.value : 0.0,
+                              origin: const Offset(0, -6),
+                              child: Icon(
+                                displayCount > 0
+                                    ? Icons.notifications_active_rounded
+                                    : Icons.notifications_outlined,
+                                color: displayCount > 0 ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                                size: 23,
+                              ),
+                            ),
+                            if (displayCount > 0)
+                              Positioned(
+                                right: -4,
+                                top: -3,
+                                child: Transform.scale(
+                                  scale: _bellAnimController.isAnimating ? _badgeScaleAnim.value : 1.0,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x33EF4444),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      displayCount > 9 ? '9+' : '$displayCount',
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+
           IconButton(
-            tooltip: 'Sign Out',
-            icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
-            onPressed: _logout,
+            tooltip: 'Refresh Stats',
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0284C7), size: 21),
+            onPressed: () {
+              HapticService.lightTap();
+              _fetchStats();
+              _fetchUnreadCount();
+            },
+          ),
+
+          // ── Admin Profile Avatar ──
+          Semantics(
+            label: 'Administrator Profile & Settings',
+            button: true,
+            child: GestureDetector(
+              onTap: () async {
+                HapticService.lightTap();
+                await Navigator.push(context, slideRoute(const AdminProfileScreen()));
+                _fetchStats();
+                _fetchUnreadCount();
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12, left: 4),
+                child: Consumer<AuthProvider>(
+                  builder: (context, auth, _) {
+                    final user = auth.currentUser;
+                    final name = user != null ? "${user['first_name'] ?? ''} ${user['last_name'] ?? ''}".trim() : 'Admin';
+                    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'A';
+                    final avatarUrl = user?['avatar_url'] as String?;
+                    return CircleAvatar(
+                      radius: 17,
+                      backgroundColor: const Color(0xFF0284C7).withAlpha(30),
+                      backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                          ? NetworkImage(avatarUrl)
+                          : null,
+                      child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                          ? Text(
+                              initial,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: Color(0xFF0284C7),
+                              ),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -299,7 +441,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             Icon(Icons.token_rounded, color: Color(0xFF38BDF8), size: 18),
                             SizedBox(width: 8),
                             Text(
-                              "OpenAI Token & Cost Meter",
+                              "AI Token & Cloud Telemetry",
                               style: TextStyle(
                                 fontFamily: 'Poppins',
                                 color: Colors.white,
@@ -344,7 +486,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      "Real-time token monitoring & GPT-4o-mini budget tracking for student AI conversations.",
+                      "Real-time token monitoring, Gemini AI budget tracking, & Neon database compute health.",
                       style: TextStyle(
                         fontFamily: 'Inter',
                         color: Color(0xFF94A3B8),
@@ -791,7 +933,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 icon: Icons.token_rounded,
                 iconColor: const Color(0xFF0D9488),
                 iconBg: const Color(0xFFCCFBF1),
-                title: 'OpenAI Token & Cost Telemetry',
+                title: 'AI Token & Cloud Telemetry',
                 subtitle: 'Monitor real-time token usage, USD & PHP budget trends, and Neon pool',
                 onTap: () {
                   HapticService.lightTap();
