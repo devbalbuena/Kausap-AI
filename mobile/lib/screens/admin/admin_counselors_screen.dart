@@ -482,7 +482,7 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                           },
                         );
                         if (!mounted) return;
-                        
+
                         // Show success copy modal
                         showDialog(
                           context: this.context,
@@ -636,248 +636,259 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
           style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white),
         ),
       ),
-      body: Column(
-        children: [
-          // ── Search & Filter Chips Bar ──
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            color: Colors.white,
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  onChanged: (val) => setState(() => _searchQuery = val),
-                  decoration: InputDecoration(
-                    hintText: "Search counselor by name, email, or department...",
-                    hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF94A3B8)),
-                    prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                    filled: true,
-                    fillColor: const Color(0xFFF1F5F9),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // Status Filter Chips
-                Row(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            children: [
+              // ── Search & Filter Chips Bar ──
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                color: Colors.white,
+                child: Column(
                   children: [
-                    _buildFilterChip("All (${_counselors.length})", 'all'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip("Active ($activeCount)", 'active'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip("Inactive ($inactiveCount)", 'inactive'),
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                      decoration: InputDecoration(
+                        hintText: "Search counselor by name, email, or department...",
+                        hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF94A3B8)),
+                        prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        filled: true,
+                        fillColor: const Color(0xFFF1F5F9),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Status Filter Chips
+                    Row(
+                      children: [
+                        _buildFilterChip("All (${_counselors.length})", 'all'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip("Active ($activeCount)", 'active'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip("Inactive ($inactiveCount)", 'inactive'),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
 
-          // ── List View ──
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 40),
-                            const SizedBox(height: 10),
-                            Text(_error!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 13)),
-                            const SizedBox(height: 10),
-                            ElevatedButton(
-                              onPressed: _fetchCounselors,
-                              child: const Text("Retry"),
-                            ),
-                          ],
-                        ),
-                      )
-                    : filtered.isEmpty
+              // ── List View ──
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                    : _error != null
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFE0F2FE),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.badge_rounded, color: Color(0xFF0284C7), size: 36),
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  "No Guidance Counselors Found",
-                                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  "Tap 'Provision Counselor' below to register your first staff account.",
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                                const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 40),
+                                const SizedBox(height: 10),
+                                Text(_error!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 13)),
+                                const SizedBox(height: 10),
+                                ElevatedButton(
+                                  onPressed: _fetchCounselors,
+                                  child: const Text("Retry"),
                                 ),
                               ],
                             ),
                           )
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: filtered.length,
-                            separatorBuilder: (context, index) => const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) {
-                              final c = filtered[i];
-                              final isActive = c['is_active'] == true;
-                              return Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  boxShadow: const [
-                                    BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1)),
+                        : filtered.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE0F2FE),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.badge_rounded, color: Color(0xFF0284C7), size: 36),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      "No Guidance Counselors Found",
+                                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      "Tap 'Provision Counselor' below to register your first staff account.",
+                                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                                    ),
                                   ],
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: filtered.length,
+                                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                itemBuilder: (ctx, i) {
+                                  final c = filtered[i];
+                                  final isActive = c['is_active'] == true;
+                                  return Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      boxShadow: const [
+                                        BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1)),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        CircleAvatar(
-                                          radius: 20,
-                                          backgroundColor: const Color(0xFFE0F2FE),
-                                          child: const Icon(Icons.volunteer_activism_rounded, color: Color(0xFF0284C7), size: 20),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                c['full_name'] ?? 'Counselor',
-                                                style: const TextStyle(
-                                                  fontFamily: 'Poppins',
+                                        Row(
+                                          children: [
+                                            const CircleAvatar(
+                                              radius: 20,
+                                              backgroundColor: Color(0xFFE0F2FE),
+                                              child: Icon(Icons.volunteer_activism_rounded, color: Color(0xFF0284C7), size: 20),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    c['full_name'] ?? 'Counselor',
+                                                    style: const TextStyle(
+                                                      fontFamily: 'Poppins',
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 14,
+                                                      color: Color(0xFF0F172A),
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    c['department_title'] ?? 'Guidance Counselor',
+                                                    style: const TextStyle(
+                                                      fontFamily: 'Inter',
+                                                      fontSize: 11.5,
+                                                      color: Color(0xFF0284C7),
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isActive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                isActive ? "Active" : "Inactive",
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 11,
                                                   fontWeight: FontWeight.w700,
-                                                  fontSize: 14,
-                                                  color: Color(0xFF0F172A),
+                                                  color: isActive ? const Color(0xFF16A34A) : const Color(0xFF991B1B),
                                                 ),
                                               ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.email_outlined, size: 14, color: Color(0xFF64748B)),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                c['email'] ?? '',
+                                                style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF475569)),
+                                              ),
+                                            ),
+                                            GestureDetector(
+                                              onTap: () {
+                                                Clipboard.setData(ClipboardData(text: c['email'] ?? ''));
+                                                HapticService.lightTap();
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text("Email copied! 📋"), backgroundColor: Color(0xFF0284C7)),
+                                                );
+                                              },
+                                              child: const Padding(
+                                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                                child: Icon(Icons.copy_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (c['phone_number'] != null && c['phone_number'].toString().isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.phone_outlined, size: 14, color: Color(0xFF64748B)),
+                                              const SizedBox(width: 6),
                                               Text(
-                                                c['department_title'] ?? 'Guidance Counselor',
-                                                style: const TextStyle(
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 11.5,
-                                                  color: Color(0xFF0284C7),
-                                                  fontWeight: FontWeight.w600,
-                                                ),
+                                                c['phone_number'],
+                                                style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF475569)),
                                               ),
                                             ],
                                           ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: isActive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            isActive ? "Active" : "Inactive",
-                                            style: TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              color: isActive ? const Color(0xFF166534) : const Color(0xFF991B1B),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.email_outlined, size: 14, color: Color(0xFF64748B)),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            c['email'] ?? '',
-                                            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF475569)),
-                                          ),
-                                        ),
-                                        GestureDetector(
-                                          onTap: () {
-                                            Clipboard.setData(ClipboardData(text: c['email'] ?? ''));
-                                            HapticService.lightTap();
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text("Email copied! 📋"), backgroundColor: Color(0xFF0284C7)),
-                                            );
-                                          },
-                                          child: const Padding(
-                                            padding: EdgeInsets.symmetric(horizontal: 4),
-                                            child: Icon(Icons.copy_rounded, size: 14, color: Color(0xFF94A3B8)),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (c['phone_number'] != null && c['phone_number'].toString().isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.phone_outlined, size: 14, color: Color(0xFF64748B)),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            c['phone_number'],
-                                            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF475569)),
-                                          ),
                                         ],
-                                      ),
-                                    ],
-                                    const Divider(height: 18, color: Color(0xFFF1F5F9)),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        OutlinedButton.icon(
-                                          onPressed: () => _showResetPasswordModal(c),
-                                          icon: const Icon(Icons.lock_reset_rounded, size: 16),
-                                          label: const Text("Reset PW", style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5)),
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: const Color(0xFF64748B),
-                                            side: const BorderSide(color: Color(0xFFCBD5E1)),
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ElevatedButton.icon(
-                                          onPressed: () => _toggleCounselorStatus(c),
-                                          icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_outline_rounded, size: 16),
-                                          label: Text(
-                                            isActive ? "Deactivate" : "Activate",
-                                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600),
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: isActive ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
-                                            foregroundColor: isActive ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                                            elevation: 0,
-                                            side: BorderSide(color: isActive ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)),
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          ),
+                                        const Divider(height: 18, color: Color(0xFFF1F5F9)),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            SizedBox(
+                                              height: 34,
+                                              child: OutlinedButton.icon(
+                                                onPressed: () => _showResetPasswordModal(c),
+                                                icon: const Icon(Icons.lock_reset_rounded, size: 15),
+                                                label: const Text("Reset PW", style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5)),
+                                                style: OutlinedButton.styleFrom(
+                                                  foregroundColor: const Color(0xFF64748B),
+                                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            SizedBox(
+                                              height: 34,
+                                              child: ElevatedButton.icon(
+                                                onPressed: () => _toggleCounselorStatus(c),
+                                                icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_outline_rounded, size: 15),
+                                                label: Text(
+                                                  isActive ? "Deactivate" : "Activate",
+                                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600),
+                                                ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: isActive ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                                                  foregroundColor: isActive ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                                                  elevation: 0,
+                                                  side: BorderSide(color: isActive ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
+                                  );
+                                },
+                              ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
