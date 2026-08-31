@@ -6,6 +6,9 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
+import '../../services/notification_service.dart';
+import '../../services/ambient_audio_service.dart';
+import '../notifications/notifications_screen.dart';
 import 'counselor_triage_tab.dart';
 import 'counselor_students_tab.dart';
 import 'counselor_articles_tab.dart';
@@ -20,7 +23,7 @@ class CounselorDashboardScreen extends StatefulWidget {
   State<CounselorDashboardScreen> createState() => _CounselorDashboardScreenState();
 }
 
-class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
+class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> with SingleTickerProviderStateMixin {
   int _selectedTabIndex = 0; // 0: Overview, 1: Triage, 2: Students, 3: Articles, 4: Audit
   bool _isLoading = true;
   Map<String, dynamic>? _stats;
@@ -29,10 +32,64 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
   String? _error;
   Map<String, dynamic>? _targetStudentForDirectory;
 
+  int _unreadCount = 0;
+  final NotificationService _notificationService = NotificationService();
+  late AnimationController _bellAnimController;
+  late Animation<double> _bellRotationAnim;
+  late Animation<double> _badgeScaleAnim;
+  bool _hasPlayedEntryChime = false;
+
   @override
   void initState() {
     super.initState();
+    _bellAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+
+    _bellRotationAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: -0.25).chain(CurveTween(curve: Curves.easeOut)), weight: 10),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.25, end: 0.25).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.25, end: -0.18).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.18, end: 0.18).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.18, end: -0.08).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.08, end: 0.08).chain(CurveTween(curve: Curves.easeInOut)), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.08, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 15),
+    ]).animate(_bellAnimController);
+
+    _badgeScaleAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.30).chain(CurveTween(curve: Curves.easeOutBack)), weight: 40),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.30, end: 0.90).chain(CurveTween(curve: Curves.easeInOut)), weight: 30),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.90, end: 1.0).chain(CurveTween(curve: Curves.easeOut)), weight: 30),
+    ]).animate(_bellAnimController);
+
     _fetchStats();
+    _fetchUnreadCount();
+  }
+
+  @override
+  void dispose() {
+    _bellAnimController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    try {
+      final count = await _notificationService.getUnreadCount();
+      if (mounted) {
+        setState(() => _unreadCount = count);
+        if (count > 0) _ringBellAndChime();
+      }
+    } catch (_) {}
+  }
+
+  void _ringBellAndChime() {
+    if (!mounted) return;
+    _bellAnimController.forward(from: 0);
+    if (!_hasPlayedEntryChime) {
+      _hasPlayedEntryChime = true;
+      AmbientAudioService.playNotificationChimeIfAllowed();
+    }
   }
 
   Future<void> _fetchStats() async {
@@ -185,6 +242,90 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
           ],
         ),
         actions: [
+          // ── Notification Bell with Dynamic Unread Badge ──
+          Semantics(
+            label: _unreadCount > 0 ? 'Notifications, $_unreadCount unread alerts' : 'Notifications',
+            button: true,
+            child: GestureDetector(
+              onTap: () async {
+                HapticService.lightTap();
+                final result = await Navigator.of(context).push(slideRoute(const NotificationsScreen()));
+                _fetchUnreadCount();
+                if (result == 'open_triage') {
+                  setState(() => _selectedTabIndex = 1);
+                } else if (result == 'open_students') {
+                  setState(() => _selectedTabIndex = 2);
+                } else if (result == 'open_articles') {
+                  setState(() => _selectedTabIndex = 3);
+                } else if (result == 'open_audit') {
+                  setState(() => _selectedTabIndex = 4);
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _notificationService.unreadCountNotifier,
+                  builder: (context, count, _) {
+                    final displayCount = count;
+                    return AnimatedBuilder(
+                      animation: _bellAnimController,
+                      builder: (context, _) {
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Transform.rotate(
+                              angle: displayCount > 0 ? _bellRotationAnim.value : 0.0,
+                              origin: const Offset(0, -6),
+                              child: Icon(
+                                displayCount > 0
+                                    ? Icons.notifications_active_rounded
+                                    : Icons.notifications_outlined,
+                                color: displayCount > 0 ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                                size: 24,
+                              ),
+                            ),
+                            if (displayCount > 0)
+                              Positioned(
+                                right: -4,
+                                top: -3,
+                                child: Transform.scale(
+                                  scale: _bellAnimController.isAnimating ? _badgeScaleAnim.value : 1.0,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x33EF4444),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      displayCount > 9 ? '9+' : '$displayCount',
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
           if (_selectedTabIndex == 0)
             IconButton(
               tooltip: 'Refresh Stats',
@@ -192,6 +333,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
               onPressed: () {
                 HapticService.lightTap();
                 _fetchStats();
+                _fetchUnreadCount();
               },
             ),
           Semantics(
@@ -1186,14 +1328,19 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
     final downMoods = (moodDistribution?['down'] as num?)?.toInt() ?? 0;
     final distressedMoods = (moodDistribution?['distressed'] as num?)?.toInt() ?? 0;
 
+    final greatPct = totalMoods > 0 ? (greatMoods / totalMoods * 100) : 0.0;
+    final goodPct = totalMoods > 0 ? (goodMoods / totalMoods * 100) : 0.0;
+    final okayPct = totalMoods > 0 ? (okayMoods / totalMoods * 100) : 0.0;
+    final downPct = totalMoods > 0 ? (downMoods / totalMoods * 100) : 0.0;
+    final distressedPct = totalMoods > 0 ? (distressedMoods / totalMoods * 100) : 0.0;
+
     final dateStr = DateTime.now().toLocal().toString().split('.')[0];
 
-    final reportText = '''
+    final reportClipboardText = '''
 ============================================================
 FATHER SATURNINO URIOS UNIVERSITY
 GUIDANCE & TESTING CENTER • BUTUAN CITY, PHILIPPINES
 CAMPUS EMOTIONAL WELLNESS & MOOD CLIMATE REPORT
-(Institutional Compliance: Republic Act 11036)
 ============================================================
 Generated: $dateStr
 Reporting Officer: FSUU Guidance & Counseling Office
@@ -1206,17 +1353,18 @@ Reporting Officer: FSUU Guidance & Counseling Office
 - Triage Distress Alerts Handled: $flagged
 
 2. CAMPUS EMOTIONAL CLIMATE BREAKDOWN
-- Great Mood: $greatMoods (${totalMoods > 0 ? (greatMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
-- Good Mood: $goodMoods (${totalMoods > 0 ? (goodMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
-- Okay / Neutral: $okayMoods (${totalMoods > 0 ? (okayMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
-- Down / Low Mood: $downMoods (${totalMoods > 0 ? (downMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
-- Distressed / High Risk: $distressedMoods (${totalMoods > 0 ? (distressedMoods / totalMoods * 100).toStringAsFixed(1) : 0}%)
+- 🌟 Great Mood: $greatMoods (${greatPct.toStringAsFixed(1)}%)
+- 😊 Good Mood: $goodMoods (${goodPct.toStringAsFixed(1)}%)
+- 😐 Okay / Neutral: $okayMoods (${okayPct.toStringAsFixed(1)}%)
+- 😔 Down / Low Mood: $downMoods (${downPct.toStringAsFixed(1)}%)
+- 💔 Distressed / High Risk: $distressedMoods (${distressedPct.toStringAsFixed(1)}%)
 
-3. PERSISTENT DISTRESS CASES (PROCESS 5.0)
+3. PRIORITY EARLY INTERVENTIONS
 - Current Flagged Priority Cases: ${_distressAlerts.length}
+${_distressAlerts.map((a) => "  • ${a['full_name']} (${a['email']}): ${a['consecutive_days']} consecutive low days").join('\n')}
 
-4. CLINICAL COMPLIANCE CERTIFICATION
-All crisis escalations and student logs have been handled in accordance with the Philippine Mental Health Act (RA 11036) and the Data Privacy Act of 2012 (RA 10173).
+4. CLINICAL COMPLIANCE & CERTIFICATION
+All crisis escalations and student logs have been securely handled and archived for institutional wellness planning.
 ============================================================
 ''';
 
@@ -1225,23 +1373,23 @@ All crisis escalations and student logs have been handled in accordance with the
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        maxChildSize: 0.95,
+        initialChildSize: 0.90,
+        maxChildSize: 0.96,
         minChildSize: 0.5,
         builder: (_, scrollController) => Container(
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
                 child: Container(
-                  width: 40,
+                  width: 44,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
+                  margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
                 ),
               ),
@@ -1264,46 +1412,277 @@ All crisis escalations and student logs have been handled in accordance with the
                   ),
                 ],
               ),
-              const Divider(height: 16),
+              const Divider(height: 12),
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Text(
-                      reportText,
-                      style: const TextStyle(
-                        fontFamily: 'Courier',
-                        fontSize: 11.5,
-                        color: Color(0xFF0F172A),
-                        height: 1.4,
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── 1. Executive FSUU Header Banner ──
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0C4A6E), Color(0xFF0284C7)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [BoxShadow(color: Color(0x180284C7), blurRadius: 10, offset: Offset(0, 4))],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(30),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.school_rounded, color: Colors.white, size: 18),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  "FATHER SATURNINO URIOS UNIVERSITY",
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                    color: Colors.white,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "Campus Emotional Wellness & Mood Pulse Report",
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Guidance & Testing Center • Generated on $dateStr",
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                color: Color(0xFFE0F2FE),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+
+                      // ── 2. Student Engagement Metrics KPI Grid ──
+                      const Text(
+                        "1. Student Engagement Overview",
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildReportKpiBox(
+                              label: "Active Students",
+                              value: "$activeStudents / $totalStudents",
+                              icon: Icons.people_alt_rounded,
+                              color: const Color(0xFF0284C7),
+                              bgColor: const Color(0xFFE0F2FE),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildReportKpiBox(
+                              label: "Mood Logs",
+                              value: "$totalMoods",
+                              icon: Icons.favorite_rounded,
+                              color: const Color(0xFF16A34A),
+                              bgColor: const Color(0xFFDCFCE7),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildReportKpiBox(
+                              label: "AI Conversations",
+                              value: "$totalSessions",
+                              icon: Icons.chat_bubble_rounded,
+                              color: const Color(0xFF7C3AED),
+                              bgColor: const Color(0xFFEDE9FE),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildReportKpiBox(
+                              label: "Distress Alerts",
+                              value: "$flagged",
+                              icon: Icons.health_and_safety_rounded,
+                              color: flagged > 0 ? const Color(0xFFDC2626) : const Color(0xFF0D9488),
+                              bgColor: flagged > 0 ? const Color(0xFFFEE2E2) : const Color(0xFFCCFBF1),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // ── 3. Campus Emotional Climate Distribution ──
+                      const Text(
+                        "2. Campus Emotional Climate Breakdown",
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildMoodDistBar(emoji: "🌟", label: "Great", count: greatMoods, pct: greatPct, color: const Color(0xFF16A34A)),
+                            const SizedBox(height: 10),
+                            _buildMoodDistBar(emoji: "😊", label: "Good", count: goodMoods, pct: goodPct, color: const Color(0xFF0284C7)),
+                            const SizedBox(height: 10),
+                            _buildMoodDistBar(emoji: "😐", label: "Okay", count: okayMoods, pct: okayPct, color: const Color(0xFF64748B)),
+                            const SizedBox(height: 10),
+                            _buildMoodDistBar(emoji: "😔", label: "Down / Rough", count: downMoods, pct: downPct, color: const Color(0xFFD97706)),
+                            const SizedBox(height: 10),
+                            _buildMoodDistBar(emoji: "💔", label: "Distressed / High Risk", count: distressedMoods, pct: distressedPct, color: const Color(0xFFDC2626)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // ── 4. Priority Early Interventions ──
+                      const Text(
+                        "3. Priority Early Interventions",
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_distressAlerts.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: _distressAlerts.map((a) {
+                              final name = a['full_name'] ?? 'Student';
+                              final email = a['email'] ?? '';
+                              final days = a['consecutive_days'] ?? 2;
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "$name ($email)",
+                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEE2E2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        "$days Days Low",
+                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "All monitored students are currently within balanced emotional thresholds.",
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF166534), fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+
+                      // ── 5. Clinical Certification Box ──
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.verified_rounded, color: Color(0xFF0284C7), size: 18),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                "Certified by FSUU Guidance & Counseling Office. All student interactions are handled under strict confidentiality protocols.",
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF475569), height: 1.35),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        Clipboard.setData(ClipboardData(text: reportText));
+                        Clipboard.setData(ClipboardData(text: reportClipboardText));
                         HapticService.lightTap();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Campus Wellness Report copied to clipboard! 📋"),
+                            content: Text("Campus Wellness Report formatted summary copied to clipboard! 📋"),
                             backgroundColor: Color(0xFF16A34A),
                           ),
                         );
                       },
                       icon: const Icon(Icons.copy_rounded, size: 16),
-                      label: const Text("Copy Report"),
+                      label: const Text("Copy Summary"),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF0F172A),
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1319,7 +1698,7 @@ All crisis escalations and student logs have been handled in accordance with the
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Report generated and ready for institutional filing. ✅"),
+                            content: Text("Report generated and certified for institutional filing. ✅"),
                             backgroundColor: Color(0xFF0284C7),
                           ),
                         );
@@ -1340,6 +1719,90 @@ All crisis escalations and student logs have been handled in accordance with the
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildReportKpiBox({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(40)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5, color: color),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoodDistBar({
+    required String emoji,
+    required String label,
+    required int count,
+    required double pct,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 6),
+                Text(label, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF1E293B))),
+              ],
+            ),
+            Text(
+              "$count (${pct.toStringAsFixed(1)}%)",
+              style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 11.5, color: color),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: (pct / 100).clamp(0.0, 1.0),
+            backgroundColor: const Color(0xFFE2E8F0),
+            color: color,
+            minHeight: 6,
+          ),
+        ),
+      ],
     );
   }
 

@@ -145,8 +145,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _markAsRead(notif);
     final type = notif['type']?.toString().toLowerCase() ?? '';
     final title = notif['title']?.toString().toLowerCase() ?? '';
+    final body = notif['body']?.toString().toLowerCase() ?? '';
 
-    if (title.contains('check-in') || title.contains('mood') || type == 'mood') {
+    if (title.contains('crisis') || title.contains('triage') || title.contains('flag') || body.contains('triage') || body.contains('escalation')) {
+      Navigator.pop(context, 'open_triage');
+    } else if (title.contains('distress') || title.contains('appeal') || title.contains('student') || body.contains('low moods') || body.contains('appeal')) {
+      Navigator.pop(context, 'open_students');
+    } else if (title.contains('check-in') || title.contains('mood') || type == 'mood') {
       Navigator.pop(context, 'open_mood');
     } else if (title.contains('assessment') || title.contains('phq') || title.contains('gad') || type == 'session' || type == 'assessment') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentInsightsScreen()));
@@ -155,7 +160,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } else if (title.contains('streak') || type == 'alert') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentInsightsScreen()));
     } else {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentInsightsScreen()));
+      Navigator.pop(context);
     }
   }
 
