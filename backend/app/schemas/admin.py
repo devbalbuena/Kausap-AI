@@ -81,6 +81,12 @@ class AdminStats(BaseModel):
 
 # ── Counselor Management Schemas ─────────────────────────────────────────────
 
+class CounselorSendVerificationRequest(BaseModel):
+    email: str
+    first_name: str
+    last_name: str
+
+
 class CounselorCreate(BaseModel):
     email: str
     password: str
@@ -89,6 +95,7 @@ class CounselorCreate(BaseModel):
     phone_number: str
     department_title: Optional[str] = "Guidance Counselor"
     gender: Optional[str] = "Female"
+    verification_code: Optional[str] = None
 
 
 class CounselorRead(BaseModel):

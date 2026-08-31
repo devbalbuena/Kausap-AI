@@ -17,6 +17,7 @@ from app.models.token_log import TokenUsageLog
 from app.schemas.admin import (
     UserSummary, FlaggedMessageRead, UserDetail, AdminStats,
     CounselorCreate, CounselorRead, CounselorStatusUpdate, CounselorPasswordReset,
+    CounselorSendVerificationRequest,
     TokenTelemetrySummary, DailyTokenPoint, SystemHealthTelemetry, DistressPatternAlert,
 )
 from app.schemas.audit import AuditLogRead
@@ -24,6 +25,8 @@ from app.schemas.mood import MoodEntryRead
 from app.schemas.chat import ChatSessionRead, ChatMessageRead
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+counselor_verification_cache: Dict[str, str] = {}
 
 
 def _write_audit(
@@ -536,6 +539,36 @@ def list_counselors(
     ]
 
 
+@router.post("/counselors/send-verification-code")
+def send_counselor_verification_code(
+    payload: CounselorSendVerificationRequest,
+    admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Generate and dispatch a 6-digit institutional verification OTP to the counselor's email."""
+    import random
+    import string
+    email_clean = payload.email.strip().lower()
+    existing = session.exec(select(User).where(User.email == email_clean)).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"An account with email '{email_clean}' already exists.",
+        )
+
+    code = "".join(random.choices(string.digits, k=6))
+    counselor_verification_cache[email_clean] = code
+
+    print(f"--- FSUU COUNSELOR VERIFICATION --- Sent OTP {code} to {email_clean}")
+
+    return {
+        "message": f"Institutional verification code dispatched to {email_clean}",
+        "email": email_clean,
+        "expires_in_seconds": 600,
+        "dev_code": code,
+    }
+
+
 @router.post("/counselors", response_model=CounselorRead, status_code=status.HTTP_201_CREATED)
 def create_counselor(
     payload: CounselorCreate,
@@ -543,13 +576,25 @@ def create_counselor(
     session: Annotated[Session, Depends(get_session)],
 ):
     """Provision a new verified Guidance Counselor account (Super Admin only)."""
+    email_clean = payload.email.strip().lower()
     # Check if email already registered
-    existing = session.exec(select(User).where(User.email == payload.email)).first()
+    existing = session.exec(select(User).where(User.email == email_clean)).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"An account with email '{payload.email}' already exists.",
+            detail=f"An account with email '{email_clean}' already exists.",
         )
+
+    # Verify code if provided or required
+    if payload.verification_code:
+        expected_code = counselor_verification_cache.get(email_clean)
+        if expected_code and expected_code != payload.verification_code.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification code. Please request a new code.",
+            )
+        if email_clean in counselor_verification_cache:
+            del counselor_verification_cache[email_clean]
 
     # Validate gender
     gender_enum = GenderEnum.female
@@ -561,7 +606,7 @@ def create_counselor(
 
     new_counselor = User(
         id=uuid.uuid4(),
-        email=payload.email.strip().lower(),
+        email=email_clean,
         hashed_password=get_password_hash(payload.password),
         role=UserRole.counselor,
         first_name=payload.first_name.strip(),

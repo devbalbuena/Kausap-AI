@@ -295,8 +295,12 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
     final deptCtrl = TextEditingController(text: "Guidance Counselor");
     final phoneCtrl = TextEditingController();
     final pwCtrl = TextEditingController();
+    final codeCtrl = TextEditingController();
     String gender = "Female";
     bool obscure = true;
+    int step = 1; // 1: Form, 2: Verification Code
+    bool isSending = false;
+    String? devCodeHint;
 
     showModalBottomSheet(
       context: context,
@@ -322,13 +326,17 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF0284C7), size: 22),
-                        SizedBox(width: 8),
+                        Icon(
+                          step == 1 ? Icons.person_add_alt_1_rounded : Icons.mark_email_read_rounded,
+                          color: const Color(0xFF0284C7),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 8),
                         Text(
-                          "Provision Counselor",
-                          style: TextStyle(
+                          step == 1 ? "Provision Counselor" : "Institutional Email Verification",
+                          style: const TextStyle(
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
@@ -343,222 +351,327 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                     ),
                   ],
                 ),
-                const Text(
-                  "Create an authorized guidance counselor account with clinical access.",
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B)),
+                Text(
+                  step == 1
+                      ? "Create an authorized guidance counselor account with verified institutional access."
+                      : "A 6-digit verification code has been dispatched to ${emailCtrl.text.trim()}.",
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B)),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: "FSUU Email Address *",
-                    hintText: "e.g. counselor@urios.edu.ph",
-                    prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF0284C7)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+
+                if (step == 1) ...[
+                  TextField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: "FSUU Email Address *",
+                      hintText: "e.g. counselor@urios.edu.ph",
+                      prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF0284C7)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: firstNameCtrl,
-                        decoration: InputDecoration(
-                          labelText: "First Name *",
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: firstNameCtrl,
+                          decoration: InputDecoration(
+                            labelText: "First Name *",
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: lastNameCtrl,
-                        decoration: InputDecoration(
-                          labelText: "Last Name *",
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: lastNameCtrl,
+                          decoration: InputDecoration(
+                            labelText: "Last Name *",
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: deptCtrl,
+                    decoration: InputDecoration(
+                      labelText: "Department / Title *",
+                      hintText: "e.g. Guidance Counselor III, Psychometrician",
+                      prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF0284C7)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: deptCtrl,
-                  decoration: InputDecoration(
-                    labelText: "Department / Title *",
-                    hintText: "e.g. Guidance Counselor III, Psychometrician",
-                    prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFF0284C7)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: "Contact Phone Number *",
-                    hintText: "e.g. 09123456789",
-                    prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF0284C7)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: pwCtrl,
-                  obscureText: obscure,
-                  decoration: InputDecoration(
-                    labelText: "Initial Temporary Password *",
-                    hintText: "Minimum 8 characters",
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF0284C7)),
-                    suffixIcon: IconButton(
-                      icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF94A3B8)),
-                      onPressed: () => setModalState(() => obscure = !obscure),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: "Contact Phone Number *",
+                      hintText: "e.g. 09123456789",
+                      prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF0284C7)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: gender,
-                  decoration: InputDecoration(
-                    labelText: "Gender",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: pwCtrl,
+                    obscureText: obscure,
+                    decoration: InputDecoration(
+                      labelText: "Initial Temporary Password *",
+                      hintText: "Minimum 8 characters",
+                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF0284C7)),
+                      suffixIcon: IconButton(
+                        icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF94A3B8)),
+                        onPressed: () => setModalState(() => obscure = !obscure),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: "Female", child: Text("Female")),
-                    DropdownMenuItem(value: "Male", child: Text("Male")),
-                    DropdownMenuItem(value: "Prefer not to say", child: Text("Prefer not to say")),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setModalState(() => gender = val);
-                  },
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final email = emailCtrl.text.trim();
-                      final fn = firstNameCtrl.text.trim();
-                      final ln = lastNameCtrl.text.trim();
-                      final dept = deptCtrl.text.trim();
-                      final phone = phoneCtrl.text.trim();
-                      final pw = pwCtrl.text.trim();
-
-                      if (email.isEmpty || fn.isEmpty || ln.isEmpty || pw.isEmpty || phone.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Please fill in all required fields."),
-                            backgroundColor: Color(0xFFDC2626),
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (pw.length < 8) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Password must be at least 8 characters long."),
-                            backgroundColor: Color(0xFFDC2626),
-                          ),
-                        );
-                        return;
-                      }
-
-                      Navigator.pop(ctx);
-                      try {
-                        HapticService.lightTap();
-                        await _api.post(
-                          '/admin/counselors',
-                          body: {
-                            'email': email,
-                            'first_name': fn,
-                            'last_name': ln,
-                            'department_title': dept.isNotEmpty ? dept : 'Guidance Counselor',
-                            'phone_number': phone,
-                            'password': pw,
-                            'gender': gender,
-                          },
-                        );
-                        if (!mounted) return;
-
-                        // Show success copy modal
-                        showDialog(
-                          context: this.context,
-                          builder: (cDialogCtx) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                            title: const Row(
-                              children: [
-                                Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 24),
-                                SizedBox(width: 8),
-                                Text("Counselor Provisioned!", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
-                              ],
-                            ),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("Successfully created staff account for $fn $ln.", style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF0F172A))),
-                                const SizedBox(height: 12),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE2E8F0))),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Email: $email", style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)),
-                                      const SizedBox(height: 4),
-                                      Text("Temporary Password: $pw", style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0284C7))),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: "Kausap AI Counselor Account\nEmail: $email\nTemporary Password: $pw"));
-                                  HapticService.lightTap();
-                                  ScaffoldMessenger.of(this.context).showSnackBar(
-                                    const SnackBar(content: Text("Credentials copied to clipboard! 📋"), backgroundColor: Color(0xFF0284C7)),
-                                  );
-                                },
-                                icon: const Icon(Icons.copy_rounded, size: 16),
-                                label: const Text("Copy Credentials"),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(cDialogCtx),
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
-                                child: const Text("Done"),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        _fetchCounselors();
-                      } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          SnackBar(
-                            content: Text("Failed to provision counselor: $e"),
-                            backgroundColor: const Color(0xFFDC2626),
-                          ),
-                        );
-                      }
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: gender,
+                    decoration: InputDecoration(
+                      labelText: "Gender",
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: "Female", child: Text("Female")),
+                      DropdownMenuItem(value: "Male", child: Text("Male")),
+                      DropdownMenuItem(value: "Prefer not to say", child: Text("Prefer not to say")),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => gender = val);
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text(
-                      "Create Counselor Account",
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isSending
+                          ? null
+                          : () async {
+                              final email = emailCtrl.text.trim();
+                              final fn = firstNameCtrl.text.trim();
+                              final ln = lastNameCtrl.text.trim();
+                              final phone = phoneCtrl.text.trim();
+                              final pw = pwCtrl.text.trim();
+
+                              if (email.isEmpty || fn.isEmpty || ln.isEmpty || pw.isEmpty || phone.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Please fill in all required fields."),
+                                    backgroundColor: Color(0xFFDC2626),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (pw.length < 8) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Password must be at least 8 characters long."),
+                                    backgroundColor: Color(0xFFDC2626),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSending = true);
+                              try {
+                                HapticService.lightTap();
+                                final res = await _api.post(
+                                  '/admin/counselors/send-verification-code',
+                                  body: {'email': email, 'first_name': fn, 'last_name': ln},
+                                );
+                                setModalState(() {
+                                  isSending = false;
+                                  step = 2;
+                                  devCodeHint = res is Map ? res['dev_code']?.toString() : null;
+                                  if (devCodeHint != null) {
+                                    codeCtrl.text = devCodeHint!;
+                                  }
+                                });
+                              } catch (e) {
+                                setModalState(() => isSending = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Failed to dispatch code: $e"),
+                                    backgroundColor: const Color(0xFFDC2626),
+                                  ),
+                                );
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: isSending
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text(
+                              "Send 6-Digit Email Verification Code",
+                              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5),
+                            ),
                     ),
                   ),
-                ),
+                ] else ...[
+                  // Step 2: Verification Code Step
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.shield_outlined, color: Color(0xFF16A34A), size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Verification code dispatched to ${emailCtrl.text.trim()}.",
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF166534)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: codeCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: 6),
+                    decoration: InputDecoration(
+                      labelText: "Enter 6-Digit Verification Code",
+                      hintText: "••••••",
+                      prefixIcon: const Icon(Icons.pin_rounded, color: Color(0xFF0284C7)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => setModalState(() => step = 1),
+                        child: const Text("← Edit Details", style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+                      ),
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final code = codeCtrl.text.trim();
+                          if (code.length != 6) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Please enter the complete 6-digit code."), backgroundColor: Color(0xFFDC2626)),
+                            );
+                            return;
+                          }
+
+                          Navigator.pop(ctx);
+                          try {
+                            HapticService.lightTap();
+                            final email = emailCtrl.text.trim();
+                            final fn = firstNameCtrl.text.trim();
+                            final ln = lastNameCtrl.text.trim();
+                            final dept = deptCtrl.text.trim();
+                            final phone = phoneCtrl.text.trim();
+                            final pw = pwCtrl.text.trim();
+
+                            await _api.post(
+                              '/admin/counselors',
+                              body: {
+                                'email': email,
+                                'first_name': fn,
+                                'last_name': ln,
+                                'department_title': dept.isNotEmpty ? dept : 'Guidance Counselor',
+                                'phone_number': phone,
+                                'password': pw,
+                                'gender': gender,
+                                'verification_code': code,
+                              },
+                            );
+
+                            if (!mounted) return;
+
+                            showDialog(
+                              context: this.context,
+                              builder: (cDialogCtx) => AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                title: const Row(
+                                  children: [
+                                    Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 24),
+                                    SizedBox(width: 8),
+                                    Text("Counselor Verified!", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+                                  ],
+                                ),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text("Successfully verified and provisioned staff account for $fn $ln.", style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF0F172A))),
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE2E8F0))),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text("Email: $email", style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)),
+                                          const SizedBox(height: 4),
+                                          Text("Temporary Password: $pw", style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0284C7))),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      Clipboard.setData(ClipboardData(text: "Kausap AI Counselor Account\nEmail: $email\nTemporary Password: $pw"));
+                                      HapticService.lightTap();
+                                      ScaffoldMessenger.of(this.context).showSnackBar(
+                                        const SnackBar(content: Text("Credentials copied to clipboard! 📋"), backgroundColor: Color(0xFF0284C7)),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.copy_rounded, size: 16),
+                                    label: const Text("Copy Credentials"),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(cDialogCtx),
+                                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
+                                    child: const Text("Done"),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            _fetchCounselors();
+                          } catch (e) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(
+                                content: Text("Failed to verify & provision counselor: $e"),
+                                backgroundColor: const Color(0xFFDC2626),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text("Verify & Provision", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
