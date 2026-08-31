@@ -16,7 +16,6 @@ import '../settings/language_settings_screen.dart';
 import '../settings/notification_settings_screen.dart';
 import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
-import '../settings/privacy_center_screen.dart';
 import '../settings/about_screen.dart';
 import '../crisis/crisis_resources_sheet.dart';
 import '../profile/edit_profile_screen.dart';
@@ -177,60 +176,9 @@ class _CounselorProfileScreenState extends State<CounselorProfileScreen> {
               ),
               const SizedBox(height: 20),
 
-              // ── 2. Clinical Care & Campus Protocols ────────────────────────
+              // ── 2. Counselor Preferences & Security ───────────────────────
               _buildSectionContainer(
-                title: 'CLINICAL CARE & PROTOCOLS',
-                children: [
-                  _buildListItem(
-                    icon: Icons.health_and_safety_rounded,
-                    iconColor: const Color(0xFFEF4444),
-                    title: 'Crisis Triage & Risk Protocols',
-                    subtitle: 'Real-time AI distress alerts & student escalations',
-                    onTap: () {
-                      HapticService.lightTap();
-                      Navigator.pop(context);
-                    },
-                  ),
-                  _buildDivider(),
-                  _buildListItem(
-                    icon: Icons.people_alt_rounded,
-                    iconColor: const Color(0xFF0284C7),
-                    title: 'Student Care Directory',
-                    subtitle: 'Emotional mood history & account management',
-                    onTap: () {
-                      HapticService.lightTap();
-                      Navigator.pop(context);
-                    },
-                  ),
-                  _buildDivider(),
-                  _buildListItem(
-                    icon: Icons.verified_user_rounded,
-                    iconColor: const Color(0xFF8B5CF6),
-                    title: 'RA 11036 Clinical Audit Trail',
-                    subtitle: 'Immutable compliance logging of triage actions',
-                    onTap: () {
-                      HapticService.lightTap();
-                      Navigator.pop(context);
-                    },
-                  ),
-                  _buildDivider(),
-                  _buildListItem(
-                    icon: Icons.auto_stories_rounded,
-                    iconColor: const Color(0xFFF59E0B),
-                    title: 'Psychoeducation CMS Articles',
-                    subtitle: 'Publish mental health resources for Urians',
-                    onTap: () {
-                      HapticService.lightTap();
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // ── 3. Counselor Settings & Controls ───────────────────────────
-              _buildSectionContainer(
-                title: 'SETTINGS & CONTROLS',
+                title: 'COUNSELOR PREFERENCES & SECURITY',
                 children: [
                   _buildListItem(
                     icon: Icons.notifications_outlined,
@@ -240,17 +188,6 @@ class _CounselorProfileScreenState extends State<CounselorProfileScreen> {
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const NotificationSettingsScreen()));
-                    },
-                  ),
-                  _buildDivider(),
-                  _buildListItem(
-                    icon: Icons.shield_outlined,
-                    iconColor: const Color(0xFF10B981),
-                    title: 'Confidentiality & Privacy Shield',
-                    subtitle: 'Data protection & ethical boundaries',
-                    onTap: () {
-                      HapticService.lightTap();
-                      Navigator.push(context, slideRoute(const PrivacyCenterScreen()));
                     },
                   ),
                   _buildDivider(),
@@ -297,27 +234,27 @@ class _CounselorProfileScreenState extends State<CounselorProfileScreen> {
                       Navigator.push(context, slideRoute(const AccessibilitySettingsScreen()));
                     },
                   ),
-                  _buildDivider(),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // ── 3. Ethics, Governance & Campus Directory ───────────────────
+              _buildSectionContainer(
+                title: 'ETHICS, GOVERNANCE & CAMPUS DIRECTORY',
+                children: [
                   _buildListItem(
                     icon: Icons.gavel_rounded,
-                    iconColor: const Color(0xFF64748B),
-                    title: 'Campus Ethical Policies & RA 11036',
-                    subtitle: 'Philippine Mental Health Law compliance',
+                    iconColor: const Color(0xFF10B981),
+                    title: 'Campus Ethical Policies & Confidentiality',
+                    subtitle: 'Student privacy & counselor ethics standards',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const PrivacyScreen()));
                     },
                   ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // ── 4. Campus Emergency & Support ──────────────────────────────
-              _buildSectionContainer(
-                title: 'CAMPUS SUPPORT & DIRECTORY',
-                children: [
+                  _buildDivider(),
                   Container(
-                    margin: const EdgeInsets.only(bottom: 6),
+                    margin: const EdgeInsets.only(top: 4, bottom: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(12),
