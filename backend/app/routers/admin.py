@@ -459,8 +459,9 @@ def admin_stats(
     total_students = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.client)).one()
     total_active_students = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.client, User.is_active == True)).one()
     total_moods = session.exec(select(func.count()).select_from(MoodEntry)).one()
-    total_sessions = session.exec(select(func.count()).select_from(ChatSession)).one()
-    total_flagged = session.exec(select(func.count()).select_from(ChatMessage).where(ChatMessage.risk_flag == True, ChatMessage.role == "user")).one()
+    total_chat_flagged = session.exec(select(func.count()).select_from(ChatMessage).where(ChatMessage.risk_flag == True, ChatMessage.role == "user")).one()
+    distress_patterns = get_consistent_distress_patterns(admin=admin, session=session)
+    total_flagged = total_chat_flagged + len(distress_patterns)
     total_counselors = session.exec(select(func.count()).select_from(User).where(User.role == UserRole.counselor)).one()
 
     # Mood level breakdown (1 to 5)

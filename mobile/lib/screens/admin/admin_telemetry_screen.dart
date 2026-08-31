@@ -65,7 +65,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "AI & System Telemetry",
+              "AI & Cloud Telemetry",
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 15,
@@ -74,7 +74,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
               ),
             ),
             Text(
-              "OpenAI token consumption & cost analytics",
+              "Real-time token consumption & Neon cloud diagnostics",
               style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
             ),
           ],
@@ -142,7 +142,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                                       Icon(Icons.token_rounded, color: Color(0xFF38BDF8), size: 18),
                                       SizedBox(width: 8),
                                       Text(
-                                        "OpenAI API Cost Meter",
+                                        "AI LLM Token & Cost Telemetry",
                                         style: TextStyle(
                                           fontFamily: 'Inter',
                                           color: Color(0xFF94A3B8),
@@ -160,7 +160,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                                       border: Border.all(color: const Color(0xFF0284C7)),
                                     ),
                                     child: const Text(
-                                      "GPT-4o-mini",
+                                      "Google Gemini 2.0 Flash",
                                       style: TextStyle(
                                         fontFamily: 'Inter',
                                         color: Color(0xFF38BDF8),
@@ -243,7 +243,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                               child: _buildMetricTile(
                                 label: "Prompt / Input",
                                 count: "${_tokensData?['total_prompt_tokens'] ?? 0}",
-                                rate: "\$0.150 / 1M tokens",
+                                rate: "Gemini Flash Input",
                                 color: const Color(0xFF0284C7),
                                 bg: const Color(0xFFE0F2FE),
                                 icon: Icons.input_rounded,
@@ -254,7 +254,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                               child: _buildMetricTile(
                                 label: "Completion / Output",
                                 count: "${_tokensData?['total_completion_tokens'] ?? 0}",
-                                rate: "\$0.600 / 1M tokens",
+                                rate: "Gemini Flash Output",
                                 color: const Color(0xFF7C3AED),
                                 bg: const Color(0xFFEDE9FE),
                                 icon: Icons.output_rounded,
@@ -312,41 +312,51 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                                   ],
                                 ),
                               ),
-                              ...((_tokensData?['daily_trends'] as List<dynamic>?) ?? []).map((trend) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                  decoration: const BoxDecoration(
-                                    border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                              if (((_tokensData?['daily_trends'] as List<dynamic>?) ?? []).isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.all(20),
+                                  child: Text(
+                                    "No AI chat token consumption recorded in the last 7 days.",
+                                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                                    textAlign: TextAlign.center,
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          "${trend['date']}",
-                                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                                )
+                              else
+                                ...((_tokensData?['daily_trends'] as List<dynamic>?) ?? []).map((trend) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    decoration: const BoxDecoration(
+                                      border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            "${trend['date']}",
+                                            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          "${trend['total_tokens']}",
-                                          textAlign: TextAlign.right,
-                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF0284C7), fontWeight: FontWeight.w600),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            "${trend['total_tokens']}",
+                                            textAlign: TextAlign.right,
+                                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF0284C7), fontWeight: FontWeight.w600),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          "₱${(trend['cost_php'] ?? 0.0).toStringAsFixed(4)}",
-                                          textAlign: TextAlign.right,
-                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF16A34A), fontWeight: FontWeight.w600),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            "₱${(trend['cost_php'] ?? 0.0).toStringAsFixed(4)}",
+                                            textAlign: TextAlign.right,
+                                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF16A34A), fontWeight: FontWeight.w600),
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
+                                      ],
+                                    ),
+                                  );
+                                }),
                             ],
                           ),
                         ),
@@ -365,61 +375,126 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1)),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      color: _healthData?['database_connected'] == true
-                                          ? const Color(0xFF16A34A)
-                                          : const Color(0xFFDC2626),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _healthData?['status'] ?? "Neon Serverless Operational",
-                                    style: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                              _buildDiagnosticRow("PgBouncer Pool Capacity", "${_healthData?['pool_size'] ?? 20} max connections"),
-                              const SizedBox(height: 8),
-                              _buildDiagnosticRow("Active Checked Out", "${_healthData?['pool_checked_out'] ?? 0} active"),
-                              const SizedBox(height: 8),
-                              _buildDiagnosticRow("Pool Overflow", "${_healthData?['pool_overflow'] ?? 0}"),
-                              const SizedBox(height: 8),
-                              _buildDiagnosticRow("Registered Students", "${_healthData?['total_students'] ?? 0}"),
-                              const SizedBox(height: 8),
-                              _buildDiagnosticRow("Authorized Counselors", "${_healthData?['total_counselors'] ?? 0}"),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
+                        _buildNeonDiagnosticsCard(),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
                 ),
+    );
+  }
+
+  Widget _buildNeonDiagnosticsCard() {
+    final poolSize = (_healthData?['pool_size'] as num?)?.toInt() ?? 20;
+    final poolCheckedOut = (_healthData?['pool_checked_out'] as num?)?.toInt() ?? 0;
+    final poolOverflow = (_healthData?['pool_overflow'] as num?)?.toInt() ?? 0;
+    final totalStudents = _healthData?['total_students'] ?? 0;
+    final totalCounselors = _healthData?['total_counselors'] ?? 0;
+    final isConnected = _healthData?['database_connected'] == true;
+    final double utilization = poolSize > 0 ? (poolCheckedOut / poolSize).clamp(0.0, 1.0) : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: isConnected ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _healthData?['status'] ?? "Neon Serverless Operational",
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isConnected ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  isConnected ? "Healthy" : "Offline",
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10.5,
+                    color: isConnected ? const Color(0xFF166534) : const Color(0xFF991B1B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Visual Connection Pool Utilization Bar
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "PgBouncer Pool Utilization",
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    "$poolCheckedOut / $poolSize Active (${(utilization * 100).toStringAsFixed(0)}%)",
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF0284C7)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: utilization == 0 ? 0.05 : utilization,
+                  minHeight: 8,
+                  backgroundColor: const Color(0xFFE2E8F0),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    utilization > 0.8 ? const Color(0xFFDC2626) : const Color(0xFF0284C7),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const Divider(height: 24, color: Color(0xFFF1F5F9)),
+          _buildDiagnosticRow("PgBouncer Pool Capacity", "$poolSize max connections"),
+          const SizedBox(height: 8),
+          _buildDiagnosticRow("Active Checked Out", "$poolCheckedOut active"),
+          const SizedBox(height: 8),
+          _buildDiagnosticRow("Pool Overflow", "$poolOverflow"),
+          const SizedBox(height: 8),
+          _buildDiagnosticRow("Registered Students", "$totalStudents"),
+          const SizedBox(height: 8),
+          _buildDiagnosticRow("Authorized Counselors", "$totalCounselors"),
+        ],
+      ),
     );
   }
 

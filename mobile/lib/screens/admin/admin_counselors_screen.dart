@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
@@ -16,6 +17,7 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
   List<dynamic> _counselors = [];
   String? _error;
   String _searchQuery = '';
+  String _activeFilter = 'all'; // 'all', 'active', 'inactive'
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -201,56 +203,83 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final newPw = passwordController.text.trim();
-                    if (newPw.length < 8) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Password must be at least 8 characters long."),
-                          backgroundColor: Color(0xFFDC2626),
-                        ),
-                      );
-                      return;
-                    }
-                    Navigator.pop(ctx);
-                    try {
-                      HapticService.lightTap();
-                      await _api.post(
-                        '/admin/counselors/${counselor['id']}/reset-password',
-                        body: {'new_password': newPw},
-                      );
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(
-                          content: Text("Password reset successfully for ${counselor['email']}."),
-                          backgroundColor: const Color(0xFF16A34A),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(
-                          content: Text("Failed to reset password: $e"),
-                          backgroundColor: const Color(0xFFDC2626),
-                        ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0284C7),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final pw = passwordController.text.trim();
+                        if (pw.isNotEmpty) {
+                          Clipboard.setData(ClipboardData(text: pw));
+                          HapticService.lightTap();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Password copied to clipboard! 📋"), backgroundColor: Color(0xFF0284C7)),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text("Copy Password", style: TextStyle(fontFamily: 'Poppins', fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0284C7),
+                        side: const BorderSide(color: Color(0xFFBAE6FD)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
                   ),
-                  child: const Text(
-                    "Confirm Password Reset",
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final newPw = passwordController.text.trim();
+                        if (newPw.length < 8) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Password must be at least 8 characters long."),
+                              backgroundColor: Color(0xFFDC2626),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        try {
+                          HapticService.lightTap();
+                          await _api.post(
+                            '/admin/counselors/${counselor['id']}/reset-password',
+                            body: {'new_password': newPw},
+                          );
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text("Password reset successfully for ${counselor['email']}."),
+                              backgroundColor: const Color(0xFF16A34A),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text("Failed to reset password: $e"),
+                              backgroundColor: const Color(0xFFDC2626),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text(
+                        "Confirm Reset",
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -453,18 +482,66 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                           },
                         );
                         if (!mounted) return;
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          SnackBar(
-                            content: Text("Counselor account $email created successfully!"),
-                            backgroundColor: const Color(0xFF16A34A),
+                        
+                        // Show success copy modal
+                        showDialog(
+                          context: this.context,
+                          builder: (cDialogCtx) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                            title: const Row(
+                              children: [
+                                Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 24),
+                                SizedBox(width: 8),
+                                Text("Counselor Provisioned!", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+                              ],
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Successfully created staff account for $fn $ln.", style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF0F172A))),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE2E8F0))),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text("Email: $email", style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 4),
+                                      Text("Temporary Password: $pw", style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0284C7))),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: "Kausap AI Counselor Account\nEmail: $email\nTemporary Password: $pw"));
+                                  HapticService.lightTap();
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    const SnackBar(content: Text("Credentials copied to clipboard! 📋"), backgroundColor: Color(0xFF0284C7)),
+                                  );
+                                },
+                                icon: const Icon(Icons.copy_rounded, size: 16),
+                                label: const Text("Copy Credentials"),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(cDialogCtx),
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
+                                child: const Text("Done"),
+                              ),
+                            ],
                           ),
                         );
+
                         _fetchCounselors();
                       } catch (e) {
                         if (!mounted) return;
                         ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(
-                            content: Text("Provisioning failed: $e"),
+                            content: Text("Failed to provision counselor: $e"),
                             backgroundColor: const Color(0xFFDC2626),
                           ),
                         );
@@ -477,7 +554,7 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text(
-                      "Create Verified Counselor Account",
+                      "Create Counselor Account",
                       style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                   ),
@@ -490,16 +567,30 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
     );
   }
 
+  List<dynamic> _getFilteredCounselors() {
+    var list = _counselors;
+    if (_searchQuery.trim().isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      list = list.where((c) {
+        final name = (c['full_name'] ?? '').toString().toLowerCase();
+        final email = (c['email'] ?? '').toString().toLowerCase();
+        final dept = (c['department_title'] ?? '').toString().toLowerCase();
+        return name.contains(q) || email.contains(q) || dept.contains(q);
+      }).toList();
+    }
+    if (_activeFilter == 'active') {
+      list = list.where((c) => c['is_active'] == true).toList();
+    } else if (_activeFilter == 'inactive') {
+      list = list.where((c) => c['is_active'] != true).toList();
+    }
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filtered = _counselors.where((c) {
-      if (_searchQuery.isEmpty) return true;
-      final q = _searchQuery.toLowerCase();
-      final name = (c['full_name'] ?? '').toString().toLowerCase();
-      final email = (c['email'] ?? '').toString().toLowerCase();
-      final dept = (c['department_title'] ?? '').toString().toLowerCase();
-      return name.contains(q) || email.contains(q) || dept.contains(q);
-    }).toList();
+    final filtered = _getFilteredCounselors();
+    final activeCount = _counselors.where((c) => c['is_active'] == true).length;
+    final inactiveCount = _counselors.where((c) => c['is_active'] != true).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -547,31 +638,46 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
       ),
       body: Column(
         children: [
-          // ── Search & Filter Bar ──
+          // ── Search & Filter Chips Bar ──
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             color: Colors.white,
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) => setState(() => _searchQuery = val),
-              decoration: InputDecoration(
-                hintText: "Search counselor by name, email, or department...",
-                hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF94A3B8)),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                filled: true,
-                fillColor: const Color(0xFFF1F5F9),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val),
+                  decoration: InputDecoration(
+                    hintText: "Search counselor by name, email, or department...",
+                    hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF94A3B8)),
+                    prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                    filled: true,
+                    fillColor: const Color(0xFFF1F5F9),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Status Filter Chips
+                Row(
+                  children: [
+                    _buildFilterChip("All (${_counselors.length})", 'all'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip("Active ($activeCount)", 'active'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip("Inactive ($inactiveCount)", 'inactive'),
+                  ],
+                ),
+              ],
             ),
           ),
 
@@ -686,7 +792,7 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                                               fontFamily: 'Inter',
                                               fontSize: 11,
                                               fontWeight: FontWeight.w700,
-                                              color: isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                              color: isActive ? const Color(0xFF166534) : const Color(0xFF991B1B),
                                             ),
                                           ),
                                         ),
@@ -697,9 +803,24 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                                       children: [
                                         const Icon(Icons.email_outlined, size: 14, color: Color(0xFF64748B)),
                                         const SizedBox(width: 6),
-                                        Text(
-                                          c['email'] ?? '',
-                                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF475569)),
+                                        Expanded(
+                                          child: Text(
+                                            c['email'] ?? '',
+                                            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF475569)),
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Clipboard.setData(ClipboardData(text: c['email'] ?? ''));
+                                            HapticService.lightTap();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Email copied! 📋"), backgroundColor: Color(0xFF0284C7)),
+                                            );
+                                          },
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 4),
+                                            child: Icon(Icons.copy_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -757,6 +878,32 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                           ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String filterKey) {
+    final isSelected = _activeFilter == filterKey;
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        setState(() => _activeFilter = filterKey);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF64748B),
+          ),
+        ),
       ),
     );
   }
