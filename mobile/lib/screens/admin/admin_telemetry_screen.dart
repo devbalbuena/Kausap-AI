@@ -77,7 +77,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
               ),
             ),
             Text(
-              "Real-time token consumption & Neon cloud diagnostics",
+              "Real-time token metrics, AI inference & Neon cloud diagnostics",
               style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
             ),
           ],
@@ -131,12 +131,12 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // ── 1. Hero Card: AI LLM Token & Cost Telemetry ──
-                          _buildHeroSpendCard(),
+                          // ── 1. Hero Card: AI Intelligence & Token Throughput ──
+                          _buildHeroTokensCard(),
 
                           const SizedBox(height: 16),
 
-                          // ── 2. AI Performance & Guardrail Metrics ──
+                          // ── 2. AI Inference Speed & Guardrails ──
                           _buildAiPerformanceCard(),
 
                           const SizedBox(height: 16),
@@ -159,7 +159,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                                 child: _buildMetricTile(
                                   label: "Prompt / Input",
                                   count: "${_tokensData?['total_prompt_tokens'] ?? 0}",
-                                  rate: "Gemini Flash Input",
+                                  rate: "Student context & prompt input",
                                   color: const Color(0xFF0284C7),
                                   bg: const Color(0xFFE0F2FE),
                                   icon: Icons.input_rounded,
@@ -170,7 +170,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                                 child: _buildMetricTile(
                                   label: "Completion / Output",
                                   count: "${_tokensData?['total_completion_tokens'] ?? 0}",
-                                  rate: "Gemini Flash Output",
+                                  rate: "AI empathy response tokens",
                                   color: const Color(0xFF7C3AED),
                                   bg: const Color(0xFFEDE9FE),
                                   icon: Icons.output_rounded,
@@ -181,9 +181,9 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
 
                           const SizedBox(height: 20),
 
-                          // ── 4. 7-Day Daily Consumption Trends ──
+                          // ── 4. 7-Day AI Token Flow Trends ──
                           const Text(
-                            "7-Day Daily Consumption Trends",
+                            "7-Day Token Throughput Trends",
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w700,
@@ -197,12 +197,12 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
 
                           const SizedBox(height: 16),
 
-                          // ── 5. Institutional Cost Estimator ──
+                          // ── 5. AI Compute Efficiency Forecast ──
                           _buildCostEstimatorCard(),
 
                           const SizedBox(height: 20),
 
-                          // ── 6. Infrastructure & Neon Serverless Diagnostics ──
+                          // ── 6. Neon Serverless Pool Diagnostics ──
                           const Text(
                             "Infrastructure & Neon Pool Diagnostics",
                             style: TextStyle(
@@ -224,13 +224,11 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
     );
   }
 
-  Widget _buildHeroSpendCard() {
+  Widget _buildHeroTokensCard() {
+    final totalTokens = _tokensData?['total_tokens'] ?? 0;
+    final todayTokens = _tokensData?['today_tokens'] ?? 0;
     final totalCostPhp = (_tokensData?['total_cost_php'] ?? 0.0) as num;
     final totalCostUsd = (_tokensData?['total_cost_usd'] ?? 0.0) as num;
-    final todayCostPhp = (_tokensData?['today_cost_php'] ?? 0.0) as num;
-    final todayTokens = _tokensData?['today_tokens'] ?? 0;
-    const monthlyBudgetCapPhp = 1120.00; // ~ $20 USD monthly university cap
-    final budgetPercent = (totalCostPhp / monthlyBudgetCapPhp).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -252,7 +250,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                   Icon(Icons.hub_rounded, color: Color(0xFF38BDF8), size: 18),
                   SizedBox(width: 8),
                   Text(
-                    "AI LLM Token & Cost Telemetry",
+                    "AI Token Intelligence",
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w600,
@@ -281,91 +279,66 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            "₱${totalCostPhp.toStringAsFixed(2)} PHP",
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w800,
-              fontSize: 28,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
+          const SizedBox(height: 14),
+
+          // Primary Big Stat: Total Tokens
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                "$totalTokens",
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 32,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "Total Tokens Processed",
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF38BDF8),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 4),
           Text(
-            "≈ \$${totalCostUsd.toStringAsFixed(4)} USD total estimated expense",
+            "$todayTokens tokens processed today across student interactions",
             style: const TextStyle(fontFamily: 'Inter', color: Color(0xFF94A3B8), fontSize: 12),
           ),
           const SizedBox(height: 14),
 
-          // Monthly University Budget Cap Meter
+          // Cloud Efficiency & Budget Badge (Subtle efficiency display)
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white.withAlpha(12),
               borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Monthly University Budget Cap",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFFCBD5E1), fontWeight: FontWeight.w600),
-                    ),
-                    Text(
-                      "₱${monthlyBudgetCapPhp.toStringAsFixed(0)} PHP (\$20 USD)",
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Color(0xFF38BDF8), fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: budgetPercent == 0 ? 0.02 : budgetPercent,
-                    minHeight: 6,
-                    backgroundColor: Colors.white.withAlpha(20),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "${(budgetPercent * 100).toStringAsFixed(1)}% Consumed • ₱${(monthlyBudgetCapPhp - totalCostPhp).toStringAsFixed(2)} Remaining",
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF94A3B8)),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withAlpha(40),
-              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withAlpha(15)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Today's Spend: ₱${todayCostPhp.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    color: Color(0xFFE2E8F0),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.bolt_rounded, color: Color(0xFFFBBF24), size: 16),
+                    SizedBox(width: 6),
+                    Text(
+                      "Cloud Efficiency",
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFFE2E8F0), fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
                 Text(
-                  "$todayTokens tokens today",
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    color: Color(0xFF38BDF8),
-                    fontSize: 11.5,
-                  ),
+                  "≈ ₱${totalCostPhp.toStringAsFixed(4)} PHP (\$${totalCostUsd.toStringAsFixed(4)} USD)",
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: Color(0xFF38BDF8), fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -473,7 +446,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                 Expanded(
                   flex: 3,
                   child: Text(
-                    "Tokens",
+                    "Total Tokens",
                     textAlign: TextAlign.right,
                     style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
                   ),
@@ -481,7 +454,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                 Expanded(
                   flex: 3,
                   child: Text(
-                    "Cost (PHP)",
+                    "Prompt / Output",
                     textAlign: TextAlign.right,
                     style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
                   ),
@@ -494,13 +467,17 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
               padding: EdgeInsets.all(20),
               child: Center(
                 child: Text(
-                  "No daily token usage recorded in the past 7 days.",
+                  "No daily token activity recorded in the past 7 days.",
                   style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
                 ),
               ),
             )
           else
             ...dailyTrends.map((trend) {
+              final prompt = trend['prompt_tokens'] ?? 0;
+              final completion = trend['completion_tokens'] ?? 0;
+              final total = trend['total_tokens'] ?? 0;
+
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: const BoxDecoration(
@@ -518,7 +495,7 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                     Expanded(
                       flex: 3,
                       child: Text(
-                        "${trend['total_tokens']}",
+                        "$total",
                         textAlign: TextAlign.right,
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF0284C7), fontWeight: FontWeight.w600),
                       ),
@@ -526,9 +503,9 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
                     Expanded(
                       flex: 3,
                       child: Text(
-                        "₱${(trend['cost_php'] ?? 0.0).toStringAsFixed(4)}",
+                        "$prompt / $completion",
                         textAlign: TextAlign.right,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF16A34A), fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -557,12 +534,12 @@ class _AdminTelemetryScreenState extends State<AdminTelemetryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Institutional Budget Forecast",
+                  "High-Throughput Intelligence",
                   style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFF166534)),
                 ),
                 SizedBox(height: 2),
                 Text(
-                  "1,000 student check-in conversations cost only ~₱45.00 PHP (\$0.80 USD) on Gemini 2.0 Flash.",
+                  "1,000 student check-in conversations consume ~150,000 tokens with zero campus hardware overhead.",
                   style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF15803D)),
                 ),
               ],
