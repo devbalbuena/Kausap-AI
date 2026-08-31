@@ -412,18 +412,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Check if already logged offline today
     final offlineMood = await OfflineMoodQueue().getTodayOfflineMood();
     if (offlineMood != null) {
-      if (mounted) setState(() => _todayMoodLevel = offlineMood);
+      if (mounted) {
+        setState(() {
+          _todayMoodLevel = offlineMood;
+          _dailyQuests[0]['completed'] = true;
+        });
+      }
       return;
     }
 
     try {
-      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final now = DateTime.now();
       final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       if (moodData is List) {
-        final loggedToday = moodData.any(
-          (e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false,
-        );
-        if (loggedToday) return; // Already logged — skip popup
+        final todayEntries = moodData.where((e) {
+          final dt = _parseDateLocal(e['created_at']);
+          return dt != null &&
+              dt.year == now.year &&
+              dt.month == now.month &&
+              dt.day == now.day;
+        }).toList();
+
+        if (todayEntries.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              _todayMoodLevel = (todayEntries.first['mood_level'] as num?)?.toInt();
+              _dailyQuests[0]['completed'] = true;
+            });
+          }
+          return; // Already logged — skip popup
+        }
       }
     } catch (_) {
       return; // On error, don't bother the user
@@ -439,18 +457,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     int? todayLevel;
 
     try {
-      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final now = DateTime.now();
+      final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
-      // 1. Check mood from API
+      // 1. Check mood from API with timezone-accurate local date comparison
       try {
         final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
         if (moodData is List) {
-          final todayEntries = moodData.where(
-            (e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false,
-          ).toList();
+          final todayEntries = moodData.where((e) {
+            final dt = _parseDateLocal(e['created_at']);
+            return dt != null &&
+                dt.year == now.year &&
+                dt.month == now.month &&
+                dt.day == now.day;
+          }).toList();
+
           if (todayEntries.isNotEmpty) {
             moodCompleted = true;
-            // API returns newest first
             todayLevel = (todayEntries.first['mood_level'] as num?)?.toInt();
           }
         }
@@ -484,7 +507,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if (savedMindfulness == 'completed') {
         mindfulnessCompleted = true;
       }
-
     } catch (_) {}
 
     if (mounted) {

@@ -296,13 +296,30 @@ class _ActivityScreenState extends State<ActivityScreen> {
     await _storage.write(key: 'favorite_activities', value: jsonEncode(_favoriteIds.toList()));
   }
 
+  DateTime? _parseDateLocal(dynamic created) {
+    if (created == null) return null;
+    try {
+      final str = created.toString();
+      final dt = DateTime.parse(str);
+      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _loadStatsAndMood() async {
     // Check mood from API or offline
     try {
-      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final now = DateTime.now();
       final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       if (moodData is List) {
-        final todayEntries = moodData.where((e) => (e['created_at'] as String?)?.startsWith(todayStr) ?? false).toList();
+        final todayEntries = moodData.where((e) {
+          final dt = _parseDateLocal(e['created_at']);
+          return dt != null &&
+              dt.year == now.year &&
+              dt.month == now.month &&
+              dt.day == now.day;
+        }).toList();
         if (todayEntries.isNotEmpty && mounted) {
           setState(() {
             _todayMoodLevel = (todayEntries.first['mood_level'] as num?)?.toInt();
