@@ -115,7 +115,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
       case 3:
         return 'Publish mental health articles for Urian students';
       case 4:
-        return 'RA 11036 compliance logs of counselor actions';
+        return 'Institutional audit trail of guidance actions';
       case 0:
       default:
         return counselorName.isNotEmpty ? '$counselorName • $deptTitle' : deptTitle;
@@ -432,7 +432,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    "Monitor student emotional health, review AI crisis escalations, and publish psychoeducation resources in compliance with RA 11036.",
+                    "Monitor student emotional health, review AI crisis escalations, and publish psychoeducation resources.",
                     style: TextStyle(
                       fontFamily: 'Inter',
                       color: Color(0xFFE0F2FE),
@@ -673,7 +673,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
               iconColor: const Color(0xFF6366F1),
               iconBg: const Color(0xFFEEF2FF),
               title: "Clinical Audit Trail",
-              subtitle: "Review immutable logs of counselor actions for RA 11036 compliance",
+              subtitle: "Review recorded counselor actions and clinical logs",
               onTap: () {
                 HapticService.lightTap();
                 setState(() => _selectedTabIndex = 4);
@@ -707,7 +707,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: Colors.white.withAlpha(30),
                             borderRadius: BorderRadius.circular(12),
@@ -730,7 +730,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
                               ),
                               SizedBox(height: 2),
                               Text(
-                                "Generate official RA 11036 emotional climate summary for administration",
+                                "Generate campus emotional climate summary for administration",
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 11,
@@ -1319,7 +1319,7 @@ All crisis escalations and student logs have been handled in accordance with the
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Report generated and ready for institutional filing (RA 11036). ✅"),
+                            content: Text("Report generated and ready for institutional filing. ✅"),
                             backgroundColor: Color(0xFF0284C7),
                           ),
                         );

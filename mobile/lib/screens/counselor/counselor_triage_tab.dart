@@ -345,7 +345,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: "Custom Clinical Note *",
-                    hintText: "Add specific counseling intake notes for RA 11036 compliance...",
+                    hintText: "Add clinical intake & session notes...",
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),

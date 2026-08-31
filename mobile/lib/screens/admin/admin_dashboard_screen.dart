@@ -833,7 +833,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 icon: Icons.verified_user_rounded,
                 iconColor: const Color(0xFF16A34A),
                 iconBg: const Color(0xFFDCFCE7),
-                title: 'RA 11036 Data Governance',
+                title: 'Data Privacy & Institutional Governance',
                 subtitle: 'Export platform compliance audits, PHQ-9 trends & cloud health',
                 onTap: () {
                   HapticService.lightTap();
@@ -891,7 +891,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 8),
                     _buildHealthRow("AI Wellness Companion", "Google Gemini AI Guardrails Active", const Color(0xFF16A34A)),
                     const SizedBox(height: 8),
-                    _buildHealthRow("Data Protection", "RA 11036 & RA 10173 Encrypted", const Color(0xFF16A34A)),
+                    _buildHealthRow("Data Protection", "Encrypted & Access Controlled", const Color(0xFF16A34A)),
                   ],
                 ),
               ),

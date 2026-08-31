@@ -52,16 +52,37 @@ def create_mood_entry(
         else:
             emotions_str = str(payload.emotions)
 
-    entry = MoodEntry(
-        user_id=current_user.id,
-        mood_level=payload.mood_level,
-        emotions=emotions_str,
-        intensity=payload.intensity,
-        note=payload.note,
-    )
-    session.add(entry)
-    session.commit()
-    session.refresh(entry)
+    # ── Safe-guard: Check if user already logged in the last 18 hours (same day) ──
+    same_day_window = datetime.utcnow() - timedelta(hours=18)
+    existing_today = session.exec(
+        select(MoodEntry)
+        .where(
+            MoodEntry.user_id == current_user.id,
+            MoodEntry.created_at >= same_day_window,
+        )
+        .order_by(MoodEntry.created_at.desc())
+    ).first()
+
+    if existing_today:
+        existing_today.mood_level = payload.mood_level
+        existing_today.emotions = emotions_str
+        existing_today.intensity = payload.intensity
+        existing_today.note = payload.note
+        session.add(existing_today)
+        session.commit()
+        session.refresh(existing_today)
+        entry = existing_today
+    else:
+        entry = MoodEntry(
+            user_id=current_user.id,
+            mood_level=payload.mood_level,
+            emotions=emotions_str,
+            intensity=payload.intensity,
+            note=payload.note,
+        )
+        session.add(entry)
+        session.commit()
+        session.refresh(entry)
 
     # ── Multi-Tier Consecutive Rough Mood Escalation (RA 11036) ──
     try:
