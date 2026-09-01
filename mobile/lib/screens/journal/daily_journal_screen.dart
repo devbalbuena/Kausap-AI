@@ -30,6 +30,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
   
   bool _isSaving = false;
   bool _isListening = false;
+  bool _isDisposed = false;  // Guard against setState after dispose
   Timer? _speechTimer;
 
   String _selectedMoodTag = '🌿 Calm';
@@ -67,8 +68,11 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _speechTimer?.cancel();
-    _stopSpeechRecognition();
+    _speechTimer = null;
+    // Stop speech recognition without calling setState (widget already disposed)
+    _stopSpeechEngineOnly();
     _journalController.dispose();
     super.dispose();
   }
@@ -158,10 +162,18 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
   }
 
   void _stopSpeechRecognition() {
-    setState(() => _isListening = false);
+    if (!_isDisposed && mounted) {
+      setState(() => _isListening = false);
+    } else {
+      _isListening = false;
+    }
     _speechTimer?.cancel();
     _speechTimer = null;
+    _stopSpeechEngineOnly();
+  }
 
+  /// Stops the JS speech engine only — safe to call from dispose() without setState
+  void _stopSpeechEngineOnly() {
     if (kIsWeb) {
       try {
         js.context.callMethod('eval', [

@@ -488,15 +488,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
       }
 
-      // 2. Check journal (from local storage and cloud API)
+      // 2. Check journal — local storage first (written on every save), then API
       final storage = const FlutterSecureStorage();
       final savedJournal = await storage.read(key: 'journal_$todayStr');
       if (savedJournal != null && savedJournal.trim().isNotEmpty) {
         journalCompleted = true;
       } else {
+        // Backend returns List[JournalRead], NOT a single Map — check the list length
         try {
           final jToday = await ApiClient().get(ApiConfig.journalToday, silent: true);
-          if (jToday is Map && jToday['content'] != null && jToday['content'].toString().trim().isNotEmpty) {
+          if (jToday is List && jToday.isNotEmpty) {
+            journalCompleted = true;
+            // Cache the first entry content locally so future refreshes are instant
+            final firstContent = jToday.first['content']?.toString() ?? '';
+            if (firstContent.trim().isNotEmpty) {
+              await storage.write(key: 'journal_$todayStr', value: firstContent);
+            }
+          } else if (jToday is Map &&
+              jToday['content'] != null &&
+              jToday['content'].toString().trim().isNotEmpty) {
+            // Fallback: old single-object shape (future-proof)
             journalCompleted = true;
           }
         } catch (_) {}
@@ -511,7 +522,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     if (mounted) {
       setState(() {
-        _todayMoodLevel = todayLevel;
+        // Only update mood level if the API actually returned one this call;
+        // otherwise preserve the existing value so it isn't reset to null on refresh.
+        if (todayLevel != null) _todayMoodLevel = todayLevel;
         _dailyQuests[0]['completed'] = moodCompleted;
         _dailyQuests[1]['completed'] = journalCompleted;
         _dailyQuests[2]['completed'] = mindfulnessCompleted;
