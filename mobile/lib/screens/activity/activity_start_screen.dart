@@ -436,7 +436,7 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
         activity: widget.activity,
         onComplete: _completeActivity,
       );
-    } else if (cat == 'meditation' || title.contains('meditation') || title.contains('compassion')) {
+    } else if (cat == 'meditation' || title.contains('meditation') || title.contains('unwind')) {
       return MeditationPlayerWidget(
         activity: widget.activity,
         onComplete: _completeActivity,

@@ -73,7 +73,7 @@ const activityList = [
   ActivityItem(
     id: '4-7-8-breathing',
     title: '4-7-8 Relaxing Breath',
-    description: 'A quick, powerful technique to ease anxiety and prepare for restful sleep.',
+    description: 'Best for sleep & anxiety — inhale 4s → hold 7s → exhale 8s. A natural nervous system reset.',
     duration: '5 min',
     difficulty: 'Easy',
     category: 'Breathing',
@@ -85,19 +85,20 @@ const activityList = [
       ActivityTag(label: 'Sleep', bg: Color(0xFFE0E7FF), border: Color(0xFFC7D2FE), text: Color(0xFF3730A3)),
     ],
     whatIsThis:
-        'The 4-7-8 breathing technique, developed by Dr. Andrew Weil, involves inhaling for 4 seconds, '
-        'holding for 7 seconds, and exhaling slowly for 8 seconds. It serves as a natural tranquilizer for your nervous system.',
+        'The 4-7-8 technique (developed by Dr. Andrew Weil) is your go-to before bed or during an anxiety spike. '
+        'Inhale 4 sec → hold 7 sec → exhale 8 sec. The long exhale activates your parasympathetic nervous system, '
+        'slowing your heart rate and signaling safety to your brain.',
     steps: [
-      ActivityStep(number: 1, title: 'Inhale Quietly', description: 'Close your mouth and inhale quietly through your nose for 4 seconds.'),
-      ActivityStep(number: 2, title: 'Hold Breath', description: 'Hold your breath comfortably for a count of 7 seconds.'),
-      ActivityStep(number: 3, title: 'Exhale Completely', description: 'Exhale completely through your mouth with a gentle whoosh sound for 8 seconds.'),
-      ActivityStep(number: 4, title: 'Repeat Cycles', description: 'Repeat this sequence for 4 cycles to feel your heart rate stabilize.'),
+      ActivityStep(number: 1, title: 'Inhale (4s)', description: 'Close your mouth and inhale quietly through your nose for 4 counts.'),
+      ActivityStep(number: 2, title: 'Hold (7s)', description: 'Hold your breath comfortably for 7 counts. This is the calming phase.'),
+      ActivityStep(number: 3, title: 'Exhale (8s)', description: 'Release all the air through your mouth with a soft whoosh for 8 counts.'),
+      ActivityStep(number: 4, title: 'Repeat x4', description: 'Do 4 complete cycles. After each round feel how your body settles.'),
     ],
   ),
   ActivityItem(
     id: 'box-breathing',
     title: 'Box Breathing (4-4-4-4)',
-    description: 'Master your focus and calm pre-exam panic with equal-duration breathing.',
+    description: 'Best for focus & exams — inhale 4s → hold 4s → exhale 4s → hold 4s. Equal rhythm, clear mind.',
     duration: '5 min',
     difficulty: 'Easy',
     category: 'Breathing',
@@ -109,13 +110,15 @@ const activityList = [
       ActivityTag(label: 'Grounding', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
     ],
     whatIsThis:
-        'Also known as square breathing, Box Breathing is used by top performers and first responders '
-        'to heighten mental clarity, lower cortisol, and instantly regain control during high-stress moments.',
+        'Box Breathing (also called square breathing) is used by Navy SEALs, surgeons, and top athletes '
+        'to instantly sharpen focus and reset under pressure. Each side of the "box" is 4 seconds — '
+        'inhale, hold, exhale, hold — creating a perfectly balanced rhythm that quiets cortisol and clears mental fog. '
+        'Do it right before entering an exam room or a stressful class.',
     steps: [
-      ActivityStep(number: 1, title: 'Inhale', description: 'Breathe in slowly through your nose for 4 seconds, feeling your lungs fill.'),
-      ActivityStep(number: 2, title: 'Hold', description: 'Hold your breath gently at the top for 4 seconds without straining.'),
-      ActivityStep(number: 3, title: 'Exhale', description: 'Release the air smoothly through your mouth for 4 seconds.'),
-      ActivityStep(number: 4, title: 'Hold Empty', description: 'Hold your lungs empty for 4 seconds before the next breath.'),
+      ActivityStep(number: 1, title: 'Inhale (4s)', description: 'Breathe in steadily through your nose for 4 counts, feeling your chest expand.'),
+      ActivityStep(number: 2, title: 'Hold Top (4s)', description: 'Hold gently at the top for 4 counts. Feel the stillness.'),
+      ActivityStep(number: 3, title: 'Exhale (4s)', description: 'Release air smoothly through your mouth for 4 counts.'),
+      ActivityStep(number: 4, title: 'Hold Empty (4s)', description: 'Hold with empty lungs for 4 counts. This completes one box. Repeat 4–6 times.'),
     ],
   ),
   ActivityItem(
@@ -145,8 +148,8 @@ const activityList = [
   ),
   ActivityItem(
     id: 'guided-meditation',
-    title: 'Guided Body Scan & Calm',
-    description: 'Release deep physical tension in your shoulders and neck after long study sessions.',
+    title: 'Unwind & Restore Meditation',
+    description: 'Release shoulder and neck tension built up after long study sessions with a guided 15-minute sit.',
     duration: '15 min',
     difficulty: 'Medium',
     category: 'Meditation',
@@ -158,36 +161,40 @@ const activityList = [
       ActivityTag(label: 'Restoration', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
     ],
     whatIsThis:
-        'A body scan meditation systematically directs focused attention to different areas of your body, '
-        'noticing sensations without judgment to release accumulated academic fatigue and tightness.',
+        'After hours of staring at screens and hunching over books, your body holds physical tension '
+        'without you realizing it. This guided meditation walks you through a slow, intentional release — '
+        'starting from your breath, moving into each area of tension, and ending in complete stillness. '
+        'No devices, no scanning — just you, your breath, and 15 minutes of genuine rest.',
     steps: [
-      ActivityStep(number: 1, title: 'Settle In', description: 'Sit comfortably or lie down. Soften your jaw and let your eyes close.'),
-      ActivityStep(number: 2, title: 'Scan from Feet Up', description: 'Notice sensations in your toes, moving gently up through your legs.'),
-      ActivityStep(number: 3, title: 'Release Shoulders', description: 'Exhale deeply, dropping your shoulders and unclasping your hands.'),
-      ActivityStep(number: 4, title: 'Full Body Peace', description: 'Feel your entire body resting in calm, grounded stillness.'),
+      ActivityStep(number: 1, title: 'Settle In', description: 'Sit comfortably or lie down. Close your eyes, unclench your jaw, and let your shoulders drop.'),
+      ActivityStep(number: 2, title: 'Slow Your Breath', description: 'Take 3 deep breaths. With each exhale, let your muscles soften a little more.'),
+      ActivityStep(number: 3, title: 'Release Tension Points', description: 'Bring attention to your neck, shoulders, and hands. Consciously relax each one as you breathe out.'),
+      ActivityStep(number: 4, title: 'Rest in Stillness', description: 'Let go of any effort. Stay in quiet awareness for the remaining time, returning to breath if thoughts arise.'),
     ],
   ),
   ActivityItem(
-    id: 'self-compassion-break',
-    title: 'Self-Compassion & Affirmation Break',
-    description: 'Cultivate kindness towards yourself when facing tough academic challenges or burnout.',
+    id: 'progressive-muscle-relaxation',
+    title: 'Progressive Muscle Relaxation',
+    description: 'Tense and release each muscle group from feet to shoulders to melt away study stress fast.',
     duration: '8 min',
     difficulty: 'Easy',
-    category: 'Meditation',
-    icon: Icons.favorite_rounded,
+    category: 'Grounding',
+    icon: Icons.accessibility_new_rounded,
     gradient: [Color(0xFF9333EA), Color(0xFFC084FC)],
     tags: [
-      ActivityTag(label: 'Self-Care', bg: Color(0xFFFCE7F3), border: Color(0xFFFBCFE8), text: Color(0xFF9D174D)),
+      ActivityTag(label: 'Tension Relief', bg: Color(0xFFE0E7FF), border: Color(0xFFC7D2FE), text: Color(0xFF3730A3)),
       ActivityTag(label: 'Burnout', bg: Color(0xFFFEF3C7), border: Color(0xFFFDE68A), text: Color(0xFF92400E)),
-      ActivityTag(label: 'Confidence', bg: Color(0xFFE0F2FE), border: Color(0xFFBAE6FD), text: Color(0xFF0369A1)),
+      ActivityTag(label: 'Relaxation', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
     ],
     whatIsThis:
-        'Designed by Dr. Kristin Neff, this practice helps students acknowledge difficult moments '
-        'with kindness rather than harsh self-criticism, fostering emotional resilience and motivation.',
+        'Progressive Muscle Relaxation (PMR) is a proven technique where you deliberately tense then release '
+        'specific muscle groups in sequence. The contrast between tension and release helps your body recognize '
+        'and let go of stress it has been holding unconsciously. Ideal after long classes or before an exam.',
     steps: [
-      ActivityStep(number: 1, title: 'Acknowledge the Struggle', description: 'Place a warm hand over your heart and silently say: "This is a moment of challenge."'),
-      ActivityStep(number: 2, title: 'Common Humanity', description: 'Remind yourself: "Struggling is part of the human journey. I am not alone."'),
-      ActivityStep(number: 3, title: 'Kind Affirmation', description: 'Offer yourself comforting words: "May I be kind to myself and give myself patience."'),
+      ActivityStep(number: 1, title: 'Feet & Calves', description: 'Curl your toes tightly for 5 seconds, then release. Feel the warmth flood in as the tension leaves.'),
+      ActivityStep(number: 2, title: 'Thighs & Hips', description: 'Squeeze your thigh muscles firmly for 5 seconds, then let go completely. Notice the difference.'),
+      ActivityStep(number: 3, title: 'Hands & Arms', description: 'Make tight fists and tense your forearms for 5 seconds, then release. Let your hands rest open.'),
+      ActivityStep(number: 4, title: 'Shoulders & Neck', description: 'Shrug your shoulders up to your ears for 5 seconds, then drop them. This is where most study tension hides.'),
     ],
   ),
   ActivityItem(
@@ -402,16 +409,20 @@ class _ActivityScreenState extends State<ActivityScreen> {
   ActivityItem _getRecommendedActivity() {
     if (_todayMoodLevel != null) {
       if (_todayMoodLevel! <= 1) {
+        // Very low mood → grounding to anchor back to the present
         return activityList.firstWhere((a) => a.id == '5-4-3-2-1-grounding');
       } else if (_todayMoodLevel! == 2) {
+        // Low mood → box breathing to regain calm and control
         return activityList.firstWhere((a) => a.id == 'box-breathing');
       } else if (_todayMoodLevel! == 3) {
-        return activityList.firstWhere((a) => a.id == 'self-compassion-break');
+        // Neutral → PMR to release hidden body tension
+        return activityList.firstWhere((a) => a.id == 'progressive-muscle-relaxation');
       } else {
+        // Good/great mood → gratitude to reinforce positive mindset
         return activityList.firstWhere((a) => a.id == 'gratitude-journal');
       }
     }
-    return activityList[0]; // Default 4-7-8
+    return activityList[0]; // Default: 4-7-8 Relaxing Breath
   }
 
   List<ActivityItem> get _filteredActivities {
@@ -854,6 +865,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   // ── Mindful Stats Bar ─────────────────────────────────────────────────────
   Widget _buildMindfulStatsBar() {
+    final hasStreak = _activityStreak > 0;
+    final hasMinutes = _totalMindfulMinutesThisWeek > 0;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -871,35 +885,55 @@ class _ActivityScreenState extends State<ActivityScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
+          // ── Streak ──
           Row(
             children: [
-              Text(_activityStreak > 0 ? '🔥' : '🌱', style: const TextStyle(fontSize: 18)),
+              Text(hasStreak ? '🔥' : '🌱', style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _activityStreak == 1 ? '1 Day' : '$_activityStreak Days',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                    hasStreak
+                        ? (_activityStreak == 1 ? '1 Day' : '$_activityStreak Days')
+                        : 'Start today!',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: hasStreak ? 13 : 12,
+                      fontWeight: FontWeight.w700,
+                      color: hasStreak ? const Color(0xFF0F172A) : const Color(0xFF0284C7),
+                    ),
                   ),
-                  const Text('Active Streak', style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
+                  Text(
+                    hasStreak ? 'Active Streak' : 'No streak yet',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                  ),
                 ],
               ),
             ],
           ),
           Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+          // ── Minutes ──
           Row(
             children: [
-              const Text('⏱️', style: TextStyle(fontSize: 18)),
+              Text(hasMinutes ? '⏱️' : '✨', style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$_totalMindfulMinutesThisWeek mins',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                    hasMinutes ? '$_totalMindfulMinutesThisWeek mins' : 'Complete one!',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: hasMinutes ? 13 : 12,
+                      fontWeight: FontWeight.w700,
+                      color: hasMinutes ? const Color(0xFF0F172A) : const Color(0xFF0284C7),
+                    ),
                   ),
-                  const Text('This Week', style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B))),
+                  Text(
+                    hasMinutes ? 'This Week' : 'This Week',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                  ),
                 ],
               ),
             ],
