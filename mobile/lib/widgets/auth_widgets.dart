@@ -331,11 +331,11 @@ class _MascotFacePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final pawPaint = Paint()
-      ..color = Colors.white
+      ..color = const Color(0xFF1A2E4A)
       ..style = PaintingStyle.fill;
 
     final pawShadowPaint = Paint()
-      ..color = const Color(0xFF0077B6).withAlpha(60)
+      ..color = const Color(0xFF0A1929).withAlpha(120)
       ..style = PaintingStyle.fill;
 
     final isBlinking = progress > 0.47 && progress < 0.53;
