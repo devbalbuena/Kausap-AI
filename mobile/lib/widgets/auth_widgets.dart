@@ -6,7 +6,11 @@ import '../../utils/haptic_service.dart';
 
 /// Interactive Animated Kausap AI Companion Mascot ("Kausap Buddy")
 /// Gently floats, breathes calmly in a soothing rhythm, blinks,
-/// and responds to user taps AND typing in email/password with joyful wiggles, sparkles, and uplifting affirmations!
+/// and responds interactively to:
+/// - Typing in password: covers eyes with cute paws ("Peek-a-boo" 🙈)
+/// - Toggling password view: peeks with one eye open (🫣)
+/// - Typing in email: looks down attentively at the input field (👀)
+/// - User taps: joyful wiggles, sparkles, and uplifting affirmations!
 class KausapBuddyMascot extends StatefulWidget {
   const KausapBuddyMascot({super.key});
 
@@ -17,10 +21,16 @@ class KausapBuddyMascot extends StatefulWidget {
 class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProviderStateMixin {
   late AnimationController _floatController;
   late AnimationController _bounceController;
+  late AnimationController _handsCoverController;
   late Animation<double> _floatAnim;
   late Animation<double> _pulseAnim;
   late Animation<double> _bounceAnim;
   late Animation<double> _wiggleAnim;
+  late Animation<double> _handsCoverAnim;
+
+  bool _isPasswordFocused = false;
+  bool _isPasswordVisible = false;
+  bool _isEmailFocused = false;
 
   int _affirmationIndex = 0;
   bool _showAffirmation = false;
@@ -33,9 +43,9 @@ class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProvide
     "Take a gentle, deep breath 🌿",
     "I'm so glad you're here! 💙",
     "One step at a time 🌱",
-    "You are worthy and loved 💖",
+    "Your safe space is here 🌸",
     "Welcome back, friend! 🌟",
-    "Peace begins with a smile 🌸",
+    "Peace begins with a smile 💖",
   ];
 
   @override
@@ -70,6 +80,16 @@ class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProvide
       TweenSequenceItem(tween: Tween(begin: -0.12, end: 0.12).chain(CurveTween(curve: Curves.easeInOut)), weight: 50),
       TweenSequenceItem(tween: Tween(begin: 0.12, end: 0.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 25),
     ]).animate(_bounceController);
+
+    _handsCoverController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _handsCoverAnim = CurvedAnimation(
+      parent: _handsCoverController,
+      curve: Curves.easeOutBack,
+    );
   }
 
   @override
@@ -77,12 +97,36 @@ class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProvide
     _dismissTimer?.cancel();
     _floatController.dispose();
     _bounceController.dispose();
+    _handsCoverController.dispose();
     super.dispose();
   }
 
-  /// Trigger mood boost from mascot tap or email/password input activity
+  /// Sets mascot focus when student interacts with password field
+  void setPasswordFocus({required bool focused, required bool isVisible}) {
+    setState(() {
+      _isPasswordFocused = focused;
+      _isPasswordVisible = isVisible;
+    });
+
+    if (focused && !isVisible) {
+      _handsCoverController.forward();
+    } else if (focused && isVisible) {
+      // Peeking mode: partial hand cover
+      _handsCoverController.animateTo(0.45);
+    } else {
+      _handsCoverController.reverse();
+    }
+  }
+
+  /// Sets mascot focus when student interacts with email field
+  void setEmailFocus(bool focused) {
+    setState(() {
+      _isEmailFocused = focused;
+    });
+  }
+
+  /// Trigger mood boost from mascot tap or typing activity
   void triggerMoodBoost({String? customMessage, bool isTyping = false}) {
-    // If triggered by typing, throttle so it triggers smoothly without overwhelming
     if (isTyping) {
       final now = DateTime.now();
       if (now.difference(_lastTypingTrigger).inMilliseconds < 1800) {
@@ -155,7 +199,7 @@ class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProvide
           onTap: () => triggerMoodBoost(),
           behavior: HitTestBehavior.opaque,
           child: AnimatedBuilder(
-            animation: Listenable.merge([_floatController, _bounceController]),
+            animation: Listenable.merge([_floatController, _bounceController, _handsCoverController]),
             builder: (context, child) {
               return Transform.translate(
                 offset: Offset(0, _floatAnim.value),
@@ -164,8 +208,8 @@ class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProvide
                   child: Transform.scale(
                     scale: _pulseAnim.value * _bounceAnim.value,
                     child: Container(
-                      width: 64,
-                      height: 64,
+                      width: 68,
+                      height: 68,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
@@ -175,8 +219,8 @@ class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProvide
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF00B4D8).withAlpha(80),
-                            blurRadius: 20,
+                            color: const Color(0xFF00B4D8).withAlpha(90),
+                            blurRadius: 22,
                             spreadRadius: 3,
                             offset: const Offset(0, 6),
                           ),
@@ -185,22 +229,28 @@ class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProvide
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Small sprout leaf / star at the top
+                          // Small sprout antenna leaf at the top
                           Positioned(
                             top: 4,
                             child: Container(
-                              width: 6,
-                              height: 6,
+                              width: 7,
+                              height: 7,
                               decoration: const BoxDecoration(
                                 color: Color(0xFFBEE3F8),
                                 shape: BoxShape.circle,
                               ),
                             ),
                           ),
-                          // Expressive mascot face
+                          // Expressive mascot face with Peek-a-boo eyes & paws
                           CustomPaint(
-                            size: const Size(40, 40),
-                            painter: _MascotFacePainter(progress: _floatController.value),
+                            size: const Size(48, 48),
+                            painter: _MascotFacePainter(
+                              progress: _floatController.value,
+                              handsProgress: _handsCoverAnim.value,
+                              isPasswordFocused: _isPasswordFocused,
+                              isPasswordVisible: _isPasswordVisible,
+                              isEmailFocused: _isEmailFocused,
+                            ),
                           ),
                         ],
                       ),
@@ -248,10 +298,21 @@ class KausapBuddyMascotState extends State<KausapBuddyMascot> with TickerProvide
   }
 }
 
-/// Custom painter for the expressive friendly mascot face
+/// Custom painter for the expressive friendly mascot face with Peek-a-boo hands
 class _MascotFacePainter extends CustomPainter {
   final double progress;
-  _MascotFacePainter({required this.progress});
+  final double handsProgress;
+  final bool isPasswordFocused;
+  final bool isPasswordVisible;
+  final bool isEmailFocused;
+
+  _MascotFacePainter({
+    required this.progress,
+    required this.handsProgress,
+    required this.isPasswordFocused,
+    required this.isPasswordVisible,
+    required this.isEmailFocused,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -266,13 +327,45 @@ class _MascotFacePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final blushPaint = Paint()
-      ..color = const Color(0xFFFFB4A2).withAlpha(140)
+      ..color = const Color(0xFFFFB4A2).withAlpha(150)
+      ..style = PaintingStyle.fill;
+
+    final pawPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final pawShadowPaint = Paint()
+      ..color = const Color(0xFF0077B6).withAlpha(60)
       ..style = PaintingStyle.fill;
 
     final isBlinking = progress > 0.47 && progress < 0.53;
 
-    if (isBlinking) {
-      // Happy curved closed eye arcs when blinking
+    // ── Eye Rendering ──
+    if (isPasswordFocused && !isPasswordVisible) {
+      // Both eyes shut closed happily when secret password is being entered 🙈
+      final leftArc = Path()
+        ..moveTo(size.width * 0.22, size.height * 0.44)
+        ..quadraticBezierTo(size.width * 0.33, size.height * 0.36, size.width * 0.44, size.height * 0.44);
+      final rightArc = Path()
+        ..moveTo(size.width * 0.56, size.height * 0.44)
+        ..quadraticBezierTo(size.width * 0.67, size.height * 0.36, size.width * 0.78, size.height * 0.44);
+      canvas.drawPath(leftArc, mouthPaint);
+      canvas.drawPath(rightArc, mouthPaint);
+    } else if (isPasswordFocused && isPasswordVisible) {
+      // Peeking mode: Left eye shut, Right eye open peeking through 🫣
+      final leftArc = Path()
+        ..moveTo(size.width * 0.22, size.height * 0.44)
+        ..quadraticBezierTo(size.width * 0.33, size.height * 0.36, size.width * 0.44, size.height * 0.44);
+      canvas.drawPath(leftArc, mouthPaint);
+
+      // Right eye peeking open with sparkle
+      canvas.drawCircle(Offset(size.width * 0.67, size.height * 0.42), 3.8, eyePaint);
+      final shinePaint = Paint()..color = const Color(0xFF0077B6);
+      canvas.drawCircle(Offset(size.width * 0.68, size.height * 0.43), 1.7, shinePaint);
+      final glintPaint = Paint()..color = Colors.white;
+      canvas.drawCircle(Offset(size.width * 0.64, size.height * 0.40), 1.2, glintPaint);
+    } else if (isBlinking) {
+      // Normal blinking arcs
       final leftArc = Path()
         ..moveTo(size.width * 0.22, size.height * 0.44)
         ..quadraticBezierTo(size.width * 0.33, size.height * 0.36, size.width * 0.44, size.height * 0.44);
@@ -282,33 +375,61 @@ class _MascotFacePainter extends CustomPainter {
       canvas.drawPath(leftArc, mouthPaint);
       canvas.drawPath(rightArc, mouthPaint);
     } else {
+      // Looking down slightly when email is focused 👀
+      final double eyeOffsetY = isEmailFocused ? 2.5 : 0.0;
+
       // Big sparkling anime-style expressive round eyes
-      canvas.drawCircle(Offset(size.width * 0.33, size.height * 0.42), 3.6, eyePaint);
-      canvas.drawCircle(Offset(size.width * 0.67, size.height * 0.42), 3.6, eyePaint);
+      canvas.drawCircle(Offset(size.width * 0.33, size.height * 0.42 + eyeOffsetY), 3.8, eyePaint);
+      canvas.drawCircle(Offset(size.width * 0.67, size.height * 0.42 + eyeOffsetY), 3.8, eyePaint);
 
       // Star sparkle catchlights inside eyes
       final shinePaint = Paint()..color = const Color(0xFF0077B6);
-      canvas.drawCircle(Offset(size.width * 0.34, size.height * 0.43), 1.6, shinePaint);
-      canvas.drawCircle(Offset(size.width * 0.68, size.height * 0.43), 1.6, shinePaint);
+      canvas.drawCircle(Offset(size.width * 0.34, size.height * 0.43 + eyeOffsetY), 1.7, shinePaint);
+      canvas.drawCircle(Offset(size.width * 0.68, size.height * 0.43 + eyeOffsetY), 1.7, shinePaint);
 
       final glintPaint = Paint()..color = Colors.white;
-      canvas.drawCircle(Offset(size.width * 0.30, size.height * 0.40), 1.2, glintPaint);
-      canvas.drawCircle(Offset(size.width * 0.64, size.height * 0.40), 1.2, glintPaint);
+      canvas.drawCircle(Offset(size.width * 0.30, size.height * 0.40 + eyeOffsetY), 1.2, glintPaint);
+      canvas.drawCircle(Offset(size.width * 0.64, size.height * 0.40 + eyeOffsetY), 1.2, glintPaint);
     }
 
     // Soft rosy glowing blush cheeks
-    canvas.drawCircle(Offset(size.width * 0.16, size.height * 0.54), 3.2, blushPaint);
-    canvas.drawCircle(Offset(size.width * 0.84, size.height * 0.54), 3.2, blushPaint);
+    canvas.drawCircle(Offset(size.width * 0.16, size.height * 0.54), 3.4, blushPaint);
+    canvas.drawCircle(Offset(size.width * 0.84, size.height * 0.54), 3.4, blushPaint);
 
-    // Warm smiling mouth arc
+    // Warm smiling mouth arc (curves even bigger when typing!)
     final mouthPath = Path()
       ..moveTo(size.width * 0.42, size.height * 0.58)
       ..quadraticBezierTo(size.width * 0.50, size.height * 0.72, size.width * 0.58, size.height * 0.58);
     canvas.drawPath(mouthPath, mouthPaint);
+
+    // ── Cute Little Paws Covering Eyes (Peek-a-boo Animation) ──
+    if (handsProgress > 0.05) {
+      final double pawY = size.height * (0.85 - (handsProgress * 0.42));
+
+      // Left Paw
+      canvas.drawCircle(Offset(size.width * 0.28, pawY + 1), 6.5, pawShadowPaint);
+      canvas.drawCircle(Offset(size.width * 0.28, pawY), 6.0, pawPaint);
+      canvas.drawCircle(Offset(size.width * 0.26, pawY - 3.5), 2.2, pawPaint);
+      canvas.drawCircle(Offset(size.width * 0.30, pawY - 3.5), 2.2, pawPaint);
+
+      // Right Paw
+      if (!isPasswordVisible || handsProgress > 0.6) {
+        final double rightPawY = isPasswordVisible ? (pawY + 6.0) : pawY;
+        canvas.drawCircle(Offset(size.width * 0.72, rightPawY + 1), 6.5, pawShadowPaint);
+        canvas.drawCircle(Offset(size.width * 0.72, rightPawY), 6.0, pawPaint);
+        canvas.drawCircle(Offset(size.width * 0.70, rightPawY - 3.5), 2.2, pawPaint);
+        canvas.drawCircle(Offset(size.width * 0.74, rightPawY - 3.5), 2.2, pawPaint);
+      }
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _MascotFacePainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _MascotFacePainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.handsProgress != handsProgress ||
+      oldDelegate.isPasswordFocused != isPasswordFocused ||
+      oldDelegate.isPasswordVisible != isPasswordVisible ||
+      oldDelegate.isEmailFocused != isEmailFocused;
 }
 
 /// Official 4-Color Google Vector Logo Widget

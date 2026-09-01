@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -144,7 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
 
-              // Page View
+              // Page View with Interactive Companions
               Expanded(
                 child: ScrollConfiguration(
                   behavior: const MaterialScrollBehavior().copyWith(
@@ -231,7 +232,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _buildCompanion(index),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
           Text(
             slide.title,
             style: AppTextStyles.heading1.copyWith(
@@ -270,7 +271,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-/// Slide 1 Companion: "Chatty Kausap"
+/// Slide 1 Companion: "Chatty Kausap" (AI Companion with Headset & Audio Wave Aura)
 class _ChattyCompanionWidget extends StatefulWidget {
   const _ChattyCompanionWidget();
 
@@ -281,16 +282,20 @@ class _ChattyCompanionWidget extends StatefulWidget {
 class _ChattyCompanionWidgetState extends State<_ChattyCompanionWidget> with TickerProviderStateMixin {
   late AnimationController _floatController;
   late AnimationController _bounceController;
+  late AnimationController _pulseRingController;
   late Animation<double> _floatAnim;
   late Animation<double> _bounceAnim;
   late Animation<double> _wiggleAnim;
+  late Animation<double> _pulseRingAnim;
 
+  Offset _gazeOffset = Offset.zero;
   bool _showQuote = false;
   int _quoteIdx = 0;
   final List<String> _quotes = [
     "I'm always here to listen! 💬 ✨",
     "Tell me anything on your mind 💙",
     "No judgement, just support 🌿",
+    "How was your day today? 🌸",
   ];
 
   @override
@@ -305,9 +310,18 @@ class _ChattyCompanionWidgetState extends State<_ChattyCompanionWidget> with Tic
       CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
     );
 
+    _pulseRingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
+
+    _pulseRingAnim = Tween<double>(begin: 0.9, end: 1.35).animate(
+      CurvedAnimation(parent: _pulseRingController, curve: Curves.easeOut),
+    );
+
     _bounceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 650),
     );
 
     _bounceAnim = TweenSequence<double>([
@@ -327,6 +341,7 @@ class _ChattyCompanionWidgetState extends State<_ChattyCompanionWidget> with Tic
   void dispose() {
     _floatController.dispose();
     _bounceController.dispose();
+    _pulseRingController.dispose();
     super.dispose();
   }
 
@@ -347,7 +362,7 @@ class _ChattyCompanionWidgetState extends State<_ChattyCompanionWidget> with Tic
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Fixed-height Speech Bubble Container (Prevents Layout Shifting under cursor)
+        // Speech Bubble & Tap Hint
         SizedBox(
           height: 38,
           child: Center(
@@ -377,80 +392,114 @@ class _ChattyCompanionWidgetState extends State<_ChattyCompanionWidget> with Tic
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
-        // Interactive Mascot
+        // Interactive Mascot with Empathy Soundwave Aura & Eye Tracking
         MouseRegion(
           cursor: SystemMouseCursors.click,
+          onHover: (e) {
+            final center = Offset(135 / 2, 135 / 2);
+            final delta = (e.localPosition - center);
+            setState(() {
+              _gazeOffset = Offset(
+                (delta.dx / 40).clamp(-2.0, 2.0),
+                (delta.dy / 40).clamp(-2.0, 2.0),
+              );
+            });
+          },
           child: GestureDetector(
             onTap: _tapMascot,
             behavior: HitTestBehavior.opaque,
             child: AnimatedBuilder(
-              animation: Listenable.merge([_floatController, _bounceController]),
+              animation: Listenable.merge([_floatController, _bounceController, _pulseRingController]),
               builder: (context, child) {
                 return Transform.translate(
                   offset: Offset(0, _floatAnim.value),
-                  child: Transform.rotate(
-                    angle: _wiggleAnim.value,
-                    child: Transform.scale(
-                      scale: _bounceAnim.value,
-                      child: Container(
-                        width: 135,
-                        height: 135,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF8B5CF6), Color(0xFF38BDF8)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Pulsing Empathy Soundwave Rings
+                      Transform.scale(
+                        scale: _pulseRingAnim.value,
+                        child: Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF38BDF8).withAlpha(((1.0 - _pulseRingController.value) * 120).toInt()),
+                              width: 2.5,
+                            ),
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF8B5CF6).withAlpha(80),
-                              blurRadius: 28,
-                              spreadRadius: 3,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Headset band
-                            Positioned(
-                              top: 14,
-                              child: Container(
-                                width: 86,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.white.withAlpha(220), width: 3.5),
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(50),
-                                    topRight: Radius.circular(50),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Headset ear cushions
-                            const Positioned(
-                              left: 17,
-                              top: 44,
-                              child: CircleAvatar(radius: 7.5, backgroundColor: Colors.white),
-                            ),
-                            const Positioned(
-                              right: 17,
-                              top: 44,
-                              child: CircleAvatar(radius: 7.5, backgroundColor: Colors.white),
-                            ),
-                            // Expressive Face
-                            CustomPaint(
-                              size: const Size(60, 60),
-                              painter: _ChattyFacePainter(progress: _floatController.value),
-                            ),
-                          ],
                         ),
                       ),
-                    ),
+                      // Floating Mascot Body
+                      Transform.rotate(
+                        angle: _wiggleAnim.value,
+                        child: Transform.scale(
+                          scale: _bounceAnim.value,
+                          child: Container(
+                            width: 135,
+                            height: 135,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF8B5CF6), Color(0xFF38BDF8)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF8B5CF6).withAlpha(80),
+                                  blurRadius: 28,
+                                  spreadRadius: 3,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Headset band
+                                Positioned(
+                                  top: 14,
+                                  child: Container(
+                                    width: 86,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.white.withAlpha(220), width: 3.5),
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(50),
+                                        topRight: Radius.circular(50),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // Headset ear cushions
+                                const Positioned(
+                                  left: 17,
+                                  top: 44,
+                                  child: CircleAvatar(radius: 7.5, backgroundColor: Colors.white),
+                                ),
+                                const Positioned(
+                                  right: 17,
+                                  top: 44,
+                                  child: CircleAvatar(radius: 7.5, backgroundColor: Colors.white),
+                                ),
+                                // Expressive Face with Eye Gaze Tracking
+                                CustomPaint(
+                                  size: const Size(60, 60),
+                                  painter: _ChattyFacePainter(
+                                    progress: _floatController.value,
+                                    gazeOffset: _gazeOffset,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -464,7 +513,9 @@ class _ChattyCompanionWidgetState extends State<_ChattyCompanionWidget> with Tic
 
 class _ChattyFacePainter extends CustomPainter {
   final double progress;
-  _ChattyFacePainter({required this.progress});
+  final Offset gazeOffset;
+
+  _ChattyFacePainter({required this.progress, required this.gazeOffset});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -488,12 +539,13 @@ class _ChattyFacePainter extends CustomPainter {
       canvas.drawPath(leftArc, mouthPaint);
       canvas.drawPath(rightArc, mouthPaint);
     } else {
-      canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.42), 4.8, eyePaint);
-      canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.42), 4.8, eyePaint);
+      // Big sparkling anime-style expressive round eyes with gaze offset
+      canvas.drawCircle(Offset(size.width * 0.35 + gazeOffset.dx, size.height * 0.42 + gazeOffset.dy), 4.8, eyePaint);
+      canvas.drawCircle(Offset(size.width * 0.65 + gazeOffset.dx, size.height * 0.42 + gazeOffset.dy), 4.8, eyePaint);
 
       final glintPaint = Paint()..color = Colors.white;
-      canvas.drawCircle(Offset(size.width * 0.32, size.height * 0.39), 1.8, glintPaint);
-      canvas.drawCircle(Offset(size.width * 0.62, size.height * 0.39), 1.8, glintPaint);
+      canvas.drawCircle(Offset(size.width * 0.32 + gazeOffset.dx, size.height * 0.39 + gazeOffset.dy), 1.8, glintPaint);
+      canvas.drawCircle(Offset(size.width * 0.62 + gazeOffset.dx, size.height * 0.39 + gazeOffset.dy), 1.8, glintPaint);
     }
 
     // Blush
@@ -508,10 +560,11 @@ class _ChattyFacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ChattyFacePainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _ChattyFacePainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.gazeOffset != gazeOffset;
 }
 
-/// Slide 2 Companion: "Meditating Zen Buddy"
+/// Slide 2 Companion: "Meditating Zen Buddy" (Mindfulness with Inhale/Exhale Breathing & Floating Leaves)
 class _ZenCompanionWidget extends StatefulWidget {
   const _ZenCompanionWidget();
 
@@ -525,6 +578,7 @@ class _ZenCompanionWidgetState extends State<_ZenCompanionWidget> with TickerPro
   late Animation<double> _breatheScale;
   late Animation<double> _floatAnim;
   late Animation<double> _bounceAnim;
+  late Animation<double> _leafFloatAnim;
 
   bool _showQuote = false;
   int _quoteIdx = 0;
@@ -532,6 +586,7 @@ class _ZenCompanionWidgetState extends State<_ZenCompanionWidget> with TickerPro
     "Inhale calm... Exhale worry 🌿",
     "Find your center in this moment 🌸",
     "Breathe gently and be kind to yourself ✨",
+    "One deep breath resets the mind 🌱",
   ];
 
   @override
@@ -542,12 +597,16 @@ class _ZenCompanionWidgetState extends State<_ZenCompanionWidget> with TickerPro
       duration: const Duration(milliseconds: 3800),
     )..repeat(reverse: true);
 
-    _breatheScale = Tween<double>(begin: 0.94, end: 1.06).animate(
+    _breatheScale = Tween<double>(begin: 0.94, end: 1.07).animate(
       CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
     );
 
     _floatAnim = Tween<double>(begin: -5.0, end: 5.0).animate(
       CurvedAnimation(parent: _breatheController, curve: Curves.easeInOutSine),
+    );
+
+    _leafFloatAnim = Tween<double>(begin: -8.0, end: 8.0).animate(
+      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
     );
 
     _bounceController = AnimationController(
@@ -615,9 +674,9 @@ class _ZenCompanionWidgetState extends State<_ZenCompanionWidget> with TickerPro
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
-        // Interactive Mascot
+        // Interactive Mascot with Floating Zen Leaves & Inhale/Exhale Expansion
         MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
@@ -628,25 +687,45 @@ class _ZenCompanionWidgetState extends State<_ZenCompanionWidget> with TickerPro
               builder: (context, child) {
                 return Transform.translate(
                   offset: Offset(0, _floatAnim.value),
-                  child: Transform.scale(
-                    scale: _breatheScale.value * _bounceAnim.value,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Lotus Base
-                        Positioned(
-                          bottom: 4,
-                          child: Container(
-                            width: 115,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF86EFAC).withAlpha(120),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Floating Ambient Zen Leaves
+                      Positioned(
+                        left: -20 + _leafFloatAnim.value,
+                        top: 20 - _leafFloatAnim.value,
+                        child: Transform.rotate(
+                          angle: 0.3,
+                          child: const Icon(Icons.eco_rounded, color: Color(0x6610B981), size: 20),
+                        ),
+                      ),
+                      Positioned(
+                        right: -18 - _leafFloatAnim.value,
+                        top: 35 + _leafFloatAnim.value,
+                        child: Transform.rotate(
+                          angle: -0.4,
+                          child: const Icon(Icons.eco_rounded, color: Color(0x5534D399), size: 18),
+                        ),
+                      ),
+
+                      // Lotus Base
+                      Positioned(
+                        bottom: 4,
+                        child: Container(
+                          width: 115,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF86EFAC).withAlpha(120),
+                            borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        // Zen Buddy Orb
-                        Container(
+                      ),
+
+                      // Zen Buddy Orb
+                      Transform.scale(
+                        scale: _breatheScale.value * _bounceAnim.value,
+                        child: Container(
                           width: 135,
                           height: 135,
                           decoration: BoxDecoration(
@@ -693,8 +772,8 @@ class _ZenCompanionWidgetState extends State<_ZenCompanionWidget> with TickerPro
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -741,7 +820,7 @@ class _ZenFacePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Slide 3 Companion: "Celebratory Star Buddy"
+/// Slide 3 Companion: "Celebratory Star Buddy" (Wellness Tracking with Orbiting Stars & Hearts)
 class _StarCompanionWidget extends StatefulWidget {
   const _StarCompanionWidget();
 
@@ -752,6 +831,7 @@ class _StarCompanionWidget extends StatefulWidget {
 class _StarCompanionWidgetState extends State<_StarCompanionWidget> with TickerProviderStateMixin {
   late AnimationController _floatController;
   late AnimationController _bounceController;
+  late AnimationController _orbitController;
   late Animation<double> _floatAnim;
   late Animation<double> _bounceAnim;
   late Animation<double> _starPulseAnim;
@@ -762,6 +842,7 @@ class _StarCompanionWidgetState extends State<_StarCompanionWidget> with TickerP
     "You are capable of amazing growth! ⭐",
     "Celebrate every small milestone! 💖",
     "Your journey matters deeply 🌟",
+    "Every day is a fresh new start! 🚀",
   ];
 
   @override
@@ -780,6 +861,11 @@ class _StarCompanionWidgetState extends State<_StarCompanionWidget> with TickerP
       CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
     );
 
+    _orbitController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4500),
+    )..repeat();
+
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -796,6 +882,7 @@ class _StarCompanionWidgetState extends State<_StarCompanionWidget> with TickerP
   void dispose() {
     _floatController.dispose();
     _bounceController.dispose();
+    _orbitController.dispose();
     super.dispose();
   }
 
@@ -846,26 +933,42 @@ class _StarCompanionWidgetState extends State<_StarCompanionWidget> with TickerP
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
-        // Interactive Mascot
+        // Interactive Mascot with Orbiting Stars & Hearts
         MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             onTap: _tapMascot,
             behavior: HitTestBehavior.opaque,
             child: AnimatedBuilder(
-              animation: Listenable.merge([_floatController, _bounceController]),
+              animation: Listenable.merge([_floatController, _bounceController, _orbitController]),
               builder: (context, child) {
+                final orbitAngle = _orbitController.value * 2 * math.pi;
+                final orbitX = math.cos(orbitAngle) * 58;
+                final orbitY = math.sin(orbitAngle) * 30;
+
                 return Transform.translate(
                   offset: Offset(0, _floatAnim.value),
-                  child: Transform.scale(
-                    scale: _bounceAnim.value,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Joyful Buddy Orb
-                        Container(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Orbiting Sparkle Star
+                      Positioned(
+                        left: (135 / 2) + orbitX - 10,
+                        top: (135 / 2) + orbitY - 10,
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Color(0xFFFBBF24),
+                          size: 18,
+                        ),
+                      ),
+
+                      // Joyful Buddy Orb
+                      Transform.scale(
+                        scale: _bounceAnim.value,
+                        child: Container(
                           width: 135,
                           height: 135,
                           decoration: BoxDecoration(
@@ -889,37 +992,39 @@ class _StarCompanionWidgetState extends State<_StarCompanionWidget> with TickerP
                             painter: _StarFacePainter(),
                           ),
                         ),
-                        // Floating Golden Star
-                        Positioned(
-                          right: 8,
-                          top: 10,
-                          child: Transform.scale(
-                            scale: _starPulseAnim.value,
-                            child: const Icon(
-                              Icons.star_rounded,
-                              color: Color(0xFFFDE047),
-                              size: 30,
-                              shadows: [
-                                Shadow(color: Color(0x66F59E0B), blurRadius: 8),
-                              ],
-                            ),
+                      ),
+
+                      // Floating Golden Star
+                      Positioned(
+                        right: 8,
+                        top: 10,
+                        child: Transform.scale(
+                          scale: _starPulseAnim.value,
+                          child: const Icon(
+                            Icons.star_rounded,
+                            color: Color(0xFFFDE047),
+                            size: 30,
+                            shadows: [
+                              Shadow(color: Color(0x66F59E0B), blurRadius: 8),
+                            ],
                           ),
                         ),
-                        // Floating Heart Sparkle
-                        Positioned(
-                          left: 8,
-                          top: 20,
-                          child: Transform.scale(
-                            scale: _starPulseAnim.value,
-                            child: const Icon(
-                              Icons.favorite_rounded,
-                              color: Color(0xFFFFE4E6),
-                              size: 18,
-                            ),
+                      ),
+
+                      // Floating Heart Sparkle
+                      Positioned(
+                        left: 8,
+                        top: 20,
+                        child: Transform.scale(
+                          scale: _starPulseAnim.value,
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            color: Color(0xFFFFE4E6),
+                            size: 18,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               },

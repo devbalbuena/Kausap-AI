@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
@@ -16,7 +17,8 @@ import '../admin/admin_dashboard_screen.dart';
 import '../counselor/counselor_dashboard_screen.dart';
 
 /// Clean, Generic Login Screen for Students and Administrators.
-/// Automatically detects Admin accounts on successful login.
+/// Features interactive Peek-a-boo mascot animations, institutional FSUU email helper,
+/// prefix input icons, remember-me persistence, and seamless role routing.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -29,9 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final GlobalKey<KausapBuddyMascotState> _mascotKey = GlobalKey<KausapBuddyMascotState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  final _storage = const FlutterSecureStorage();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _rememberMe = true;
 
   // Error state
   String? _emailError;
@@ -39,9 +45,45 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _bannerError;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+
+    // Listen to focus changes to trigger mascot emotions & eye gestures
+    _emailFocusNode.addListener(() {
+      if (_emailFocusNode.hasFocus) {
+        _mascotKey.currentState?.setEmailFocus(true);
+      } else {
+        _mascotKey.currentState?.setEmailFocus(false);
+      }
+    });
+
+    _passwordFocusNode.addListener(() {
+      _mascotKey.currentState?.setPasswordFocus(
+        focused: _passwordFocusNode.hasFocus,
+        isVisible: !_obscurePassword,
+      );
+    });
+  }
+
+  Future<void> _loadSavedEmail() async {
+    try {
+      final savedEmail = await _storage.read(key: 'saved_login_email');
+      if (savedEmail != null && savedEmail.isNotEmpty && mounted) {
+        setState(() {
+          _emailController.text = savedEmail;
+          _rememberMe = true;
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -57,6 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _clearErrors();
     if (!_formKey.currentState!.validate()) {
       HapticService.error();
+      _mascotKey.currentState?.triggerMoodBoost(customMessage: "Please check the form! ✍️");
       return;
     }
 
@@ -70,12 +113,20 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
 
+      if (_rememberMe) {
+        await _storage.write(key: 'saved_login_email', value: _emailController.text.trim());
+      } else {
+        await _storage.delete(key: 'saved_login_email');
+      }
+
       if (!mounted) return;
 
       // Auto-detect role and active status and route
       final user = authProvider.currentUser;
       if (user != null) {
         HapticService.success();
+        _mascotKey.currentState?.triggerMoodBoost(customMessage: "Welcome back! 🎉✨");
+
         if (user['is_active'] == false) {
           Navigator.of(context).pushAndRemoveUntil(
             slideRoute(DeactivatedAccountScreen(userProfile: user)),
@@ -101,10 +152,12 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       HapticService.error();
       _parseApiError(e);
+      _mascotKey.currentState?.triggerMoodBoost(customMessage: "Let's try again, you can do it! 💙");
     } catch (e) {
       HapticService.error();
       setState(() => _bannerError =
           'Unable to sign in. Please check your credentials and try again, or reset your password.');
+      _mascotKey.currentState?.triggerMoodBoost(customMessage: "Connection error. Let's retry! 🌿");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -132,9 +185,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleSocialAuth(String provider) {
     HapticService.lightTap();
+    _mascotKey.currentState?.triggerMoodBoost(customMessage: "Connecting to $provider! 🚀");
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$provider sign-in is ready for institutional single sign-on (SSO).'),
+        content: Text('$provider sign-in is ready for single sign-on (SSO).'),
         backgroundColor: AppColors.primary,
         duration: const Duration(seconds: 3),
       ),
@@ -156,9 +210,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
+
+                    // ── Animated Mascot with Peek-a-boo reactions ──
                     KausapBuddyMascot(key: _mascotKey),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+
+                    // ── Login Card ──
                     AuthCard(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
@@ -172,19 +230,25 @@ class _LoginScreenState extends State<LoginScreen> {
                               'Sign in to continue',
                               style: AppTextStyles.subheading,
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 22),
 
-                            // Email field
+                            // Email field with Mail Icon & Institutional Hint
                             Text('Email', style: AppTextStyles.label),
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _emailController,
+                              focusNode: _emailFocusNode,
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               autocorrect: false,
                               style: AppTextStyles.inputText,
                               decoration: InputDecoration(
-                                hintText: 'you@example.com',
+                                hintText: 'yourname@urios.edu.ph',
+                                prefixIcon: const Icon(
+                                  Icons.mail_outline_rounded,
+                                  color: Color(0xFF0284C7),
+                                  size: 20,
+                                ),
                                 errorText: _emailError,
                               ),
                               validator: AppValidators.email,
@@ -227,15 +291,21 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             const SizedBox(height: 8),
 
-                            // Password Input
+                            // Password Input with Lock Icon & Peek-a-boo Trigger
                             TextFormField(
                               controller: _passwordController,
+                              focusNode: _passwordFocusNode,
                               obscureText: _obscurePassword,
                               textInputAction: TextInputAction.done,
                               onFieldSubmitted: (_) => _handleLogin(),
                               style: AppTextStyles.inputText,
                               decoration: InputDecoration(
                                 hintText: '••••••••',
+                                prefixIcon: const Icon(
+                                  Icons.lock_outline_rounded,
+                                  color: Color(0xFF0284C7),
+                                  size: 20,
+                                ),
                                 errorText: _passwordError,
                                 suffixIcon: IconButton(
                                   icon: Icon(
@@ -247,7 +317,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   onPressed: () {
                                     HapticService.lightTap();
-                                    setState(() => _obscurePassword = !_obscurePassword);
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                    _mascotKey.currentState?.setPasswordFocus(
+                                      focused: _passwordFocusNode.hasFocus,
+                                      isVisible: !_obscurePassword,
+                                    );
                                   },
                                 ),
                               ),
@@ -260,13 +336,50 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                             ),
 
+                            const SizedBox(height: 12),
+
+                            // ── Remember Me Checkbox ──
+                            Row(
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Checkbox(
+                                    value: _rememberMe,
+                                    activeColor: AppColors.primary,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    onChanged: (val) {
+                                      HapticService.lightTap();
+                                      setState(() => _rememberMe = val ?? true);
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: () {
+                                    HapticService.lightTap();
+                                    setState(() => _rememberMe = !_rememberMe);
+                                  },
+                                  child: const Text(
+                                    'Remember me on this device',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12.5,
+                                      color: Color(0xFF475569),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
                             // Error banner
                             if (_bannerError != null) ...[
                               const SizedBox(height: 12),
                               AccessibleErrorWidget(message: _bannerError!),
                             ],
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 18),
 
                             // Sign In button (Primary Action)
                             ElevatedButton(
@@ -285,7 +398,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             const SizedBox(height: 20),
 
-                            // Divider (Separating Email/Password from Social Sign-Ins)
+                            // Divider
                             const Row(
                               children: [
                                 Expanded(child: Divider(color: Color(0xFFE2E8F0))),
@@ -317,22 +430,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const GoogleBrandLogo(size: 20),
-                                  const SizedBox(width: 12),
+                                  GoogleBrandLogo(size: 19),
+                                  SizedBox(width: 10),
                                   Text(
                                     'Sign in with Google',
-                                    style: AppTextStyles.body.copyWith(
-                                      fontWeight: FontWeight.w600,
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
                                       fontSize: 13.5,
-                                      color: const Color(0xFF0F172A),
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1E293B),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+
                             const SizedBox(height: 10),
 
                             // Social Sign-in: Facebook
@@ -346,50 +461,56 @@ class _LoginScreenState extends State<LoginScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const FacebookBrandLogo(size: 20),
-                                  const SizedBox(width: 12),
+                                  FacebookBrandLogo(size: 20),
+                                  SizedBox(width: 10),
                                   Text(
                                     'Sign in with Facebook',
-                                    style: AppTextStyles.body.copyWith(
-                                      fontWeight: FontWeight.w600,
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
                                       fontSize: 13.5,
-                                      color: const Color(0xFF0F172A),
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1E293B),
                                     ),
                                   ),
                                 ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 22),
-
-                            // Sign Up link
-                            Center(
-                              child: GestureDetector(
-                                onTap: () {
-                                  HapticService.lightTap();
-                                  Navigator.of(context).push(
-                                    slideRoute(const ClientSignupStep1Screen()),
-                                  );
-                                },
-                                child: RichText(
-                                  text: TextSpan(
-                                    style: AppTextStyles.body.copyWith(color: const Color(0xFF64748B), fontSize: 13),
-                                    children: [
-                                      const TextSpan(text: "Don't have an account? "),
-                                      TextSpan(text: 'Sign Up', style: AppTextStyles.link),
-                                    ],
-                                  ),
-                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 28),
+
+                    const SizedBox(height: 24),
+
+                    // Don't have an account? Sign Up
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("Don't have an account? ", style: AppTextStyles.body.copyWith(fontSize: 13)),
+                        GestureDetector(
+                          onTap: () {
+                            HapticService.lightTap();
+                            Navigator.of(context).push(
+                              slideRoute(const ClientSignupStep1Screen()),
+                            );
+                          },
+                          child: const Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
                     const AuthFooter(),
                     const SizedBox(height: 24),
                   ],
