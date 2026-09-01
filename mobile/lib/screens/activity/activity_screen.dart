@@ -71,54 +71,28 @@ class ActivityStep {
 // ── Expanded Activity Library Tailored for Student Mental Health ────────────
 const activityList = [
   ActivityItem(
-    id: '4-7-8-breathing',
-    title: '4-7-8 Relaxing Breath',
-    description: 'Best for sleep & anxiety — inhale 4s → hold 7s → exhale 8s. A natural nervous system reset.',
+    id: 'mindful-breathing',
+    title: 'Mindful Breathing & Breathwork',
+    description: 'Calm anxiety, sharpen focus, or prepare for sleep with switchable 4-7-8, Box 4-4-4-4, and 5-5 Flow patterns.',
     duration: '5 min',
     difficulty: 'Easy',
     category: 'Breathing',
     icon: Icons.air_rounded,
     gradient: [Color(0xFF0D9488), Color(0xFF14B8A6)],
     tags: [
-      ActivityTag(label: 'Anxiety', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
-      ActivityTag(label: 'Stress', bg: Color(0xFFFFEDD5), border: Color(0xFFFED7AA), text: Color(0xFF9A3412)),
-      ActivityTag(label: 'Sleep', bg: Color(0xFFE0E7FF), border: Color(0xFFC7D2FE), text: Color(0xFF3730A3)),
+      ActivityTag(label: 'Anxiety & Sleep', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
+      ActivityTag(label: 'Focus (Box)', bg: Color(0xFFE0F2FE), border: Color(0xFFBAE6FD), text: Color(0xFF0369A1)),
+      ActivityTag(label: 'Calm Flow', bg: Color(0xFFE0E7FF), border: Color(0xFFC7D2FE), text: Color(0xFF3730A3)),
     ],
     whatIsThis:
-        'The 4-7-8 technique (developed by Dr. Andrew Weil) is your go-to before bed or during an anxiety spike. '
-        'Inhale 4 sec → hold 7 sec → exhale 8 sec. The long exhale activates your parasympathetic nervous system, '
-        'slowing your heart rate and signaling safety to your brain.',
+        'Mindful Breathwork gives you 3 proven breathing techniques in one interactive session: '
+        '1) 4-7-8 Relax to quiet nighttime anxiety, 2) Box Breathing (4-4-4-4) to sharpen pre-exam focus, and '
+        '3) 5-5 Flow to balance your nervous system. Switch between them anytime during your exercise!',
     steps: [
-      ActivityStep(number: 1, title: 'Inhale (4s)', description: 'Close your mouth and inhale quietly through your nose for 4 counts.'),
-      ActivityStep(number: 2, title: 'Hold (7s)', description: 'Hold your breath comfortably for 7 counts. This is the calming phase.'),
-      ActivityStep(number: 3, title: 'Exhale (8s)', description: 'Release all the air through your mouth with a soft whoosh for 8 counts.'),
-      ActivityStep(number: 4, title: 'Repeat x4', description: 'Do 4 complete cycles. After each round feel how your body settles.'),
-    ],
-  ),
-  ActivityItem(
-    id: 'box-breathing',
-    title: 'Box Breathing (4-4-4-4)',
-    description: 'Best for focus & exams — inhale 4s → hold 4s → exhale 4s → hold 4s. Equal rhythm, clear mind.',
-    duration: '5 min',
-    difficulty: 'Easy',
-    category: 'Breathing',
-    icon: Icons.grid_view_rounded,
-    gradient: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-    tags: [
-      ActivityTag(label: 'Focus', bg: Color(0xFFE0F2FE), border: Color(0xFFBAE6FD), text: Color(0xFF0369A1)),
-      ActivityTag(label: 'Exam Prep', bg: Color(0xFFFEF3C7), border: Color(0xFFFDE68A), text: Color(0xFF92400E)),
-      ActivityTag(label: 'Grounding', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
-    ],
-    whatIsThis:
-        'Box Breathing (also called square breathing) is used by Navy SEALs, surgeons, and top athletes '
-        'to instantly sharpen focus and reset under pressure. Each side of the "box" is 4 seconds — '
-        'inhale, hold, exhale, hold — creating a perfectly balanced rhythm that quiets cortisol and clears mental fog. '
-        'Do it right before entering an exam room or a stressful class.',
-    steps: [
-      ActivityStep(number: 1, title: 'Inhale (4s)', description: 'Breathe in steadily through your nose for 4 counts, feeling your chest expand.'),
-      ActivityStep(number: 2, title: 'Hold Top (4s)', description: 'Hold gently at the top for 4 counts. Feel the stillness.'),
-      ActivityStep(number: 3, title: 'Exhale (4s)', description: 'Release air smoothly through your mouth for 4 counts.'),
-      ActivityStep(number: 4, title: 'Hold Empty (4s)', description: 'Hold with empty lungs for 4 counts. This completes one box. Repeat 4–6 times.'),
+      ActivityStep(number: 1, title: 'Pick Your Pattern', description: 'Choose between 4-7-8 Relax, Box 4-4-4-4, or 5-5 Flow at the top.'),
+      ActivityStep(number: 2, title: 'Follow the Visual Circle', description: 'Inhale as the circle expands, hold gently when prompted, and exhale as it contracts.'),
+      ActivityStep(number: 3, title: 'Select Cycles (4x to 12x)', description: 'Customize your session length with quick cycle selectors.'),
+      ActivityStep(number: 4, title: 'Feel Centered & Recharged', description: 'Notice the immediate calm and mental clarity washing over you.'),
     ],
   ),
   ActivityItem(
@@ -170,31 +144,6 @@ const activityList = [
       ActivityStep(number: 2, title: 'Slow Your Breath', description: 'Take 3 deep breaths. With each exhale, let your muscles soften a little more.'),
       ActivityStep(number: 3, title: 'Release Tension Points', description: 'Bring attention to your neck, shoulders, and hands. Consciously relax each one as you breathe out.'),
       ActivityStep(number: 4, title: 'Rest in Stillness', description: 'Let go of any effort. Stay in quiet awareness for the remaining time, returning to breath if thoughts arise.'),
-    ],
-  ),
-  ActivityItem(
-    id: 'progressive-muscle-relaxation',
-    title: 'Progressive Muscle Relaxation',
-    description: 'Tense and release each muscle group from feet to shoulders to melt away study stress fast.',
-    duration: '8 min',
-    difficulty: 'Easy',
-    category: 'Grounding',
-    icon: Icons.accessibility_new_rounded,
-    gradient: [Color(0xFF9333EA), Color(0xFFC084FC)],
-    tags: [
-      ActivityTag(label: 'Tension Relief', bg: Color(0xFFE0E7FF), border: Color(0xFFC7D2FE), text: Color(0xFF3730A3)),
-      ActivityTag(label: 'Burnout', bg: Color(0xFFFEF3C7), border: Color(0xFFFDE68A), text: Color(0xFF92400E)),
-      ActivityTag(label: 'Relaxation', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
-    ],
-    whatIsThis:
-        'Progressive Muscle Relaxation (PMR) is a proven technique where you deliberately tense then release '
-        'specific muscle groups in sequence. The contrast between tension and release helps your body recognize '
-        'and let go of stress it has been holding unconsciously. Ideal after long classes or before an exam.',
-    steps: [
-      ActivityStep(number: 1, title: 'Feet & Calves', description: 'Curl your toes tightly for 5 seconds, then release. Feel the warmth flood in as the tension leaves.'),
-      ActivityStep(number: 2, title: 'Thighs & Hips', description: 'Squeeze your thigh muscles firmly for 5 seconds, then let go completely. Notice the difference.'),
-      ActivityStep(number: 3, title: 'Hands & Arms', description: 'Make tight fists and tense your forearms for 5 seconds, then release. Let your hands rest open.'),
-      ActivityStep(number: 4, title: 'Shoulders & Neck', description: 'Shrug your shoulders up to your ears for 5 seconds, then drop them. This is where most study tension hides.'),
     ],
   ),
   ActivityItem(
@@ -412,17 +361,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
         // Very low mood → grounding to anchor back to the present
         return activityList.firstWhere((a) => a.id == '5-4-3-2-1-grounding');
       } else if (_todayMoodLevel! == 2) {
-        // Low mood → box breathing to regain calm and control
-        return activityList.firstWhere((a) => a.id == 'box-breathing');
+        // Low mood → mindful breathwork to regain calm and focus
+        return activityList.firstWhere((a) => a.id == 'mindful-breathing');
       } else if (_todayMoodLevel! == 3) {
-        // Neutral → PMR to release hidden body tension
-        return activityList.firstWhere((a) => a.id == 'progressive-muscle-relaxation');
+        // Neutral → unwind meditation to release tension
+        return activityList.firstWhere((a) => a.id == 'guided-meditation');
       } else {
-        // Good/great mood → gratitude to reinforce positive mindset
+        // Good/great mood → gratitude journal to reinforce positive mindset
         return activityList.firstWhere((a) => a.id == 'gratitude-journal');
       }
     }
-    return activityList[0]; // Default: 4-7-8 Relaxing Breath
+    return activityList[0]; // Default: Mindful Breathing & Breathwork
   }
 
   List<ActivityItem> get _filteredActivities {

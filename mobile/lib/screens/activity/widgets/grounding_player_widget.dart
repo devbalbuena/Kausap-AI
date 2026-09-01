@@ -132,30 +132,74 @@ class _GroundingPlayerWidgetState extends State<GroundingPlayerWidget> {
     final step = _groundingSteps[_currentStepIndex];
     final items = _recordedItems[_currentStepIndex];
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Column(
-        children: [
-          // Step progress indicator bar
-          Row(
-            children: List.generate(_groundingSteps.length, (i) {
-              final isDone = i < _currentStepIndex;
-              final isCurrent = i == _currentStepIndex;
-              return Expanded(
-                child: Container(
-                  height: 6,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    color: isDone
-                        ? const Color(0xFF10B981)
-                        : (isCurrent ? step.themeColor : const Color(0xFFE2E8F0)),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              );
-            }),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded, color: Color(0xFF0F172A)),
+          onPressed: () => Navigator.maybePop(context),
+          tooltip: 'Exit Grounding',
+        ),
+        title: Text(
+          widget.activity.title,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 17,
+            color: Color(0xFF0F172A),
           ),
-          const SizedBox(height: 20),
+        ),
+        centerTitle: true,
+        actions: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: step.themeColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: step.themeColor.withAlpha(50)),
+              ),
+              child: Text(
+                '${_currentStepIndex + 1} / 5',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: step.themeColor,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Column(
+            children: [
+              // Step progress indicator bar
+              Row(
+                children: List.generate(_groundingSteps.length, (i) {
+                  final isDone = i < _currentStepIndex;
+                  final isCurrent = i == _currentStepIndex;
+                  return Expanded(
+                    child: Container(
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        color: isDone
+                            ? const Color(0xFF10B981)
+                            : (isCurrent ? step.themeColor : const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 18),
 
           // Step Card with Soft Glowing Gradient
           Container(
@@ -348,6 +392,8 @@ class _GroundingPlayerWidgetState extends State<GroundingPlayerWidget> {
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 }
