@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -8,6 +7,7 @@ import 'dart:js' as js;
 
 import '../../models/avatar_model.dart';
 import '../../utils/ambient_audio_service.dart';
+import '../../services/voice_audio_service.dart';
 
 class VoiceCallScreen extends StatefulWidget {
   final AvatarModel avatar;
@@ -152,35 +152,32 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
 
     _stopListening();
 
-    if (_isSpeakerOn && kIsWeb) {
-      try {
-        final safeText = jsonEncode(text);
-        final jsCode = '''
-        (function() {
-          if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            var u = new SpeechSynthesisUtterance($safeText);
-            u.rate = 0.95;
-            u.pitch = 1.05;
-            window.speechSynthesis.speak(u);
+    if (_isSpeakerOn) {
+      VoiceAudioService().speak(
+        text,
+        onDone: () {
+          if (mounted) {
+            setState(() {
+              _isAiSpeaking = false;
+              _userSpeechBuffer = "";
+            });
+            _startListening();
           }
-        })();
-        ''';
-        js.context.callMethod('eval', [jsCode]);
-      } catch (_) {}
+        },
+      );
+    } else {
+      final wordCount = text.split(' ').length;
+      final speakDuration = Duration(milliseconds: (wordCount * 320).clamp(2400, 7500));
+      Future.delayed(speakDuration, () {
+        if (mounted) {
+          setState(() {
+            _isAiSpeaking = false;
+            _userSpeechBuffer = "";
+          });
+          _startListening();
+        }
+      });
     }
-
-    final wordCount = text.split(' ').length;
-    final speakDuration = Duration(milliseconds: (wordCount * 320).clamp(2400, 7500));
-    Future.delayed(speakDuration, () {
-      if (mounted) {
-        setState(() {
-          _isAiSpeaking = false;
-          _userSpeechBuffer = "";
-        });
-        _startListening();
-      }
-    });
   }
 
   void _processUserSpokenInput(String userInput) {
@@ -212,11 +209,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
     _pollTimer?.cancel();
     _silenceTimer?.cancel();
     _stopListening();
-    if (kIsWeb) {
-      try {
-        js.context.callMethod('eval', ['if ("speechSynthesis" in window) window.speechSynthesis.cancel();']);
-      } catch (_) {}
-    }
+    VoiceAudioService().stopSpeaking();
     _waveController.dispose();
     super.dispose();
   }
