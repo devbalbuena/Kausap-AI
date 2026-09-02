@@ -24,7 +24,7 @@ import '../settings/about_screen.dart';
 import '../crisis/crisis_resources_sheet.dart';
 import 'edit_profile_screen.dart';
 import 'achievements_screen.dart';
-import 'safety_plan_screen.dart';
+import 'assessment_history_screen.dart';
 import '../../widgets/cached_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -219,18 +219,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     subtitle: 'Badges, streak levels & wellness milestones',
                     onTap: () {
                       HapticService.lightTap();
-                      Navigator.push(context, slideRoute(const AchievementsScreen()));
+                      Navigator.push(context, slideRoute(const AchievementsScreen())).then((_) {
+                        if (mounted) _fetchUserStats();
+                      });
                     },
                   ),
                   _buildDivider(),
                   _buildListItem(
-                    icon: Icons.shield_rounded,
-                    iconColor: const Color(0xFF10B981),
-                    title: 'Safety Plan & Trusted Contacts',
-                    subtitle: 'Quick emergency contacts & grounding steps',
+                    icon: Icons.assignment_turned_in_rounded,
+                    iconColor: const Color(0xFF6366F1),
+                    title: 'Self-Assessments & Screeners',
+                    subtitle: 'PHQ-9, GAD-7 & campus burnout records',
                     onTap: () {
                       HapticService.lightTap();
-                      Navigator.push(context, slideRoute(const SafetyPlanScreen()));
+                      Navigator.push(context, slideRoute(const AssessmentHistoryScreen())).then((_) {
+                        if (mounted) _fetchUserStats();
+                      });
                     },
                   ),
                 ],
@@ -541,18 +545,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 emoji: '🔥',
                 value: '$_streak Day',
                 label: 'Streak',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.push(context, slideRoute(const AchievementsScreen())).then((_) {
+                    if (mounted) _fetchUserStats();
+                  });
+                },
               ),
               Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
               _buildQuickStatItem(
                 emoji: '🌿',
                 value: '$_totalMoodLogs',
                 label: 'Check-ins',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.push(context, slideRoute(const AchievementsScreen())).then((_) {
+                    if (mounted) _fetchUserStats();
+                  });
+                },
               ),
               Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
               _buildQuickStatItem(
                 emoji: '📋',
                 value: '$_screenersCount',
                 label: 'Screeners',
+                onTap: () {
+                  HapticService.lightTap();
+                  Navigator.push(context, slideRoute(const AssessmentHistoryScreen())).then((_) {
+                    if (mounted) _fetchUserStats();
+                  });
+                },
               ),
             ],
           ),
@@ -566,7 +588,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () {
                 HapticService.lightTap();
                 Navigator.push(context, slideRoute(const EditProfileScreen())).then((_) {
-                  if (mounted) setState(() {});
+                  if (mounted) {
+                    setState(() {});
+                    _fetchUserStats();
+                  }
                 });
               },
               icon: const Icon(Icons.edit_note_rounded, size: 17, color: AppColors.primary),
@@ -591,36 +616,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildQuickStatItem({required String emoji, required String value, required String label}) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
+  Widget _buildQuickStatItem({
+    required String emoji,
+    required String value,
+    required String label,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
             Text(
-              value,
+              label,
               style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: Color(0xFF0F172A),
+                fontFamily: 'Inter',
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF64748B),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF64748B),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
