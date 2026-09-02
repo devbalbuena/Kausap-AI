@@ -525,7 +525,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         // Only update mood level if the API actually returned one this call;
         // otherwise preserve the existing value so it isn't reset to null on refresh.
         if (todayLevel != null) _todayMoodLevel = todayLevel;
-        _dailyQuests[0]['completed'] = moodCompleted;
+        _dailyQuests[0]['completed'] = moodCompleted || _todayMoodLevel != null;
         _dailyQuests[1]['completed'] = journalCompleted;
         _dailyQuests[2]['completed'] = mindfulnessCompleted;
       });

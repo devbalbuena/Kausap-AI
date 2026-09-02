@@ -52,13 +52,16 @@ def create_mood_entry(
         else:
             emotions_str = str(payload.emotions)
 
-    # ── Safe-guard: Check if user already logged in the last 18 hours (same day) ──
-    same_day_window = datetime.utcnow() - timedelta(hours=18)
+    # ── Safe-guard: Check if user already logged today in calendar day (PHT: UTC+8) ──
+    pht_now = datetime.now(timezone.utc) + timedelta(hours=8)
+    pht_today = pht_now.date()
+    today_start_utc = datetime(pht_today.year, pht_today.month, pht_today.day) - timedelta(hours=8)
+
     existing_today = session.exec(
         select(MoodEntry)
         .where(
             MoodEntry.user_id == current_user.id,
-            MoodEntry.created_at >= same_day_window,
+            MoodEntry.created_at >= today_start_utc,
         )
         .order_by(MoodEntry.created_at.desc())
     ).first()
@@ -100,13 +103,12 @@ def create_mood_entry(
             else:
                 break
 
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         existing_alert = session.exec(
             select(Notification)
             .where(
                 Notification.user_id == current_user.id,
                 Notification.type == NotificationType.alert,
-                Notification.created_at >= today_start,
+                Notification.created_at >= today_start_utc,
             )
         ).first()
 
@@ -181,7 +183,7 @@ def list_mood_entries(
     session: Annotated[Session, Depends(get_session)],
     from_date: Annotated[Optional[datetime], Query(alias="from")] = None,
     to_date: Annotated[Optional[datetime], Query(alias="to")] = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ):
     """List the authenticated user's mood entries, newest first. Supports date range + pagination."""
