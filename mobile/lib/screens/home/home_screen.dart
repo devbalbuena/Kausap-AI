@@ -181,10 +181,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _logMood(int level) async {
-    if (_todayMoodLevel != null) {
-      _showAlreadyLoggedNotice();
-      return;
-    }
     HapticService.mediumTap();
 
     await showModalBottomSheet(
@@ -359,35 +355,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Navigator.of(ctx).pop();
           setState(() => _navIndex = 2);
         },
-      ),
-    );
-  }
-
-  void _showAlreadyLoggedNotice() {
-    HapticService.lightTap();
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Text('✨', style: TextStyle(fontSize: 16)),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'You already checked in today! Feel free to reflect in your Daily Journal 🌿',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF0F172A),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
       ),
     );
   }
