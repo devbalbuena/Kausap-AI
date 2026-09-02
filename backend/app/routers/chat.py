@@ -274,8 +274,13 @@ async def generate_tts(
     # 1. Try ElevenLabs Primary (Zara voice / High-fidelity conversational)
     if settings.ELEVENLABS_API_KEY:
         target_voice = payload.voice or settings.ELEVENLABS_VOICE_ID or "jqcCZkN6Knx8BJ5TBdYR"
-        # Voices to attempt: requested voice (Zara), with instant fallback to standard premade voices
-        voices_to_try = [target_voice, "EXAVITQu4vr4xnSDxMaL", "Xb7hH8MSUJpSbSDYk0k2"]
+        # Prioritize Zara, then young/warm 20s conversational female voices (Jessica, Lily, Alice)
+        voices_to_try = [
+            (target_voice, "Zara"),
+            ("cgSgspJ2msm6clMCkdW9", "Jessica (Young Conversational)"),
+            ("pFZP5JQG7iQjIQuC4Bku", "Lily (Sweet Companion)"),
+            ("Xb7hH8MSUJpSbSDYk0k2", "Alice (Bright & Gentle)"),
+        ]
 
         headers = {
             "xi-api-key": settings.ELEVENLABS_API_KEY,
@@ -284,27 +289,26 @@ async def generate_tts(
         }
 
         async with httpx.AsyncClient(timeout=20.0) as client:
-            for v_id in voices_to_try:
+            for v_id, v_label in voices_to_try:
                 try:
                     url = f"https://api.elevenlabs.io/v1/text-to-speech/{v_id}"
                     req_payload = {
                         "text": snippet,
                         "model_id": "eleven_turbo_v2_5",
                         "voice_settings": {
-                            "stability": 0.5,
+                            "stability": 0.55,
                             "similarity_boost": 0.8,
-                            "style": 0.0,
+                            "style": 0.15,
                             "use_speaker_boost": True,
                         },
                     }
                     res = await client.post(url, headers=headers, json=req_payload)
                     if res.status_code == 200 and len(res.content) > 1000:
                         audio_b64 = base64.b64encode(res.content).decode("ascii")
-                        voice_name = "Zara" if v_id == target_voice else "Sarah"
                         return {
                             "status": "success",
                             "provider": "elevenlabs",
-                            "voice_used": voice_name,
+                            "voice_used": v_label,
                             "voice_id": v_id,
                             "mime_type": "audio/mpeg",
                             "audio_base64": audio_b64,
