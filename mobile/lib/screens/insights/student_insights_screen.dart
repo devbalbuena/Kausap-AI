@@ -24,7 +24,8 @@ import '../../widgets/home/mood_influence_sheet.dart';
 import '../../services/offline_mood_queue.dart';
 
 class StudentInsightsScreen extends StatefulWidget {
-  const StudentInsightsScreen({super.key});
+  final int? refreshTrigger;
+  const StudentInsightsScreen({super.key, this.refreshTrigger});
 
   @override
   State<StudentInsightsScreen> createState() => _StudentInsightsScreenState();
@@ -45,6 +46,14 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
+  }
+
+  @override
+  void didUpdateWidget(covariant StudentInsightsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshTrigger != oldWidget.refreshTrigger) {
+      _loadData();
+    }
   }
 
   @override
@@ -2047,14 +2056,20 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       final dateStr = item['created_at']?.toString() ?? '';
       String formattedDate = dateStr;
       try {
-        final dt = DateTime.parse(dateStr).toLocal();
-        final diff = DateTime.now().difference(dt);
-        if (diff.inHours < 24 && dt.day == DateTime.now().day) {
-          formattedDate = "Today, ${DateFormat('h:mm a').format(dt)}";
-        } else if (diff.inHours < 48 && dt.day == DateTime.now().subtract(const Duration(days: 1)).day) {
-          formattedDate = "Yesterday, ${DateFormat('h:mm a').format(dt)}";
-        } else {
-          formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(dt);
+        final dt = _parseDateLocal(dateStr);
+        if (dt != null) {
+          final now = DateTime.now();
+          final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+          final yesterday = now.subtract(const Duration(days: 1));
+          final isYesterday = dt.year == yesterday.year && dt.month == yesterday.month && dt.day == yesterday.day;
+
+          if (isToday) {
+            formattedDate = "Today, ${DateFormat('h:mm a').format(dt)}";
+          } else if (isYesterday) {
+            formattedDate = "Yesterday, ${DateFormat('h:mm a').format(dt)}";
+          } else {
+            formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(dt);
+          }
         }
       } catch (_) {}
 
@@ -2163,8 +2178,10 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
 
     String formattedDate = dateStr;
     try {
-      final dt = DateTime.parse(dateStr).toLocal();
-      formattedDate = DateFormat('MMMM d, yyyy • h:mm a').format(dt);
+      final dt = _parseDateLocal(dateStr);
+      if (dt != null) {
+        formattedDate = DateFormat('MMMM d, yyyy • h:mm a').format(dt);
+      }
     } catch (_) {}
 
     final moodName = level == 5

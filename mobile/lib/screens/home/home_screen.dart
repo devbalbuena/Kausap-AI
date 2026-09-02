@@ -56,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _unreadCount = 0;
   int _streak = 0;
   int _goal = 30;
+  int _insightsRefreshKey = 0;
   final ScrollController _scrollController = ScrollController();
 
   final List<Map<String, dynamic>> _dailyQuests = [
@@ -250,6 +251,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         setState(() {
           _todayMoodLevel = level;
           _dailyQuests[0]['completed'] = true;
+          _insightsRefreshKey++;
         });
         HapticService.success();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1188,7 +1190,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       weeklyMoods: _weeklyMoods,
                       weeklyAverage: _weeklyAverage,
                       totalLogsThisWeek: _totalLogsThisWeek,
-                      onInsightsTap: () => setState(() => _navIndex = 3),
+                      onInsightsTap: () => setState(() {
+                        _insightsRefreshKey++;
+                        _navIndex = 3;
+                      }),
                     ),
                     const SizedBox(height: 20),
                   ]),
@@ -1241,7 +1246,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       if (i == 0 && _navIndex == 0) {
                         _refreshHome();
                       } else {
-                        setState(() => _navIndex = i);
+                        setState(() {
+                          _navIndex = i;
+                          if (i == 3) _insightsRefreshKey++;
+                        });
                         if (i == 0) {
                           _fetchQuests();
                           _fetchStreak();
@@ -1298,7 +1306,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         contextualMoodLevel: _todayMoodLevel,
         userName: _firstName,
       ), // 2 – Kausap AI
-      const StudentInsightsScreen(), // 3 – Insights & Screeners
+      StudentInsightsScreen(
+        refreshTrigger: _insightsRefreshKey,
+      ), // 3 – Insights & Screeners
       const ArticlesScreen(), // 4 – Articles
     ];
 
