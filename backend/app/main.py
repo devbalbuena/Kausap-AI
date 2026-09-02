@@ -25,6 +25,11 @@ if sentry_dsn and _sentry_available:
 async def lifespan(app: FastAPI):
     # Runs on startup
     create_db_and_tables()
+    try:
+        from app.migrate_db import migrate
+        migrate()
+    except Exception:
+        pass
     yield
     # Runs on shutdown (add cleanup here if needed later)
 
