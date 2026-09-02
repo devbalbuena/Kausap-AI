@@ -3,6 +3,8 @@ import '../../theme/app_theme.dart';
 
 class HomeMoodTrendsCard extends StatelessWidget {
   final List<double?> weeklyMoods;
+  final List<String?>? latestEmojis;
+  final List<int>? logCounts;
   final double? weeklyAverage;
   final int totalLogsThisWeek;
   final VoidCallback onInsightsTap;
@@ -10,6 +12,8 @@ class HomeMoodTrendsCard extends StatelessWidget {
   const HomeMoodTrendsCard({
     super.key,
     required this.weeklyMoods,
+    this.latestEmojis,
+    this.logCounts,
     required this.weeklyAverage,
     required this.totalLogsThisWeek,
     required this.onInsightsTap,
@@ -123,6 +127,10 @@ class HomeMoodTrendsCard extends StatelessWidget {
 
                 final barHeight = mood != null ? ((mood / 5.0) * 65).clamp(14.0, 65.0) : 0.0;
                 final color = mood != null ? getMoodColor(mood) : AppColors.primary;
+                final latestEmoji = (latestEmojis != null && latestEmojis!.length > i && latestEmojis![i] != null)
+                    ? latestEmojis![i]!
+                    : (mood != null ? getMoodEmoji(mood) : null);
+                final logCount = (logCounts != null && logCounts!.length > i) ? logCounts![i] : 0;
 
                 return Expanded(
                   child: Padding(
@@ -134,9 +142,36 @@ class HomeMoodTrendsCard extends StatelessWidget {
                         SizedBox(
                           height: 18,
                           child: mood != null
-                              ? Text(
-                                  getMoodEmoji(mood),
-                                  style: const TextStyle(fontSize: 12),
+                              ? Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Text(
+                                      latestEmoji ?? getMoodEmoji(mood),
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    if (logCount > 1)
+                                      Positioned(
+                                        top: -3,
+                                        right: -7,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '${logCount}x',
+                                            style: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 7.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 )
                               : (isToday
                                   ? Center(

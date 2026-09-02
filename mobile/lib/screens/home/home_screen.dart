@@ -68,6 +68,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int? _todayMoodLevel;
   bool _showQuickEscape = false;
   List<double?> _weeklyMoods = List.filled(7, null);
+  List<String?> _weeklyLatestEmojis = List.filled(7, null);
+  List<int> _weeklyLogCounts = List.filled(7, 0);
   double? _weeklyAverage;
   int _totalLogsThisWeek = 0;
   List<ArticleModel> _homeArticles = ArticlesData.all;
@@ -177,6 +179,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         return '😞 Rough';
       default:
         return '🙂 Good';
+    }
+  }
+
+  String _getEmojiOnly(int level) {
+    switch (level) {
+      case 5:
+        return '😄';
+      case 4:
+        return '🙂';
+      case 3:
+        return '😐';
+      case 2:
+        return '😟';
+      case 1:
+        return '😞';
+      default:
+        return '🙂';
     }
   }
 
@@ -555,6 +574,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
 
       final List<double?> weeklyMoods = List.filled(7, null);
+      final List<String?> weeklyLatestEmojis = List.filled(7, null);
+      final List<int> weeklyLogCounts = List.filled(7, 0);
       double totalSum = 0;
       int loggedDays = 0;
 
@@ -577,6 +598,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           }
           final avgLevel = (daySum / dayEntries.length).clamp(1.0, 5.0);
           weeklyMoods[i] = avgLevel;
+          weeklyLogCounts[i] = dayEntries.length;
+
+          // Day's latest mood emoji: first entry in sorted descending list
+          final latestLevel = (dayEntries.first['mood_level'] as num?)?.toInt() ?? avgLevel.round();
+          weeklyLatestEmojis[i] = _getEmojiOnly(latestLevel);
+
           totalSum += avgLevel;
           loggedDays++;
         }
@@ -587,14 +614,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final todayIdx = DateTime.now().weekday - 1;
         if (weeklyMoods[todayIdx] == null) {
           weeklyMoods[todayIdx] = _todayMoodLevel!.toDouble();
+          weeklyLatestEmojis[todayIdx] = _getEmojiOnly(_todayMoodLevel!);
+          weeklyLogCounts[todayIdx] = 1;
           totalSum += _todayMoodLevel!.toDouble();
           loggedDays++;
+        } else {
+          weeklyLatestEmojis[todayIdx] = _getEmojiOnly(_todayMoodLevel!);
         }
       }
 
       if (mounted) {
         setState(() {
           _weeklyMoods = weeklyMoods;
+          _weeklyLatestEmojis = weeklyLatestEmojis;
+          _weeklyLogCounts = weeklyLogCounts;
           _totalLogsThisWeek = loggedDays;
           _weeklyAverage = loggedDays > 0 ? (totalSum / loggedDays) : null;
         });
@@ -1152,6 +1185,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     const SizedBox(height: 16),
                     HomeMoodTrendsCard(
                       weeklyMoods: _weeklyMoods,
+                      latestEmojis: _weeklyLatestEmojis,
+                      logCounts: _weeklyLogCounts,
                       weeklyAverage: _weeklyAverage,
                       totalLogsThisWeek: _totalLogsThisWeek,
                       onInsightsTap: () => setState(() {
