@@ -253,98 +253,94 @@ class TtsRequest(BaseModel):
     emotion: Optional[str] = None
 
 
-def resolve_marie_voice(text: str, requested_voice: Optional[str] = None, emotion: Optional[str] = None) -> str:
-    """
-    Dynamically select the appropriate Mistral Voxtral Marie voice variant:
-    - fr_marie_sad: Muted, heavy, deep empathetic comfort
-    - fr_marie_happy: Warm, radiant, uplifting joy
-    - fr_marie_excited: Vibrant, bubbly, celebratory
-    - fr_marie_curious: Bright, probing, reflective inquiry
-    - fr_marie_neutral: Composed, steady, balanced
-    """
-    if requested_voice and requested_voice.startswith("fr_marie_"):
-        return requested_voice
-
-    # 1. Check explicit emotion tag
-    if emotion:
-        e = emotion.lower()
-        if any(k in e for k in ["sad", "comforting", "heavy", "grief", "crisis", "burnout", "stress", "anxious"]):
-            return "fr_marie_sad"
-        if any(k in e for k in ["happy", "joyful", "relief", "gratitude", "positive"]):
-            return "fr_marie_happy"
-        if any(k in e for k in ["excited", "celebrating", "congrats", "winner"]):
-            return "fr_marie_excited"
-        if any(k in e for k in ["curious", "thinking", "question", "reflective"]):
-            return "fr_marie_curious"
-        if any(k in e for k in ["neutral", "default"]):
-            return "fr_marie_neutral"
-
-    # 2. Contextual heuristic text emotion detection
-    lower = text.lower()
-    if any(k in lower for k in ['congrat', 'pasa', 'nanalo', 'passed', 'proud', 'yay', 'celebrat', 'champion']):
-        return "fr_marie_excited"
-    if any(k in lower for k in ['happy', 'masaya', 'salamat', 'thank you', 'gagaan', 'relief', 'smile', 'galing']):
-        return "fr_marie_happy"
-    if any(k in lower for k in ['sad', 'lungkot', 'iyak', 'cry', 'pagod', 'stress', 'anxious', 'takot', 'hurt', 'mabigat', 'hirap', 'hug', 'hinga', 'valid']):
-        return "fr_marie_sad"
-    if any(k in lower for k in ['ano', 'bakit', 'how', 'what', 'tell me', 'share', 'kwento', '?']):
-        return "fr_marie_curious"
-
-    return "fr_marie_neutral"
-
-
 @router.post("/tts")
 async def generate_tts(
     payload: TtsRequest,
 ):
     """
-    Generate realistic neural speech audio via Mistral Voxtral (Marie Voice with emotion modulation).
-    Returns audio metadata and base64 audio data for instant browser playback.
+    Generate realistic human speech audio via ElevenLabs (Zara Voice: jqcCZkN6Knx8BJ5TBdYR).
+    Returns audio metadata and base64 audio data URL for instant client playback.
     """
     import base64
     import httpx
     import re
 
-    if not settings.MISTRAL_API_KEY:
-        raise HTTPException(status_code=503, detail="TTS voice engine is not configured")
-
     clean_text = re.sub(r'[*_~`#\[\]()•\n]', ' ', payload.text).strip()
     if not clean_text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    snippet = clean_text[:450]
-    chosen_voice = resolve_marie_voice(snippet, payload.voice, payload.emotion)
+    snippet = clean_text[:500]
 
-    headers = {
-        "Authorization": f"Bearer {settings.MISTRAL_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    req_body = {
-        "model": "voxtral-mini-tts-latest",
-        "input": snippet,
-        "voice": chosen_voice,
-    }
+    # 1. Try ElevenLabs Primary (Zara voice / High-fidelity conversational)
+    if settings.ELEVENLABS_API_KEY:
+        target_voice = payload.voice or settings.ELEVENLABS_VOICE_ID or "jqcCZkN6Knx8BJ5TBdYR"
+        # Voices to attempt: requested voice (Zara), with instant fallback to standard premade voices
+        voices_to_try = [target_voice, "EXAVITQu4vr4xnSDxMaL", "Xb7hH8MSUJpSbSDYk0k2"]
 
-    try:
-        async with httpx.AsyncClient(timeout=18.0) as client:
-            res = await client.post("https://api.mistral.ai/v1/audio/speech", headers=headers, json=req_body)
-            if res.status_code != 200:
-                raise HTTPException(status_code=502, detail=f"Mistral TTS error: {res.text[:100]}")
+        headers = {
+            "xi-api-key": settings.ELEVENLABS_API_KEY,
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg",
+        }
 
-            data = res.json()
-            audio_b64 = data.get("audio_data", "")
-            if not audio_b64:
-                raise HTTPException(status_code=502, detail="Empty audio data received from Mistral")
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            for v_id in voices_to_try:
+                try:
+                    url = f"https://api.elevenlabs.io/v1/text-to-speech/{v_id}"
+                    req_payload = {
+                        "text": snippet,
+                        "model_id": "eleven_turbo_v2_5",
+                        "voice_settings": {
+                            "stability": 0.5,
+                            "similarity_boost": 0.8,
+                            "style": 0.0,
+                            "use_speaker_boost": True,
+                        },
+                    }
+                    res = await client.post(url, headers=headers, json=req_payload)
+                    if res.status_code == 200 and len(res.content) > 1000:
+                        audio_b64 = base64.b64encode(res.content).decode("ascii")
+                        voice_name = "Zara" if v_id == target_voice else "Sarah"
+                        return {
+                            "status": "success",
+                            "provider": "elevenlabs",
+                            "voice_used": voice_name,
+                            "voice_id": v_id,
+                            "mime_type": "audio/mpeg",
+                            "audio_base64": audio_b64,
+                            "data_url": f"data:audio/mpeg;base64,{audio_b64}",
+                        }
+                except Exception:
+                    continue
 
-            return {
-                "status": "success",
-                "voice_used": chosen_voice,
-                "mime_type": "audio/mpeg",
-                "audio_base64": audio_b64,
-                "data_url": f"data:audio/mpeg;base64,{audio_b64}",
+    # 2. Fallback: Mistral Voxtral (if ElevenLabs is unreachable)
+    if settings.MISTRAL_API_KEY:
+        try:
+            headers = {
+                "Authorization": f"Bearer {settings.MISTRAL_API_KEY}",
+                "Content-Type": "application/json",
             }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"TTS synthesis failed: {str(e)}")
+            req_body = {
+                "model": "voxtral-mini-tts-latest",
+                "input": snippet,
+                "voice": "fr_marie_neutral",
+            }
+            async with httpx.AsyncClient(timeout=18.0) as client:
+                res = await client.post("https://api.mistral.ai/v1/audio/speech", headers=headers, json=req_body)
+                if res.status_code == 200:
+                    data = res.json()
+                    audio_b64 = data.get("audio_data", "")
+                    if audio_b64:
+                        return {
+                            "status": "success",
+                            "provider": "mistral",
+                            "voice_used": "Mistral Marie",
+                            "mime_type": "audio/mpeg",
+                            "audio_base64": audio_b64,
+                            "data_url": f"data:audio/mpeg;base64,{audio_b64}",
+                        }
+        except Exception:
+            pass
+
+    raise HTTPException(status_code=502, detail="TTS synthesis failed across all providers")
 

@@ -53,7 +53,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
     _audioService.playChime(frequency: 440.0, durationSeconds: 0.8);
     Future.delayed(const Duration(milliseconds: 600), () {
       if (mounted) {
-        final greeting = "Kumusta! I'm ${widget.avatar.name}. I'm listening. Tell me what's on your mind today.";
+        final greeting = "Hello! I'm ${widget.avatar.name}. I'm right here with you. Tell me what's on your mind today.";
         _aiSpeak(greeting);
       }
     });

@@ -7,10 +7,12 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 
-    # LLM provider keys
+    # LLM & Voice provider keys
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     MISTRAL_API_KEY: str = ""
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_VOICE_ID: str = "jqcCZkN6Knx8BJ5TBdYR"
 
     # Token protection & rate limits
     RATE_LIMIT_MESSAGES_PER_HOUR: int = 30
