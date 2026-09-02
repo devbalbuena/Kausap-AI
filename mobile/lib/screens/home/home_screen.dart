@@ -254,9 +254,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _insightsRefreshKey++;
         });
         HapticService.success();
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Mood checked in as ${_getMoodEmojiAndLabel(level)}! ✅ Daily quest completed.'),
+            content: Text('Mood checked in as ${_getMoodEmojiAndLabel(level)}! ✅ Daily tracking updated.'),
             backgroundColor: const Color(0xFF16A34A),
             duration: const Duration(seconds: 3),
           ),
@@ -393,10 +394,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   /// Show unified friendly 1-tap mood check-in sheet
   Future<void> _openMoodPickerSheet() async {
-    if (_todayMoodLevel != null) {
-      _showAlreadyLoggedNotice();
-      return;
-    }
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -950,7 +947,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 const SizedBox(height: 5),
                 Text(
                   hasMood
-                      ? 'Feeling $moodLabel today • Keep blooming 🌱'
+                      ? 'Feeling $moodLabel right now • Keep blooming 🌱'
                       : 'How are you feeling right now? Tap a mood below 💙',
                   style: const TextStyle(
                     fontFamily: 'Inter',

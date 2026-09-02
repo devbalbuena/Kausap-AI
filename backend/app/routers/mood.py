@@ -52,53 +52,45 @@ def create_mood_entry(
         else:
             emotions_str = str(payload.emotions)
 
-    # ── Safe-guard: Check if user already logged today in calendar day (PHT: UTC+8) ──
-    pht_now = datetime.now(timezone.utc) + timedelta(hours=8)
-    pht_today = pht_now.date()
-    today_start_utc = datetime(pht_today.year, pht_today.month, pht_today.day) - timedelta(hours=8)
-
-    existing_today = session.exec(
-        select(MoodEntry)
-        .where(
-            MoodEntry.user_id == current_user.id,
-            MoodEntry.created_at >= today_start_utc,
-        )
-        .order_by(MoodEntry.created_at.desc())
-    ).first()
-
-    if existing_today:
-        existing_today.mood_level = payload.mood_level
-        existing_today.emotions = emotions_str
-        existing_today.intensity = payload.intensity
-        existing_today.note = payload.note
-        session.add(existing_today)
-        session.commit()
-        session.refresh(existing_today)
-        entry = existing_today
-    else:
-        entry = MoodEntry(
-            user_id=current_user.id,
-            mood_level=payload.mood_level,
-            emotions=emotions_str,
-            intensity=payload.intensity,
-            note=payload.note,
-        )
-        session.add(entry)
-        session.commit()
-        session.refresh(entry)
+    entry = MoodEntry(
+        user_id=current_user.id,
+        mood_level=payload.mood_level,
+        emotions=emotions_str,
+        intensity=payload.intensity,
+        note=payload.note,
+    )
+    session.add(entry)
+    session.commit()
+    session.refresh(entry)
 
     # ── Multi-Tier Consecutive Rough Mood Escalation (RA 11036) ──
     try:
+        pht_now = datetime.now(timezone.utc) + timedelta(hours=8)
+        pht_today = pht_now.date()
+        today_start_utc = datetime(pht_today.year, pht_today.month, pht_today.day) - timedelta(hours=8)
+
         recent = session.exec(
             select(MoodEntry)
             .where(MoodEntry.user_id == current_user.id)
             .order_by(MoodEntry.created_at.desc())
-            .limit(7)
+            .limit(30)
         ).all()
 
-        consecutive_rough = 0
+        # Group recent entries by PHT calendar day (UTC+8) to evaluate distinct daily distress
+        day_moods: dict = {}
         for r in recent:
-            if r.mood_level <= 2:
+            if r.created_at:
+                pht_date = (r.created_at + timedelta(hours=8)).date()
+                if pht_date not in day_moods:
+                    day_moods[pht_date] = []
+                day_moods[pht_date].append(r.mood_level)
+
+        consecutive_rough = 0
+        sorted_dates = sorted(day_moods.keys(), reverse=True)
+        for d in sorted_dates:
+            levels = day_moods[d]
+            avg_mood = sum(levels) / len(levels)
+            if avg_mood <= 2.5 or any(m <= 2 for m in levels):
                 consecutive_rough += 1
             else:
                 break
