@@ -70,11 +70,17 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
       TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1.0), weight: 50),
     ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut));
     _loadReactions();
+    _loadBookmarkStatus();
     if (!widget.isPreview) {
       _saveRecentlyRead();
       _recordView();
     }
     _scrollCtrl.addListener(_onScroll);
+  }
+
+  Future<void> _loadBookmarkStatus() async {
+    final isSaved = await ArticlesStorageService.isBookmarked(widget.article.id);
+    if (mounted) setState(() => _isBookmarked = isSaved);
   }
 
   Future<void> _recordView() async {
@@ -377,14 +383,31 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: GestureDetector(
-                  onTap: () {
+                  onTap: () async {
                     HapticService.lightTap();
-                    setState(() => _isBookmarked = !_isBookmarked);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    final messenger = ScaffoldMessenger.of(context);
+                    final isSaved = await ArticlesStorageService.toggleBookmark(article.id);
+                    if (!mounted) return;
+                    setState(() => _isBookmarked = isSaved);
+                    messenger.hideCurrentSnackBar();
+                    messenger.showSnackBar(
                       SnackBar(
-                        content: Text(_isBookmarked ? 'Article bookmarked! 🔖' : 'Bookmark removed'),
-                        duration: const Duration(seconds: 1),
-                        backgroundColor: article.themeColor,
+                        content: Row(
+                          children: [
+                            Text(isSaved ? '🔖' : '🗑️', style: const TextStyle(fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isSaved ? 'Saved to Bookmarks!' : 'Removed from Bookmarks',
+                                style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                        duration: const Duration(seconds: 2),
+                        backgroundColor: isSaved ? const Color(0xFF0F172A) : const Color(0xFF475569),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     );
                   },
@@ -397,7 +420,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with TickerPr
                     ),
                     child: Icon(
                       _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                      color: Colors.white,
+                      color: _isBookmarked ? const Color(0xFFFBBF24) : Colors.white,
                       size: 20,
                     ),
                   ),

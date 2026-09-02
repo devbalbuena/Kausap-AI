@@ -27,13 +27,21 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<ArticleModel> _allArticles = ArticlesData.all;
   List<ArticleModel> _recentlyRead = [];
+  List<String> _bookmarkedIds = [];
   bool _isLoading = false;
+
+  List<String> get _categories => [
+    'All',
+    '🔖 Saved',
+    ...ArticlesData.categories.where((c) => c != 'All'),
+  ];
 
   @override
   void initState() {
     super.initState();
     _fetchLiveArticles();
     _loadRecentlyRead();
+    _loadBookmarks();
   }
 
   @override
@@ -72,6 +80,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
         setState(() => _isLoading = false);
       }
     }
+    _loadBookmarks();
   }
 
   Future<void> _loadRecentlyRead() async {
@@ -92,18 +101,41 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
     } catch (_) {}
   }
 
+  Future<void> _loadBookmarks() async {
+    try {
+      final ids = await ArticlesStorageService.getBookmarkedArticleIds();
+      if (mounted) setState(() => _bookmarkedIds = ids);
+    } catch (_) {}
+  }
+
+  Future<void> _openArticle(ArticleModel article) async {
+    HapticService.lightTap();
+    await Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
+    if (mounted) {
+      _fetchLiveArticles();
+      _loadRecentlyRead();
+      _loadBookmarks();
+    }
+  }
+
   List<ArticleModel> get _filteredArticles {
-    final category = ArticlesData.categories[_selectedCategoryIndex];
-    // Exclude featured from regular list to avoid duplication
+    final isSavedView = _selectedCategoryIndex == 1;
+    final category = _categories[_selectedCategoryIndex];
+
     return _allArticles.where((article) {
-      if (article.isFeatured && _selectedCategoryIndex == 0 && _searchQuery.isEmpty) return false;
-      final matchesCategory = category == 'All' || article.category == category;
+      if (isSavedView) {
+        if (!_bookmarkedIds.contains(article.id)) return false;
+      } else {
+        if (article.isFeatured && _selectedCategoryIndex == 0 && _searchQuery.isEmpty) return false;
+        final matchesCategory = category == 'All' || article.category == category;
+        if (!matchesCategory) return false;
+      }
       final matchesQuery = _searchQuery.isEmpty ||
           article.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           article.subtitle.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           article.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           article.author.toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchesCategory && matchesQuery;
+      return matchesQuery;
     }).toList();
   }
 
@@ -118,10 +150,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
 
   Widget _buildFeaturedHeroCard(ArticleModel article) {
     return GestureDetector(
-      onTap: () {
-        HapticService.lightTap();
-        Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
-      },
+      onTap: () => _openArticle(article),
       child: Container(
         height: 180,
         decoration: BoxDecoration(
@@ -259,7 +288,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
             itemBuilder: (context, i) {
               final a = _recentlyRead[i];
               return GestureDetector(
-                onTap: () => Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: a))),
+                onTap: () => _openArticle(a),
                 child: Container(
                   width: 200,
                   padding: const EdgeInsets.all(12),
@@ -364,6 +393,57 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                       ),
                     ),
+                  // Bookmarks action button with badge
+                  GestureDetector(
+                    onTap: () {
+                      HapticService.lightTap();
+                      setState(() {
+                        _selectedCategoryIndex = (_selectedCategoryIndex == 1) ? 0 : 1;
+                      });
+                    },
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: _selectedCategoryIndex == 1 ? const Color(0xFFFEF3C7) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _selectedCategoryIndex == 1 ? const Color(0xFFF59E0B) : const Color(0x33C0C9C2),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            _selectedCategoryIndex == 1 ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                            size: 19,
+                            color: _selectedCategoryIndex == 1 ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                          ),
+                          if (_bookmarkedIds.isNotEmpty)
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF59E0B),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                   Consumer<AuthProvider>(
                     builder: (context, auth, _) {
                       final user = auth.currentUser ?? {};
@@ -491,10 +571,12 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                itemCount: ArticlesData.categories.length,
+                itemCount: _categories.length,
                 itemBuilder: (context, index) {
                   final isSelected = index == _selectedCategoryIndex;
-                  final categoryName = ArticlesData.categories[index];
+                  final categoryName = _categories[index];
+                  final isBookmarkChip = index == 1;
+
                   return Semantics(
                     label: '$categoryName category filter chip${isSelected ? ', currently active' : ''}',
                     button: true,
@@ -508,29 +590,58 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : Colors.white,
+                          color: isSelected
+                              ? (isBookmarkChip ? const Color(0xFFD97706) : AppColors.primary)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isSelected ? AppColors.primary : const Color(0x33C0C9C2),
+                            color: isSelected
+                                ? (isBookmarkChip ? const Color(0xFFD97706) : AppColors.primary)
+                                : const Color(0x33C0C9C2),
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.3),
+                                    color: (isBookmarkChip ? const Color(0xFFD97706) : AppColors.primary)
+                                        .withValues(alpha: 0.3),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
                                 ]
                               : null,
                         ),
-                        child: Text(
-                          categoryName,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white : const Color(0xFF4B5563),
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              categoryName,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected ? Colors.white : const Color(0xFF4B5563),
+                              ),
+                            ),
+                            if (isBookmarkChip && _bookmarkedIds.isNotEmpty) ...[
+                              const SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? Colors.white.withAlpha(50) : const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${_bookmarkedIds.length}',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected ? Colors.white : const Color(0xFFD97706),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ),
@@ -549,23 +660,55 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                 child: filtered.isEmpty
                     ? ListView(
                         children: [
-                          SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                          SizedBox(height: MediaQuery.of(context).size.height * 0.18),
                           Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('🔍', style: TextStyle(fontSize: 40)),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No articles found',
-                                  style: AppTextStyles.heading2.copyWith(fontSize: 16),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Try a different keyword or category.',
-                                  style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 13),
-                                ),
-                              ],
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 32),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _selectedCategoryIndex == 1 ? '🔖' : '🔍',
+                                    style: const TextStyle(fontSize: 44),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _selectedCategoryIndex == 1
+                                        ? 'No saved articles yet'
+                                        : 'No articles found',
+                                    style: AppTextStyles.heading2.copyWith(fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _selectedCategoryIndex == 1
+                                        ? 'Tap the bookmark icon 🔖 on any article to save it for offline reading anytime.'
+                                        : 'Try a different keyword or category.',
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.body.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  if (_selectedCategoryIndex == 1) ...[
+                                    const SizedBox(height: 16),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        HapticService.lightTap();
+                                        setState(() => _selectedCategoryIndex = 0);
+                                      },
+                                      icon: const Icon(Icons.explore_rounded, size: 16),
+                                      label: const Text('Explore Articles', style: TextStyle(fontWeight: FontWeight.w600)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -604,11 +747,9 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
   }
 
   Widget _buildArticleCard(ArticleModel article) {
+    final isSaved = _bookmarkedIds.contains(article.id);
     return GestureDetector(
-      onTap: () {
-        HapticService.lightTap();
-        Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
-      },
+      onTap: () => _openArticle(article),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -684,25 +825,56 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     ),
                   ),
                 ),
-                // Read time tag on top right
+                // Read time & Saved tag on top right
                 Positioned(
                   top: 10,
                   right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withAlpha(160),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      article.readTime,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 10.5,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isSaved) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.bookmark_rounded, color: Colors.white, size: 11),
+                              SizedBox(width: 2),
+                              Text(
+                                'Saved',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withAlpha(160),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          article.readTime,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.5,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],

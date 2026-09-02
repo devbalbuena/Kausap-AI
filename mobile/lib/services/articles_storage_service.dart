@@ -259,9 +259,55 @@ class ArticlesStorageService {
     } catch (_) {}
   }
 
+  static const _bookmarkKey = 'kausap_article_bookmarks_v1';
+
+  /// Check if an article is bookmarked.
+  static Future<bool> isBookmarked(String articleId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_bookmarkKey) ?? [];
+      return list.contains(articleId);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Toggle bookmark status for an article. Returns true if now bookmarked, false if removed.
+  static Future<bool> toggleBookmark(String articleId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_bookmarkKey) ?? [];
+      final bool nowBookmarked;
+      if (list.contains(articleId)) {
+        list.remove(articleId);
+        nowBookmarked = false;
+      } else {
+        list.insert(0, articleId);
+        nowBookmarked = true;
+      }
+      await prefs.setStringList(_bookmarkKey, list);
+      return nowBookmarked;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Get list of all bookmarked article IDs.
+  static Future<List<String>> getBookmarkedArticleIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getStringList(_bookmarkKey) ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Return the icon that matches a category string.
   static IconData iconForCategory(String cat) {
     switch (cat.toLowerCase()) {
+      case 'saved':
+      case 'bookmarks':
+        return Icons.bookmark_rounded;
       case 'student burnout':
         return Icons.school_rounded;
       case 'anxiety & coping':
