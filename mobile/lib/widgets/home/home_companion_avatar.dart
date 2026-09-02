@@ -56,15 +56,33 @@ class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerPr
     );
 
     _bounceAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: 1.25, end: 0.95), weight: 35),
-      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0), weight: 25),
-    ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.easeOutBack));
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.25).chain(CurveTween(curve: Curves.easeOutQuad)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.25, end: 0.95).chain(CurveTween(curve: Curves.easeInOutQuad)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.95, end: 1.0).chain(CurveTween(curve: Curves.easeInQuad)),
+        weight: 25,
+      ),
+    ]).animate(_bounceController);
 
     _wiggleAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.15), weight: 25),
-      TweenSequenceItem(tween: Tween(begin: -0.15, end: 0.15), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 0.15, end: 0.0), weight: 25),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: -0.15).chain(CurveTween(curve: Curves.easeOutQuad)),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: -0.15, end: 0.15).chain(CurveTween(curve: Curves.easeInOutQuad)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.15, end: 0.0).chain(CurveTween(curve: Curves.easeInQuad)),
+        weight: 25,
+      ),
     ]).animate(_bounceController);
   }
 
