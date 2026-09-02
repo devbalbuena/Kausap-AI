@@ -19,7 +19,7 @@ _openai_client: Optional[AsyncOpenAI] = (
 )
 
 # Preferred default models
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.0-flash"
 OPENAI_MODEL = "gpt-4o-mini"
 
 
