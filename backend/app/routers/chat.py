@@ -245,3 +245,51 @@ def delete_session(
     db.delete(chat_session)
     db.commit()
     return None
+
+
+class TtsRequest(BaseModel):
+    text: str
+    voice: Optional[str] = "en_paul_neutral"
+
+
+@router.post("/tts")
+async def generate_tts(
+    payload: TtsRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    Generate realistic neural speech audio via Mistral Voxtral.
+    Returns audio/mpeg stream for instant playback on client devices.
+    """
+    import httpx
+    import re
+    from fastapi.responses import Response
+
+    if not settings.MISTRAL_API_KEY:
+        raise HTTPException(status_code=503, detail="TTS voice engine is not configured")
+
+    clean_text = re.sub(r'[*_~`#\[\]()•\n]', ' ', payload.text).strip()
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+
+    snippet = clean_text[:400]
+
+    headers = {
+        "Authorization": f"Bearer {settings.MISTRAL_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    req_body = {
+        "model": "voxtral-mini-tts-latest",
+        "input": snippet,
+        "voice": payload.voice or "en_paul_neutral",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            res = await client.post("https://api.mistral.ai/v1/audio/speech", headers=headers, json=req_body)
+            if res.status_code != 200:
+                raise HTTPException(status_code=502, detail=f"Mistral TTS error: {res.text[:100]}")
+            return Response(content=res.content, media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"TTS synthesis failed: {str(e)}")
+

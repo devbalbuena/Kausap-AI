@@ -29,6 +29,7 @@ class ApiConfig {
 
   // Chat endpoints
   static const String chatSessions = '/chat/sessions';
+  static const String chatTts = '/chat/tts';
 
   // Referral endpoints
   static const String referrals = '/referrals';
