@@ -143,7 +143,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
     } catch (_) {}
   }
 
-  void _aiSpeak(String text) {
+  void _aiSpeak(String text, {String? emotion}) {
     if (!mounted) return;
     setState(() {
       _isAiSpeaking = true;
@@ -155,6 +155,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
     if (_isSpeakerOn) {
       VoiceAudioService().speak(
         text,
+        emotion: emotion,
         onDone: () {
           if (mounted) {
             setState(() {
@@ -183,24 +184,38 @@ class _VoiceCallScreenState extends State<VoiceCallScreen>
   void _processUserSpokenInput(String userInput) {
     final lower = userInput.toLowerCase();
     String reply;
+    String emotion = 'neutral';
 
     if (lower.contains('depre') || lower.contains('sad') || lower.contains('lungkot') || lower.contains('crying')) {
       reply = "I hear the sadness in your voice. Please know that it's okay to feel this way, and you are not alone. Let's take a slow breath together.";
+      emotion = 'sad';
     } else if (lower.contains('family') || lower.contains('parents') || lower.contains('mom') || lower.contains('dad')) {
       reply = "Family situations can be so overwhelming. Your feelings are completely valid. What's been the hardest part for you recently?";
+      emotion = 'sad';
     } else if (lower.contains('stress') || lower.contains('exam') || lower.contains('school') || lower.contains('study') || lower.contains('thesis')) {
       reply = "Academic stress can feel like a heavy burden. Remember that your grades don't define your worth. Have you taken a short break today?";
+      emotion = 'sad';
     } else if (lower.contains('anxious') || lower.contains('panic') || lower.contains('scared') || lower.contains('kaba')) {
       reply = "I'm right here with you. Let's ground ourselves: feel your feet on the floor and breathe in for 4 seconds... and breathe out.";
+      emotion = 'sad';
     } else if (lower.contains('sleep') || lower.contains('tired') || lower.contains('insomnia')) {
       reply = "Rest is so essential. When your mind is racing, try not to fight it. Just breathe gently and allow yourself to pause.";
+      emotion = 'sad';
+    } else if (lower.contains('happy') || lower.contains('masaya') || lower.contains('salamat') || lower.contains('thanks') || lower.contains('gumaan')) {
+      reply = "I'm so glad to hear that! Knowing that you're feeling a bit lighter makes my day. How else can I support you today?";
+      emotion = 'happy';
+    } else if (lower.contains('passed') || lower.contains('pasa') || lower.contains('nanalo') || lower.contains('won') || lower.contains('congrats')) {
+      reply = "Congratulations! That is such wonderful news! I am so proud of your hard work and perseverance!";
+      emotion = 'excited';
     } else if (lower.contains('giving up') || lower.contains('die') || lower.contains('suicide') || lower.contains('end it')) {
       reply = "I hear how much pain you're in. You are deeply valued, and support is here. You can call the 24/7 NCMH hotline at 1553 anytime.";
+      emotion = 'sad';
     } else {
       reply = "Thank you for sharing that with me. I'm listening closely. Tell me more about what you're feeling right now.";
+      emotion = 'curious';
     }
 
-    _aiSpeak(reply);
+    _aiSpeak(reply, emotion: emotion);
   }
 
   @override

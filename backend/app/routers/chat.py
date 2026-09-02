@@ -249,21 +249,61 @@ def delete_session(
 
 class TtsRequest(BaseModel):
     text: str
-    voice: Optional[str] = "en_paul_neutral"
+    voice: Optional[str] = None
+    emotion: Optional[str] = None
+
+
+def resolve_marie_voice(text: str, requested_voice: Optional[str] = None, emotion: Optional[str] = None) -> str:
+    """
+    Dynamically select the appropriate Mistral Voxtral Marie voice variant:
+    - fr_marie_sad: Muted, heavy, deep empathetic comfort
+    - fr_marie_happy: Warm, radiant, uplifting joy
+    - fr_marie_excited: Vibrant, bubbly, celebratory
+    - fr_marie_curious: Bright, probing, reflective inquiry
+    - fr_marie_neutral: Composed, steady, balanced
+    """
+    if requested_voice and requested_voice.startswith("fr_marie_"):
+        return requested_voice
+
+    # 1. Check explicit emotion tag
+    if emotion:
+        e = emotion.lower()
+        if any(k in e for k in ["sad", "comforting", "heavy", "grief", "crisis", "burnout", "stress", "anxious"]):
+            return "fr_marie_sad"
+        if any(k in e for k in ["happy", "joyful", "relief", "gratitude", "positive"]):
+            return "fr_marie_happy"
+        if any(k in e for k in ["excited", "celebrating", "congrats", "winner"]):
+            return "fr_marie_excited"
+        if any(k in e for k in ["curious", "thinking", "question", "reflective"]):
+            return "fr_marie_curious"
+        if any(k in e for k in ["neutral", "default"]):
+            return "fr_marie_neutral"
+
+    # 2. Contextual heuristic text emotion detection
+    lower = text.lower()
+    if any(k in lower for k in ['congrat', 'pasa', 'nanalo', 'passed', 'proud', 'yay', 'celebrat', 'champion']):
+        return "fr_marie_excited"
+    if any(k in lower for k in ['happy', 'masaya', 'salamat', 'thank you', 'gagaan', 'relief', 'smile', 'galing']):
+        return "fr_marie_happy"
+    if any(k in lower for k in ['sad', 'lungkot', 'iyak', 'cry', 'pagod', 'stress', 'anxious', 'takot', 'hurt', 'mabigat', 'hirap', 'hug', 'hinga', 'valid']):
+        return "fr_marie_sad"
+    if any(k in lower for k in ['ano', 'bakit', 'how', 'what', 'tell me', 'share', 'kwento', '?']):
+        return "fr_marie_curious"
+
+    return "fr_marie_neutral"
 
 
 @router.post("/tts")
 async def generate_tts(
     payload: TtsRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
-    Generate realistic neural speech audio via Mistral Voxtral.
-    Returns audio/mpeg stream for instant playback on client devices.
+    Generate realistic neural speech audio via Mistral Voxtral (Marie Voice with emotion modulation).
+    Returns audio metadata and base64 audio data for instant browser playback.
     """
+    import base64
     import httpx
     import re
-    from fastapi.responses import Response
 
     if not settings.MISTRAL_API_KEY:
         raise HTTPException(status_code=503, detail="TTS voice engine is not configured")
@@ -272,7 +312,8 @@ async def generate_tts(
     if not clean_text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    snippet = clean_text[:400]
+    snippet = clean_text[:450]
+    chosen_voice = resolve_marie_voice(snippet, payload.voice, payload.emotion)
 
     headers = {
         "Authorization": f"Bearer {settings.MISTRAL_API_KEY}",
@@ -281,15 +322,29 @@ async def generate_tts(
     req_body = {
         "model": "voxtral-mini-tts-latest",
         "input": snippet,
-        "voice": payload.voice or "en_paul_neutral",
+        "voice": chosen_voice,
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=18.0) as client:
             res = await client.post("https://api.mistral.ai/v1/audio/speech", headers=headers, json=req_body)
             if res.status_code != 200:
                 raise HTTPException(status_code=502, detail=f"Mistral TTS error: {res.text[:100]}")
-            return Response(content=res.content, media_type="audio/mpeg")
+
+            data = res.json()
+            audio_b64 = data.get("audio_data", "")
+            if not audio_b64:
+                raise HTTPException(status_code=502, detail="Empty audio data received from Mistral")
+
+            return {
+                "status": "success",
+                "voice_used": chosen_voice,
+                "mime_type": "audio/mpeg",
+                "audio_base64": audio_b64,
+                "data_url": f"data:audio/mpeg;base64,{audio_b64}",
+            }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"TTS synthesis failed: {str(e)}")
 

@@ -27,9 +27,11 @@ class VoiceAudioService {
   bool get isListening => _isListening;
   String get currentSpeakingText => _currentSpeakingText;
 
-  /// Speaks the given text using high-fidelity Mistral Voxtral neural voice with browser fallback.
+  /// Speaks the given text using high-fidelity Mistral Voxtral Marie neural voice with dynamic emotional intonation.
   Future<void> speak(
     String text, {
+    String? emotion,
+    String? voice,
     VoidCallback? onStart,
     VoidCallback? onDone,
   }) async {
@@ -44,12 +46,16 @@ class VoiceAudioService {
         final token = await TokenStorage().getToken();
         final apiUrl = '${ApiConfig.baseUrl}${ApiConfig.chatTts}';
         final safeText = jsonEncode(text);
+        final safeEmotion = jsonEncode(emotion ?? '');
+        final safeVoice = jsonEncode(voice ?? '');
         final safeToken = jsonEncode(token ?? '');
         final safeUrl = jsonEncode(apiUrl);
 
         final jsCode = '''
         (function() {
           var text = $safeText;
+          var emotion = $safeEmotion;
+          var voice = $safeVoice;
           var token = $safeToken;
           var url = $safeUrl;
 
@@ -60,35 +66,41 @@ class VoiceAudioService {
             window.speechSynthesis.cancel();
           }
 
-          // 1. Stream neural voice from Mistral Voxtral TTS via backend
+          var headers = { 'Content-Type': 'application/json' };
           if (token && token.length > 5) {
-            fetch(url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-              },
-              body: JSON.stringify({ text: text })
-            })
-            .then(function(res) {
-              if (!res.ok) throw new Error('Voxtral TTS status: ' + res.status);
-              return res.blob();
-            })
-            .then(function(blob) {
-              var blobUrl = URL.createObjectURL(blob);
-              var audio = new Audio(blobUrl);
+            headers['Authorization'] = 'Bearer ' + token;
+          }
+
+          var body = { text: text };
+          if (emotion && emotion.length > 0) body.emotion = emotion;
+          if (voice && voice.length > 0) body.voice = voice;
+
+          fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(body)
+          })
+          .then(function(res) {
+            if (!res.ok) throw new Error('Voxtral TTS response status: ' + res.status);
+            return res.json();
+          })
+          .then(function(data) {
+            if (data && data.data_url) {
+              console.log('[Kausap Voice] Synthesized with Mistral Marie Voice:', data.voice_used);
+              var audio = new Audio(data.data_url);
               window._kausapCurrentAudio = audio;
-              audio.play().catch(function() {
+              audio.play().catch(function(e) {
+                console.warn('[Kausap Voice] Audio play error:', e);
                 fallbackSpeech(text);
               });
-            })
-            .catch(function(err) {
-              console.log('Neural TTS fallback to browser TTS:', err);
-              fallbackSpeech(text);
-            });
-          } else {
+            } else {
+              throw new Error('No data_url in TTS response');
+            }
+          })
+          .catch(function(err) {
+            console.warn('[Kausap Voice] Neural TTS fetch failed, falling back:', err);
             fallbackSpeech(text);
-          }
+          });
 
           function fallbackSpeech(t) {
             if ('speechSynthesis' in window) {
@@ -117,7 +129,7 @@ class VoiceAudioService {
 
     // Safety fallback timer to automatically reset speaking state
     final wordCount = text.split(' ').length;
-    final durationMs = (wordCount * 350).clamp(2500, 20000);
+    final durationMs = (wordCount * 380).clamp(2500, 25000);
     _speechFallbackTimer?.cancel();
     _speechFallbackTimer = Timer(Duration(milliseconds: durationMs), () {
       if (_isSpeaking && _currentSpeakingText == text) {

@@ -284,15 +284,37 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     }
   }
 
-  void _toggleTts(String text) {
+  void _toggleTts(String text, {MascotEmotion? emotion}) {
     if (_currentlySpeakingContent == text && VoiceAudioService().isSpeaking) {
       VoiceAudioService().stopSpeaking();
       setState(() => _currentlySpeakingContent = null);
     } else {
       HapticService.lightTap();
       setState(() => _currentlySpeakingContent = text);
+
+      String? emotionKey;
+      final targetEmotion = emotion ?? _mascotEmotion;
+      switch (targetEmotion) {
+        case MascotEmotion.comforting:
+          emotionKey = 'sad';
+          break;
+        case MascotEmotion.joyful:
+          emotionKey = 'happy';
+          break;
+        case MascotEmotion.celebrating:
+          emotionKey = 'excited';
+          break;
+        case MascotEmotion.thinking:
+          emotionKey = 'curious';
+          break;
+        case MascotEmotion.neutral:
+          emotionKey = 'neutral';
+          break;
+      }
+
       VoiceAudioService().speak(
         text,
+        emotion: emotionKey,
         onDone: () {
           if (mounted) setState(() => _currentlySpeakingContent = null);
         },
@@ -1421,7 +1443,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 ),
                 const SizedBox(height: 4),
                 GestureDetector(
-                  onTap: () => _toggleTts(msg.content),
+                  onTap: () => _toggleTts(msg.content, emotion: _detectMascotEmotion('', msg.content)),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
