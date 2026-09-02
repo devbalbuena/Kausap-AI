@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # LLM provider keys
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
+    MISTRAL_API_KEY: str = ""
 
     # Token protection & rate limits
     RATE_LIMIT_MESSAGES_PER_HOUR: int = 30

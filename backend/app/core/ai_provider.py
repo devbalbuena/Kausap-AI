@@ -123,6 +123,47 @@ async def _call_openai(
     return content, prompt_tokens, completion_tokens, total_tokens
 
 
+async def _call_mistral(
+    messages: List[Dict[str, str]],
+    model: str = "mistral-small-latest",
+    temperature: float = 0.7,
+    max_tokens: int = 600,
+) -> Tuple[str, int, int, int]:
+    """Call Mistral AI REST API (Mistral Studio / Voxtral)."""
+    if not settings.MISTRAL_API_KEY:
+        raise ValueError("MISTRAL_API_KEY is not configured")
+
+    headers = {
+        "Authorization": f"Bearer {settings.MISTRAL_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    url = "https://api.mistral.ai/v1/chat/completions"
+
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        res = await client.post(url, headers=headers, json=payload)
+        if res.status_code != 200:
+            logger.warning(f"Mistral API error {res.status_code}: {res.text[:200]}")
+            raise RuntimeError(f"Mistral API returned status {res.status_code}")
+
+        data = res.json()
+        choices = data.get("choices", [])
+        if not choices:
+            raise RuntimeError("Mistral returned empty choices")
+
+        content = choices[0].get("message", {}).get("content", "")
+        usage = data.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        total_tokens = usage.get("total_tokens", prompt_tokens + completion_tokens)
+        return content, prompt_tokens, completion_tokens, total_tokens
+
+
 async def chat_completion_with_usage(
     messages: List[Dict[str, str]],
     model: str = GEMINI_MODEL,
@@ -130,11 +171,12 @@ async def chat_completion_with_usage(
     max_tokens: int = 600,
 ) -> Tuple[str, int, int, int]:
     """
-    Send messages with automatic dual-provider fallback:
+    Send messages with automatic multi-provider resilience:
     1. Try Gemini 2.5 Flash
     2. Try Gemini 2.5 Pro (if Flash is busy)
-    3. If Gemini fails, fallback to OpenAI
-    4. If all fail, return compassionate safety fallback
+    3. Try Mistral AI / Voxtral (mistral-small-latest)
+    4. Try OpenAI (gpt-4o-mini)
+    5. If all fail, return compassionate safety fallback
     """
     # 1. Try Gemini primary (2.5-flash) and secondary (2.5-pro)
     if settings.GEMINI_API_KEY:
@@ -149,7 +191,19 @@ async def chat_completion_with_usage(
             except Exception as e:
                 logger.warning(f"Gemini API ({gemini_model}) failed: {e}. Trying next...")
 
-    # 2. Try OpenAI fallback
+    # 2. Try Mistral AI fallback (High-speed Mistral / Voxtral)
+    if settings.MISTRAL_API_KEY:
+        try:
+            return await _call_mistral(
+                messages=messages,
+                model="mistral-small-latest",
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except Exception as e:
+            logger.warning(f"Mistral API fallback failed: {e}. Trying OpenAI...")
+
+    # 3. Try OpenAI fallback
     if settings.OPENAI_API_KEY:
         try:
             return await _call_openai(
@@ -161,7 +215,7 @@ async def chat_completion_with_usage(
         except Exception as e:
             logger.error(f"OpenAI fallback failed: {e}")
 
-    # 3. Empathetic offline fallback response if both providers are offline
+    # 4. Empathetic offline fallback response if all providers are unreachable
     fallback_text = (
         "Nandito pa rin ako para sa'yo. Pasensya na, medyo mabagal ang aking connection "
         "ngayong sandali, pero gusto kong malaman mo na valid at mahalaga ang nararamdaman mo. "
