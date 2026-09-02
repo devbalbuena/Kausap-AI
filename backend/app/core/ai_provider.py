@@ -19,7 +19,7 @@ _openai_client: Optional[AsyncOpenAI] = (
 )
 
 # Preferred default models
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 OPENAI_MODEL = "gpt-4o-mini"
 
 
@@ -80,10 +80,10 @@ async def _call_gemini(
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
 
-    async with httpx.AsyncClient(timeout=35.0) as client:
+    async with httpx.AsyncClient(timeout=25.0) as client:
         res = await client.post(url, json=payload)
         if res.status_code != 200:
-            logger.warning(f"Gemini API error {res.status_code}: {res.text[:200]}")
+            logger.warning(f"Gemini API error {res.status_code} on {model}: {res.text[:200]}")
             raise RuntimeError(f"Gemini API returned status {res.status_code}")
 
         data = res.json()
@@ -132,20 +132,22 @@ async def chat_completion_with_usage(
     """
     Send messages with automatic dual-provider fallback:
     1. Try Gemini 2.5 Flash
-    2. If Gemini fails, fallback to OpenAI
-    3. If both fail, return compassionate safety fallback
+    2. Try Gemini 2.5 Pro (if Flash is busy)
+    3. If Gemini fails, fallback to OpenAI
+    4. If all fail, return compassionate safety fallback
     """
-    # 1. Try Gemini first if key exists
+    # 1. Try Gemini primary (2.5-flash) and secondary (2.5-pro)
     if settings.GEMINI_API_KEY:
-        try:
-            return await _call_gemini(
-                messages=messages,
-                model=GEMINI_MODEL,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-        except Exception as e:
-            logger.error(f"Gemini API primary failed: {e}. Attempting OpenAI fallback...")
+        for gemini_model in [GEMINI_MODEL, "gemini-2.5-pro"]:
+            try:
+                return await _call_gemini(
+                    messages=messages,
+                    model=gemini_model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            except Exception as e:
+                logger.warning(f"Gemini API ({gemini_model}) failed: {e}. Trying next...")
 
     # 2. Try OpenAI fallback
     if settings.OPENAI_API_KEY:
