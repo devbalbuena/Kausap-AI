@@ -888,6 +888,14 @@ def get_student_mood_history(
     ).all()
 
 
+def _utc_dt(dt: Optional[datetime]) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 @router.get("/users/{user_id}/chat-sessions", response_model=List[ChatSessionRead])
 def get_student_chat_sessions(
     user_id: uuid.UUID,
@@ -915,7 +923,7 @@ def get_student_chat_sessions(
                 id=s.id,
                 user_id=s.user_id,
                 topic=s.topic or "Counseling & Wellness Chat",
-                created_at=s.created_at,
+                created_at=_utc_dt(s.created_at),
                 messages=[
                     ChatMessageRead(
                         id=m.id,
@@ -923,7 +931,7 @@ def get_student_chat_sessions(
                         role=m.role,
                         content=m.content,
                         risk_flag=m.risk_flag,
-                        created_at=m.created_at,
+                        created_at=_utc_dt(m.created_at),
                     )
                     for m in msgs
                 ],

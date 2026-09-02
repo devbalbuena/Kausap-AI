@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../services/api_client.dart';
 import '../../../services/clinical_audit_service.dart';
 import '../../../utils/haptic_service.dart';
+import '../../../utils/date_helper.dart';
 
 class StudentClinicalModal extends StatefulWidget {
   final Map<String, dynamic> student;
@@ -127,13 +127,7 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
   }
 
   String _formatDateTime(String? raw) {
-    if (raw == null || raw.isEmpty) return 'Recent';
-    try {
-      final dt = DateTime.parse(raw).toLocal();
-      return DateFormat('MMM d, yyyy • h:mm a').format(dt);
-    } catch (_) {
-      return raw;
-    }
+    return DateHelper.formatDateTime(raw);
   }
 
   Map<String, dynamic> _getMoodVisuals(int level) {

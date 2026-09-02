@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/date_helper.dart';
 
 class ChatHistoryScreen extends StatefulWidget {
   final Function(List<Map<String, dynamic>> messages)? onResumeSession;
@@ -91,13 +91,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   }
 
   String _formatSessionDate(String? isoDate) {
-    if (isoDate == null) return 'Recent';
-    try {
-      final dt = DateTime.parse(isoDate);
-      return DateFormat('MMM d, yyyy • h:mm a').format(dt);
-    } catch (_) {
-      return isoDate;
-    }
+    return DateHelper.formatDateTime(isoDate);
   }
 
   @override
