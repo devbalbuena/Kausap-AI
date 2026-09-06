@@ -13,7 +13,7 @@ Core Principles:
 """
 
 import re
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Any
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BASE SYSTEM PROMPT (EMPATHY ENGINE + CLINICAL GUARDRAILS)
@@ -334,10 +334,13 @@ def build_system_messages(
     student_name: Optional[str] = None,
     mood_level: Optional[int] = None,
     custom_system_prompt: Optional[str] = None,
+    mood_trend_context: Optional[Dict[str, Any]] = None,
+    screener_context: Optional[List[Dict[str, Any]]] = None,
 ) -> list[dict]:
     """
     Build the complete personalized system prompt for the conversation.
     Injects Carl Rogers empathy, persona style, student name, today's mood context,
+    longitudinal 7-day mood trends, emotion tags, clinical assessments (PHQ-9/GAD-7),
     and optional custom avatar personality from the mobile app.
     """
     prompt = BASE_EMPATHY_PROMPT
@@ -361,7 +364,7 @@ def build_system_messages(
         prompt += custom_system_prompt
         prompt += "\n(Apply this custom personality on top of the base empathy rules above. The student created this companion to feel personal and unique to them.)\n"
 
-    # Student context injection
+    # Layer 3: Student personal context injection
     context_lines = []
     if student_name:
         context_lines.append(f"Student Name: {student_name} (Address the student warmly by their name when natural).")
@@ -378,9 +381,68 @@ def build_system_messages(
         context_lines.append(f"Today's Logged Mood: Level {mood_level} — {label}")
 
     if user_context:
-        context_lines.append(f"Additional Personal Background: {user_context}")
+        context_lines.append(f"University & Academic Background: {user_context}")
 
     if context_lines:
-        prompt += "\n\n[STUDENT CONTEXT & MOOD STATE]\n" + "\n".join(context_lines)
+        prompt += "\n\n[STUDENT IMMEDIATE CONTEXT]\n" + "\n".join(context_lines)
+
+    # Layer 4: Longitudinal Mood Trends & Emotion Analytics
+    if mood_trend_context:
+        trend_lines = []
+        avg_7d = mood_trend_context.get("avg_mood_7d")
+        if avg_7d is not None:
+            trend_lines.append(f"- 7-Day Average Mood: {avg_7d:.1f}/5.0")
+        
+        trajectory = mood_trend_context.get("trajectory")
+        if trajectory:
+            trend_lines.append(f"- Trajectory / Momentum: {trajectory}")
+
+        frequent_emotions = mood_trend_context.get("frequent_emotions")
+        if frequent_emotions:
+            trend_lines.append(f"- Common Emotion Tags Logged Recently: {', '.join(frequent_emotions)}")
+
+        recent_notes = mood_trend_context.get("recent_notes")
+        if recent_notes:
+            notes_str = " | ".join(f'"{n}"' for n in recent_notes[:3])
+            trend_lines.append(f"- Recent Journal / Mood Notes: {notes_str}")
+
+        if trend_lines:
+            prompt += (
+                "\n\n[STUDENT LONGITUDINAL MOOD ANALYTICS (PAST 7-14 DAYS)]\n"
+                + "\n".join(trend_lines)
+            )
+
+    # Layer 5: Standardized Clinical Screeners (PHQ-9, GAD-7, Burnout)
+    if screener_context and len(screener_context) > 0:
+        screener_lines = []
+        for s in screener_context:
+            test_name = s.get("testName") or s.get("screener") or "Screener"
+            score = s.get("score")
+            max_score = s.get("maxScore")
+            severity = s.get("severity")
+            date_str = s.get("date") or "Recently"
+            
+            score_part = f"Score: {score}/{max_score}" if score is not None and max_score is not None else ""
+            severity_part = f"Severity: {severity}" if severity else ""
+            screener_lines.append(f"- {test_name}: {score_part} ({severity_part}) -- Checked: {date_str}")
+
+        if screener_lines:
+            prompt += (
+                "\n\n[STANDARDIZED CLINICAL SCREENER RECORDS (PHQ-9 / GAD-7 / BURNOUT)]\n"
+                + "\n".join(screener_lines)
+            )
+
+    # Layer 6: Carl Rogers Empathy & Proactive Guidance Instructions
+    if mood_trend_context or screener_context:
+        prompt += """
+
+[CLINICAL & EMPATHETIC INTEGRATION RULES]
+1. NATURAL WEAVING, NEVER ROBOTIC: NEVER mechanically recite test numbers or clinical stats to the student (e.g. NEVER say "My records show your GAD-7 is 14" or "Your average mood is 2.8"). Instead, organically weave this understanding into compassionate human empathy (e.g. "Napansin ko na medyo sunod-sunod ang mabibigat na araw mo nitong linggo at ramdam ko 'yung pagod mo sa requirements...").
+2. VALIDATE CHRONIC WEIGHT FIRST: If the student's mood has been low for several consecutive days or screening shows high anxiety/burnout, sit with their fatigue first before jumping to problem-solving. Validate how exhausting carrying that weight is.
+3. PROACTIVE TAILORED COPING TOOLS: Offer relevant, evidence-based coping tools attuned to their specific emotional tags:
+   - If tags or screeners show "Anxious / Exam Stress": Suggest Kuya Ben's micro-step breakdown, a 2-minute box breathing exercise, or grounding.
+   - If tags show "Exhausted / Insomnia": Suggest gentle sleep hygiene, screen-free wind-down, or the Unwind & Restore Meditation with soothing Tibetan singing bowl or rain sounds.
+   - If clinical scores are severe: Gently reassure them with utmost tenderness that seeking support from the FSUU Guidance & Counseling Office is a sign of courage, and that they never have to navigate university alone.
+"""
 
     return [{"role": "system", "content": prompt}]

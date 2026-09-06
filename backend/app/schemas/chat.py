@@ -1,6 +1,6 @@
 from datetime import datetime
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from sqlmodel import SQLModel
 
@@ -9,6 +9,7 @@ class ChatMessageCreate(BaseModel):
     content: str
     persona: Optional[str] = "buddy"
     custom_system_prompt: Optional[str] = None
+    screener_context: Optional[List[Dict[str, Any]]] = None
 
 
 class ChatMessageRead(SQLModel):

@@ -1,5 +1,6 @@
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Optional, Dict, Any, Tuple
 import uuid
+import json
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -47,6 +48,93 @@ def _get_own_session(
     if chat_session.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your chat session")
     return chat_session
+
+
+def _extract_mood_analytics(db: Session, user_id: uuid.UUID) -> Tuple[Optional[int], Optional[Dict[str, Any]]]:
+    """
+    Fetch today's mood level and compute longitudinal 7-14 day wellness trends & emotion tags.
+    Returns (today_mood_level, mood_trend_context).
+    """
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    fourteen_days_ago = today_start - timedelta(days=14)
+
+    # 1. Today's latest mood entry
+    today_mood_entry = db.exec(
+        select(MoodEntry)
+        .where(MoodEntry.user_id == user_id)
+        .where(MoodEntry.created_at >= today_start)
+        .order_by(MoodEntry.created_at.desc())
+    ).first()
+    today_mood_level = today_mood_entry.mood_level if today_mood_entry else None
+
+    # 2. Past 14 days of mood history for trend analysis
+    entries = db.exec(
+        select(MoodEntry)
+        .where(MoodEntry.user_id == user_id)
+        .where(MoodEntry.created_at >= fourteen_days_ago)
+        .order_by(MoodEntry.created_at.desc())
+    ).all()
+
+    if not entries:
+        return today_mood_level, None
+
+    seven_days_ago = today_start - timedelta(days=7)
+    recent_7d = [e for e in entries if e.created_at >= seven_days_ago]
+    prior_7d = [e for e in entries if e.created_at < seven_days_ago]
+
+    avg_7d = sum(e.mood_level for e in recent_7d) / len(recent_7d) if recent_7d else None
+    avg_prior = sum(e.mood_level for e in prior_7d) / len(prior_7d) if prior_7d else None
+
+    trajectory = "Holding steady"
+    if avg_7d is not None and avg_prior is not None:
+        diff = avg_7d - avg_prior
+        if diff >= 0.5:
+            trajectory = "Improving trend (mood has been lifting compared to last week)"
+        elif diff <= -0.5:
+            trajectory = "Declining trend (carrying more fatigue/stress than last week)"
+    elif avg_7d is not None:
+        if avg_7d <= 2.2:
+            trajectory = "Consistently low or drained over recent check-ins"
+        elif avg_7d >= 4.0:
+            trajectory = "Consistently positive emotional energy"
+
+    # Aggregate emotion tags frequency & recent notes
+    emotion_counts: Dict[str, int] = {}
+    recent_notes: List[str] = []
+    for e in entries:
+        if e.emotions:
+            try:
+                parsed = json.loads(e.emotions)
+                if isinstance(parsed, list):
+                    for tag in parsed:
+                        tag_clean = str(tag).strip()
+                        if tag_clean:
+                            emotion_counts[tag_clean] = emotion_counts.get(tag_clean, 0) + 1
+                elif isinstance(parsed, str):
+                    for tag in parsed.split(","):
+                        tag_clean = tag.strip()
+                        if tag_clean:
+                            emotion_counts[tag_clean] = emotion_counts.get(tag_clean, 0) + 1
+            except Exception:
+                for tag in e.emotions.split(","):
+                    tag_clean = tag.strip()
+                    if tag_clean:
+                        emotion_counts[tag_clean] = emotion_counts.get(tag_clean, 0) + 1
+        if e.note and e.note.strip() and len(recent_notes) < 3:
+            recent_notes.append(e.note.strip())
+
+    sorted_emotions = sorted(emotion_counts.items(), key=lambda x: x[1], reverse=True)
+    frequent_emotions = [f"{tag} ({count}x)" if count > 1 else tag for tag, count in sorted_emotions[:6]]
+
+    mood_trend_context = {
+        "avg_mood_7d": avg_7d,
+        "trajectory": trajectory,
+        "frequent_emotions": frequent_emotions,
+        "recent_notes": recent_notes,
+    }
+
+    return today_mood_level, mood_trend_context
 
 
 @router.post("/sessions", response_model=ChatSessionRead, status_code=status.HTTP_201_CREATED)
@@ -151,15 +239,8 @@ async def post_message(
                 db.refresh(chat_session)
                 sorted_messages = sorted(chat_session.messages, key=lambda m: m.created_at)
 
-                # Fetch today's mood entry for context
-                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-                today_mood_entry = db.exec(
-                    select(MoodEntry)
-                    .where(MoodEntry.user_id == current_user.id)
-                    .where(MoodEntry.created_at >= today_start)
-                    .order_by(MoodEntry.created_at.desc())
-                ).first()
-                mood_level = today_mood_entry.mood_level if today_mood_entry else None
+                # Fetch today's mood entry and longitudinal wellness trends
+                mood_level, mood_trend_context = _extract_mood_analytics(db, current_user.id)
 
                 # Build student cultural profile context
                 cultural_parts = []
@@ -178,7 +259,7 @@ async def post_message(
                     current_user.full_name.split()[0] if current_user.full_name else None
                 )
 
-                # Generate system prompt with Person-Centered Empathy & persona
+                # Generate system prompt with Person-Centered Empathy, trends & screeners
                 active_persona = payload.persona or "buddy"
                 llm_messages = build_system_messages(
                     user_context=context_str,
@@ -186,6 +267,8 @@ async def post_message(
                     student_name=student_display_name,
                     mood_level=mood_level,
                     custom_system_prompt=payload.custom_system_prompt,
+                    mood_trend_context=mood_trend_context,
+                    screener_context=payload.screener_context,
                 )
 
                 # Per-persona temperature tuning

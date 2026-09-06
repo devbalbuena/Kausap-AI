@@ -511,6 +511,41 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         requestBody['custom_system_prompt'] = customPrompt;
       }
 
+      // Attach latest clinical screening context (PHQ-9, GAD-7, Burnout)
+      try {
+        final rawAssessments = await _storage.read(key: 'assessment_history');
+        if (rawAssessments != null) {
+          final List<dynamic> allAssessments = jsonDecode(rawAssessments) as List;
+          final Map<String, Map<String, dynamic>> latestByType = {};
+          for (final item in allAssessments) {
+            if (item is Map) {
+              final name = (item['testName'] ?? '').toString();
+              String categoryKey = 'other';
+              final nameLower = name.toLowerCase();
+              if (nameLower.contains('phq')) {
+                categoryKey = 'phq9';
+              } else if (nameLower.contains('gad')) {
+                categoryKey = 'gad7';
+              } else if (nameLower.contains('burnout') || nameLower.contains('fatigue')) {
+                categoryKey = 'burnout';
+              }
+              if (!latestByType.containsKey(categoryKey)) {
+                latestByType[categoryKey] = {
+                  'testName': item['testName'],
+                  'score': item['score'],
+                  'maxScore': item['maxScore'],
+                  'severity': item['severity'],
+                  'date': item['date'],
+                };
+              }
+            }
+          }
+          if (latestByType.isNotEmpty) {
+            requestBody['screener_context'] = latestByType.values.toList();
+          }
+        }
+      } catch (_) {}
+
       final data = await ApiClient().post(
         endpoint,
         body: requestBody,
