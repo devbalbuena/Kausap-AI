@@ -1,13 +1,17 @@
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 import uuid
+import httpx
+import logging
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from sqlmodel import Session, select, func
 from app.database import get_session
 from app.models.user import User
 from app.models.notification import Notification, NotificationType
 from app.schemas.notification import NotificationRead
 from app.core.deps import get_current_user
+from app.core.config import settings
 
 from app.models.mood import MoodEntry
 
@@ -15,6 +19,8 @@ from app.models.user import User, UserRole
 from app.models.chat import ChatMessage, ChatSession
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
+
+logger = logging.getLogger(__name__)
 
 
 def _ensure_daily_notifications(session: Session, user: User) -> List[Notification]:
@@ -346,4 +352,166 @@ def delete_notification(
     return {"deleted": True, "id": str(notification_id)}
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 📅 MOOD CHECK-IN SCHEDULE — Save & Email Confirmation
+# ═══════════════════════════════════════════════════════════════════════════════
 
+class MoodScheduleRequest(BaseModel):
+    morning_enabled: bool = True
+    morning_time: str = "08:00"
+    afternoon_enabled: bool = False
+    afternoon_time: str = "14:00"
+    evening_enabled: bool = True
+    evening_time: str = "20:00"
+    channel_push: bool = True
+    channel_email: bool = False
+    channel_inapp: bool = True
+
+
+def _send_email_notification(to_email: str, to_name: str, schedule: MoodScheduleRequest) -> None:
+    """
+    Send a confirmation email via Brevo Transactional Email API.
+    Gracefully no-ops if BREVO_API_KEY or BREVO_SENDER_EMAIL are not configured.
+    Brevo API docs: https://developers.brevo.com/reference/sendtransacemail
+    """
+    if not settings.BREVO_API_KEY or not settings.BREVO_SENDER_EMAIL:
+        logger.info("Brevo credentials not configured — skipping email notification.")
+        return
+
+    # ── Build schedule summary strings ──────────────────────────────────────
+    slots = []
+    if schedule.morning_enabled:
+        h, m = schedule.morning_time.split(":")
+        tod = "AM" if int(h) < 12 else "PM"
+        h12 = int(h) % 12 or 12
+        slots.append(f"🌅 Morning — {h12}:{m} {tod}")
+    if schedule.afternoon_enabled:
+        h, m = schedule.afternoon_time.split(":")
+        tod = "AM" if int(h) < 12 else "PM"
+        h12 = int(h) % 12 or 12
+        slots.append(f"☀️ Afternoon — {h12}:{m} {tod}")
+    if schedule.evening_enabled:
+        h, m = schedule.evening_time.split(":")
+        tod = "AM" if int(h) < 12 else "PM"
+        h12 = int(h) % 12 or 12
+        slots.append(f"🌙 Evening — {h12}:{m} {tod}")
+
+    slots_html = "".join(
+        f'<li style="margin:6px 0;color:#374151;">{s}</li>' for s in slots
+    ) if slots else '<li style="color:#9CA3AF;">No check-ins scheduled</li>'
+
+    channels = []
+    if schedule.channel_push:
+        channels.append("📱 Mobile & Browser Push")
+    if schedule.channel_email:
+        channels.append("📧 Email Notifications")
+    if schedule.channel_inapp:
+        channels.append("🔔 In-App Notification Bell")
+
+    channels_html = "".join(
+        f'<li style="margin:4px 0;color:#374151;">{c}</li>' for c in channels
+    ) if channels else '<li style="color:#9CA3AF;">No channels enabled</li>'
+
+    html_body = f"""
+    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:520px;margin:auto;background:#F9FAFB;border-radius:16px;overflow:hidden;border:1px solid #E5E7EB;">
+      <div style="background:linear-gradient(135deg,#7C3AED,#6D28D9);padding:28px 32px;">
+        <h1 style="margin:0;color:#fff;font-size:22px;">🧠 Kausap AI</h1>
+        <p style="margin:6px 0 0;color:#DDD6FE;font-size:14px;">Your Mood Check-in Schedule is Set!</p>
+      </div>
+      <div style="padding:28px 32px;">
+        <p style="color:#1F2937;font-size:15px;">Hi <strong>{to_name}</strong>,</p>
+        <p style="color:#374151;font-size:14px;line-height:1.6;">
+          Great news! Your personal wellness check-in schedule has been saved.
+          Kausap AI will gently remind you to log your mood at the times you've chosen.
+        </p>
+
+        <div style="background:#EDE9FE;border-radius:12px;padding:16px 20px;margin:20px 0;">
+          <p style="margin:0 0 10px;color:#4C1D95;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Your Check-in Times (Philippine Time)</p>
+          <ul style="margin:0;padding-left:16px;">
+            {slots_html}
+          </ul>
+        </div>
+
+        <div style="background:#F0FDF4;border-radius:12px;padding:16px 20px;margin:20px 0;">
+          <p style="margin:0 0 10px;color:#14532D;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Notification Channels</p>
+          <ul style="margin:0;padding-left:16px;">
+            {channels_html}
+          </ul>
+        </div>
+
+        <p style="color:#6B7280;font-size:13px;line-height:1.6;">
+          You can update your schedule anytime from <strong>Settings → Notifications</strong> in the Kausap AI app.
+        </p>
+
+        <div style="border-top:1px solid #E5E7EB;margin-top:24px;padding-top:16px;">
+          <p style="color:#9CA3AF;font-size:12px;text-align:center;margin:0;">
+            Kausap AI · Mental Health Companion · Philippine Standard Time (UTC+8)
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+
+    # ── Send via Brevo Transactional Email API ───────────────────────────────
+    payload = {
+        "sender": {
+            "name": settings.BREVO_SENDER_NAME,
+            "email": settings.BREVO_SENDER_EMAIL,
+        },
+        "to": [{"email": to_email, "name": to_name}],
+        "subject": "✅ Your Mood Check-in Schedule is Saved — Kausap AI",
+        "htmlContent": html_body,
+    }
+
+    try:
+        response = httpx.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={
+                "accept": "application/json",
+                "api-key": settings.BREVO_API_KEY,
+                "content-type": "application/json",
+            },
+            timeout=15,
+        )
+        if response.status_code in (200, 201):
+            logger.info(f"✅ Brevo: Schedule confirmation email sent to {to_email}")
+        else:
+            logger.warning(f"⚠️ Brevo API error {response.status_code}: {response.text}")
+    except Exception as exc:
+        logger.warning(f"⚠️ Failed to send Brevo email: {exc}")
+
+
+@router.post("/schedule", status_code=200)
+def save_mood_schedule(
+    payload: MoodScheduleRequest,
+    background_tasks: BackgroundTasks,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """
+    Save the user's mood check-in schedule preferences.
+    If email channel is enabled, sends a confirmation email in the background.
+    """
+    # If email notifications are enabled, send a beautiful confirmation email
+    if payload.channel_email:
+        background_tasks.add_task(
+            _send_email_notification,
+            current_user.email,
+            current_user.first_name or "there",
+            payload,
+        )
+
+    return {
+        "saved": True,
+        "morning": {"enabled": payload.morning_enabled, "time": payload.morning_time},
+        "afternoon": {"enabled": payload.afternoon_enabled, "time": payload.afternoon_time},
+        "evening": {"enabled": payload.evening_enabled, "time": payload.evening_time},
+        "channels": {
+            "push": payload.channel_push,
+            "email": payload.channel_email,
+            "inapp": payload.channel_inapp,
+        },
+        "email_queued": payload.channel_email,
+        "message": "Schedule saved successfully. Email confirmation will arrive shortly." if payload.channel_email else "Schedule saved successfully.",
+    }

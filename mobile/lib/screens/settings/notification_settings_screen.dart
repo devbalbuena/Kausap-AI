@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/notification_prefs_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/ambient_audio_service.dart';
+import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -22,10 +23,21 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   bool _pushNotifications = true;
 
   // Student Preferences
-  bool _dailyCheckins = true;
-  String _dailyCheckinsTime = '20:00';
   bool _mindfulnessReminders = true;
   bool _streakAlerts = true;
+
+  // ─── Multi-Slot Mood Check-in Schedule ────────────────────────────────────
+  bool _morningCheckin = true;
+  String _morningCheckinTime = '08:00';
+  bool _afternoonCheckin = false;
+  String _afternoonCheckinTime = '14:00';
+  bool _eveningCheckin = true;
+  String _eveningCheckinTime = '20:00';
+
+  // ─── Delivery Channel Preferences ─────────────────────────────────────────
+  bool _channelPush = true;
+  bool _channelEmail = false;
+  bool _channelInApp = true;
 
   // Admin Specific Preferences
   bool _crisisDistressAlerts = true;
@@ -43,6 +55,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   String _quietHoursEnd = '07:00';
 
   bool _isLoading = true;
+  bool _savingEmail = false;
 
   @override
   void initState() {
@@ -56,10 +69,21 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final cam = await NotificationPrefsService.getCameraEnabled();
 
     final push = await NotificationPrefsService.getPushEnabled();
-    final daily = await NotificationPrefsService.getDailyCheckins();
-    final dailyTime = await NotificationPrefsService.getDailyCheckinsTime();
     final mindful = await NotificationPrefsService.getMindfulnessReminders();
     final streak = await NotificationPrefsService.getStreakAlerts();
+
+    // Multi-slot check-ins
+    final morning = await NotificationPrefsService.getMorningCheckin();
+    final morningTime = await NotificationPrefsService.getMorningCheckinTime();
+    final afternoon = await NotificationPrefsService.getAfternoonCheckin();
+    final afternoonTime = await NotificationPrefsService.getAfternoonCheckinTime();
+    final evening = await NotificationPrefsService.getEveningCheckin();
+    final eveningTime = await NotificationPrefsService.getEveningCheckinTime();
+
+    // Delivery channels
+    final chPush = await NotificationPrefsService.getChannelPush();
+    final chEmail = await NotificationPrefsService.getChannelEmail();
+    final chInApp = await NotificationPrefsService.getChannelInApp();
 
     final quietHours = await NotificationPrefsService.getQuietHoursEnabled();
     final quietStart = await NotificationPrefsService.getQuietHoursStart();
@@ -72,10 +96,19 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         _cameraAccess = cam;
 
         _pushNotifications = push;
-        _dailyCheckins = daily;
-        _dailyCheckinsTime = dailyTime;
         _mindfulnessReminders = mindful;
         _streakAlerts = streak;
+
+        _morningCheckin = morning;
+        _morningCheckinTime = morningTime;
+        _afternoonCheckin = afternoon;
+        _afternoonCheckinTime = afternoonTime;
+        _eveningCheckin = evening;
+        _eveningCheckinTime = eveningTime;
+
+        _channelPush = chPush;
+        _channelEmail = chEmail;
+        _channelInApp = chInApp;
 
         _quietHoursEnabled = quietHours;
         _quietHoursStart = quietStart;
@@ -121,10 +154,22 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     }
   }
 
-  Future<void> _selectCheckinTime(BuildContext context) async {
-    final parts = _dailyCheckinsTime.split(':');
+  Future<void> _selectSlotTime(BuildContext context, String slot) async {
+    String current;
+    switch (slot) {
+      case 'morning':
+        current = _morningCheckinTime;
+        break;
+      case 'afternoon':
+        current = _afternoonCheckinTime;
+        break;
+      default:
+        current = _eveningCheckinTime;
+    }
+
+    final parts = current.split(':');
     final initialTime = TimeOfDay(
-      hour: int.tryParse(parts[0]) ?? 20,
+      hour: int.tryParse(parts[0]) ?? 8,
       minute: int.tryParse(parts[1]) ?? 0,
     );
 
@@ -146,8 +191,52 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
     if (picked != null) {
       final timeStr = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-      await NotificationPrefsService.setDailyCheckinsTime(timeStr);
-      setState(() => _dailyCheckinsTime = timeStr);
+      switch (slot) {
+        case 'morning':
+          await NotificationPrefsService.setMorningCheckinTime(timeStr);
+          setState(() => _morningCheckinTime = timeStr);
+          break;
+        case 'afternoon':
+          await NotificationPrefsService.setAfternoonCheckinTime(timeStr);
+          setState(() => _afternoonCheckinTime = timeStr);
+          break;
+        default:
+          await NotificationPrefsService.setEveningCheckinTime(timeStr);
+          setState(() => _eveningCheckinTime = timeStr);
+      }
+    }
+  }
+
+  /// Sends the check-in schedule to backend so it can deliver email notifications.
+  Future<void> _syncScheduleToBackend() async {
+    if (!_channelEmail) return;
+    setState(() => _savingEmail = true);
+    try {
+      final api = ApiClient();
+      await api.post('/notifications/schedule', body: {
+        'morning_enabled': _morningCheckin,
+        'morning_time': _morningCheckinTime,
+        'afternoon_enabled': _afternoonCheckin,
+        'afternoon_time': _afternoonCheckinTime,
+        'evening_enabled': _eveningCheckin,
+        'evening_time': _eveningCheckinTime,
+        'channel_push': _channelPush,
+        'channel_email': _channelEmail,
+        'channel_inapp': _channelInApp,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Email notification schedule saved!'),
+            backgroundColor: Color(0xFF16A34A),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (_) {
+      // Silently fail — local prefs are already saved
+    } finally {
+      if (mounted) setState(() => _savingEmail = false);
     }
   }
 
@@ -402,30 +491,212 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                               ]),
                               const SizedBox(height: 24),
 
-                              _buildSectionLabel('WELLNESS NOTIFICATIONS'),
+                              // ─────────────────────────────────────────────────
+                              // 💖 MOOD CHECK-IN SCHEDULE (NEW)
+                              // ─────────────────────────────────────────────────
+                              _buildSectionLabel('MOOD CHECK-IN SCHEDULE'),
+                              _buildInfoBanner(
+                                icon: Icons.info_outline_rounded,
+                                text: 'Choose when you want Kausap AI to gently remind you to log your mood. You can enable multiple check-ins throughout the day.',
+                              ),
+                              const SizedBox(height: 10),
                               _buildSettingsCard([
+                                // Morning Slot
                                 _buildToggleRow(
-                                  icon: Icons.favorite_border_rounded,
-                                  iconColor: const Color(0xFFE11D48),
-                                  label: 'Daily Mood Check-ins',
-                                  subtitle: 'Friendly nudge to record how you feel',
-                                  value: _dailyCheckins,
+                                  icon: Icons.wb_sunny_outlined,
+                                  iconColor: const Color(0xFFF59E0B),
+                                  label: 'Morning Check-in',
+                                  subtitle: 'Start your day with intention & awareness',
+                                  value: _morningCheckin,
                                   onChanged: (v) async {
                                     HapticService.lightTap();
-                                    await NotificationPrefsService.setDailyCheckins(v);
-                                    setState(() => _dailyCheckins = v);
-                                    await NotificationService().getUnreadCount();
+                                    await NotificationPrefsService.setMorningCheckin(v);
+                                    setState(() => _morningCheckin = v);
                                   },
                                 ),
-                                if (_dailyCheckins) ...[
+                                if (_morningCheckin) ...[
                                   _buildDivider(),
-                                  _buildTimePickerRow(
-                                    label: 'Daily Reminder Time',
-                                    timeStr: _dailyCheckinsTime,
-                                    onTap: () => _selectCheckinTime(context),
+                                  _buildSlotTimePickerRow(
+                                    emoji: '🌅',
+                                    label: 'Morning Time',
+                                    timeStr: _morningCheckinTime,
+                                    onTap: () => _selectSlotTime(context, 'morning'),
                                   ),
                                 ],
                                 _buildDivider(),
+
+                                // Afternoon Slot
+                                _buildToggleRow(
+                                  icon: Icons.wb_cloudy_outlined,
+                                  iconColor: const Color(0xFF0284C7),
+                                  label: 'Afternoon Check-in',
+                                  subtitle: 'Mid-day pulse check after classes & activities',
+                                  value: _afternoonCheckin,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setAfternoonCheckin(v);
+                                    setState(() => _afternoonCheckin = v);
+                                  },
+                                ),
+                                if (_afternoonCheckin) ...[
+                                  _buildDivider(),
+                                  _buildSlotTimePickerRow(
+                                    emoji: '☀️',
+                                    label: 'Afternoon Time',
+                                    timeStr: _afternoonCheckinTime,
+                                    onTap: () => _selectSlotTime(context, 'afternoon'),
+                                  ),
+                                ],
+                                _buildDivider(),
+
+                                // Evening Slot
+                                _buildToggleRow(
+                                  icon: Icons.nights_stay_outlined,
+                                  iconColor: const Color(0xFF7C3AED),
+                                  label: 'Evening Reflection',
+                                  subtitle: 'Wind down & reflect on your emotional day',
+                                  value: _eveningCheckin,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setEveningCheckin(v);
+                                    setState(() => _eveningCheckin = v);
+                                  },
+                                ),
+                                if (_eveningCheckin) ...[
+                                  _buildDivider(),
+                                  _buildSlotTimePickerRow(
+                                    emoji: '🌙',
+                                    label: 'Evening Time',
+                                    timeStr: _eveningCheckinTime,
+                                    onTap: () => _selectSlotTime(context, 'evening'),
+                                  ),
+                                ],
+                              ]),
+                              const SizedBox(height: 24),
+
+                              // ─────────────────────────────────────────────────
+                              // 📬 NOTIFICATION DELIVERY CHANNELS (NEW)
+                              // ─────────────────────────────────────────────────
+                              _buildSectionLabel('NOTIFICATION DELIVERY CHANNELS'),
+                              _buildInfoBanner(
+                                icon: Icons.send_rounded,
+                                text: 'Choose how Kausap AI sends you mood reminders and wellness nudges.',
+                              ),
+                              const SizedBox(height: 10),
+                              _buildSettingsCard([
+                                _buildToggleRow(
+                                  icon: Icons.smartphone_rounded,
+                                  iconColor: const Color(0xFF6366F1),
+                                  label: 'Mobile & Browser Push',
+                                  subtitle: 'Instant notification on your device & browser',
+                                  value: _channelPush,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setChannelPush(v);
+                                    setState(() => _channelPush = v);
+                                  },
+                                ),
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.mark_email_read_outlined,
+                                  iconColor: const Color(0xFF059669),
+                                  label: 'Email Notifications',
+                                  subtitle: 'Receive a gentle email reminder at your registered address',
+                                  value: _channelEmail,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setChannelEmail(v);
+                                    setState(() => _channelEmail = v);
+                                    if (v) await _syncScheduleToBackend();
+                                  },
+                                ),
+                                if (_channelEmail) ...[
+                                  _buildDivider(),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                                    child: Row(
+                                      children: [
+                                        const SizedBox(width: 54),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                'Email reminders will be sent to your registered email address.',
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 11.5,
+                                                  color: Color(0xFF6B7280),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              GestureDetector(
+                                                onTap: _savingEmail ? null : _syncScheduleToBackend,
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                                  decoration: BoxDecoration(
+                                                    gradient: const LinearGradient(
+                                                      colors: [Color(0xFF059669), Color(0xFF10B981)],
+                                                    ),
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      if (_savingEmail)
+                                                        const SizedBox(
+                                                          width: 13,
+                                                          height: 13,
+                                                          child: CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                            color: Colors.white,
+                                                          ),
+                                                        )
+                                                      else
+                                                        const Icon(Icons.sync_rounded, color: Colors.white, size: 14),
+                                                      const SizedBox(width: 6),
+                                                      const Text(
+                                                        'Save Email Schedule',
+                                                        style: TextStyle(
+                                                          fontFamily: 'Inter',
+                                                          fontWeight: FontWeight.w600,
+                                                          fontSize: 12,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                _buildDivider(),
+                                _buildToggleRow(
+                                  icon: Icons.notifications_active_outlined,
+                                  iconColor: const Color(0xFFE11D48),
+                                  label: 'In-App Notification Bell',
+                                  subtitle: 'Show unread badge & reminders inside the app',
+                                  value: _channelInApp,
+                                  onChanged: (v) async {
+                                    HapticService.lightTap();
+                                    await NotificationPrefsService.setChannelInApp(v);
+                                    setState(() => _channelInApp = v);
+                                    await NotificationService().getUnreadCount();
+                                  },
+                                ),
+                              ]),
+                              const SizedBox(height: 24),
+
+                              // ─────────────────────────────────────────────────
+                              // 🔔 OTHER WELLNESS NOTIFICATIONS
+                              // ─────────────────────────────────────────────────
+                              _buildSectionLabel('WELLNESS NOTIFICATIONS'),
+                              _buildSettingsCard([
                                 _buildToggleRow(
                                   icon: Icons.spa_outlined,
                                   iconColor: const Color(0xFF2E9E6B),
@@ -513,6 +784,34 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           letterSpacing: 0.6,
           color: Color(0xFF6B7280),
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoBanner({required IconData icon, required String text}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDE9FE),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDDD6FE)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF7C3AED)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11.5,
+                color: Color(0xFF4C1D95),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -635,6 +934,65 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                   color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSlotTimePickerRow({
+    required String emoji,
+    required String label,
+    required String timeStr,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            const SizedBox(width: 14),
+            Text(emoji, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13.5,
+                  color: Color(0xFF374151),
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFDDD6FE)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatTime(timeStr),
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF7C3AED),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    const Icon(Icons.edit_outlined, size: 12, color: Color(0xFF7C3AED)),
+                  ],
                 ),
               ),
             ),

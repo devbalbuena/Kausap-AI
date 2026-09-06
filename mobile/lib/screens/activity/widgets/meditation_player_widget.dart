@@ -33,7 +33,15 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
 
   // Ambient sound selection
   AmbientSoundType _selectedSound = AmbientSoundType.singingBowl;
-  final double _ambientVolume = 0.6;
+  double _ambientVolume = 0.7;
+  bool _showVolumeSlider = false;
+
+  void _setVolume(double vol) {
+    setState(() {
+      _ambientVolume = vol;
+      _audioService.setVolume(vol);
+    });
+  }
 
   // 4 Guided stages
   final List<_MeditationStage> _stages = const [
@@ -347,37 +355,113 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
             // Ambient Soundscape Selector Strip (Light floating pill bar)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(6),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(6),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ...AmbientAudioService.soundOptions.map((opt) {
+                            return _buildSoundOption(opt.type, '${opt.emoji} ${opt.label}');
+                          }),
+                          if (_selectedSound != AmbientSoundType.silence)
+                            IconButton(
+                              icon: Icon(
+                                _ambientVolume == 0
+                                    ? Icons.volume_mute_rounded
+                                    : _ambientVolume < 0.5
+                                        ? Icons.volume_down_rounded
+                                        : Icons.volume_up_rounded,
+                                size: 18,
+                                color: _showVolumeSlider ? AppColors.primary : const Color(0xFF64748B),
+                              ),
+                              tooltip: 'Volume',
+                              onPressed: () {
+                                setState(() {
+                                  _showVolumeSlider = !_showVolumeSlider;
+                                });
+                              },
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Soundscape subtitle description
+                  if (_selectedSound != AmbientSoundType.silence) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      AmbientAudioService.getOption(_selectedSound).subtitle,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
                   ],
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildSoundOption(AmbientSoundType.singingBowl, '🔔 Singing Bowl'),
-                      _buildSoundOption(AmbientSoundType.rain, '🌧️ Rain'),
-                      _buildSoundOption(AmbientSoundType.ocean, '🌊 Waves'),
-                      _buildSoundOption(AmbientSoundType.forest, '🌲 Forest'),
-                      _buildSoundOption(AmbientSoundType.silence, '🔇 Mute'),
-                    ],
-                  ),
-                ),
+
+                  // Optional inline volume slider
+                  if (_showVolumeSlider && _selectedSound != AmbientSoundType.silence) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.volume_down_rounded, size: 15, color: Color(0xFF94A3B8)),
+                        SizedBox(
+                          width: 170,
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 3,
+                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                              activeTrackColor: AppColors.primary,
+                              inactiveTrackColor: const Color(0xFFE2E8F0),
+                              thumbColor: AppColors.primary,
+                            ),
+                            child: Slider(
+                              value: _ambientVolume,
+                              min: 0.0,
+                              max: 1.0,
+                              onChanged: _setVolume,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.volume_up_rounded, size: 15, color: Color(0xFF94A3B8)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${(_ambientVolume * 100).round()}%',
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
             // Controls & Finish Button
             Padding(

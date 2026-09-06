@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     ELEVENLABS_API_KEY: str = ""
     ELEVENLABS_VOICE_ID: str = "jqcCZkN6Knx8BJ5TBdYR"
 
+    # Brevo Transactional Email API (for mood check-in notifications)
+    # Get your API key from: https://app.brevo.com/settings/keys/api
+    BREVO_API_KEY: str = ""
+    BREVO_SENDER_EMAIL: str = ""
+    BREVO_SENDER_NAME: str = "Kausap AI"
+
     # Token protection & rate limits
     RATE_LIMIT_MESSAGES_PER_HOUR: int = 30
     DEFAULT_MAX_TOKENS: int = 1200
