@@ -23,13 +23,32 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
   }
 
   Future<void> _loadHistory() async {
-    final raw = await _storage.read(key: 'assessment_history');
+    try {
+      final raw = await _storage.read(key: 'assessment_history');
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          final list = <Map<String, dynamic>>[];
+          for (final item in decoded) {
+            if (item is Map) {
+              list.add(Map<String, dynamic>.from(item));
+            }
+          }
+          if (mounted) {
+            setState(() {
+              _history = list;
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading assessment history: $e');
+    }
     if (mounted) {
       setState(() {
-        _history = raw != null
-            ? List<Map<String, dynamic>>.from(
-                (jsonDecode(raw) as List).cast<Map<String, dynamic>>())
-            : [];
+        _history = [];
         _isLoading = false;
       });
     }

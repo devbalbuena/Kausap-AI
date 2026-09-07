@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_helper.dart';
+import '../../services/api_client.dart';
+import '../../config/api_config.dart';
 
 class ChatHistoryScreen extends StatefulWidget {
-  final Function(List<Map<String, dynamic>> messages)? onResumeSession;
+  final Function(String? sessionId, List<Map<String, dynamic>> messages)? onResumeSession;
 
   const ChatHistoryScreen({super.key, this.onResumeSession});
 
@@ -27,17 +29,74 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   Future<void> _loadSessions() async {
     setState(() => _isLoading = true);
     final List<Map<String, dynamic>> list = [];
+
+    // 1. Local history (instant, works offline)
     try {
       final raw = await _storage.read(key: 'chat_history_sessions');
       if (raw != null && raw.isNotEmpty) {
-        final decoded = jsonDecode(raw) as List;
-        for (final s in decoded) {
-          if (s is Map<String, dynamic>) {
-            list.add(s);
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final s in decoded) {
+            if (s is Map) {
+              list.add(Map<String, dynamic>.from(s));
+            }
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error reading local chat history: $e');
+    }
+
+    // 2. Fetch remote sessions from backend API (syncs in production & local test)
+    try {
+      final remote = await ApiClient().get(ApiConfig.chatSessions, silent: true);
+      if (remote is List) {
+        for (final item in remote) {
+          if (item is Map) {
+            final remoteSession = Map<String, dynamic>.from(item);
+            final sId = (remoteSession['id'] ?? '').toString();
+            final rawMsgs = remoteSession['messages'];
+            final List<Map<String, dynamic>> parsedMsgs = [];
+            if (rawMsgs is List) {
+              for (final m in rawMsgs) {
+                if (m is Map) {
+                  parsedMsgs.add(Map<String, dynamic>.from(m));
+                }
+              }
+            }
+
+            if (parsedMsgs.isNotEmpty) {
+              final existingIdx = list.indexWhere((s) => s['id']?.toString() == sId);
+              final sessionMap = {
+                'id': sId,
+                'date': remoteSession['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+                'avatarName': remoteSession['topic'] ?? 'Kausap AI',
+                'messages': parsedMsgs,
+              };
+
+              if (existingIdx >= 0) {
+                final localMsgs = list[existingIdx]['messages'] as List?;
+                if (localMsgs == null || localMsgs.length < parsedMsgs.length) {
+                  list[existingIdx] = sessionMap;
+                }
+              } else {
+                list.add(sessionMap);
+              }
+            }
+          }
+        }
+
+        list.sort((a, b) {
+          final da = DateTime.tryParse(a['date']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final db = DateTime.tryParse(b['date']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return db.compareTo(da);
+        });
+
+        await _storage.write(key: 'chat_history_sessions', value: jsonEncode(list));
+      }
+    } catch (e) {
+      debugPrint('Error syncing chat sessions from backend: $e');
+    }
 
     if (mounted) {
       setState(() {
@@ -50,11 +109,20 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   Future<void> _deleteSession(int index) async {
     final deleted = _sessions.removeAt(index);
     await _storage.write(key: 'chat_history_sessions', value: jsonEncode(_sessions));
+
+    // Also delete from backend database if valid UUID
+    final sessionId = deleted['id']?.toString();
+    if (sessionId != null && sessionId.contains('-')) {
+      try {
+        await ApiClient().delete('${ApiConfig.chatSessions}/$sessionId', silent: true);
+      } catch (_) {}
+    }
+
     if (mounted) {
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Chat session deleted.'),
+          content: const Text('Chat session deleted.'),
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () async {
@@ -85,8 +153,18 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     );
 
     if (confirm == true) {
+      for (final s in _sessions) {
+        final sId = s['id']?.toString();
+        if (sId != null && sId.contains('-')) {
+          try {
+            await ApiClient().delete('${ApiConfig.chatSessions}/$sId', silent: true);
+          } catch (_) {}
+        }
+      }
       await _storage.delete(key: 'chat_history_sessions');
-      setState(() => _sessions = []);
+      if (mounted) {
+        setState(() => _sessions = []);
+      }
     }
   }
 
@@ -174,8 +252,14 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                     final session = _sessions[idx];
                     final dateStr = _formatSessionDate(session['date'] as String?);
                     final avatarName = session['avatarName'] as String? ?? 'Kausap AI';
-                    final messages = (session['messages'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-                    final lastMsg = messages.isNotEmpty ? messages.last['content'] as String? ?? '' : 'No messages';
+                    final rawMsgs = session['messages'] as List? ?? [];
+                    final List<Map<String, dynamic>> messages = [];
+                    for (final m in rawMsgs) {
+                      if (m is Map) {
+                        messages.add(Map<String, dynamic>.from(m));
+                      }
+                    }
+                    final lastMsg = messages.isNotEmpty ? (messages.last['content'] as String? ?? '') : 'No messages';
 
                     return Dismissible(
                       key: Key('session_${session['id'] ?? idx}'),
@@ -252,7 +336,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                           ),
                           onTap: () {
                             if (widget.onResumeSession != null) {
-                              widget.onResumeSession!(messages);
+                              widget.onResumeSession!(session['id']?.toString(), messages);
                               Navigator.pop(context);
                             }
                           },

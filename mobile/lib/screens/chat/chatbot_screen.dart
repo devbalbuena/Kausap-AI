@@ -346,9 +346,16 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     if (_messages.isEmpty) return;
     try {
       final raw = await _storage.read(key: 'chat_history_sessions');
-      List<dynamic> list = [];
+      List<Map<String, dynamic>> list = [];
       if (raw != null && raw.isNotEmpty) {
-        list = jsonDecode(raw) as List;
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final s in decoded) {
+            if (s is Map) {
+              list.add(Map<String, dynamic>.from(s));
+            }
+          }
+        }
       }
 
       final sessionData = {
@@ -359,7 +366,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       };
 
       // Check if session exists and update, or prepend
-      final existingIdx = list.indexWhere((s) => s is Map && s['id'] == sessionData['id']);
+      final existingIdx = list.indexWhere((s) => s['id']?.toString() == sessionData['id']?.toString());
       if (existingIdx >= 0) {
         list[existingIdx] = sessionData;
       } else {
@@ -370,10 +377,13 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       if (list.length > 20) list = list.sublist(0, 20);
 
       await _storage.write(key: 'chat_history_sessions', value: jsonEncode(list));
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error saving session to local history: $e');
+    }
   }
 
   void _startNewChat() {
+    _saveSessionToHistory();
     setState(() {
       _sessionId = null;
       _messages.clear();
@@ -386,8 +396,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     Navigator.of(context).push(
       slideRoute(
         ChatHistoryScreen(
-          onResumeSession: (pastMessages) {
+          onResumeSession: (resumedSessionId, pastMessages) {
             setState(() {
+              _sessionId = resumedSessionId;
               _messages.clear();
               for (final m in pastMessages) {
                 _messages.add(_ChatMessage.fromJson(m));
@@ -514,34 +525,36 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       // Attach latest clinical screening context (PHQ-9, GAD-7, Burnout)
       try {
         final rawAssessments = await _storage.read(key: 'assessment_history');
-        if (rawAssessments != null) {
-          final List<dynamic> allAssessments = jsonDecode(rawAssessments) as List;
-          final Map<String, Map<String, dynamic>> latestByType = {};
-          for (final item in allAssessments) {
-            if (item is Map) {
-              final name = (item['testName'] ?? '').toString();
-              String categoryKey = 'other';
-              final nameLower = name.toLowerCase();
-              if (nameLower.contains('phq')) {
-                categoryKey = 'phq9';
-              } else if (nameLower.contains('gad')) {
-                categoryKey = 'gad7';
-              } else if (nameLower.contains('burnout') || nameLower.contains('fatigue')) {
-                categoryKey = 'burnout';
-              }
-              if (!latestByType.containsKey(categoryKey)) {
-                latestByType[categoryKey] = {
-                  'testName': item['testName'],
-                  'score': item['score'],
-                  'maxScore': item['maxScore'],
-                  'severity': item['severity'],
-                  'date': item['date'],
-                };
+        if (rawAssessments != null && rawAssessments.isNotEmpty) {
+          final decoded = jsonDecode(rawAssessments);
+          if (decoded is List) {
+            final Map<String, Map<String, dynamic>> latestByType = {};
+            for (final item in decoded) {
+              if (item is Map) {
+                final name = (item['testName'] ?? '').toString();
+                String categoryKey = 'other';
+                final nameLower = name.toLowerCase();
+                if (nameLower.contains('phq')) {
+                  categoryKey = 'phq9';
+                } else if (nameLower.contains('gad')) {
+                  categoryKey = 'gad7';
+                } else if (nameLower.contains('burnout') || nameLower.contains('fatigue')) {
+                  categoryKey = 'burnout';
+                }
+                if (!latestByType.containsKey(categoryKey)) {
+                  latestByType[categoryKey] = {
+                    'testName': item['testName'],
+                    'score': item['score'],
+                    'maxScore': item['maxScore'],
+                    'severity': item['severity'],
+                    'date': item['date'],
+                  };
+                }
               }
             }
-          }
-          if (latestByType.isNotEmpty) {
-            requestBody['screener_context'] = latestByType.values.toList();
+            if (latestByType.isNotEmpty) {
+              requestBody['screener_context'] = latestByType.values.toList();
+            }
           }
         }
       } catch (_) {}

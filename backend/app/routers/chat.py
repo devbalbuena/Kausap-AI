@@ -50,12 +50,21 @@ def _get_own_session(
     return chat_session
 
 
+def _to_naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Ensure datetime is offset-naive in UTC for safe comparisons and sorting."""
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 def _extract_mood_analytics(db: Session, user_id: uuid.UUID) -> Tuple[Optional[int], Optional[Dict[str, Any]]]:
     """
     Fetch today's mood level and compute longitudinal 7-14 day wellness trends & emotion tags.
     Returns (today_mood_level, mood_trend_context).
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     fourteen_days_ago = today_start - timedelta(days=14)
 
@@ -80,8 +89,14 @@ def _extract_mood_analytics(db: Session, user_id: uuid.UUID) -> Tuple[Optional[i
         return today_mood_level, None
 
     seven_days_ago = today_start - timedelta(days=7)
-    recent_7d = [e for e in entries if e.created_at >= seven_days_ago]
-    prior_7d = [e for e in entries if e.created_at < seven_days_ago]
+    recent_7d = [
+        e for e in entries
+        if _to_naive_utc(e.created_at) is not None and _to_naive_utc(e.created_at) >= seven_days_ago
+    ]
+    prior_7d = [
+        e for e in entries
+        if _to_naive_utc(e.created_at) is not None and _to_naive_utc(e.created_at) < seven_days_ago
+    ]
 
     avg_7d = sum(e.mood_level for e in recent_7d) / len(recent_7d) if recent_7d else None
     avg_prior = sum(e.mood_level for e in prior_7d) / len(prior_7d) if prior_7d else None
@@ -210,7 +225,7 @@ async def post_message(
 
     else:
         # ── Rate Limiting Check (Token & Pacing Protection) ───────────────────
-        one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
         recent_msgs = db.exec(
             select(ChatMessage)
             .where(ChatMessage.session_id == chat_session.id)
@@ -237,10 +252,17 @@ async def post_message(
             else:
                 # ── Layer 3: Empathy Engine + Gemini 2.5 LLM Generation ─────────
                 db.refresh(chat_session)
-                sorted_messages = sorted(chat_session.messages, key=lambda m: m.created_at)
+                sorted_messages = sorted(
+                    chat_session.messages,
+                    key=lambda m: _to_naive_utc(m.created_at) or datetime.min,
+                )
 
-                # Fetch today's mood entry and longitudinal wellness trends
-                mood_level, mood_trend_context = _extract_mood_analytics(db, current_user.id)
+                # Fetch today's mood entry and longitudinal wellness trends safely
+                try:
+                    mood_level, mood_trend_context = _extract_mood_analytics(db, current_user.id)
+                except Exception as e:
+                    print(f"Warning: error extracting mood analytics: {e}")
+                    mood_level, mood_trend_context = None, None
 
                 # Build student cultural profile context
                 cultural_parts = []

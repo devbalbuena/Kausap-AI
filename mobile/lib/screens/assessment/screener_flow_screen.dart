@@ -180,13 +180,24 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
 
     // Dynamic Comparison with previous check-in of the same test type
     String progressNote = '🌟 First check-in recorded! This sets your personal baseline.';
+    final List<Map<String, dynamic>> historyList = [];
     try {
       final raw = await _storage.read(key: 'assessment_history');
-      final List<dynamic> list = raw != null ? jsonDecode(raw) as List : [];
-      final pastMatches = list.where((item) => item is Map && item['testName'] == _title).toList();
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final item in decoded) {
+            if (item is Map) {
+              historyList.add(Map<String, dynamic>.from(item));
+            }
+          }
+        }
+      }
+
+      final pastMatches = historyList.where((item) => item['testName'] == _title).toList();
 
       if (pastMatches.isNotEmpty) {
-        final last = pastMatches.first as Map<String, dynamic>;
+        final last = pastMatches.first;
         final prevScore = (last['score'] as num?)?.toInt() ?? totalScore;
         final diff = totalScore - prevScore;
         if (diff < 0) {
@@ -211,9 +222,11 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
         'progressNote': progressNote,
       };
 
-      list.insert(0, entry);
-      await _storage.write(key: 'assessment_history', value: jsonEncode(list));
-    } catch (_) {}
+      historyList.insert(0, entry);
+      await _storage.write(key: 'assessment_history', value: jsonEncode(historyList));
+    } catch (e) {
+      debugPrint('Error saving assessment result: $e');
+    }
 
     if (widget.onComplete != null) {
       widget.onComplete!(totalScore, maxScore, severity, color, interpretation);

@@ -72,16 +72,30 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
 
       // 2. Load clinical assessment history
       final rawAssessments = await _storage.read(key: 'assessment_history');
-      final assessments = rawAssessments != null
-          ? List<Map<String, dynamic>>.from((jsonDecode(rawAssessments) as List).cast<Map<String, dynamic>>())
-          : <Map<String, dynamic>>[];
+      final assessments = <Map<String, dynamic>>[];
+      if (rawAssessments != null && rawAssessments.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(rawAssessments);
+          if (decoded is List) {
+            for (final item in decoded) {
+              if (item is Map) {
+                assessments.add(Map<String, dynamic>.from(item));
+              }
+            }
+          }
+        } catch (_) {}
+      }
 
       // 3. Load unified dynamic mood logs from API
-      List<Map<String, dynamic>> loadedMoods = [];
+      final List<Map<String, dynamic>> loadedMoods = [];
       try {
         final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
         if (moodData is List) {
-          loadedMoods = List<Map<String, dynamic>>.from(moodData.cast<Map<String, dynamic>>());
+          for (final item in moodData) {
+            if (item is Map) {
+              loadedMoods.add(Map<String, dynamic>.from(item));
+            }
+          }
         }
       } catch (_) {}
 
