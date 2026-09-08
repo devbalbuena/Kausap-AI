@@ -9,7 +9,9 @@ import '../../utils/haptic_service.dart';
 import 'daily_journal_screen.dart';
 
 class JournalHistoryScreen extends StatefulWidget {
-  const JournalHistoryScreen({super.key});
+  final bool fromDailyJournal;
+
+  const JournalHistoryScreen({super.key, this.fromDailyJournal = false});
 
   @override
   State<JournalHistoryScreen> createState() => _JournalHistoryScreenState();
@@ -29,54 +31,35 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
   Future<void> _loadHistory() async {
     setState(() => _isLoading = true);
     final List<Map<String, dynamic>> loaded = [];
+    bool apiSuccess = false;
 
     try {
-      // 1. Try fetching from cloud backend API
+      // 1. Try fetching from cloud backend API (authoritative source of truth)
       try {
         final remote = await ApiClient().get(ApiConfig.journal, silent: true);
-        if (remote is List && remote.isNotEmpty) {
+        if (remote is List) {
+          apiSuccess = true;
           for (final item in remote) {
             if (item is Map) {
               loaded.add(Map<String, dynamic>.from(item));
             }
           }
         }
-      } catch (_) {}
-
-      // 2. Fallback or merge with local storage
-      final raw = await _storage.read(key: 'journal_history');
-      if (raw != null && raw.isNotEmpty) {
-        final List<dynamic> list = jsonDecode(raw);
-        for (final item in list) {
-          if (item is Map<String, dynamic>) {
-            final content = item['content']?.toString() ?? '';
-            // Only add if not already loaded from API
-            final alreadyInList = loaded.any((e) => e['content'] == content);
-            if (!alreadyInList) {
-              loaded.add(item);
-            }
-          }
-        }
+      } catch (e) {
+        debugPrint('Remote journal fetch failed, falling back to local storage: $e');
       }
 
-      // Also check legacy single-day keys
-      final allKeys = await _storage.readAll();
-      for (final key in allKeys.keys) {
-        if (key.startsWith('journal_') && key != 'journal_history' && !key.startsWith('journal_mood_')) {
-          final dateStr = key.replaceFirst('journal_', '');
-          final content = allKeys[key];
-          final moodTag = allKeys['journal_mood_$dateStr'] ?? '🌿 Calm';
-          if (content != null && content.isNotEmpty) {
-            final alreadyInList = loaded.any((e) => e['content'] == content);
-            if (!alreadyInList) {
-              loaded.add({
-                'id': 'legacy_$dateStr',
-                'entry_date': dateStr,
-                'date': dateStr,
-                'mood_tag': moodTag,
-                'content': content,
-                'created_at': dateStr,
-              });
+      if (apiSuccess) {
+        // When cloud API succeeds, update local cache with authoritative server list
+        await _storage.write(key: 'journal_history', value: jsonEncode(loaded));
+      } else {
+        // Offline Fallback: Only read from local storage if API was unreachable
+        final raw = await _storage.read(key: 'journal_history');
+        if (raw != null && raw.isNotEmpty) {
+          final List<dynamic> list = jsonDecode(raw);
+          for (final item in list) {
+            if (item is Map<String, dynamic>) {
+              loaded.add(item);
             }
           }
         }
@@ -88,7 +71,9 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
         final dateB = (b['created_at'] ?? b['entry_date'] ?? b['date']) as String? ?? '';
         return dateB.compareTo(dateA);
       });
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error in _loadHistory: $e');
+    }
 
     if (mounted) {
       setState(() {
@@ -135,11 +120,15 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
     final content = entry['content']?.toString() ?? '';
     final dateStr = (entry['entry_date'] ?? entry['date'] ?? entry['created_at'])?.toString() ?? '';
 
-    // Optimistically remove from state list immediately
+    // Optimistically remove ONLY the targeted entry from state list (by exact ID if present)
     setState(() {
-      _entries.removeWhere((e) =>
-          (id.isNotEmpty && e['id']?.toString() == id) ||
-          (content.isNotEmpty && e['content']?.toString() == content));
+      if (id.isNotEmpty) {
+        _entries.removeWhere((e) => e['id']?.toString() == id);
+      } else {
+        _entries.removeWhere((e) =>
+            e['content']?.toString() == content &&
+            (e['entry_date'] ?? e['created_at'])?.toString() == dateStr);
+      }
     });
 
     try {
@@ -148,17 +137,21 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
         await ApiClient().delete('${ApiConfig.journal}/$id', silent: true);
       }
 
-      // 2. Delete from local storage 'journal_history' array
+      // 2. Delete from local storage 'journal_history' cache
       final raw = await _storage.read(key: 'journal_history');
       if (raw != null && raw.isNotEmpty) {
         final List<dynamic> list = jsonDecode(raw);
-        list.removeWhere((e) =>
-            (id.isNotEmpty && e['id']?.toString() == id) ||
-            (content.isNotEmpty && e['content']?.toString() == content));
+        if (id.isNotEmpty) {
+          list.removeWhere((e) => e['id']?.toString() == id);
+        } else {
+          list.removeWhere((e) =>
+              e['content']?.toString() == content &&
+              (e['entry_date'] ?? e['created_at'])?.toString() == dateStr);
+        }
         await _storage.write(key: 'journal_history', value: jsonEncode(list));
       }
 
-      // 3. Thoroughly purge legacy single-day keys in local storage
+      // 3. Purge legacy single-day keys in local storage if matching
       final allKeys = await _storage.readAll();
       final cleanDate = dateStr.contains('T') ? dateStr.substring(0, 10) : dateStr;
       for (final key in allKeys.keys) {
@@ -170,7 +163,9 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error deleting journal entry: $e');
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -255,23 +250,24 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFBAE6FD)),
-                  ),
-                  child: Text(
-                    moodTag.toString(),
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0284C7),
+                if (moodTag != null && moodTag.toString().isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFBAE6FD)),
+                    ),
+                    child: Text(
+                      moodTag.toString(),
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0284C7),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
             if (prompt != null && prompt.isNotEmpty) ...[
@@ -378,29 +374,39 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
             icon: const Icon(Icons.add_rounded, color: AppColors.primary, size: 26),
             tooltip: 'Write New Entry',
             onPressed: () async {
-              final res = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DailyJournalScreen()),
-              );
-              if (res == true) _loadHistory();
+              if (widget.fromDailyJournal) {
+                Navigator.pop(context);
+              } else {
+                final res = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DailyJournalScreen()),
+                );
+                if (res == true) _loadHistory();
+              }
             },
           ),
           const SizedBox(width: 6),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final res = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const DailyJournalScreen()),
-          );
-          if (res == true) _loadHistory();
-        },
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.edit_note_rounded, size: 20),
-        label: const Text('New Entry', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
-      ),
+      floatingActionButton: _entries.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () async {
+                if (widget.fromDailyJournal) {
+                  Navigator.pop(context);
+                } else {
+                  final res = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DailyJournalScreen()),
+                  );
+                  if (res == true) _loadHistory();
+                }
+              },
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.edit_note_rounded, size: 20),
+              label: const Text('New Entry', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
+            ),
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
@@ -436,23 +442,6 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                             fontSize: 13,
                           ),
                         ),
-                        const SizedBox(height: 18),
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            final res = await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const DailyJournalScreen()),
-                            );
-                            if (res == true) _loadHistory();
-                          },
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Write First Journal'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
                       ],
                     ),
                   )
@@ -465,7 +454,7 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                       separatorBuilder: (context, index) => const SizedBox(height: 12),
                       itemBuilder: (ctx, i) {
                         final entry = _entries[i];
-                        final moodTag = entry['mood_tag'] ?? entry['type'] ?? '🌿 Calm';
+                        final moodTag = entry['mood_tag'] ?? entry['type'];
                         final content = entry['content'] ?? '';
 
                         return Material(
@@ -514,23 +503,25 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE0F2FE),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          moodTag.toString(),
-                                          style: const TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF0284C7),
+                                      if (moodTag != null && moodTag.toString().isNotEmpty) ...[
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE0F2FE),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            moodTag.toString(),
+                                            style: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF0284C7),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 4),
+                                        const SizedBox(width: 4),
+                                      ],
                                       // Dedicated Edit button with hit-stop
                                       IconButton(
                                         icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF64748B)),

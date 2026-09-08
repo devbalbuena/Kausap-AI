@@ -8,7 +8,7 @@ class JournalEntryBase(SQLModel):
     title: Optional[str] = None
     content: str
     entry_date: str = Field(index=True)  # Format: YYYY-MM-DD
-    mood_tag: Optional[str] = "🌿 Calm"
+    mood_tag: Optional[str] = None
     prompt: Optional[str] = None
 
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 // Web Audio interop for browsers
 // ignore: avoid_web_libraries_in_flutter, deprecated_member_use
@@ -35,6 +36,7 @@ class AmbientSoundOption {
 class AmbientAudioService {
   static final AmbientAudioService _instance = AmbientAudioService._internal();
   factory AmbientAudioService() => _instance;
+  static AmbientAudioService get instance => _instance;
   AmbientAudioService._internal();
 
   AmbientSoundType _currentSound = AmbientSoundType.silence;
@@ -47,6 +49,21 @@ class AmbientAudioService {
   double get volume => _volume;
 
   Timer? _synthTimer;
+  final List<VoidCallback> _listeners = [];
+
+  void addListener(VoidCallback listener) => _listeners.add(listener);
+  void removeListener(VoidCallback listener) => _listeners.remove(listener);
+  void _notify() {
+    // Defer listener notification to the next frame to ensure audio state
+    // changes never trigger setState on widgets mid-build (e.g., when
+    // MeditationPlayerWidget starts playing inside an IndexedStack sibling
+    // of ChatbotScreen which also listens to audio changes).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final l in List<VoidCallback>.from(_listeners)) {
+        l();
+      }
+    });
+  }
 
   static const List<AmbientSoundOption> soundOptions = [
     AmbientSoundOption(
@@ -120,6 +137,19 @@ class AmbientAudioService {
         ''']);
       } catch (_) {}
     }
+    _notify();
+  }
+
+  void togglePlay() {
+    if (_isPlaying) {
+      pause();
+    } else {
+      if (_currentSound == AmbientSoundType.silence) {
+        play(AmbientSoundType.singingBowl);
+      } else {
+        resume();
+      }
+    }
   }
 
   /// Play an ambient soundscape continuously
@@ -135,6 +165,7 @@ class AmbientAudioService {
     if (kIsWeb) {
       _startWebAudioElement(opt);
     }
+    _notify();
   }
 
   void pause() {
@@ -152,6 +183,7 @@ class AmbientAudioService {
         ''']);
       } catch (_) {}
     }
+    _notify();
   }
 
   void resume() {
@@ -170,11 +202,13 @@ class AmbientAudioService {
           play(_currentSound);
         }
       }
+      _notify();
     }
   }
 
   void stop() {
     _isPlaying = false;
+    _currentSound = AmbientSoundType.silence;
     _synthTimer?.cancel();
     if (kIsWeb) {
       try {
@@ -198,6 +232,7 @@ class AmbientAudioService {
         ''']);
       } catch (_) {}
     }
+    _notify();
   }
 
   /// Plays high-quality recorded ASMR soundscape with multi-tier fallback:

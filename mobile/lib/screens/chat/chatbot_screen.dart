@@ -4,12 +4,15 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/chat/counselor_sharing_dialog.dart';
 import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
-import '../../services/ambient_audio_service.dart';
+import '../../utils/ambient_audio_service.dart';
 import '../../utils/haptic_service.dart';
 import '../../config/api_config.dart';
 import '../../models/avatar_model.dart';
@@ -21,6 +24,11 @@ import '../subscription/upgrade_plan_screen.dart';
 import '../../services/voice_audio_service.dart';
 import '../../services/offline_mood_queue.dart';
 import '../../widgets/chat/custom_avatar_painter.dart';
+import '../activity/activity_screen.dart' show activityList, ActivityItem;
+import '../activity/activity_start_screen.dart';
+import '../articles/articles_data.dart';
+import '../articles/article_detail_screen.dart';
+import '../assessment/screener_flow_screen.dart';
 
 /// A single message in the chat (either user or assistant).
 class _ChatMessage {
@@ -51,6 +59,32 @@ class _ChatMessage {
     imagePath: json['imagePath'] as String?,
     isCrisis: json['isCrisis'] as bool? ?? false,
   );
+}
+
+// ── Action Tag Model & Parser ────────────────────────────────────────────────
+/// Parsed action tag from AI response: [action:type:id|Label]
+class _ActionTag {
+  final String type;   // 'activity' | 'article' | 'screener' | 'soundscape'
+  final String id;     // Resource ID matching app's catalog
+  final String label;  // Display text shown on the button
+
+  const _ActionTag({required this.type, required this.id, required this.label});
+}
+
+/// Parses [action:type:id|Label] tags out of AI message content.
+/// Returns (cleanText, List<_ActionTag>)
+({String cleanText, List<_ActionTag> actions}) _parseActionTags(String raw) {
+  final actionTagRegex = RegExp(r'\[action:(\w+):([^|\]]+)\|([^\]]+)\]');
+  final List<_ActionTag> actions = [];
+  final cleanText = raw.replaceAllMapped(actionTagRegex, (m) {
+    actions.add(_ActionTag(
+      type: m.group(1)!,
+      id: m.group(2)!.trim(),
+      label: m.group(3)!.trim(),
+    ));
+    return ''; // Remove the tag from display text
+  }).replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+  return (cleanText: cleanText, actions: actions);
 }
 
 /// Emotional state of Kausap Buddy Mascot for real-time reactivity
@@ -189,7 +223,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   }
 
   void _onAmbientAudioChanged() {
-    if (mounted) setState(() {});
+    // Defer rebuild to post-frame so audio events from other widgets
+    // (e.g., MeditationPlayerWidget inside an IndexedStack sibling) never
+    // trigger setState while this widget's subtree is still building.
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    }
   }
 
   Future<void> _openAmbientSoundscapeSheet() async {
@@ -991,7 +1032,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                               ? '👑 Premium Specialist'
                               : '🌱 Basic Companion')),
                   style: AppTextStyles.body.copyWith(
-                    fontSize: 11,
+                    fontSize: 10.5,
                     color: _currentAvatar.isMascot
                         ? _getMascotSubtitleColor()
                         : (_currentAvatar.isPremium
@@ -999,6 +1040,53 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                             : (_isTyping ? const Color(0xFF0284C7) : AppColors.textSecondary)),
                     fontWeight: (_currentAvatar.isPremium || _currentAvatar.isMascot) ? FontWeight.w600 : FontWeight.w500,
                   ),
+                ),
+                const SizedBox(height: 2),
+                // Compact Clickable Counselor Sharing / Privacy Badge in the top header
+                Builder(
+                  builder: (ctx) {
+                    final bool isShared = ctx.watch<AuthProvider>().currentUser?['share_chat_with_counselor'] == true;
+                    return InkWell(
+                      onTap: () {
+                        HapticService.lightTap();
+                        CounselorSharingDialog.show(ctx, onStatusChanged: (_) {
+                          if (mounted) setState(() {});
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isShared ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isShared ? const Color(0xFF7DD3FC) : const Color(0xFFCBD5E1),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isShared ? Icons.shield_rounded : Icons.lock_outline_rounded,
+                              size: 10,
+                              color: isShared ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              isShared ? 'Shared with Counselor' : 'Confidential (Locked)',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: isShared ? const Color(0xFF0284C7) : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -1022,13 +1110,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      audio.currentType == SoundscapeType.rain
-                          ? '🌧️'
-                          : audio.currentType == SoundscapeType.ocean
-                              ? '🌊'
-                              : audio.currentType == SoundscapeType.forest
-                                  ? '🍃'
-                                  : '🧘',
+                      AmbientAudioService.getOption(audio.currentSound).emoji,
                       style: const TextStyle(fontSize: 12),
                     ),
                     const SizedBox(width: 4),
@@ -1042,6 +1124,27 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               icon: Icons.headphones_rounded,
               onTap: _openAmbientSoundscapeSheet,
             ),
+          const SizedBox(width: 6),
+
+          // Privacy / Counselor Sharing Shield Icon Button
+          Builder(
+            builder: (ctx) {
+              final bool isShared = ctx.watch<AuthProvider>().currentUser?['share_chat_with_counselor'] == true;
+              return Tooltip(
+                message: isShared ? 'Shared with Counselor (Tap to manage)' : 'Confidential: Hidden from counselors (Tap to manage)',
+                child: _HeaderIconBtn(
+                  icon: isShared ? Icons.shield_rounded : Icons.lock_outline_rounded,
+                  iconColor: isShared ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                  onTap: () {
+                    HapticService.lightTap();
+                    CounselorSharingDialog.show(ctx, onStatusChanged: (_) {
+                      if (mounted) setState(() {});
+                    });
+                  },
+                ),
+              );
+            },
+          ),
           const SizedBox(width: 6),
 
           // Phone call icon
@@ -1223,8 +1326,65 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   ),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 12),
+                // Confidentiality Status & Counselor Sharing Chip
+                Builder(
+                  builder: (ctx) {
+                    final bool isSharedWithCounselor = ctx.watch<AuthProvider>().currentUser?['share_chat_with_counselor'] == true;
+                    return InkWell(
+                      onTap: () {
+                        HapticService.lightTap();
+                        CounselorSharingDialog.show(ctx, onStatusChanged: (_) {
+                          if (mounted) setState(() {});
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSharedWithCounselor ? const Color(0xFFE0F2FE) : Colors.white.withAlpha(220),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSharedWithCounselor ? const Color(0xFF7DD3FC) : const Color(0xFFCBD5E1),
+                          ),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1)),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isSharedWithCounselor ? Icons.shield_rounded : Icons.lock_outline_rounded,
+                              size: 13,
+                              color: isSharedWithCounselor ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isSharedWithCounselor
+                                  ? 'Counselor Sharing: ON • Shared'
+                                  : '100% Confidential • Hidden from Counselors',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isSharedWithCounselor ? const Color(0xFF0284C7) : const Color(0xFF475569),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              size: 13,
+                              color: isSharedWithCounselor ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 if (isSpacious) ...[
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   InkWell(
                     onTap: _toggleQuickPrompts,
                     borderRadius: BorderRadius.circular(20),
@@ -1461,69 +1621,90 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 265),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(2),
-                      topRight: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0D000000),
-                        blurRadius: 1,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    msg.content,
-                    style: AppTextStyles.body.copyWith(
-                      fontSize: 14,
-                      color: const Color(0xFF191C21),
-                      height: 1.43,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: () => _toggleTts(msg.content, emotion: _detectMascotEmotion('', msg.content)),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _currentlySpeakingContent == msg.content ? const Color(0xFFE0F2FE) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      border: _currentlySpeakingContent == msg.content
-                          ? Border.all(color: const Color(0xFFBAE6FD))
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _currentlySpeakingContent == msg.content ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
-                          size: 13,
-                          color: _currentlySpeakingContent == msg.content ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                Builder(builder: (context) {
+                  final parsed = _parseActionTags(msg.content);
+                  final displayText = parsed.cleanText;
+                  final actions = parsed.actions;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Message Text Bubble ──────────────────────────────
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 265),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(2),
+                            topRight: Radius.circular(16),
+                            bottomLeft: Radius.circular(16),
+                            bottomRight: Radius.circular(16),
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x0D000000),
+                              blurRadius: 1,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _currentlySpeakingContent == msg.content ? 'Speaking • Tap to stop' : 'Listen 🔊',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: _currentlySpeakingContent == msg.content ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                        child: Text(
+                          displayText,
+                          style: AppTextStyles.body.copyWith(
+                            fontSize: 14,
+                            color: const Color(0xFF191C21),
+                            height: 1.43,
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      // ── Listen TTS Button ──────────────────────────────
+                      GestureDetector(
+                        onTap: () => _toggleTts(msg.content, emotion: _detectMascotEmotion('', msg.content)),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: _currentlySpeakingContent == msg.content ? const Color(0xFFE0F2FE) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: _currentlySpeakingContent == msg.content
+                                ? Border.all(color: const Color(0xFFBAE6FD))
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _currentlySpeakingContent == msg.content ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
+                                size: 13,
+                                color: _currentlySpeakingContent == msg.content ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _currentlySpeakingContent == msg.content ? 'Speaking • Tap to stop' : 'Listen 🔊',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: _currentlySpeakingContent == msg.content ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // ── Action Chip Buttons (one-tap navigation) ────────
+                      if (actions.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: actions.map((action) => _buildActionChip(context, action)).toList(),
+                        ),
                       ],
-                    ),
-                  ),
-                ),
-                if (msg.isCrisis) _buildCrisisCard(),
+                      if (msg.isCrisis) _buildCrisisCard(),
+                    ],
+                  );
+                }),
               ],
             ),
           ),
@@ -1531,6 +1712,111 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       ),
     );
   }
+
+  /// Builds a single interactive action chip for an AI-recommended in-app resource.
+  Widget _buildActionChip(BuildContext context, _ActionTag action) {
+    // Determine chip color and icon based on resource type
+    final (Color bg, Color border, Color fg, IconData icon) = switch (action.type) {
+      'activity' => (const Color(0xFFE0F7F4), const Color(0xFF0D9488), const Color(0xFF0D9488), Icons.self_improvement_rounded),
+      'article'  => (const Color(0xFFEDE9FE), const Color(0xFF7C3AED), const Color(0xFF7C3AED), Icons.article_rounded),
+      'screener' => (const Color(0xFFFFF7ED), const Color(0xFFD97706), const Color(0xFFD97706), Icons.assignment_rounded),
+      'soundscape' => (const Color(0xFFE0F2FE), const Color(0xFF0284C7), const Color(0xFF0284C7), Icons.headphones_rounded),
+      _ => (const Color(0xFFF1F5F9), const Color(0xFF94A3B8), const Color(0xFF475569), Icons.touch_app_rounded),
+    };
+
+    return GestureDetector(
+      onTap: () => _handleActionChipTap(context, action),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: border, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: border.withAlpha(30),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: fg),
+            const SizedBox(width: 6),
+            Text(
+              action.label,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: fg,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_forward_ios_rounded, size: 10, color: fg.withAlpha(180)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Handles tap on an action chip — navigates directly to the relevant screen.
+  Future<void> _handleActionChipTap(BuildContext context, _ActionTag action) async {
+    HapticService.mediumTap();
+    if (!mounted) return;
+
+    switch (action.type) {
+      case 'activity':
+        ActivityItem? activity = activityList.where((a) => a.id == action.id).firstOrNull;
+        if (activity == null) {
+          final idLower = action.id.toLowerCase();
+          activity = activityList.where((a) =>
+            a.id.toLowerCase().contains(idLower) ||
+            idLower.contains(a.id.toLowerCase()) ||
+            a.category.toLowerCase() == idLower ||
+            a.title.toLowerCase().contains(idLower)
+          ).firstOrNull;
+        }
+        if (activity != null && mounted) {
+          await Navigator.of(context).push(slideRoute(ActivityStartScreen(activity: activity)));
+        }
+        break;
+
+      case 'article':
+        final allArticles = ArticlesData.all;
+        ArticleModel? article = allArticles.where((a) => a.id == action.id).firstOrNull;
+        if (article == null) {
+          final idLower = action.id.toLowerCase();
+          article = allArticles.where((a) =>
+            a.id.toLowerCase().contains(idLower) ||
+            idLower.contains(a.id.toLowerCase()) ||
+            a.title.toLowerCase().contains(idLower) ||
+            a.category.toLowerCase().contains(idLower)
+          ).firstOrNull;
+        }
+        if (article != null && mounted) {
+          await Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
+        }
+        break;
+
+      case 'screener':
+        if (mounted) {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => ScreenerFlowScreen(screenerType: action.id)),
+          );
+        }
+        break;
+
+      case 'soundscape':
+        // Open the soundscape bottom sheet (existing functionality)
+        if (mounted) _openAmbientSoundscapeSheet();
+        break;
+    }
+  }
+
   Widget _buildCrisisCard() {
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -2010,6 +2296,42 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 onTap: _openSelectAvatar,
               ),
               _MenuDivider(),
+              Builder(
+                builder: (ctx) {
+                  final bool isSharedWithCounselor = ctx.watch<AuthProvider>().currentUser?['share_chat_with_counselor'] == true;
+                  return _MenuItem(
+                    icon: isSharedWithCounselor ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                    label: 'Counselor Chat Sharing',
+                    iconColor: isSharedWithCounselor ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isSharedWithCounselor ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isSharedWithCounselor ? const Color(0xFFBAE6FD) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                      child: Text(
+                        isSharedWithCounselor ? 'ON' : 'OFF',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: isSharedWithCounselor ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                    onTap: () {
+                      setState(() => _showMenu = false);
+                      CounselorSharingDialog.show(context, onStatusChanged: (_) {
+                        if (mounted) setState(() {});
+                      });
+                    },
+                  );
+                },
+              ),
+              _MenuDivider(),
               if (_currentAvatar.customConfig != null || _currentAvatar.id.startsWith('custom_')) ...[
                 _MenuItem(
                   icon: Icons.edit_note_rounded,
@@ -2174,8 +2496,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 class _HeaderIconBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final Color? iconColor;
 
-  const _HeaderIconBtn({required this.icon, required this.onTap});
+  const _HeaderIconBtn({required this.icon, required this.onTap, this.iconColor});
 
   @override
   Widget build(BuildContext context) {
@@ -2195,7 +2518,7 @@ class _HeaderIconBtn extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, color: AppColors.primary, size: 20),
+        child: Icon(icon, color: iconColor ?? AppColors.primary, size: 20),
       ),
     );
   }
@@ -2693,7 +3016,9 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final soundscapes = AmbientAudioService.availableSoundscapes;
+    final soundscapes = AmbientAudioService.soundOptions
+        .where((s) => s.type != AmbientSoundType.silence)
+        .toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -2753,7 +3078,7 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
 
               // Soundscape Selection Cards
               ...soundscapes.map((s) {
-                final isSelected = _audio.currentType == s.type;
+                final isSelected = _audio.currentSound == s.type;
                 final isPlayingThis = isSelected && _audio.isPlaying;
 
                 return GestureDetector(
@@ -2791,7 +3116,7 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                s.title,
+                                s.label,
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 13.5,
@@ -2801,7 +3126,7 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                s.description,
+                                s.subtitle,
                                 style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 11,

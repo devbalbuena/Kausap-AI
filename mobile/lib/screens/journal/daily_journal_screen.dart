@@ -33,8 +33,14 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
   bool _isDisposed = false;  // Guard against setState after dispose
   Timer? _speechTimer;
 
-  String _selectedMoodTag = '🌿 Calm';
+  String? _selectedMoodTag;
   String? _activePrompt;
+
+  // ── Auto-Save Draft ───────────────────────────────────────────────────────
+  static const String _draftKey = 'journal_active_draft';
+  Timer? _draftDebounceTimer;
+  bool _hasDraft = false;       // true when a draft was restored from storage
+  bool _draftDismissed = false; // true once user taps Discard on banner
 
   static const List<String> _moodTags = [
     '🌿 Calm',
@@ -55,20 +61,114 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
 
   bool get _isEditing => widget.entryToEdit != null;
 
+  int _todayEntryCount = 0;
+
   @override
   void initState() {
     super.initState();
     if (_isEditing) {
+      // Populate fields from the entry being edited — no draft involved
       final entry = widget.entryToEdit!;
       _journalController.text = entry['content']?.toString() ?? '';
-      _selectedMoodTag = entry['mood_tag']?.toString() ?? entry['type']?.toString() ?? '🌿 Calm';
+      _selectedMoodTag = entry['mood_tag']?.toString() ?? entry['type']?.toString();
       _activePrompt = entry['prompt']?.toString();
+    } else {
+      _checkTodayEntries();
+      // Try to restore any unsaved draft from the previous session
+      _loadDraft();
+    }
+    // Wire up debounced auto-save on every text change
+    _journalController.addListener(_onTextChanged);
+  }
+
+  Future<void> _checkTodayEntries() async {
+    try {
+      final res = await ApiClient().get(ApiConfig.journalToday, silent: true);
+      if (res is List && mounted) {
+        setState(() {
+          _todayEntryCount = res.length;
+        });
+      }
+    } catch (_) {}
+  }
+
+  // ── Draft helpers ──────────────────────────────────────────────────────────
+
+  /// Called whenever the text field changes; debounces the actual disk write.
+  void _onTextChanged() {
+    if (_isSaving || _isEditing) return; // Don't auto-save while a real save is in progress
+    _draftDebounceTimer?.cancel();
+    _draftDebounceTimer = Timer(const Duration(milliseconds: 600), _saveDraft);
+  }
+
+  /// Persist current content, mood tag, and prompt to local storage as a draft.
+  Future<void> _saveDraft() async {
+    final text = _journalController.text;
+    if (text.isEmpty) {
+      // Nothing to save — purge any existing draft
+      await _deleteDraft();
+      return;
+    }
+    try {
+      final payload = jsonEncode({
+        'content': text,
+        'mood_tag': _selectedMoodTag,
+        'prompt': _activePrompt,
+      });
+      await _storage.write(key: _draftKey, value: payload);
+    } catch (_) {}
+  }
+
+  /// Restore a previously saved draft (called during initState for new entries).
+  Future<void> _loadDraft() async {
+    try {
+      final raw = await _storage.read(key: _draftKey);
+      if (raw == null || raw.isEmpty) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final draftContent = data['content']?.toString() ?? '';
+      if (draftContent.isEmpty) return;
+      if (mounted) {
+        setState(() {
+          _journalController.text = draftContent;
+          _selectedMoodTag = data['mood_tag']?.toString();
+          _activePrompt = data['prompt']?.toString();
+          _hasDraft = true;
+          // Move cursor to end of restored text
+          _journalController.selection = TextSelection.fromPosition(
+            TextPosition(offset: _journalController.text.length),
+          );
+        });
+      }
+    } catch (_) {}
+  }
+
+  /// Remove the persisted draft from local storage.
+  Future<void> _deleteDraft() async {
+    try {
+      await _storage.delete(key: _draftKey);
+    } catch (_) {}
+  }
+
+  /// Called when user taps "Discard" on the draft-restored banner.
+  Future<void> _discardDraft() async {
+    HapticService.lightTap();
+    await _deleteDraft();
+    if (mounted) {
+      setState(() {
+        _hasDraft = false;
+        _draftDismissed = true;
+        _journalController.clear();
+        _selectedMoodTag = null;
+        _activePrompt = null;
+      });
     }
   }
 
   @override
   void dispose() {
     _isDisposed = true;
+    _draftDebounceTimer?.cancel();
+    _journalController.removeListener(_onTextChanged);
     _speechTimer?.cancel();
     _speechTimer = null;
     // Stop speech recognition without calling setState (widget already disposed)
@@ -213,9 +313,11 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
+              _deleteDraft(); // purge draft so next open starts fresh
               setState(() {
                 _journalController.clear();
                 _activePrompt = null;
+                _hasDraft = false;
               });
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
@@ -246,7 +348,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
       if (_isEditing) {
         // Edit existing entry
         final entryId = widget.entryToEdit!['id']?.toString() ?? '';
-        if (entryId.isNotEmpty && entryId.contains('-') && entryId.length > 20) {
+        if (entryId.isNotEmpty && !entryId.startsWith('legacy_') && !entryId.startsWith('local_')) {
           try {
             await ApiClient().put(
               '${ApiConfig.journal}/$entryId',
@@ -255,14 +357,32 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                 'mood_tag': _selectedMoodTag,
                 'prompt': _activePrompt,
               },
-              silent: true,
+              silent: false,
             );
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('API journal update error: $e');
+          }
+        }
+
+        // Update local storage cache
+        final rawHistory = await _storage.read(key: 'journal_history');
+        if (rawHistory != null && rawHistory.isNotEmpty) {
+          final List<dynamic> history = jsonDecode(rawHistory) as List;
+          final idx = history.indexWhere((e) => e['id']?.toString() == entryId);
+          if (idx != -1) {
+            history[idx]['content'] = content;
+            history[idx]['mood_tag'] = _selectedMoodTag;
+            history[idx]['type'] = _selectedMoodTag;
+            history[idx]['prompt'] = _activePrompt;
+            history[idx]['updated_at'] = nowIso;
+            await _storage.write(key: 'journal_history', value: jsonEncode(history));
+          }
         }
       } else {
         // Create brand new separate entry
+        String? newServerId;
         try {
-          await ApiClient().post(
+          final res = await ApiClient().post(
             ApiConfig.journal,
             body: {
               'content': content,
@@ -270,31 +390,19 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
               'mood_tag': _selectedMoodTag,
               'prompt': _activePrompt,
             },
-            silent: true,
+            silent: false,
           );
-        } catch (_) {}
-      }
-
-      // Persist to local storage for offline resilience
-      await _storage.write(key: 'journal_$dateKey', value: content);
-      await _storage.write(key: 'journal_mood_$dateKey', value: _selectedMoodTag);
-
-      // Append/Update unified journal_history in local storage
-      final rawHistory = await _storage.read(key: 'journal_history');
-      final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) as List : [];
-      
-      if (_isEditing) {
-        final entryId = widget.entryToEdit!['id']?.toString();
-        final idx = history.indexWhere((e) => e['id']?.toString() == entryId);
-        if (idx != -1) {
-          history[idx]['content'] = content;
-          history[idx]['mood_tag'] = _selectedMoodTag;
-          history[idx]['type'] = _selectedMoodTag;
-          history[idx]['prompt'] = _activePrompt;
+          if (res is Map && res['id'] != null) {
+            newServerId = res['id'].toString();
+          }
+        } catch (e) {
+          debugPrint('API journal create error: $e');
         }
-      } else {
-        history.insert(0, {
-          'id': 'local_${DateTime.now().millisecondsSinceEpoch}',
+
+        final entryIdToUse = newServerId ?? 'local_${DateTime.now().millisecondsSinceEpoch}';
+
+        final newEntryMap = {
+          'id': entryIdToUse,
           'date': dateKey,
           'entry_date': dateKey,
           'type': _selectedMoodTag,
@@ -302,10 +410,24 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
           'content': content,
           'prompt': _activePrompt,
           'created_at': nowIso,
-        });
+        };
+
+        // Append to unified journal_history in local storage
+        final rawHistory = await _storage.read(key: 'journal_history');
+        final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) as List : [];
+        history.insert(0, newEntryMap);
+        await _storage.write(key: 'journal_history', value: jsonEncode(history));
       }
-      await _storage.write(key: 'journal_history', value: jsonEncode(history));
-    } catch (_) {}
+
+      // Persist latest entry draft to local storage for quick offline retrieval
+      await _storage.write(key: 'journal_$dateKey', value: content);
+      await _storage.write(key: 'journal_mood_$dateKey', value: _selectedMoodTag);
+
+      // ── Auto-draft cleanup: purge draft on successful save ──────────────
+      await _deleteDraft();
+    } catch (e) {
+      debugPrint('Error saving journal: $e');
+    }
 
     if (mounted) {
       setState(() => _isSaving = false);
@@ -363,12 +485,12 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
             tooltip: 'View Past Journals',
             onPressed: () async {
               _stopSpeechRecognition();
-              final res = await Navigator.push(
+              await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const JournalHistoryScreen()),
+                MaterialPageRoute(builder: (_) => const JournalHistoryScreen(fromDailyJournal: true)),
               );
-              if (res == true && mounted) {
-                // If an action occurred in history, refresh state
+              if (mounted) {
+                _checkTodayEntries();
               }
             },
           ),
@@ -426,6 +548,18 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                               color: Color(0xFF1E293B),
                             ),
                           ),
+                          if (_todayEntryCount > 0 && !_isEditing) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '$_todayEntryCount ${_todayEntryCount == 1 ? 'entry' : 'entries'} already logged today',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -451,15 +585,101 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
 
               const SizedBox(height: 12),
 
-              // Mood Tag Selector
-              const Text(
-                'Emotional Tone',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12.5,
-                  color: Color(0xFF334155),
+              // ── Draft Restored Banner ─────────────────────────────────────
+              if (_hasDraft && !_draftDismissed && !_isEditing) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFFD97706)),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Draft restored — continue where you left off',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _discardDraft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFCD34D)),
+                          ),
+                          child: const Text(
+                            'Discard',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+
+              // Mood Tag Selector
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Emotional Tone (Optional)',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12.5,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                  if (_selectedMoodTag != null)
+                    GestureDetector(
+                      onTap: () {
+                        HapticService.lightTap();
+                        setState(() => _selectedMoodTag = null);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.close_rounded, size: 11, color: Color(0xFFDC2626)),
+                            SizedBox(width: 3),
+                            Text(
+                              'Clear',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFDC2626),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 6),
               SizedBox(
@@ -475,7 +695,8 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                       label: Text(tag),
                       selected: isSelected,
                       onSelected: (val) {
-                        if (val) setState(() => _selectedMoodTag = tag);
+                        HapticService.lightTap();
+                        setState(() => _selectedMoodTag = val ? tag : null);
                       },
                       selectedColor: const Color(0xFFE0F2FE),
                       backgroundColor: Colors.white,

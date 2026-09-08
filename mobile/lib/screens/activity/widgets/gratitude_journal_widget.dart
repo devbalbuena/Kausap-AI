@@ -10,6 +10,8 @@ import 'dart:js' as js;
 
 import '../../../theme/app_theme.dart';
 import '../../../utils/ambient_audio_service.dart';
+import '../../../services/api_client.dart';
+import '../../../config/api_config.dart';
 import '../activity_screen.dart';
 import '../../journal/journal_history_screen.dart';
 
@@ -172,21 +174,40 @@ class _GratitudeJournalWidgetState extends State<GratitudeJournalWidget> {
       entryContent = _freeformController.text.trim();
     }
 
-    // Save unified daily journal
+    // Save unified daily journal locally
     await _storage.write(key: 'journal_$today', value: entryContent);
 
-    // Append to unified journal_history
+    // Sync to Cloud Backend API (Neon PostgreSQL)
+    try {
+      await ApiClient().post(
+        ApiConfig.journal,
+        body: {
+          'title': _mode == _JournalMode.guided ? 'Gratitude Journal (Guided)' : 'Gratitude Journal (Freeform)',
+          'content': entryContent,
+          'entry_date': today,
+          'mood_tag': '😊 Grateful',
+          'prompt': _mode == _JournalMode.guided ? 'Guided Gratitude Reflection' : 'Freeform Gratitude Reflection',
+        },
+        silent: true,
+      );
+    } catch (e) {
+      debugPrint('Gratitude journal cloud sync failed: $e');
+    }
+
+    // Append to unified journal_history in local storage
     try {
       final rawHistory = await _storage.read(key: 'journal_history');
       final List<dynamic> history = rawHistory != null ? jsonDecode(rawHistory) as List : [];
       // Remove today if already exists to update it
       history.removeWhere((e) => e['date'] == today);
       history.insert(0, {
-        'id': today,
+        'id': 'local_${DateTime.now().millisecondsSinceEpoch}',
         'date': today,
-        'type': _mode == _JournalMode.guided ? 'guided' : 'freeform',
+        'entry_date': today,
+        'type': '😊 Grateful',
+        'mood_tag': '😊 Grateful',
         'content': entryContent,
-        'mood': '5',
+        'prompt': _mode == _JournalMode.guided ? 'Guided Gratitude Reflection' : 'Freeform Gratitude Reflection',
         'created_at': DateTime.now().toIso8601String(),
       });
       await _storage.write(key: 'journal_history', value: jsonEncode(history));

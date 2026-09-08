@@ -8,7 +8,7 @@ class JournalCreate(BaseModel):
     title: Optional[str] = None
     content: str
     entry_date: Optional[str] = None  # Defaults to today YYYY-MM-DD
-    mood_tag: Optional[str] = "🌿 Calm"
+    mood_tag: Optional[str] = None
     prompt: Optional[str] = None
 
 

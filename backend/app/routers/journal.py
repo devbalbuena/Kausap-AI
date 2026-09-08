@@ -65,7 +65,7 @@ def create_journal_entry(
         title=payload.title or "Daily Reflection",
         content=payload.content,
         entry_date=entry_date,
-        mood_tag=payload.mood_tag or "🌿 Calm",
+        mood_tag=payload.mood_tag,
         prompt=payload.prompt,
         created_at=now_utc,
         updated_at=now_utc,
@@ -92,14 +92,9 @@ def update_journal_entry(
     if not entry:
         raise HTTPException(status_code=404, detail="Journal entry not found")
 
-    if payload.content is not None:
-        entry.content = payload.content
-    if payload.title is not None:
-        entry.title = payload.title
-    if payload.mood_tag is not None:
-        entry.mood_tag = payload.mood_tag
-    if payload.prompt is not None:
-        entry.prompt = payload.prompt
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(entry, key, value)
     entry.updated_at = datetime.utcnow()
 
     session.add(entry)

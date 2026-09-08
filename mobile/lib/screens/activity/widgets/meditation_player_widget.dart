@@ -83,11 +83,15 @@ class _MeditationPlayerWidgetState extends State<MeditationPlayerWidget>
     _totalSeconds = _selectedDurationMinutes * 60;
     _secondsRemaining = _totalSeconds;
 
-    // Start ambient sound
-    _audioService.setVolume(_ambientVolume);
-    _audioService.play(_selectedSound);
-
-    _startTimer();
+    // Defer audio start to post-frame so ambient state listeners on sibling
+    // widgets (e.g., ChatbotScreen in the IndexedStack) are never notified
+    // during this widget's initial build phase — prevents setState-during-build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _audioService.setVolume(_ambientVolume);
+      _audioService.play(_selectedSound);
+      _startTimer();
+    });
   }
 
   void _changeDuration(int minutes) {
