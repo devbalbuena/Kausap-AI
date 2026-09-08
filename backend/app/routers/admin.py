@@ -112,6 +112,7 @@ def list_users(
                 occupation=u.occupation.value if hasattr(u.occupation, 'value') else (str(u.occupation) if u.occupation else None),
                 nationality=getattr(u, 'nationality', 'Filipino') or 'Filipino',
                 hobbies=getattr(u, 'hobbies', None),
+                share_chat_with_counselor=getattr(u, 'share_chat_with_counselor', False) or False,
             )
         )
     return summaries
@@ -148,6 +149,7 @@ def get_user_detail(
         birthday=str(u.birthday) if u.birthday else None,
         gender=u.gender.value if u.gender else None,
         occupation=u.occupation.value if u.occupation else None,
+        share_chat_with_counselor=getattr(u, 'share_chat_with_counselor', False) or False,
         recent_moods=recent_moods,
         recent_sessions=recent_sessions,
     )
@@ -896,7 +898,7 @@ def _utc_dt(dt: Optional[datetime]) -> Optional[datetime]:
     return dt
 
 
-@router.get("/users/{user_id}/chat-sessions", response_model=List[ChatSessionRead])
+@router.get("/users/{user_id}/chat-sessions")
 def get_student_chat_sessions(
     user_id: uuid.UUID,
     admin: Annotated[User, Depends(get_current_counselor_or_admin)],
@@ -904,6 +906,18 @@ def get_student_chat_sessions(
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
     """Retrieve all AI chat sessions and complete conversation transcripts for clinical review."""
+    target_student = session.get(User, user_id)
+    if not target_student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    is_shared = bool(getattr(target_student, 'share_chat_with_counselor', False))
+    if not is_shared:
+        return {
+            "share_chat_with_counselor": False,
+            "message": "In accordance with student privacy ethics and informed consent policies, AI conversation transcripts are confidential-by-default. This student has chosen not to share their chat logs with university counselors.",
+            "sessions": []
+        }
+
     sessions = session.exec(
         select(ChatSession)
         .where(ChatSession.user_id == user_id)
@@ -937,7 +951,11 @@ def get_student_chat_sessions(
                 ],
             )
         )
-    return result
+    return {
+        "share_chat_with_counselor": True,
+        "message": "Student Consent Active: The student has voluntarily authorized counselor access to these AI chat transcripts.",
+        "sessions": result
+    }
 
 
 @router.delete("/chat-sessions/reset")

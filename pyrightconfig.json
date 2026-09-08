@@ -1,0 +1,13 @@
+{
+  "venvPath": "c:/Kausap-AI/backend",
+  "venv": "venv",
+  "extraPaths": [
+    "c:/Kausap-AI/backend",
+    "c:/Kausap-AI/backend/app",
+    "c:/Kausap-AI/backend/venv/Lib/site-packages",
+    "backend",
+    "backend/app",
+    "backend/venv/Lib/site-packages"
+  ]
+}
+

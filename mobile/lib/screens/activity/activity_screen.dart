@@ -478,10 +478,21 @@ class _ActivityScreenState extends State<ActivityScreen> {
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF0284C7), Color(0xFF0D9488)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x330284C7),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-          child: const Icon(Icons.self_improvement_rounded, color: Colors.white, size: 20),
+          child: const Center(
+            child: Icon(Icons.self_improvement_rounded, color: Colors.white, size: 18),
+          ),
         ),
         const SizedBox(width: 10),
         const Expanded(
@@ -510,10 +521,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
             ],
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.history_rounded, color: Color(0xFF334155), size: 22),
-          tooltip: 'Activity History',
-          onPressed: () {
+        // History tool button in standardized 34x34 container
+        GestureDetector(
+          onTap: () {
             HapticService.lightTap();
             showModalBottomSheet(
               context: context,
@@ -522,7 +532,27 @@ class _ActivityScreenState extends State<ActivityScreen> {
               builder: (_) => const ActivityHistorySheet(),
             );
           },
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(Icons.history_rounded, color: Color(0xFF334155), size: 19),
+            ),
+          ),
         ),
+        const SizedBox(width: 8),
         Consumer<AuthProvider>(
           builder: (context, auth, _) {
             final user = auth.currentUser;
@@ -530,24 +560,60 @@ class _ActivityScreenState extends State<ActivityScreen> {
             final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
             final avatarUrl = user?['avatar_url'] as String?;
 
-            return GestureDetector(
-              onTap: () {
-                HapticService.lightTap();
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            final avatar = CircleAvatar(
+              radius: 16,
+              backgroundColor: AppColors.primary.withAlpha(25),
+              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                  ? NetworkImage(avatarUrl)
+                  : null,
+              child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                  ? Text(
+                      initial,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary),
+                    )
+                  : null,
+            );
+
+            return PopupMenuButton<String>(
+              offset: const Offset(0, 44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 8,
+              child: avatar,
+              onSelected: (value) {
+                if (value == 'profile') {
+                  HapticService.lightTap();
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                }
               },
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.primary.withAlpha(25),
-                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
-                    ? Text(
-                        initial,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
-                      )
-                    : null,
-              ),
+              itemBuilder: (_) => [
+                PopupMenuItem<String>(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: AppColors.primary.withAlpha(20),
+                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                            ? NetworkImage(avatarUrl)
+                            : null,
+                        child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                            ? Text(initial,
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
+                          const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             );
           },
         ),

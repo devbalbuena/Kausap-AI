@@ -49,6 +49,8 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
   bool _loadingChats = true;
   List<dynamic> _chatSessions = [];
   String? _chatError;
+  bool _shareChatWithCounselor = true;
+  String? _sharingNoticeMessage;
 
   final Set<String> _expandedSessionIds = {};
 
@@ -112,7 +114,16 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
       final res = await _api.get('/admin/users/$_studentId/chat-sessions', silent: true);
       if (mounted) {
         setState(() {
-          _chatSessions = res is List ? res : [];
+          if (res is Map) {
+            _shareChatWithCounselor = res['share_chat_with_counselor'] != false;
+            _sharingNoticeMessage = res['message']?.toString();
+            _chatSessions = (res['sessions'] as List<dynamic>?) ?? [];
+          } else if (res is List) {
+            _shareChatWithCounselor = true;
+            _chatSessions = res;
+          } else {
+            _chatSessions = [];
+          }
           _loadingChats = false;
         });
       }
@@ -670,6 +681,108 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
       );
     }
 
+    if (!_shareChatWithCounselor) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                ),
+                child: const Icon(Icons.lock_rounded, size: 36, color: Color(0xFF475569)),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                "Transcripts Confidential",
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Text(
+                  "Student Privacy: Sharing Disabled",
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      _sharingNoticeMessage ??
+                          "In accordance with student privacy ethics and informed consent policies, AI conversation transcripts are confidential-by-default.\n\nThis student has chosen not to share their chat logs with university counselors. They can grant or revoke access anytime from their mobile chat settings.",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        color: Color(0xFF475569),
+                        height: 1.5,
+                      ),
+                    ),
+                    SizedBox(height: 14),
+                    Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Icon(Icons.shield_outlined, size: 16, color: Color(0xFF0284C7)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Emergency Safeguard: Automated crisis detection remains active to notify counselors if high-risk crises are detected.",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11,
+                              color: Color(0xFF0284C7),
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_chatSessions.isEmpty) {
       return Center(
         child: Padding(
@@ -700,10 +813,32 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
       color: const Color(0xFF7C3AED),
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: _chatSessions.length,
+        itemCount: _chatSessions.length + 1,
         separatorBuilder: (ctx, i) => const SizedBox(height: 14),
         itemBuilder: (ctx, i) {
-          final s = _chatSessions[i];
+          if (i == 0) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Student Consent Active: The student has voluntarily authorized counselor access to these AI chat transcripts for clinical guidance.",
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF065F46), height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          final s = _chatSessions[i - 1];
           final sessionId = s['id']?.toString() ?? '$i';
           final topic = s['topic'] ?? 'AI Companion Conversation';
           final dateStr = _formatDateTime(s['created_at']?.toString());

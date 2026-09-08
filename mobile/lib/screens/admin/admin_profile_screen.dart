@@ -29,7 +29,7 @@ class AdminProfileScreen extends StatefulWidget {
 class _AdminProfileScreenState extends State<AdminProfileScreen> {
   int _totalStudents = 2;
   int _totalCounselors = 1;
-  bool _neonHealthy = true;
+  final bool _neonHealthy = true;
 
   @override
   void initState() {

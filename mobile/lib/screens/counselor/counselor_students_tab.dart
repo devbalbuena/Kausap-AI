@@ -237,22 +237,61 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
                                           ],
                                         ),
                                       ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: isActive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          isActive ? "Active" : "Inactive",
-                                          style: TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w700,
-                                            color: isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                                          ),
-                                        ),
-                                      ),
+                                       Builder(
+                                         builder: (_) {
+                                           final bool isShared = s['share_chat_with_counselor'] == true;
+                                           return Column(
+                                             crossAxisAlignment: CrossAxisAlignment.end,
+                                             children: [
+                                               Container(
+                                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                 decoration: BoxDecoration(
+                                                   color: isActive ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                                   borderRadius: BorderRadius.circular(6),
+                                                 ),
+                                                 child: Text(
+                                                   isActive ? "Active" : "Inactive",
+                                                   style: TextStyle(
+                                                     fontFamily: 'Inter',
+                                                     fontSize: 10.5,
+                                                     fontWeight: FontWeight.w700,
+                                                     color: isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                                   ),
+                                                 ),
+                                               ),
+                                               const SizedBox(height: 4),
+                                               Container(
+                                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                 decoration: BoxDecoration(
+                                                   color: isShared ? const Color(0xFFE0F2FE) : const Color(0xFFF8FAFC),
+                                                   borderRadius: BorderRadius.circular(6),
+                                                   border: Border.all(color: isShared ? const Color(0xFFBAE6FD) : const Color(0xFFE2E8F0)),
+                                                 ),
+                                                 child: Row(
+                                                   mainAxisSize: MainAxisSize.min,
+                                                   children: [
+                                                     Icon(
+                                                       isShared ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                                                       size: 9.5,
+                                                       color: isShared ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                                                     ),
+                                                     const SizedBox(width: 3),
+                                                     Text(
+                                                       isShared ? "Chats Shared" : "Confidential",
+                                                       style: TextStyle(
+                                                         fontFamily: 'Inter',
+                                                         fontSize: 9.5,
+                                                         fontWeight: FontWeight.w600,
+                                                         color: isShared ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                                                       ),
+                                                     ),
+                                                   ],
+                                                 ),
+                                               ),
+                                             ],
+                                           );
+                                         },
+                                       ),
                                       const SizedBox(width: 6),
                                       const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 18),
                                     ],

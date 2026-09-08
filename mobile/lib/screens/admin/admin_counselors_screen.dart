@@ -496,6 +496,7 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                                 });
                               } catch (e) {
                                 setModalState(() => isSending = false);
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text("Failed to dispatch code: $e"),

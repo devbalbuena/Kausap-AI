@@ -28,6 +28,7 @@ class UserSummary(BaseModel):
     occupation: Optional[str] = None
     nationality: Optional[str] = "Filipino"
     hobbies: Optional[str] = None
+    share_chat_with_counselor: bool = False
 
 
 class FlaggedMessageRead(BaseModel):
@@ -63,6 +64,7 @@ class UserDetail(BaseModel):
     birthday: Optional[str] = None
     gender: Optional[str] = None
     occupation: Optional[str] = None
+    share_chat_with_counselor: bool = False
     recent_moods: List[MoodEntryRead]
     recent_sessions: List[ChatSessionRead]
 

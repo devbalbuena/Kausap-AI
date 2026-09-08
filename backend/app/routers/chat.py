@@ -68,13 +68,21 @@ def _extract_mood_analytics(db: Session, user_id: uuid.UUID) -> Tuple[Optional[i
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     fourteen_days_ago = today_start - timedelta(days=14)
 
-    # 1. Today's latest mood entry
+    # 1. Today's latest mood entry (with 24h fallback for timezone offsets)
     today_mood_entry = db.exec(
         select(MoodEntry)
         .where(MoodEntry.user_id == user_id)
         .where(MoodEntry.created_at >= today_start)
         .order_by(MoodEntry.created_at.desc())
     ).first()
+    if not today_mood_entry:
+        twenty_four_hours_ago = now - timedelta(hours=24)
+        today_mood_entry = db.exec(
+            select(MoodEntry)
+            .where(MoodEntry.user_id == user_id)
+            .where(MoodEntry.created_at >= twenty_four_hours_ago)
+            .order_by(MoodEntry.created_at.desc())
+        ).first()
     today_mood_level = today_mood_entry.mood_level if today_mood_entry else None
 
     # 2. Past 14 days of mood history for trend analysis
@@ -291,6 +299,7 @@ async def post_message(
                     custom_system_prompt=payload.custom_system_prompt,
                     mood_trend_context=mood_trend_context,
                     screener_context=payload.screener_context,
+                    user_message=payload.content,
                 )
 
                 # Per-persona temperature tuning

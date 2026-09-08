@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
@@ -67,6 +68,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   int? _todayMoodLevel;
   bool _showQuickEscape = false;
+  String? _activeCompanionAffirmation;
+  Timer? _affirmationDismissTimer;
   List<double?> _weeklyMoods = List.filled(7, null);
   List<String?> _weeklyLatestEmojis = List.filled(7, null);
   List<int> _weeklyLogCounts = List.filled(7, 0);
@@ -140,9 +143,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    _affirmationDismissTimer?.cancel();
     _bellAnimController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onCompanionAffirmation(String affirmation) {
+    _affirmationDismissTimer?.cancel();
+    setState(() {
+      _activeCompanionAffirmation = affirmation;
+    });
+    _affirmationDismissTimer = Timer(const Duration(milliseconds: 5000), () {
+      if (mounted) {
+        setState(() {
+          _activeCompanionAffirmation = null;
+        });
+      }
+    });
   }
 
   void _refreshHome() {
@@ -682,11 +700,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     await Future.delayed(const Duration(milliseconds: 400));
   }
 
-  String _greetingPeriodFilipino() {
+  (String, String) _greetingPeriodEnglish() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'umaga';
-    if (hour < 18) return 'hapon';
-    return 'gabi';
+    if (hour >= 5 && hour < 12) {
+      return ('Good morning', '☀️');
+    } else if (hour >= 12 && hour < 18) {
+      return ('Good afternoon', '🌤️');
+    } else {
+      return ('Good evening', '🌙');
+    }
   }
 
   // ── Header (Logo + Quick Escape + Animated Bell + Profile Avatar Menu) ───
@@ -696,18 +718,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       children: [
         Row(children: [
           Container(
-            width: 27,
-            height: 27,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(6),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0284C7), Color(0xFF0077B6), Color(0xFF06B6D4)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(9),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x330284C7),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-            child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 15),
+            child: const Center(
+              child: Icon(
+                Icons.auto_awesome_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 8.5),
           Text(
             'Kausap AI',
-            style: AppTextStyles.brandName.copyWith(color: AppColors.primary, fontSize: 20),
+            style: AppTextStyles.brandName.copyWith(
+              color: const Color(0xFF0284C7),
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ]),
         Row(children: [
@@ -819,7 +862,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
               final avatarUrl = user['avatar_url'] as String?;
               final avatar = CircleAvatar(
-                radius: 17,
+                radius: 16,
                 backgroundColor: AppColors.primary.withAlpha(30),
                 backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
                     ? NetworkImage(avatarUrl)
@@ -888,6 +931,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildHomeCompanionHero() {
     final hasMood = _todayMoodLevel != null;
     final moodLabel = hasMood ? _getMoodEmojiAndLabel(_todayMoodLevel!) : '';
+    final (greetingText, greetingEmoji) = _greetingPeriodEnglish();
+    final formattedName = _firstName.isNotEmpty
+        ? _firstName[0].toUpperCase() + _firstName.substring(1)
+        : 'Friend';
 
     return Container(
       width: double.infinity,
@@ -904,60 +951,115 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          HomeCompanionAvatar(
-            todayMood: _todayMoodLevel,
-            firstName: _firstName,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFBAE6FD)),
-                  ),
-                  child: const Text(
-                    '🌱 Campus Wellness Shield',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0284C7),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              HomeCompanionAvatar(
+                todayMood: _todayMoodLevel,
+                firstName: _firstName,
+                onAffirmation: _onCompanionAffirmation,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFBAE6FD)),
+                      ),
+                      child: const Text(
+                        '🌱 Campus Wellness Shield',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0284C7),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '$greetingText,\n$formattedName! $greetingEmoji',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      hasMood
+                          ? 'Feeling $moodLabel right now • Keep blooming 🌱'
+                          : 'How are you feeling right now? Tap a mood below 💙',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  'Magandang ${_greetingPeriodFilipino()},\n${_firstName.isNotEmpty ? _firstName[0].toUpperCase() + _firstName.substring(1) : 'Friend'}! ✨',
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  hasMood
-                      ? 'Feeling $moodLabel right now • Keep blooming 🌱'
-                      : 'How are you feeling right now? Tap a mood below 💙',
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
+          ),
+
+          // Option A: Clean Expanding Speech Card below greeting (No overlapping)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeInOut,
+            child: _activeCompanionAffirmation != null
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _activeCompanionAffirmation = null;
+                        });
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F9FF),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Text('✨', style: TextStyle(fontSize: 14)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Kausap Buddy: "${_activeCompanionAffirmation!}"',
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0369A1),
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.close_rounded, size: 14, color: Color(0xFF94A3B8)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),

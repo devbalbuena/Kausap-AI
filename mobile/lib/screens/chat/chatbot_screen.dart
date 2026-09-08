@@ -912,7 +912,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Widget _buildHeader() {
     final audio = AmbientAudioService.instance;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       child: Row(
         children: [
           // Custom Vector Avatar, Living Expressive Mascot, or Specialist Avatar Photo
@@ -1160,14 +1160,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           GestureDetector(
             onTap: () => setState(() => _showMenu = !_showMenu),
             child: Container(
-              width: 38,
-              height: 38,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withAlpha(25),
-                    blurRadius: 8,
+                    blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -2505,20 +2505,20 @@ class _HeaderIconBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 38,
-        height: 38,
+        width: 34,
+        height: 34,
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(200),
+          color: Colors.white.withAlpha(220),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+              color: Colors.black.withAlpha(18),
+              blurRadius: 5,
+              offset: const Offset(0, 1.5),
             ),
           ],
         ),
-        child: Icon(icon, color: iconColor ?? AppColors.primary, size: 20),
+        child: Icon(icon, color: iconColor ?? AppColors.primary, size: 18),
       ),
     );
   }

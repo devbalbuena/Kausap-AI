@@ -21,6 +21,7 @@ def migrate():
             ("article", "theme_color_hex", "VARCHAR DEFAULT '#0284C7'"),
             ("article", "content_json", "TEXT DEFAULT '[]'"),
             ("article", "is_published", "BOOLEAN DEFAULT TRUE"),
+            ('"user"', "share_chat_with_counselor", "BOOLEAN DEFAULT FALSE"),
         ]
         
         for table, col, col_type in columns_to_ensure:

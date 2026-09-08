@@ -414,137 +414,233 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
         .then((_) => _loadData());
   }
 
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0284C7), Color(0xFF0077B6), Color(0xFF06B6D4)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x330284C7),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Icon(Icons.analytics_rounded, color: Colors.white, size: 18),
+          ),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Insights & Screeners',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                'Self-Assessments & Mental Health Trends',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11.5,
+                  color: Color(0xFF64748B),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        // History Tool Button
+        GestureDetector(
+          onTap: () {
+            HapticService.lightTap();
+            _openHistoryScreen();
+          },
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(Icons.history_rounded, color: Color(0xFF334155), size: 19),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Download Report Tool Button
+        GestureDetector(
+          onTap: _isExporting
+              ? null
+              : () {
+                  HapticService.lightTap();
+                  _exportReport();
+                },
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Center(
+              child: _isExporting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0284C7)),
+                    )
+                  : const Icon(Icons.download_rounded, color: Color(0xFF334155), size: 19),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Consumer<AuthProvider>(
+          builder: (context, auth, _) {
+            final user = auth.currentUser ?? {};
+            final name = user['first_name'] ?? 'U';
+            final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+            final avatarUrl = user['avatar_url'] as String?;
+            final avatar = CircleAvatar(
+              radius: 16,
+              backgroundColor: AppColors.primary.withAlpha(25),
+              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                  ? NetworkImage(avatarUrl)
+                  : null,
+              child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                  ? Text(
+                      initial,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary),
+                    )
+                  : null,
+            );
+            return PopupMenuButton<String>(
+              offset: const Offset(0, 44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 8,
+              child: avatar,
+              onSelected: (value) {
+                if (value == 'profile') {
+                  HapticService.lightTap();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem<String>(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: AppColors.primary.withAlpha(20),
+                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                            ? NetworkImage(avatarUrl)
+                            : null,
+                        child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                            ? Text(initial,
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
+                          const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FF),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Row(
+      body: SafeArea(
+        child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+              child: _buildHeader(),
+            ),
             Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD6F1FC),
-                borderRadius: BorderRadius.circular(10),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                ),
               ),
-              child: const Icon(Icons.analytics_rounded, color: AppColors.primary, size: 20),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: AppColors.primary,
+                unselectedLabelColor: const Color(0xFF64748B),
+                indicatorColor: AppColors.primary,
+                indicatorWeight: 2.5,
+                labelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500, fontSize: 13),
+                tabs: const [
+                  Tab(text: "Wellness Check-Ins"),
+                  Tab(text: "Trends & Analytics"),
+                ],
+              ),
             ),
-            const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Insights & Screeners', style: TextStyle(fontSize: 16, color: Color(0xFF2C3E50), fontWeight: FontWeight.bold)),
-                Text('Self-Assessments & Mental Health Trends', style: TextStyle(fontSize: 11, color: Color(0xFF707974))),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history_rounded, color: AppColors.primary),
-            tooltip: "Assessment History",
-            onPressed: _openHistoryScreen,
-          ),
-          IconButton(
-            icon: _isExporting
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-                : const Icon(Icons.download_rounded, color: AppColors.primary),
-            tooltip: "Download Wellness Report",
-            onPressed: _isExporting ? null : _exportReport,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12, left: 4),
-            child: Consumer<AuthProvider>(
-              builder: (context, auth, _) {
-                final user = auth.currentUser ?? {};
-                final name = user['first_name'] ?? 'U';
-                final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-                final avatarUrl = user['avatar_url'] as String?;
-                final avatar = CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.primary.withAlpha(30),
-                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
-                      ? NetworkImage(avatarUrl)
-                      : null,
-                  child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
-                      ? Text(
-                          initial,
-                          style: AppTextStyles.label.copyWith(
-                              color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 11),
-                        )
-                      : null,
-                );
-                return PopupMenuButton<String>(
-                  offset: const Offset(0, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 8,
-                  child: avatar,
-                  onSelected: (value) {
-                    if (value == 'profile') {
-                      HapticService.lightTap();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                      );
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem<String>(
-                      value: 'profile',
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: AppColors.primary.withAlpha(20),
-                            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
-                                ? NetworkImage(avatarUrl)
-                                : null,
-                            child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
-                                ? Text(initial,
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
-                                : null,
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
-                              const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-                            ],
-                          ),
-                        ],
-                      ),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildScreenersTab(),
+                        _buildTrendsTab(),
+                      ],
                     ),
-                  ],
-                );
-              },
             ),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: const Color(0xFF707974),
-          indicatorColor: AppColors.primary,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          tabs: const [
-            Tab(text: "Wellness Check-Ins"),
-            Tab(text: "Trends & Analytics"),
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildScreenersTab(),
-                _buildTrendsTab(),
-              ],
-            ),
     );
   }
 

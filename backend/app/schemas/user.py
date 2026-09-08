@@ -27,6 +27,7 @@ class UserCreate(BaseModel):
     nationality: Optional[str] = "Filipino"
     hobbies: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
+    share_chat_with_counselor: bool = False
 
     @field_validator("role")
     @classmethod
@@ -59,6 +60,7 @@ class UserRead(BaseModel):
     hobbies: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
     department_title: Optional[str] = None
+    share_chat_with_counselor: bool = False
     created_at: datetime
 
     class Config:
@@ -81,6 +83,7 @@ class RegisterRequest(BaseModel):
     nationality: Optional[str] = "Filipino"
     hobbies: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
+    share_chat_with_counselor: bool = False
 
     @field_validator("role")
     @classmethod
@@ -100,3 +103,4 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None
     nationality: Optional[str] = None
     hobbies: Optional[str] = None
+    share_chat_with_counselor: Optional[bool] = None

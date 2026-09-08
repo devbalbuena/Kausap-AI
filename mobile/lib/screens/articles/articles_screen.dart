@@ -327,7 +327,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
               child: Row(
                 children: [
                   if (Navigator.canPop(context))
@@ -337,8 +337,8 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                         Navigator.pop(context);
                       },
                       child: Container(
-                        width: 36,
-                        height: 36,
+                        width: 32,
+                        height: 32,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
@@ -355,31 +355,50 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     )
                   else
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(25),
-                        borderRadius: BorderRadius.circular(10),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0284C7), Color(0xFF0077B6), Color(0xFF06B6D4)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x330284C7),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.article_rounded, size: 20, color: AppColors.primary),
+                      child: const Center(
+                        child: Icon(Icons.article_rounded, size: 18, color: Colors.white),
+                      ),
                     ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  const SizedBox(width: 10),
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Mental Wellness Articles',
-                          style: AppTextStyles.heading2.copyWith(fontSize: 17),
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const Text(
+                        Text(
                           'Psychoeducation & Student Factsheets',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 11,
+                            fontSize: 11.5,
                             color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w500,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/privacy_settings_service.dart';
 import '../../utils/haptic_service.dart';
+import '../../widgets/chat/counselor_sharing_dialog.dart';
 import 'download_data_screen.dart';
 import 'privacy_screen.dart';
 
@@ -244,6 +247,8 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
   }
 
   Widget _buildPrivacyControlCard() {
+    final bool shareChatEnabled = context.watch<AuthProvider>().currentUser?['share_chat_with_counselor'] == true;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -253,6 +258,21 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
       ),
       child: Column(
         children: [
+          _buildControlTile(
+            icon: Icons.lock_person_rounded,
+            color: const Color(0xFF0284C7),
+            label: 'Share AI Chats with Counselors',
+            subtitle: shareChatEnabled
+                ? 'Shared with university guidance counselors'
+                : '100% Confidential • Hidden from counselors (Default)',
+            value: shareChatEnabled,
+            onChanged: (v) {
+              CounselorSharingDialog.show(context, onStatusChanged: (_) {
+                if (mounted) setState(() {});
+              });
+            },
+          ),
+          const Divider(height: 1, indent: 68),
           _buildControlTile(
             icon: Icons.blur_on_rounded,
             color: const Color(0xFF7C3AED),

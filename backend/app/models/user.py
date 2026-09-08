@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import uuid
 from enum import Enum
 from typing import Optional, List
@@ -61,10 +61,13 @@ class User(SQLModel, table=True):
     hobbies: Optional[str] = Field(default=None)
     occupation: Optional[OccupationEnum] = Field(default=None)
 
+    # Student privacy & clinical consent control (Default: False = Strictly Confidential)
+    share_chat_with_counselor: bool = Field(default=False)
+
     # For counselors/staff — guidance department title
     department_title: Optional[str] = Field(default=None)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property
     def full_name(self) -> str:

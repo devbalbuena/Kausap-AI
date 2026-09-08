@@ -4,11 +4,13 @@ import '../../utils/haptic_service.dart';
 class HomeCompanionAvatar extends StatefulWidget {
   final int? todayMood;
   final String firstName;
+  final ValueChanged<String>? onAffirmation;
 
   const HomeCompanionAvatar({
     super.key,
     required this.todayMood,
     required this.firstName,
+    this.onAffirmation,
   });
 
   @override
@@ -18,18 +20,19 @@ class HomeCompanionAvatar extends StatefulWidget {
 class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerProviderStateMixin {
   late AnimationController _floatController;
   late AnimationController _bounceController;
+
   late Animation<double> _floatAnim;
   late Animation<double> _pulseAnim;
   late Animation<double> _bounceAnim;
   late Animation<double> _wiggleAnim;
 
   final List<String> _mindfulAffirmations = [
-    "You're doing great, one step at a time! ✨",
     "Take a gentle, deep breath right now 🌿",
-    "I'm so glad you're here today! 💙",
-    "Be kind to your mind today 🌱",
+    "You're doing great, one step at a time! ✨",
+    "I'm always here to listen and support you 💙",
+    "Be kind and patient with your mind today 🌱",
     "You are capable of amazing growth 🌟",
-    "Peace begins with a gentle smile 🌸",
+    "Small steps every day bring peace of mind 🌸",
   ];
 
   int _affirmationIdx = 0;
@@ -52,35 +55,35 @@ class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerPr
 
     _bounceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 650),
     );
 
     _bounceAnim = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.25).chain(CurveTween(curve: Curves.easeOutQuad)),
-        weight: 40,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.25, end: 0.95).chain(CurveTween(curve: Curves.easeInOutQuad)),
+        tween: Tween<double>(begin: 1.0, end: 1.22).chain(CurveTween(curve: Curves.easeOutQuad)),
         weight: 35,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.95, end: 1.0).chain(CurveTween(curve: Curves.easeInQuad)),
-        weight: 25,
+        tween: Tween<double>(begin: 1.22, end: 0.94).chain(CurveTween(curve: Curves.easeInOutQuad)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.94, end: 1.0).chain(CurveTween(curve: Curves.easeInQuad)),
+        weight: 30,
       ),
     ]).animate(_bounceController);
 
     _wiggleAnim = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: -0.15).chain(CurveTween(curve: Curves.easeOutQuad)),
+        tween: Tween<double>(begin: 0.0, end: -0.16).chain(CurveTween(curve: Curves.easeOutQuad)),
         weight: 25,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: -0.15, end: 0.15).chain(CurveTween(curve: Curves.easeInOutQuad)),
+        tween: Tween<double>(begin: -0.16, end: 0.16).chain(CurveTween(curve: Curves.easeInOutQuad)),
         weight: 50,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.15, end: 0.0).chain(CurveTween(curve: Curves.easeInQuad)),
+        tween: Tween<double>(begin: 0.16, end: 0.0).chain(CurveTween(curve: Curves.easeInQuad)),
         weight: 25,
       ),
     ]).animate(_bounceController);
@@ -96,36 +99,13 @@ class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerPr
   void _tapCompanion() {
     HapticService.lightTap();
     _bounceController.forward(from: 0.0);
+
     setState(() {
       _affirmationIdx = (_affirmationIdx + 1) % _mindfulAffirmations.length;
     });
 
     final affirmation = _mindfulAffirmations[_affirmationIdx];
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Text('✨', style: TextStyle(fontSize: 16)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Kausap Buddy: "$affirmation"',
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF0F172A),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    widget.onAffirmation?.call(affirmation);
   }
 
   List<Color> _getAuraGradient() {
@@ -141,7 +121,7 @@ class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerPr
       case 1:
         return const [Color(0xFFF43F5E), Color(0xFFFB7185)]; // Rough (Rose)
       default:
-        return const [Color(0xFF7C3AED), Color(0xFF38BDF8)]; // Default (Purple-Cyan)
+        return const [Color(0xFF0284C7), Color(0xFF38BDF8)]; // Default (Ocean Sky)
     }
   }
 
@@ -157,6 +137,7 @@ class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerPr
         child: AnimatedBuilder(
           animation: Listenable.merge([_floatController, _bounceController]),
           builder: (context, child) {
+            final bounceProgress = _bounceController.value;
             return Transform.translate(
               offset: Offset(0, _floatAnim.value),
               child: Transform.rotate(
@@ -211,12 +192,13 @@ class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerPr
                           top: 20,
                           child: CircleAvatar(radius: 4.5, backgroundColor: Colors.white),
                         ),
-                        // Expressive Mood Face
+                        // Expressive Mood Face with Wink on Tap
                         CustomPaint(
                           size: const Size(40, 40),
                           painter: HomeMascotFacePainter(
                             mood: widget.todayMood,
                             progress: _floatController.value,
+                            bounceProgress: bounceProgress,
                           ),
                         ),
                       ],
@@ -235,10 +217,12 @@ class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerPr
 class HomeMascotFacePainter extends CustomPainter {
   final int? mood;
   final double progress;
+  final double bounceProgress;
 
   HomeMascotFacePainter({
     required this.mood,
     required this.progress,
+    this.bounceProgress = 0.0,
   });
 
   @override
@@ -249,12 +233,24 @@ class HomeMascotFacePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
-    final blushPaint = Paint()..color = const Color(0xFFFFB4A2).withAlpha(160);
+    final blushPaint = Paint()..color = const Color(0xFFFFB4A2).withAlpha(170);
 
     final isBlinking = progress > 0.48 && progress < 0.52;
+    final isWinking = bounceProgress > 0.05 && bounceProgress < 0.65;
 
-    if (mood == 3 || isBlinking) {
-      // Peaceful closed smiling eyes ( ˘ ᵕ ˘ )
+    // ── EYES RENDERING (Adaptive by mood + wink + blink) ────────────────────
+    if (isWinking) {
+      // Playful Wink on Tap (Left eye closed happy arc, Right eye open sparkling)
+      final leftWink = Path()
+        ..moveTo(size.width * 0.24, size.height * 0.44)
+        ..quadraticBezierTo(size.width * 0.35, size.height * 0.36, size.width * 0.46, size.height * 0.44);
+      canvas.drawPath(leftWink, strokePaint);
+
+      // Right Eye Sparkling
+      canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.42), 3.2, eyePaint);
+      canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.39), 1.2, eyePaint);
+    } else if (mood == 3 || isBlinking) {
+      // Peaceful Zen Closed Smiling Eyes ( ˘ ᵕ ˘ )
       final leftArc = Path()
         ..moveTo(size.width * 0.24, size.height * 0.44)
         ..quadraticBezierTo(size.width * 0.35, size.height * 0.36, size.width * 0.46, size.height * 0.44);
@@ -263,37 +259,61 @@ class HomeMascotFacePainter extends CustomPainter {
         ..quadraticBezierTo(size.width * 0.65, size.height * 0.36, size.width * 0.76, size.height * 0.44);
       canvas.drawPath(leftArc, strokePaint);
       canvas.drawPath(rightArc, strokePaint);
+    } else if (mood == 2 || mood == 1) {
+      // Empathetic Reassuring Eyes for Low / Rough Mood ( ◜‿◝ )
+      final leftArc = Path()
+        ..moveTo(size.width * 0.25, size.height * 0.45)
+        ..quadraticBezierTo(size.width * 0.35, size.height * 0.38, size.width * 0.45, size.height * 0.45);
+      final rightArc = Path()
+        ..moveTo(size.width * 0.55, size.height * 0.45)
+        ..quadraticBezierTo(size.width * 0.65, size.height * 0.38, size.width * 0.75, size.height * 0.45);
+      canvas.drawPath(leftArc, strokePaint);
+      canvas.drawPath(rightArc, strokePaint);
     } else {
-      // Round sparkling eyes
+      // Great (5) & Good (4) - Round Sparkling Twinkling Eyes
       canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.42), 3.2, eyePaint);
       canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.42), 3.2, eyePaint);
 
       final glintPaint = Paint()..color = Colors.white;
       canvas.drawCircle(Offset(size.width * 0.33, size.height * 0.39), 1.2, glintPaint);
       canvas.drawCircle(Offset(size.width * 0.63, size.height * 0.39), 1.2, glintPaint);
+
+      if (mood == 5) {
+        // Extra star shine glint for Great mood
+        canvas.drawCircle(Offset(size.width * 0.37, size.height * 0.44), 0.7, glintPaint);
+        canvas.drawCircle(Offset(size.width * 0.67, size.height * 0.44), 0.7, glintPaint);
+      }
     }
 
-    // Cheeks
+    // ── BLUSH CHEEKS ────────────────────────────────────────────────────────
     canvas.drawCircle(Offset(size.width * 0.18, size.height * 0.54), 2.8, blushPaint);
     canvas.drawCircle(Offset(size.width * 0.82, size.height * 0.54), 2.8, blushPaint);
 
-    // Dynamic Smile
-    if (mood == 1) {
-      // Comforting gentle smile
+    // ── ADAPTIVE SMILE ──────────────────────────────────────────────────────
+    if (mood == 1 || mood == 2) {
+      // Gentle, caring reassuring smile
       final mouth = Path()
-        ..moveTo(size.width * 0.42, size.height * 0.62)
-        ..quadraticBezierTo(size.width * 0.50, size.height * 0.68, size.width * 0.58, size.height * 0.62);
+        ..moveTo(size.width * 0.40, size.height * 0.61)
+        ..quadraticBezierTo(size.width * 0.50, size.height * 0.67, size.width * 0.60, size.height * 0.61);
+      canvas.drawPath(mouth, strokePaint);
+    } else if (mood == 5) {
+      // Broad cheerful joyful smile
+      final mouth = Path()
+        ..moveTo(size.width * 0.36, size.height * 0.57)
+        ..quadraticBezierTo(size.width * 0.50, size.height * 0.74, size.width * 0.64, size.height * 0.57);
       canvas.drawPath(mouth, strokePaint);
     } else {
-      // Upbeat open smile
+      // Upbeat friendly smile
       final mouth = Path()
         ..moveTo(size.width * 0.38, size.height * 0.58)
-        ..quadraticBezierTo(size.width * 0.50, size.height * 0.72, size.width * 0.62, size.height * 0.58);
+        ..quadraticBezierTo(size.width * 0.50, size.height * 0.71, size.width * 0.62, size.height * 0.58);
       canvas.drawPath(mouth, strokePaint);
     }
   }
 
   @override
   bool shouldRepaint(covariant HomeMascotFacePainter oldDelegate) =>
-      oldDelegate.mood != mood || oldDelegate.progress != progress;
+      oldDelegate.mood != mood ||
+      oldDelegate.progress != progress ||
+      oldDelegate.bounceProgress != bounceProgress;
 }
