@@ -1,6 +1,6 @@
 from datetime import datetime
 import uuid
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from app.schemas.mood import MoodEntryRead
 from app.schemas.chat import ChatSessionRead
@@ -45,6 +45,10 @@ class FlaggedMessageRead(BaseModel):
     resolution_note: Optional[str] = None
     flag_reason: Optional[str] = "Crisis Trigger"
     risk_level: Optional[str] = "red"
+    status: Optional[str] = "active"  # "active" | "in_action" | "resolved"
+    call_slip: Optional[Dict[str, Any]] = None
+    is_acknowledged: Optional[bool] = False
+    acknowledged_at: Optional[datetime] = None
 
 
 class UserDetail(BaseModel):

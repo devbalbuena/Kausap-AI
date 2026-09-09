@@ -21,9 +21,13 @@ class FlaggedIncidentItem {
   final String severity; // CRITICAL, HIGH, MODERATE
   final Color severityColor;
   final List<String> triggerKeywords;
+  String status; // 'active', 'in_action', 'resolved'
   bool isResolved;
   String? resolvedAt;
   String? resolutionNote;
+  Map<String, dynamic>? callSlip;
+  bool isAcknowledged;
+  String? acknowledgedAt;
 
   FlaggedIncidentItem({
     required this.id,
@@ -34,9 +38,13 @@ class FlaggedIncidentItem {
     required this.severity,
     required this.severityColor,
     required this.triggerKeywords,
+    this.status = 'active',
     this.isResolved = false,
     this.resolvedAt,
     this.resolutionNote,
+    this.callSlip,
+    this.isAcknowledged = false,
+    this.acknowledgedAt,
   });
 
   factory FlaggedIncidentItem.fromJson(Map<String, dynamic> json) {
@@ -73,6 +81,16 @@ class FlaggedIncidentItem {
     }
 
     final bool isResolved = json['is_resolved'] == true;
+    final String status = json['status']?.toString() ?? (isResolved ? 'resolved' : 'active');
+
+    Map<String, dynamic>? callSlip;
+    if (json['call_slip'] is Map) {
+      callSlip = Map<String, dynamic>.from(json['call_slip']);
+    }
+
+    final bool isAck = json['is_acknowledged'] == true;
+    final String? ackAt = json['acknowledged_at']?.toString();
+
     final String? rawResolvedAt = json['resolved_at']?.toString();
     String? formattedResolvedAt;
     if (rawResolvedAt != null && rawResolvedAt.isNotEmpty) {
@@ -97,9 +115,13 @@ class FlaggedIncidentItem {
       severity: severity,
       severityColor: severityColor,
       triggerKeywords: keywords,
+      status: status,
       isResolved: isResolved,
       resolvedAt: formattedResolvedAt,
       resolutionNote: resolutionNote,
+      callSlip: callSlip,
+      isAcknowledged: isAck,
+      acknowledgedAt: ackAt,
     );
   }
 }
@@ -115,7 +137,8 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
   final ApiClient _api = ApiClient();
   late TabController _tabController;
   bool _isLoading = true;
-  List<FlaggedIncidentItem> _incidents = [];
+  List<FlaggedIncidentItem> _activeIncidents = [];
+  List<FlaggedIncidentItem> _inActionIncidents = [];
   List<FlaggedIncidentItem> _resolvedHistory = [];
   String? _error;
   String _resolvedSearch = '';
@@ -196,8 +219,9 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
   String _selectedHotlineCategory = 'all';
 
   final List<String> _clinicalActionPresets = [
-    "Conducted immediate 1-on-1 intake session",
-    "Scheduled follow-up consultation with guidance staff",
+    "Conducted physical 1-on-1 intake session at Guidance Center",
+    "Completed in-person assessment & safety check-in",
+    "Scheduled follow-up physical consultation with guidance staff",
     "Dispatched emergency contact & NCMH 1553 hotlines",
     "Referred to Student Affairs & Guidance testing center",
     "Reviewed context: False positive / safe emotional expression",
@@ -207,9 +231,10 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
   void initState() {
     super.initState();
     _hotlinesList = List<Map<String, dynamic>>.from(_fallbackHotlines);
-    _tabController = TabController(length: 3, vsync: this);
+    // 4 Tabs: 0: Active Queue, 1: In Action, 2: Resolved Log, 3: Safety & Hotlines
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
-      if (_tabController.index == 2 && mounted) {
+      if (_tabController.index == 3 && mounted) {
         _fetchHotlines();
       }
     });
@@ -235,8 +260,9 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
         final rawList = (data as List<dynamic>?) ?? [];
         final parsed = rawList.map((m) => FlaggedIncidentItem.fromJson(m as Map<String, dynamic>)).toList();
         setState(() {
-          _incidents = parsed.where((i) => !i.isResolved).toList();
-          _resolvedHistory = parsed.where((i) => i.isResolved).toList();
+          _activeIncidents = parsed.where((i) => !i.isResolved && i.status != 'in_action' && i.callSlip == null).toList();
+          _inActionIncidents = parsed.where((i) => !i.isResolved && (i.status == 'in_action' || i.callSlip != null)).toList();
+          _resolvedHistory = parsed.where((i) => i.isResolved || i.status == 'resolved').toList();
           _isLoading = false;
         });
       }
@@ -263,6 +289,287 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
       }
     } catch (_) {}
     if (mounted) setState(() => _isLoadingHotlines = false);
+  }
+
+  // ── Issue Guidance Office Call-Slip / Physical Visit Notice ──
+  Future<void> _showIssueNoticeDialog(FlaggedIncidentItem item) async {
+    HapticService.lightTap();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final studentName = item.userName;
+    final studentEmail = item.userEmail;
+
+    final locationCtrl = TextEditingController(text: "Urios Guidance & Counseling Center (Main Campus, 2nd Floor)");
+    final noteCtrl = TextEditingController(
+      text: "Hi $studentName, please proceed to the Guidance & Counseling Center for a supportive, confidential 1-on-1 consultation.",
+    );
+
+    String selectedDate = "Today";
+    String selectedTime = "2:00 PM - 3:00 PM";
+    String selectedUrgency = "Priority Consultation";
+    bool isSubmitting = false;
+
+    final presetDates = ["Today", "Tomorrow", "Within 48 Hours"];
+    final presetTimes = ["9:00 AM - 10:00 AM", "10:30 AM - 11:30 AM", "1:30 PM - 2:30 PM", "2:00 PM - 3:00 PM", "3:30 PM - 4:30 PM", "Immediate / ASAP"];
+    final presetUrgencies = ["Priority Consultation", "Urgent SOS Follow-Up", "Standard Check-in"];
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            top: 24,
+            left: 20,
+            right: 20,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.account_balance_rounded, color: Color(0xFF0284C7), size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Father Saturnino Urios University",
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0284C7),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          Text(
+                            "Issue Guidance Call-Slip ($studentName)",
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  "Dispatches an official physical consultation notice to the student's app dashboard and sends a formal email invitation.",
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B), height: 1.35),
+                ),
+                const SizedBox(height: 18),
+
+                // Location Field
+                const Text("Office Location *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: locationCtrl,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.location_on_rounded, color: Color(0xFF0284C7), size: 20),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Date Selection Chips
+                const Text("Consultation Date *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: presetDates.map((d) {
+                    final isSel = selectedDate == d;
+                    return ChoiceChip(
+                      label: Text(d),
+                      selected: isSel,
+                      selectedColor: const Color(0xFF0284C7),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                        color: isSel ? Colors.white : const Color(0xFF475569),
+                      ),
+                      onSelected: (v) {
+                        if (v) setSheetState(() => selectedDate = d);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                // Time Selection Chips
+                const Text("Preferred Time Slot *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: presetTimes.map((t) {
+                    final isSel = selectedTime == t;
+                    return ChoiceChip(
+                      label: Text(t),
+                      selected: isSel,
+                      selectedColor: const Color(0xFF0284C7),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                        color: isSel ? Colors.white : const Color(0xFF475569),
+                      ),
+                      onSelected: (v) {
+                        if (v) setSheetState(() => selectedTime = t);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                // Urgency
+                const Text("Priority Level", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: presetUrgencies.map((u) {
+                    final isSel = selectedUrgency == u;
+                    return ChoiceChip(
+                      label: Text(u),
+                      selected: isSel,
+                      selectedColor: const Color(0xFFDC2626),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                        color: isSel ? Colors.white : const Color(0xFF475569),
+                      ),
+                      onSelected: (v) {
+                        if (v) setSheetState(() => selectedUrgency = u);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                // Counselor Note / Instructions
+                const Text("Guidance & Compliance Note *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: noteCtrl,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: "Add specific instructions or reassuring message for the student...",
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            setSheetState(() => isSubmitting = true);
+                            try {
+                              final callSlipPayload = {
+                                "flag_id": item.id,
+                                "user_email": studentEmail,
+                                "student_name": studentName,
+                                "location": locationCtrl.text.trim(),
+                                "appointment_date": selectedDate,
+                                "appointment_time": selectedTime,
+                                "counselor_note": noteCtrl.text.trim(),
+                                "urgency": selectedUrgency,
+                                "issued_at": DateTime.now().toIso8601String(),
+                              };
+
+                              if (item.id.isNotEmpty) {
+                                await _api.post(
+                                  '/admin/flagged-messages/${item.id}/issue-notice',
+                                  body: callSlipPayload,
+                                  silent: true,
+                                );
+                              }
+
+                              if (ctx.mounted) Navigator.pop(ctx);
+
+                              setState(() {
+                                item.status = 'in_action';
+                                item.callSlip = callSlipPayload;
+                                item.isAcknowledged = false;
+                                _activeIncidents.removeWhere((i) => i.id == item.id);
+                                _inActionIncidents.removeWhere((i) => i.id == item.id);
+                                _inActionIncidents.insert(0, item);
+                              });
+
+                              _tabController.animateTo(1);
+
+                              HapticService.success();
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text("Guidance call-slip dispatched to $studentName! Moved to 'In Action'."),
+                                  backgroundColor: const Color(0xFF0284C7),
+                                ),
+                              );
+                            } catch (e) {
+                              setSheetState(() => isSubmitting = false);
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(content: Text("Failed to dispatch notice: $e"), backgroundColor: const Color(0xFFDC2626)),
+                              );
+                            }
+                          },
+                    icon: isSubmitting
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.send_rounded, size: 18),
+                    label: Text(
+                      isSubmitting ? "Dispatching Notice..." : "Dispatch Call-Slip & Send Email",
+                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _resolveIncident(FlaggedIncidentItem item) async {
@@ -377,9 +684,11 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
 
     setState(() {
       item.isResolved = true;
+      item.status = 'resolved';
       item.resolvedAt = nowFormatted;
       item.resolutionNote = note;
-      _incidents.removeWhere((i) => i.id == item.id);
+      _activeIncidents.removeWhere((i) => i.id == item.id);
+      _inActionIncidents.removeWhere((i) => i.id == item.id);
       _resolvedHistory.insert(0, item);
     });
 
@@ -405,7 +714,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
   }
 
   Future<void> _resolveAllIncidents() async {
-    final active = _incidents.where((i) => !i.isResolved).toList();
+    final active = List<FlaggedIncidentItem>.from(_activeIncidents);
     if (active.isEmpty) return;
 
     final bool? confirm = await showDialog<bool>(
@@ -448,11 +757,12 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
     setState(() {
       for (final item in active) {
         item.isResolved = true;
+        item.status = 'resolved';
         item.resolvedAt = nowFormatted;
         item.resolutionNote = "Batch crisis resolution processed by administrator.";
         _resolvedHistory.insert(0, item);
       }
-      _incidents.clear();
+      _activeIncidents.clear();
     });
 
     try {
@@ -926,8 +1236,6 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
 
   @override
   Widget build(BuildContext context) {
-    final activeIncidents = _incidents.where((i) => !i.isResolved).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -957,7 +1265,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                   ),
                 ),
                 Text(
-                  '${activeIncidents.length} Active Safety Triggers',
+                  '${_activeIncidents.length} Active • ${_inActionIncidents.length} In Action',
                   style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
@@ -978,13 +1286,57 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
         ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           labelColor: const Color(0xFFDC2626),
           unselectedLabelColor: const Color(0xFF64748B),
           indicatorColor: const Color(0xFFDC2626),
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 11.5),
           tabs: [
-            Tab(text: "Active (${activeIncidents.length})"),
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("Active Queue"),
+                  if (_activeIncidents.isNotEmpty) ...[
+                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        "${_activeIncidents.length}",
+                        style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("In Action"),
+                  if (_inActionIncidents.isNotEmpty) ...[
+                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        "${_inActionIncidents.length}",
+                        style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             Tab(text: "Resolved Log (${_resolvedHistory.length})"),
             const Tab(text: "Safety & Hotlines"),
           ],
@@ -1013,7 +1365,8 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
               : TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildIncidentsTab(activeIncidents),
+                    _buildIncidentsTab(_activeIncidents),
+                    _buildInActionTab(_inActionIncidents),
                     _buildResolvedHistoryTab(),
                     _buildSafetyRulesTab(),
                   ],
@@ -1022,7 +1375,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
     );
   }
 
-  // ── Tab 1: Active Incidents Queue ─────────────────────────────────────────
+  // ── Tab 0: Active Incidents Queue ─────────────────────────────────────────
   Widget _buildIncidentsTab(List<FlaggedIncidentItem> activeIncidents) {
     if (activeIncidents.isEmpty) {
       return Center(
@@ -1273,19 +1626,232 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                         const SizedBox(width: 8),
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: () => _resolveIncident(incident),
-                            icon: const Icon(Icons.check_circle_rounded, size: 14),
+                            onPressed: () => _showIssueNoticeDialog(incident),
+                            icon: const Icon(Icons.account_balance_rounded, size: 14),
                             label: const Text(
-                              "Resolve",
+                              "Issue Notice",
                               style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF16A34A),
+                              backgroundColor: const Color(0xFF0284C7),
                               foregroundColor: Colors.white,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Tab 1: In Action (Issued Guidance Call-Slips awaiting physical session) ──
+  Widget _buildInActionTab(List<FlaggedIncidentItem> inActionList) {
+    if (inActionList.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEEF2FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.pending_actions_rounded, color: Color(0xFF6366F1), size: 44),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "No Cases In Action",
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              "When you issue a call-slip for a student to visit the guidance office, it will appear here.",
+              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchFlaggedMessages,
+      color: const Color(0xFF6366F1),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+            itemCount: inActionList.length,
+            itemBuilder: (ctx, i) {
+              final item = inActionList[i];
+              final student = item.userName;
+              final email = item.userEmail;
+              final callSlip = item.callSlip ?? <String, dynamic>{};
+              final appointmentDate = callSlip['appointment_date'] ?? 'Today';
+              final appointmentTime = callSlip['appointment_time'] ?? '2:00 PM';
+              final counselorNote = callSlip['counselor_note'] ?? 'Please visit the Guidance Center for 1-on-1 check-in.';
+              final isAck = item.isAcknowledged;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFC7D2FE), width: 1.5),
+                  boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: const Color(0xFFEEF2FF),
+                              child: const Icon(Icons.account_balance_rounded, color: Color(0xFF4F46E5), size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  student,
+                                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF0F172A)),
+                                ),
+                                Text(
+                                  email,
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        if (isAck)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF86EFAC)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 13),
+                                SizedBox(width: 4),
+                                Text(
+                                  "Confirmed by Student",
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFFCD34D)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.schedule_rounded, color: Color(0xFFD97706), size: 13),
+                                SizedBox(width: 4),
+                                Text(
+                                  "Awaiting Student View",
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.event_available_rounded, size: 15, color: Color(0xFF4F46E5)),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Scheduled Visit: $appointmentDate • $appointmentTime",
+                                style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF1E293B)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Row(
+                            children: [
+                              Icon(Icons.location_on_rounded, size: 15, color: Color(0xFF64748B)),
+                              SizedBox(width: 6),
+                              Text(
+                                "Urios Guidance Center (Main Campus, 2nd Floor)",
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Note: "$counselorNote"',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF334155), fontStyle: FontStyle.italic),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () => _showIssueNoticeDialog(item),
+                          icon: const Icon(Icons.edit_calendar_rounded, size: 15),
+                          label: const Text("Resend / Edit", style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF4F46E5),
+                            side: const BorderSide(color: Color(0xFFC7D2FE)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => _resolveIncident(item),
+                          icon: const Icon(Icons.check_circle_rounded, size: 16),
+                          label: const Text(
+                            "Complete Intake & Resolve",
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF16A34A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            elevation: 0,
                           ),
                         ),
                       ],

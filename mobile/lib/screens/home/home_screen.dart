@@ -40,6 +40,7 @@ import '../crisis/sos_screen.dart';
 import '../crisis/quick_escape_screen.dart';
 import '../articles/articles_data.dart';
 import '../articles/articles_screen.dart';
+import '../guidance/guidance_notices_screen.dart';
 
 /// Client Home Screen — Clean Modular Architecture
 /// Sections: Header, Companion Hero, 1-Tap Mood Check-In, Streak, SOS Banner,
@@ -55,6 +56,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   int _navIndex = 0;
   int _unreadCount = 0;
+  int _guidanceNoticesCount = 0;
+  Map<String, dynamic>? _activeGuidanceNotice;
   int _streak = 0;
   int _goal = 30;
   int _insightsRefreshKey = 0;
@@ -113,12 +116,75 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     _fetchQuickEscapePref();
     _fetchUnreadCount();
+    _fetchGuidanceNotices();
     _fetchStreak();
     _fetchQuests();
     _fetchMoodTrends();
     _fetchHomeArticles();
     // Show mood popup after first frame if mood not yet logged today
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMoodPopup());
+  }
+
+  Future<void> _fetchGuidanceNotices() async {
+    try {
+      final res = await ApiClient().get('/notifications/guidance-notices', silent: true);
+      if (res is List && res.isNotEmpty && mounted) {
+        final list = res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        final unack = list.where((n) => n['is_acknowledged'] != true).toList();
+        setState(() {
+          _guidanceNoticesCount = unack.length;
+          _activeGuidanceNotice = list.first;
+        });
+      } else if (mounted) {
+        setState(() {
+          _guidanceNoticesCount = 0;
+          _activeGuidanceNotice = null;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _acknowledgeCallSlip(Map<String, dynamic> notice) async {
+    final notifId = notice['id']?.toString() ?? '';
+    if (notifId.isEmpty) return;
+
+    HapticService.heavyTap();
+    try {
+      await ApiClient().post('/notifications/$notifId/acknowledge', body: {});
+      if (mounted) {
+        setState(() {
+          notice['is_acknowledged'] = true;
+          notice['acknowledged_at'] = DateTime.now().toIso8601String();
+          _guidanceNoticesCount = (_guidanceNoticesCount - 1).clamp(0, 99);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Guidance visit confirmed! See you at the Guidance Center.',
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to confirm visit: $e'), backgroundColor: const Color(0xFFEF4444)),
+        );
+      }
+    }
   }
 
   Future<void> _fetchHomeArticles() async {
@@ -697,6 +763,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _onRefresh() async {
     await _fetchUnreadCount();
+    await _fetchGuidanceNotices();
     await Future.delayed(const Duration(milliseconds: 400));
   }
 
@@ -711,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-  // ── Header (Logo + Quick Escape + Animated Bell + Profile Avatar Menu) ───
+  // ── Header (Logo + Quick Escape + Guidance Mail + Animated Bell + Profile Avatar Menu) ───
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -777,6 +844,67 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(width: 8),
           ],
+
+          // 🏛️ Guidance Consultation Notices / Mail Icon
+          Semantics(
+            label: _guidanceNoticesCount > 0 ? 'Guidance Notices, $_guidanceNoticesCount new' : 'Guidance Notices',
+            button: true,
+            child: GestureDetector(
+              onTap: () async {
+                HapticService.lightTap();
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GuidanceNoticesScreen()),
+                );
+                _fetchGuidanceNotices();
+                _fetchUnreadCount();
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: _guidanceNoticesCount > 0 ? const Color(0xFFE0F2FE) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _guidanceNoticesCount > 0 ? Icons.mark_email_unread_rounded : Icons.mail_outline_rounded,
+                      color: _guidanceNoticesCount > 0 ? const Color(0xFF0284C7) : AppColors.textPrimary,
+                      size: 22,
+                    ),
+                  ),
+                  if (_guidanceNoticesCount > 0)
+                    Positioned(
+                      right: 2,
+                      top: 2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0284C7),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
+                        child: Center(
+                          child: Text(
+                            '$_guidanceNoticesCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w800,
+                              fontFamily: 'Poppins',
+                              height: 1.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
           Semantics(
             label: _unreadCount > 0 ? 'Notifications, $_unreadCount unread' : 'Notifications',
             button: true,
@@ -785,6 +913,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 HapticService.lightTap();
                 final result = await Navigator.of(context).push(slideRoute(const NotificationsScreen()));
                 _fetchUnreadCount();
+                _fetchGuidanceNotices();
                 if (result == 'open_mood') {
                   _openMoodPickerSheet();
                 }
@@ -1183,6 +1312,165 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  Widget _buildGuidanceCallSlipBanner(Map<String, dynamic> notice) {
+    final isAck = notice['is_acknowledged'] == true;
+    final title = notice['title'] ?? 'Guidance Consultation Call-Slip';
+    final body = notice['body'] ?? '';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isAck ? const Color(0xFFF0FDF4) : const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isAck ? const Color(0xFF86EFAC) : const Color(0xFF38BDF8),
+          width: 1.5,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A0284C7),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isAck ? const Color(0xFFDCFCE7) : const Color(0xFF0284C7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.account_balance_rounded,
+                  color: isAck ? const Color(0xFF16A34A) : Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Father Saturnino Urios University',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0284C7),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isAck)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Confirmed ✅',
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Action Needed',
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            body,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              color: Color(0xFF334155),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (isAck)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '📍 Urios Guidance Center (Main Campus)',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const GuidanceNoticesScreen()),
+                  ).then((_) => _fetchGuidanceNotices()),
+                  child: const Text('View Details', style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _acknowledgeCallSlip(notice),
+                    icon: const Icon(Icons.check_circle_rounded, size: 16),
+                    label: const Text(
+                      'Acknowledge & Confirm Visit',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const GuidanceNoticesScreen()),
+                  ).then((_) => _fetchGuidanceNotices()),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  ),
+                  child: const Text('Details', style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: Color(0xFF64748B))),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
   /// Builds the home tab content (the main scrollable dashboard)
   Widget _buildHomeTab() {
     return Center(
@@ -1201,6 +1489,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     _buildHeader(),
                     const SizedBox(height: 16),
                     _buildHomeCompanionHero(),
+                    if (_activeGuidanceNotice != null) ...[
+                      const SizedBox(height: 14),
+                      _buildGuidanceCallSlipBanner(_activeGuidanceNotice!),
+                    ],
                     const SizedBox(height: 14),
                     _build1TapMoodSection(),
                     const SizedBox(height: 14),

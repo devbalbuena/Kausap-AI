@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_client.dart';
 import '../../services/clinical_audit_service.dart';
 import '../../utils/haptic_service.dart';
@@ -97,12 +98,13 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
   String _selectedHotlineCategory = 'all';
 
   static const String _resolvedStorageKey = 'counselor_resolved_triage_logs_v1';
+  static const String _inActionStorageKey = 'counselor_inaction_triage_logs_v1';
 
   final List<String> _clinicalActionPresets = [
-    "Conducted immediate 1-on-1 intake session",
-    "Scheduled follow-up consultation with guidance staff",
-    "Dispatched emergency contact & NCMH 1553 hotlines",
-    "Referred to Student Affairs & Guidance testing center",
+    "Conducted physical 1-on-1 intake session at Guidance Center",
+    "Completed in-person assessment & safety check-in",
+    "Scheduled follow-up physical consultation with guidance staff",
+    "Dispatched emergency contact & NCMH 1553 support",
     "Reviewed context: False positive / safe emotional expression",
   ];
 
@@ -110,9 +112,10 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
   void initState() {
     super.initState();
     _hotlinesList = List<Map<String, dynamic>>.from(_fallbackHotlines);
-    _tabController = TabController(length: 3, vsync: this);
+    // 4 Tabs: 0: Active Queue, 1: In Action, 2: Resolved Log, 3: Hotlines
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
-      if (_tabController.index == 2 && mounted) {
+      if (_tabController.index == 3 && mounted) {
         _fetchHotlines();
       }
     });
@@ -148,6 +151,27 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     } catch (_) {}
   }
 
+  Future<List<Map<String, dynamic>>> _loadLocalInAction() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_inActionStorageKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  Future<void> _saveLocalInAction(List<Map<String, dynamic>> list) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_inActionStorageKey, jsonEncode(list));
+    } catch (_) {}
+  }
+
   Future<void> _fetchFlaggedMessages() async {
     setState(() {
       _isLoading = true;
@@ -155,7 +179,9 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     });
     try {
       final localResolved = await _loadLocalResolved();
+      final localInAction = await _loadLocalInAction();
       final resolvedIds = localResolved.map((r) => r['id'].toString()).toSet();
+      final inActionMap = {for (var item in localInAction) item['id'].toString(): item};
 
       final results = await Future.wait([
         _api.get('/admin/flagged-messages', silent: true).catchError((_) => []),
@@ -176,6 +202,14 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
           if (resolvedIds.contains(idStr)) {
             continue;
           }
+
+          // If locally recorded as in_action, merge local call-slip data
+          if (inActionMap.containsKey(idStr)) {
+            map['status'] = 'in_action';
+            map['call_slip'] = inActionMap[idStr]!['call_slip'] ?? map['call_slip'];
+            map['is_acknowledged'] = inActionMap[idStr]!['is_acknowledged'] ?? map['is_acknowledged'];
+          }
+
           seenIds.add(idStr);
           combined.add(map);
         }
@@ -203,7 +237,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
               ? 'Student logged $consecutiveDays consecutive days of rough mood. Note: "${map['latest_note']}"'
               : 'Student has logged $consecutiveDays consecutive days of low/rough mood (${map['latest_mood_label'] ?? "Rough"} - Level ${map['latest_mood_level'] ?? 2}/5).';
 
-          combined.add({
+          final itemRecord = <String, dynamic>{
             'id': distressId,
             'user_id': userId,
             'user_email': map['email'] ?? '',
@@ -212,11 +246,15 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
             'content': excerpt,
             'created_at': latestDate,
             'is_resolved': false,
+            'status': inActionMap.containsKey(distressId) ? 'in_action' : 'active',
+            'call_slip': inActionMap[distressId]?['call_slip'],
+            'is_acknowledged': inActionMap[distressId]?['is_acknowledged'] ?? false,
             'flag_reason': reasonText,
             'risk_level': riskLevel,
             'severity': map['severity'] ?? (isRed ? 'High Risk' : 'Moderate Risk'),
             'consecutive_days': consecutiveDays,
-          });
+          };
+          combined.add(itemRecord);
         }
 
         // 3. Add all locally saved resolved logs
@@ -241,35 +279,337 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     }
   }
 
-  Future<void> _unresolveFlag(Map<String, dynamic> item) async {
-    final flagId = item['id'].toString();
-    final studentName = item['user_name'] ?? item['user_email'] ?? 'Student';
-
-    HapticService.lightTap();
-    final localResolved = await _loadLocalResolved();
-    localResolved.removeWhere((r) => r['id'].toString() == flagId);
-    await _saveLocalResolved(localResolved);
-
-    await ClinicalAuditService.recordLog(
-      action: 'reopen_triage',
-      targetType: 'Student Distress Case',
-      targetId: flagId,
-      detail: 'Reopened triage case for $studentName back to active review.',
-    );
-
-    _fetchFlaggedMessages();
-
-    if (mounted) {
+  Future<void> _callStudent(String? phone, String name) async {
+    final cleanPhone = (phone ?? '').replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleanPhone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Case for $studentName moved back to Active Queue."),
-          backgroundColor: const Color(0xFF0284C7),
-          duration: const Duration(seconds: 2),
-        ),
+        SnackBar(content: Text('No valid contact number registered for $name.')),
       );
+      return;
     }
+    final uri = Uri(scheme: 'tel', path: cleanPhone);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri);
+      }
+    } catch (_) {}
   }
 
+  // ── 1. Issue Guidance Office Call-Slip / Physical Visit Notice ──
+  Future<void> _showIssueNoticeDialog(Map<String, dynamic> flag) async {
+    HapticService.lightTap();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final flagId = flag['id'].toString();
+    final studentName = flag['user_name'] ?? flag['user_email']?.toString().split('@')[0] ?? 'Student';
+    final studentEmail = flag['user_email'] ?? '';
+    final studentId = flag['user_id']?.toString() ?? '';
+
+    final locationCtrl = TextEditingController(text: "Urios Guidance & Counseling Center (Main Campus, 2nd Floor)");
+    final noteCtrl = TextEditingController(
+      text: "Hi $studentName, please proceed to the Guidance & Counseling Center for a supportive, confidential 1-on-1 consultation.",
+    );
+
+    String selectedDate = "Today";
+    String selectedTime = "2:00 PM - 3:00 PM";
+    String selectedUrgency = "Priority Consultation";
+    bool isSubmitting = false;
+
+    final presetDates = ["Today", "Tomorrow", "Within 48 Hours"];
+    final presetTimes = ["9:00 AM - 10:00 AM", "10:30 AM - 11:30 AM", "1:30 PM - 2:30 PM", "2:00 PM - 3:00 PM", "3:30 PM - 4:30 PM", "Immediate / ASAP"];
+    final presetUrgencies = ["Priority Consultation", "Urgent SOS Follow-Up", "Standard Check-in"];
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            top: 24,
+            left: 20,
+            right: 20,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.account_balance_rounded, color: Color(0xFF0284C7), size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Father Saturnino Urios University",
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0284C7),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          Text(
+                            "Issue Guidance Call-Slip ($studentName)",
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  "Dispatches an official physical consultation notice to the student's app dashboard and sends a formal email invitation.",
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B), height: 1.35),
+                ),
+                const SizedBox(height: 18),
+
+                // Location Field
+                const Text("Office Location *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: locationCtrl,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.location_on_rounded, color: Color(0xFF0284C7), size: 20),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Date Selection Chips
+                const Text("Consultation Date *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: presetDates.map((d) {
+                    final isSel = selectedDate == d;
+                    return ChoiceChip(
+                      label: Text(d),
+                      selected: isSel,
+                      selectedColor: const Color(0xFF0284C7),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                        color: isSel ? Colors.white : const Color(0xFF475569),
+                      ),
+                      onSelected: (v) {
+                        if (v) setSheetState(() => selectedDate = d);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                // Time Selection Chips
+                const Text("Preferred Time Slot *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: presetTimes.map((t) {
+                    final isSel = selectedTime == t;
+                    return ChoiceChip(
+                      label: Text(t),
+                      selected: isSel,
+                      selectedColor: const Color(0xFF0284C7),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                        color: isSel ? Colors.white : const Color(0xFF475569),
+                      ),
+                      onSelected: (v) {
+                        if (v) setSheetState(() => selectedTime = t);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                // Urgency
+                const Text("Priority Level", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: presetUrgencies.map((u) {
+                    final isSel = selectedUrgency == u;
+                    return ChoiceChip(
+                      label: Text(u),
+                      selected: isSel,
+                      selectedColor: const Color(0xFFDC2626),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                        color: isSel ? Colors.white : const Color(0xFF475569),
+                      ),
+                      onSelected: (v) {
+                        if (v) setSheetState(() => selectedUrgency = u);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                // Counselor Note / Instructions
+                const Text("Counselor's Note & Guidance Instructions *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: noteCtrl,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: "Add specific instructions or reassuring message for the student...",
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            setSheetState(() => isSubmitting = true);
+                            try {
+                              final callSlipPayload = {
+                                "flag_id": flagId,
+                                "user_id": studentId,
+                                "user_email": studentEmail,
+                                "student_name": studentName,
+                                "location": locationCtrl.text.trim(),
+                                "appointment_date": selectedDate,
+                                "appointment_time": selectedTime,
+                                "counselor_note": noteCtrl.text.trim(),
+                                "urgency": selectedUrgency,
+                                "issued_at": DateTime.now().toIso8601String(),
+                              };
+
+                              // 1. API Call
+                              await _api.post(
+                                '/admin/flagged-messages/$flagId/issue-notice',
+                                body: callSlipPayload,
+                                silent: true,
+                              );
+
+                              // 2. Save to local In-Action cache
+                              final localInAction = await _loadLocalInAction();
+                              localInAction.removeWhere((i) => i['id'].toString() == flagId);
+                              final updatedRecord = Map<String, dynamic>.from(flag);
+                              updatedRecord['status'] = 'in_action';
+                              updatedRecord['call_slip'] = callSlipPayload;
+                              updatedRecord['is_acknowledged'] = false;
+                              localInAction.insert(0, updatedRecord);
+                              await _saveLocalInAction(localInAction);
+
+                              // 3. Clinical Audit Log
+                              await ClinicalAuditService.recordLog(
+                                action: 'issue_guidance_notice',
+                                targetType: 'Student Distress Case',
+                                targetId: flagId,
+                                detail: 'Issued physical call-slip for $studentName at ${locationCtrl.text.trim()} ($selectedDate $selectedTime)',
+                              );
+
+                              if (ctx.mounted) Navigator.pop(ctx);
+
+                              // 4. Update UI State & Switch Tab to "In Action" (Index 1)
+                              setState(() {
+                                final idx = _flaggedMessages.indexWhere((f) => f['id'].toString() == flagId);
+                                if (idx != -1) {
+                                  _flaggedMessages[idx] = updatedRecord;
+                                }
+                              });
+                              _tabController.animateTo(1);
+
+                              HapticService.success();
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Call-Slip dispatched to $studentName! Moved to 'In Action'.",
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor: const Color(0xFF0284C7),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              );
+                            } catch (e) {
+                              setSheetState(() => isSubmitting = false);
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(content: Text("Failed to dispatch notice: $e"), backgroundColor: const Color(0xFFDC2626)),
+                              );
+                            }
+                          },
+                    icon: isSubmitting
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.send_rounded, size: 18),
+                    label: Text(
+                      isSubmitting ? "Dispatching Notice..." : "Dispatch Call-Slip & Send Email",
+                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── 2. Complete Physical Intake & Resolve Case ──
   Future<void> _resolveFlag(Map<String, dynamic> flag) async {
     final flagId = flag['id'].toString();
     final studentName = flag['user_name'] ?? flag['user_email']?.toString().split('@')[0] ?? 'Student';
@@ -280,13 +620,13 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Row(
             children: [
-              Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 22),
+              Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 24),
               SizedBox(width: 8),
               Text(
-                "Resolve Crisis Triage",
+                "Complete Intake & Resolve",
                 style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
               ),
             ],
@@ -297,7 +637,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Document the clinical action taken for $studentName:",
+                  "Document the physical intake session and clinical resolution for $studentName:",
                   style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B)),
                 ),
                 const SizedBox(height: 12),
@@ -344,8 +684,8 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                   controller: noteCtrl,
                   maxLines: 3,
                   decoration: InputDecoration(
-                    labelText: "Custom Clinical Note *",
-                    hintText: "Add clinical intake & session notes...",
+                    labelText: "Clinical Resolution Note *",
+                    hintText: "Add physical intake & consultation notes...",
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -362,10 +702,10 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF16A34A),
                 foregroundColor: Colors.white,
-                minimumSize: const Size(0, 38),
+                minimumSize: const Size(0, 40),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text("Confirm Resolution", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+              child: const Text("Confirm & Resolve", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -379,17 +719,23 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
 
       final resolvedRecord = Map<String, dynamic>.from(flag);
       resolvedRecord['is_resolved'] = true;
+      resolvedRecord['status'] = 'resolved';
       resolvedRecord['is_archived'] = false;
       resolvedRecord['resolution_note'] = noteCtrl.text.trim();
       resolvedRecord['resolved_at'] = DateTime.now().toIso8601String();
 
-      // 1. Save locally so it's permanently stored in Resolved Log
+      // 1. Remove from local In-Action cache
+      final localInAction = await _loadLocalInAction();
+      localInAction.removeWhere((i) => i['id'].toString() == flagId);
+      await _saveLocalInAction(localInAction);
+
+      // 2. Save locally in Resolved Log
       final localResolved = await _loadLocalResolved();
       localResolved.removeWhere((r) => r['id'].toString() == flagId);
       localResolved.insert(0, resolvedRecord);
       await _saveLocalResolved(localResolved);
 
-      // 2. Record in Clinical Audit Log
+      // 3. Record in Clinical Audit Log
       await ClinicalAuditService.recordLog(
         action: 'resolve_flag',
         targetType: 'Student Distress Case',
@@ -397,13 +743,13 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
         detail: 'Resolved crisis triage for $studentName: ${noteCtrl.text.trim()}',
       );
 
-      // 3. Update state immediately
+      // 4. Update state immediately
       setState(() {
         _flaggedMessages.removeWhere((f) => f['id'].toString() == flagId);
         _flaggedMessages.insert(0, resolvedRecord);
       });
 
-      // 4. Sync resolution with API backend
+      // 5. Sync resolution with API backend
       try {
         await _api.patch(
           '/admin/flagged-messages/$flagId/resolve',
@@ -411,6 +757,9 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
           silent: true,
         );
       } catch (_) {}
+
+      // Switch to Resolved Tab (Index 2)
+      _tabController.animateTo(2);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -425,6 +774,35 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
         SnackBar(
           content: Text("Failed to resolve triage: $e"),
           backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    }
+  }
+
+  Future<void> _unresolveFlag(Map<String, dynamic> item) async {
+    final flagId = item['id'].toString();
+    final studentName = item['user_name'] ?? item['user_email'] ?? 'Student';
+
+    HapticService.lightTap();
+    final localResolved = await _loadLocalResolved();
+    localResolved.removeWhere((r) => r['id'].toString() == flagId);
+    await _saveLocalResolved(localResolved);
+
+    await ClinicalAuditService.recordLog(
+      action: 'reopen_triage',
+      targetType: 'Student Distress Case',
+      targetId: flagId,
+      detail: 'Reopened triage case for $studentName back to active review.',
+    );
+
+    _fetchFlaggedMessages();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Case for $studentName moved back to Active Queue."),
+          backgroundColor: const Color(0xFF0284C7),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -625,41 +1003,54 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    final active = _flaggedMessages.where((f) => f['is_resolved'] != true).toList();
-    final allResolved = _flaggedMessages.where((f) => f['is_resolved'] == true).toList();
+    // Partitioning into 3-stage lifecycle:
+    final activeQueue = _flaggedMessages.where((f) {
+      final isResolved = f['is_resolved'] == true || f['status'] == 'resolved';
+      final isInAction = f['status'] == 'in_action' || f['call_slip'] != null;
+      return !isResolved && !isInAction;
+    }).toList();
+
+    final inActionQueue = _flaggedMessages.where((f) {
+      final isResolved = f['is_resolved'] == true || f['status'] == 'resolved';
+      final isInAction = f['status'] == 'in_action' || f['call_slip'] != null;
+      return !isResolved && isInAction;
+    }).toList();
+
+    final allResolved = _flaggedMessages.where((f) => f['is_resolved'] == true || f['status'] == 'resolved').toList();
     final activeResolved = allResolved.where((f) => f['is_archived'] != true).toList();
     final archivedResolved = allResolved.where((f) => f['is_archived'] == true).toList();
 
     return Column(
       children: [
-        // ── Subtab Header ──
+        // ── 4-Subtab Header ──
         Container(
           color: Colors.white,
           child: TabBar(
             controller: _tabController,
+            isScrollable: true,
             labelColor: const Color(0xFF0284C7),
             unselectedLabelColor: const Color(0xFF64748B),
             indicatorColor: const Color(0xFF0284C7),
             indicatorWeight: 3,
-            labelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 12.5),
-            unselectedLabelStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w500, fontSize: 12),
+            labelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 12),
+            unselectedLabelStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w500, fontSize: 11.5),
             tabs: [
               Tab(
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text("Active Queue"),
-                    if (active.isNotEmpty) ...[
-                      const SizedBox(width: 6),
+                    if (activeQueue.isNotEmpty) ...[
+                      const SizedBox(width: 5),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
                           color: const Color(0xFFEF4444),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          "${active.length}",
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                          "${activeQueue.length}",
+                          style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
@@ -668,12 +1059,27 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
               ),
               Tab(
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text("Resolved Log (${activeResolved.length})"),
+                    const Text("In Action"),
+                    if (inActionQueue.isNotEmpty) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          "${inActionQueue.length}",
+                          style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
+              Tab(text: "Resolved Log (${activeResolved.length})"),
               const Tab(text: "Emergency Hotlines"),
             ],
           ),
@@ -701,7 +1107,8 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                   : TabBarView(
                       controller: _tabController,
                       children: [
-                        _buildActiveList(active),
+                        _buildActiveList(activeQueue),
+                        _buildInActionList(inActionQueue),
                         _buildResolvedList(activeResolved, archivedResolved),
                         _buildHotlinesTab(),
                       ],
@@ -711,6 +1118,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     );
   }
 
+  // ── Tab 0: Active Queue ──
   Widget _buildActiveList(List<dynamic> list) {
     if (list.isEmpty) {
       return Center(
@@ -751,31 +1159,25 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
           final item = list[i];
           final student = item['user_name'] ?? item['user_email']?.toString().split('@')[0] ?? 'Student';
           final email = item['user_email'] ?? '';
-          final reason = item['flag_reason'] ?? 'Crisis Trigger';
-          final rawExcerpt = (item['content'] ?? item['message_text'] ?? '').toString().trim();
-          final excerpt = rawExcerpt.isNotEmpty ? rawExcerpt : "🚨 1-Tap Campus SOS Emergency Assistance Triggered";
+          final excerpt = item['content'] ?? '';
           final createdAt = item['created_at']?.toString().split('T')[0] ?? 'Today';
+          final riskLevel = (item['risk_level'] ?? 'red').toString().toLowerCase();
+          final flagReason = item['flag_reason'] ?? 'Crisis Trigger';
 
-          final riskLevel = (item['risk_level'] ?? '').toString().toLowerCase();
-          final isYellow = riskLevel == 'yellow' || reason.toLowerCase().contains('2-day') || reason.toLowerCase().contains('low mood');
-          final isHighRisk = (!isYellow) && (riskLevel == 'red' || reason.toLowerCase().contains('suicide') || reason.toLowerCase().contains('harm') || reason.toLowerCase().contains('crisis') || reason.toLowerCase().contains('persistent') || excerpt.contains('SOS'));
-
-          final cardBorderColor = isHighRisk ? const Color(0xFFFCA5A5) : (isYellow ? const Color(0xFFFDE68A) : const Color(0xFFFED7AA));
-          final iconBgColor = isHighRisk ? const Color(0xFFFEE2E2) : (isYellow ? const Color(0xFFFEF3C7) : const Color(0xFFFFEDD5));
-          final iconColor = isHighRisk ? const Color(0xFFDC2626) : (isYellow ? const Color(0xFFD97706) : const Color(0xFFD97706));
-          final iconData = isHighRisk ? Icons.emergency_rounded : Icons.warning_amber_rounded;
-          final badgeBgColor = isHighRisk ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB);
-          final badgeBorderColor = isHighRisk ? const Color(0xFFFCA5A5) : const Color(0xFFFDE68A);
-          final badgeTextColor = isHighRisk ? const Color(0xFFDC2626) : const Color(0xFFD97706);
-          final badgeLabel = isHighRisk ? "🚨 $reason" : "⚠️ $reason";
+          final isRed = riskLevel == 'red';
+          final cardBorderColor = isRed ? const Color(0xFFFCA5A5) : const Color(0xFFFCD34D);
+          final badgeBgColor = isRed ? const Color(0xFFFEF2F2) : const Color(0xFFFFFBEB);
+          final badgeBorderColor = isRed ? const Color(0xFFF87171) : const Color(0xFFFBBF24);
+          final badgeTextColor = isRed ? const Color(0xFFDC2626) : const Color(0xFFD97706);
+          final badgeLabel = isRed ? "🚨 $flagReason" : "⚠️ $flagReason";
 
           return Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cardBorderColor, width: isHighRisk ? 1.5 : 1.0),
-              boxShadow: [BoxShadow(color: isHighRisk ? const Color(0x08EF4444) : const Color(0x08D97706), blurRadius: 6, offset: const Offset(0, 2))],
+              border: Border.all(color: cardBorderColor, width: 1.5),
+              boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,25 +1187,22 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: iconBgColor,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: badgeBgColor,
                           child: Icon(
-                            iconData,
-                            color: iconColor,
-                            size: 16,
+                            isRed ? Icons.crisis_alert_rounded : Icons.warning_amber_rounded,
+                            color: badgeTextColor,
+                            size: 18,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               student,
-                              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF0F172A)),
+                              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
                             ),
                             Text(
                               email,
@@ -832,10 +1231,10 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(10),
@@ -843,10 +1242,10 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                   ),
                   child: Text(
                     '"$excerpt"',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF334155), fontStyle: FontStyle.italic),
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF334155), fontStyle: FontStyle.italic, height: 1.35),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -855,15 +1254,19 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                       style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF94A3B8)),
                     ),
                     ElevatedButton.icon(
-                      onPressed: () => _resolveFlag(item),
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 15),
-                      label: const Text("Resolve Triage", style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600)),
+                      onPressed: () => _showIssueNoticeDialog(item),
+                      icon: const Icon(Icons.account_balance_rounded, size: 16),
+                      label: const Text(
+                        "Issue Guidance Notice",
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF16A34A),
+                        backgroundColor: const Color(0xFF0284C7),
                         foregroundColor: Colors.white,
-                        minimumSize: const Size(0, 34),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        minimumSize: const Size(0, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
                       ),
                     ),
                   ],
@@ -876,6 +1279,235 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     );
   }
 
+  // ── Tab 1: In Action (Issued Guidance Call-Slips awaiting physical session) ──
+  Widget _buildInActionList(List<dynamic> list) {
+    if (list.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEEF2FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.pending_actions_rounded, color: Color(0xFF6366F1), size: 44),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "No Cases In Action",
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              "When you issue a call-slip for a student to visit the guidance office, it will appear here.",
+              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchFlaggedMessages,
+      color: const Color(0xFF6366F1),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: list.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (ctx, i) {
+          final item = list[i];
+          final student = item['user_name'] ?? item['user_email']?.toString().split('@')[0] ?? 'Student';
+          final email = item['user_email'] ?? '';
+          final callSlip = item['call_slip'] is Map ? Map<String, dynamic>.from(item['call_slip']) : <String, dynamic>{};
+          final appointmentDate = callSlip['appointment_date'] ?? 'Today';
+          final appointmentTime = callSlip['appointment_time'] ?? '2:00 PM';
+          final counselorNote = callSlip['counselor_note'] ?? 'Please visit the Guidance Center for 1-on-1 check-in.';
+          final isAck = item['is_acknowledged'] == true;
+
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFC7D2FE), width: 1.5),
+              boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with Student & Ack status
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: const Color(0xFFEEF2FF),
+                          child: const Icon(Icons.account_balance_rounded, color: Color(0xFF4F46E5), size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              student,
+                              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
+                            ),
+                            Text(
+                              email,
+                              style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (isAck)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 13),
+                            SizedBox(width: 4),
+                            Text(
+                              "Confirmed by Student",
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFCD34D)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.schedule_rounded, color: Color(0xFFD97706), size: 13),
+                            SizedBox(width: 4),
+                            Text(
+                              "Awaiting Student View",
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFD97706)),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Scheduled Appointment Box
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.event_available_rounded, size: 15, color: Color(0xFF4F46E5)),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Scheduled Visit: $appointmentDate • $appointmentTime",
+                            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF1E293B)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded, size: 15, color: Color(0xFF64748B)),
+                          const SizedBox(width: 6),
+                          const Text(
+                            "Urios Guidance Center (Main Campus, 2nd Floor)",
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Note: "$counselorNote"',
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF334155), fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Actions: Complete Intake / Resend / Call
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _callStudent(item['phone']?.toString() ?? item['user_phone']?.toString(), student),
+                      icon: const Icon(Icons.phone_rounded, size: 14),
+                      label: const Text("Call", style: TextStyle(fontFamily: 'Poppins', fontSize: 11)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0284C7),
+                        side: const BorderSide(color: Color(0xFFBAE6FD)),
+                        minimumSize: const Size(0, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    OutlinedButton.icon(
+                      onPressed: () => _showIssueNoticeDialog(item),
+                      icon: const Icon(Icons.edit_calendar_rounded, size: 14),
+                      label: const Text("Resend", style: TextStyle(fontFamily: 'Poppins', fontSize: 11)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF4F46E5),
+                        side: const BorderSide(color: Color(0xFFC7D2FE)),
+                        minimumSize: const Size(0, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      onPressed: () => _resolveFlag(item),
+                      icon: const Icon(Icons.check_circle_rounded, size: 15),
+                      label: const Text(
+                        "Resolve",
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Tab 2: Resolved Log ──
   Widget _buildResolvedList(List<dynamic> activeResolved, List<dynamic> archivedResolved) {
     final currentList = _showArchivedResolved ? archivedResolved : activeResolved;
 
@@ -889,7 +1521,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
 
     return Column(
       children: [
-        // ── Search & Filter Controls ──
+        // Search & Filter Controls
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Column(
@@ -1062,8 +1694,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                                       constraints: const BoxConstraints(),
                                       onPressed: () => _archiveResolvedLog(item),
                                     ),
-                                  ]
-                                  else
+                                  ] else
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -1110,6 +1741,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     );
   }
 
+  // ── Tab 3: Hotlines ──
   Future<void> _fetchHotlines() async {
     setState(() => _isLoadingHotlines = true);
     try {
@@ -1704,4 +2336,3 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     );
   }
 }
-

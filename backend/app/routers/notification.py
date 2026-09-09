@@ -493,7 +493,6 @@ def save_mood_schedule(
     Save the user's mood check-in schedule preferences.
     If email channel is enabled, sends a confirmation email in the background.
     """
-    # If email notifications are enabled, send a beautiful confirmation email
     if payload.channel_email:
         background_tasks.add_task(
             _send_email_notification,
@@ -514,4 +513,63 @@ def save_mood_schedule(
         },
         "email_queued": payload.channel_email,
         "message": "Schedule saved successfully. Email confirmation will arrive shortly." if payload.channel_email else "Schedule saved successfully.",
+    }
+
+
+@router.get("/guidance-notices", response_model=List[NotificationRead])
+def get_guidance_notices(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Fetch official Guidance Call-Slip notices for the logged-in student."""
+    notifs = session.exec(
+        select(Notification)
+        .where(
+            Notification.user_id == current_user.id,
+            Notification.type == NotificationType.guidance_notice,
+            Notification.is_deleted == False,
+        )
+        .order_by(Notification.created_at.desc())
+    ).all()
+    return notifs
+
+
+@router.post("/{notification_id}/acknowledge")
+def acknowledge_guidance_notice(
+    notification_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+):
+    """
+    Student confirms / acknowledges their physical Guidance Office consultation call slip.
+    """
+    notif = session.get(Notification, notification_id)
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    if notif.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to acknowledge this notice")
+
+    notif.is_acknowledged = True
+    notif.acknowledged_at = datetime.utcnow()
+    notif.is_read = True
+    session.add(notif)
+
+    # Record acknowledgment in AuditLog
+    audit = AuditLog(
+        admin_id=current_user.id,
+        admin_email=current_user.email,
+        action="student_acknowledged_call_slip",
+        target_type="notification",
+        target_id=str(notification_id),
+        detail=f"Student {current_user.full_name or current_user.email} acknowledged physical guidance consultation call-slip.",
+    )
+    session.add(audit)
+    session.commit()
+
+    return {
+        "status": "acknowledged",
+        "notification_id": str(notification_id),
+        "acknowledged_at": notif.acknowledged_at.isoformat(),
+        "message": "Visit successfully confirmed. The Guidance Counselor has been notified!",
     }

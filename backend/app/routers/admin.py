@@ -22,7 +22,9 @@ from app.schemas.admin import (
 )
 from app.schemas.audit import AuditLogRead
 from app.schemas.mood import MoodEntryRead
-from app.schemas.chat import ChatSessionRead, ChatMessageRead
+import json
+from app.models.notification import Notification, NotificationType
+from app.services.email_service import send_guidance_call_slip_email
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -297,8 +299,20 @@ def list_flagged_messages(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    """List all risk-flagged messages (both active and resolved) joined with user info."""
-    # 1. Fetch active flagged messages (risk_flag == True and role == 'user')
+    """List all risk-flagged triage incidents across Active, In-Action, and Resolved lifecycle."""
+    # 1. Fetch all audit logs for triage actions to determine lifecycle state
+    triage_audits = session.exec(
+        select(AuditLog)
+        .where(AuditLog.action.in_(["resolve_flag", "issue_guidance_notice"]))
+        .order_by(AuditLog.created_at.desc())
+    ).all()
+
+    audit_by_target: Dict[str, AuditLog] = {}
+    for a in triage_audits:
+        if a.target_id not in audit_by_target:
+            audit_by_target[a.target_id] = a
+
+    # 2. Fetch active flagged messages (risk_flag == True and role == 'user')
     active_query = (
         select(ChatMessage, ChatSession, User)
         .join(ChatSession, ChatMessage.session_id == ChatSession.id)
@@ -311,7 +325,37 @@ def list_flagged_messages(
     flagged = []
     seen_ids = set()
     for msg, chat_session, user in active_results:
+        msg_id_str = str(msg.id)
         seen_ids.add(msg.id)
+
+        # Check if an in-action notice has been issued
+        audit = audit_by_target.get(msg_id_str)
+        status_val = "active"
+        call_slip_data = None
+        is_ack = False
+        ack_at = None
+
+        if audit and audit.action == "issue_guidance_notice":
+            status_val = "in_action"
+            try:
+                if audit.detail and audit.detail.startswith("{"):
+                    call_slip_data = json.loads(audit.detail)
+                else:
+                    call_slip_data = {"counselor_note": audit.detail, "location": "Urios Guidance & Counseling Center"}
+            except Exception:
+                call_slip_data = {"counselor_note": audit.detail}
+
+            # Check if student acknowledged notification
+            student_notif = session.exec(
+                select(Notification).where(
+                    Notification.user_id == user.id,
+                    Notification.type == NotificationType.guidance_notice,
+                ).order_by(Notification.created_at.desc())
+            ).first()
+            if student_notif and student_notif.is_acknowledged:
+                is_ack = True
+                ack_at = student_notif.acknowledged_at
+
         flagged.append(
             FlaggedMessageRead(
                 id=msg.id,
@@ -323,10 +367,14 @@ def list_flagged_messages(
                 content=msg.content,
                 created_at=msg.created_at,
                 is_resolved=False,
+                status=status_val,
+                call_slip=call_slip_data,
+                is_acknowledged=is_ack,
+                acknowledged_at=ack_at,
             )
         )
     
-    # 2. Fetch resolved triage audit logs (action == "resolve_flag", target_type == "message")
+    # 3. Fetch resolved triage audit logs (action == "resolve_flag", target_type == "message")
     audit_query = (
         select(AuditLog)
         .where(AuditLog.action == "resolve_flag", AuditLog.target_type == "message")
@@ -356,6 +404,7 @@ def list_flagged_messages(
                         content=msg.content,
                         created_at=msg.created_at,
                         is_resolved=True,
+                        status="resolved",
                         resolved_at=audit.created_at,
                         resolution_note=audit.detail or "Resolved by counselor",
                         flag_reason="Crisis Trigger Resolved",
@@ -365,13 +414,43 @@ def list_flagged_messages(
         except Exception:
             continue
 
-    # 3. Include active distress pattern alerts (2-day Yellow and 3-day Red)
+    # 4. Include distress pattern alerts (2-day Yellow and 3-day Red)
     distress_alerts = get_consistent_distress_patterns(admin=admin, session=session)
     for da in distress_alerts:
         distress_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"distress_{da.user_id}_{da.consecutive_days}")
+        distress_id_str = str(distress_id)
         if distress_id in seen_ids:
             continue
         seen_ids.add(distress_id)
+
+        audit = audit_by_target.get(distress_id_str)
+        status_val = "active"
+        is_resolved_val = False
+        call_slip_data = None
+        is_ack = False
+        ack_at = None
+
+        if audit:
+            if audit.action == "resolve_flag":
+                status_val = "resolved"
+                is_resolved_val = True
+            elif audit.action == "issue_guidance_notice":
+                status_val = "in_action"
+                try:
+                    if audit.detail and audit.detail.startswith("{"):
+                        call_slip_data = json.loads(audit.detail)
+                except Exception:
+                    call_slip_data = {"counselor_note": audit.detail}
+
+                student_notif = session.exec(
+                    select(Notification).where(
+                        Notification.user_id == da.user_id,
+                        Notification.type == NotificationType.guidance_notice,
+                    ).order_by(Notification.created_at.desc())
+                ).first()
+                if student_notif and student_notif.is_acknowledged:
+                    is_ack = True
+                    ack_at = student_notif.acknowledged_at
 
         is_red = da.risk_level == "red"
         reason_text = f"{da.consecutive_days}-Day Persistent Distress Alert" if is_red else f"{da.consecutive_days}-Day Low Mood Trend"
@@ -389,7 +468,11 @@ def list_flagged_messages(
                 role="user",
                 content=excerpt,
                 created_at=datetime.utcnow(),
-                is_resolved=False,
+                is_resolved=is_resolved_val,
+                status=status_val,
+                call_slip=call_slip_data,
+                is_acknowledged=is_ack,
+                acknowledged_at=ack_at,
                 flag_reason=reason_text,
                 risk_level=da.risk_level,
             )
@@ -398,23 +481,131 @@ def list_flagged_messages(
     return flagged
 
 
+@router.post("/flagged-messages/{message_id}/issue-notice")
+@router.post("/flagged-messages/{message_id}/issue-notice/")
+@router.post("/flagged-messages/{message_id}/action")
+def issue_guidance_notice(
+    message_id: str,
+    admin: Annotated[User, Depends(get_current_counselor_or_admin)],
+    session: Annotated[Session, Depends(get_session)],
+    payload: Dict[str, Any],
+):
+    """
+    Issue an official Urios Guidance Office consultation call-slip / notice to the student.
+    Dispatches in-app notification + Brevo transactional email, moving case to 'In Action'.
+    """
+    appointment_date = payload.get("appointment_date", "Today")
+    appointment_time = payload.get("appointment_time", "2:00 PM - 3:00 PM")
+    location = payload.get("location", "Urios Guidance & Counseling Center (Main Campus, 2nd Floor)")
+    counselor_name = payload.get("counselor_name") or admin.full_name or "Urios Guidance Counselor"
+    counselor_note = payload.get("counselor_note", "Please visit the Guidance Center for a supportive, confidential 1-on-1 check-in.")
+    urgency = payload.get("urgency", "Priority Guidance Consultation")
+    target_user_id_str = payload.get("user_id")
+
+    # Locate student user
+    student_user: Optional[User] = None
+    if target_user_id_str:
+        try:
+            student_user = session.get(User, uuid.UUID(str(target_user_id_str)))
+        except Exception:
+            pass
+
+    if not student_user:
+        try:
+            msg_uuid = uuid.UUID(message_id)
+            msg = session.get(ChatMessage, msg_uuid)
+            if msg:
+                chat_session = session.get(ChatSession, msg.session_id)
+                if chat_session:
+                    student_user = session.get(User, chat_session.user_id)
+        except Exception:
+            pass
+
+    student_name = student_user.full_name or "Student" if student_user else "Student"
+    student_email = student_user.email if student_user else payload.get("user_email", "student@urios.edu.ph")
+
+    call_slip_payload = {
+        "flag_id": message_id,
+        "counselor_name": counselor_name,
+        "counselor_email": admin.email,
+        "counselor_note": counselor_note,
+        "appointment_date": appointment_date,
+        "appointment_time": appointment_time,
+        "location": location,
+        "urgency": urgency,
+        "issued_at": datetime.utcnow().isoformat(),
+        "student_name": student_name,
+        "student_email": student_email,
+    }
+    call_slip_json_str = json.dumps(call_slip_payload)
+
+    # 1. Create in-app Notification for student
+    if student_user:
+        notif = Notification(
+            user_id=student_user.id,
+            title="🏛️ Urios Guidance Office: Consultation Notice",
+            body=f"Call-Slip from {counselor_name}: Please visit {location} on {appointment_date} at {appointment_time}. Note: \"{counselor_note}\"",
+            type=NotificationType.guidance_notice,
+            is_read=False,
+            is_acknowledged=False,
+            call_slip_json=call_slip_json_str,
+        )
+        session.add(notif)
+
+    # 2. Write AuditLog for In-Action state
+    audit = AuditLog(
+        admin_id=admin.id,
+        admin_email=admin.email,
+        action="issue_guidance_notice",
+        target_type="message",
+        target_id=str(message_id),
+        detail=call_slip_json_str,
+    )
+    session.add(audit)
+    session.commit()
+
+    # 3. Dispatch Email via Brevo API in background
+    email_sent = False
+    if student_email and "@" in student_email:
+        email_sent = send_guidance_call_slip_email(
+            to_email=student_email,
+            to_name=student_name,
+            counselor_name=counselor_name,
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
+            location=location,
+            message=counselor_note,
+            urgency=urgency,
+        )
+
+    return {
+        "status": "in_action",
+        "id": str(message_id),
+        "call_slip": call_slip_payload,
+        "email_dispatched": email_sent,
+        "message": f"Official Guidance Notice issued for {student_name} and moved to 'In Action'.",
+    }
+
+
 @router.patch("/flagged-messages/{message_id}/resolve")
 @router.patch("/flagged-messages/{message_id}/resolve/")
 def resolve_flagged_message(
-    message_id: uuid.UUID,
+    message_id: str,
     admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
     payload: Optional[Dict[str, Any]] = None,
 ):
-    """Mark a specific flagged message incident as resolved and record in AuditLog."""
-    msg = session.get(ChatMessage, message_id)
-    if not msg:
-        raise HTTPException(status_code=404, detail="Flagged message not found")
+    """Mark a specific flagged message incident as resolved and record clinical note in AuditLog."""
+    try:
+        msg_uuid = uuid.UUID(message_id)
+        msg = session.get(ChatMessage, msg_uuid)
+        if msg:
+            msg.risk_flag = False
+            session.add(msg)
+    except Exception:
+        pass
     
-    msg.risk_flag = False
-    session.add(msg)
-    
-    note = (payload or {}).get("resolution_note") or f"Crisis triage resolved by {admin.email}."
+    note = (payload or {}).get("resolution_note") or f"Crisis triage intake completed & resolved by {admin.email}."
     audit = AuditLog(
         admin_id=admin.id,
         admin_email=admin.email,
@@ -425,7 +616,7 @@ def resolve_flagged_message(
     )
     session.add(audit)
     session.commit()
-    return {"status": "resolved", "id": str(message_id)}
+    return {"status": "resolved", "id": str(message_id), "resolution_note": note}
 
 
 @router.post("/flagged-messages/resolve-all")

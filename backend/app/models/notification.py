@@ -10,6 +10,7 @@ class NotificationType(str, Enum):
     message = "message"
     alert = "alert"
     system = "system"
+    guidance_notice = "guidance_notice"
 
 
 class NotificationBase(SQLModel):
@@ -18,6 +19,9 @@ class NotificationBase(SQLModel):
     type: NotificationType = Field(default=NotificationType.system)
     is_read: bool = Field(default=False)
     is_deleted: bool = Field(default=False)
+    is_acknowledged: bool = Field(default=False)
+    acknowledged_at: Optional[datetime] = Field(default=None)
+    call_slip_json: Optional[str] = Field(default=None)
 
 
 class Notification(NotificationBase, table=True):
