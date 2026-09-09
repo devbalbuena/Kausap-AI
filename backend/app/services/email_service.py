@@ -10,11 +10,12 @@ def send_guidance_call_slip_email(
     to_email: str,
     to_name: str,
     counselor_name: str,
-    appointment_date: str,
-    appointment_time: str,
+    appointment_date: str = "Flexible / Walk-in",
+    appointment_time: str = "Office Hours (8:00 AM - 5:00 PM)",
     location: str = "Urios Guidance & Counseling Center (Main Campus, 2nd Floor)",
     message: str = "Please visit the Guidance Center for a supportive, confidential 1-on-1 check-in.",
     urgency: str = "Priority Guidance Consultation",
+    subject: Optional[str] = None,
 ) -> bool:
     """
     Send an official Father Saturnino Urios University (Urios) Guidance Call-Slip / 
@@ -23,6 +24,8 @@ def send_guidance_call_slip_email(
     if not settings.BREVO_API_KEY or not settings.BREVO_SENDER_EMAIL:
         logger.info(f"Brevo API key not configured — skipping email dispatch to {to_email}")
         return False
+
+    email_subject = subject.strip() if subject and subject.strip() else f"🏛️ Guidance Office Consultation Call-Slip — {to_name}"
 
     html_body = f"""
     <!DOCTYPE html>
@@ -55,13 +58,13 @@ def send_guidance_call_slip_email(
           <p>Dear <strong>{to_name}</strong>,</p>
           
           <p style="line-height:1.6;color:#334155;">
-            You have received an official consultation call-slip from the Urios Guidance & Counseling Center. We are here to provide a safe, supportive, and completely confidential space for you.
+            You have received an official consultation message from the Urios Guidance & Counseling Center. We are here to provide a safe, supportive, and completely confidential space for you.
           </p>
 
           <div class="info-box">
-            <div class="info-row"><span class="info-label">📍 Location:</span> {location}</div>
-            <div class="info-row"><span class="info-label">📅 Date:</span> {appointment_date}</div>
-            <div class="info-row"><span class="info-label">⏰ Time:</span> {appointment_time}</div>
+            <div class="info-row"><span class="info-label">📍 Office Location:</span> {location}</div>
+            <div class="info-row"><span class="info-label">📅 Consultation Date:</span> {appointment_date}</div>
+            <div class="info-row"><span class="info-label">⏰ Preferred Time:</span> {appointment_time}</div>
             <div class="info-row"><span class="info-label">👤 Counselor:</span> {counselor_name}</div>
           </div>
 
@@ -71,7 +74,7 @@ def send_guidance_call_slip_email(
           </div>
 
           <p style="margin-top:24px;font-size:13px;line-height:1.5;color:#64748B;">
-            Please open the <strong>Kausap AI</strong> mobile app on your home dashboard to acknowledge this invitation and view campus directions. If you cannot attend at this time, please contact the guidance office directly.
+            Please open the <strong>Kausap AI</strong> mobile app on your dashboard to view full details and confirm your visit.
           </p>
         </div>
         <div class="footer">
@@ -89,7 +92,7 @@ def send_guidance_call_slip_email(
             "email": settings.BREVO_SENDER_EMAIL,
         },
         "to": [{"email": to_email, "name": to_name}],
-        "subject": f"🏛️ Guidance Office Consultation Call-Slip — {to_name}",
+        "subject": email_subject,
         "htmlContent": html_body,
     }
 

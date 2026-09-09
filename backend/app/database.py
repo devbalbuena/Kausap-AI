@@ -40,8 +40,33 @@ engine = create_engine(
 
 
 def create_db_and_tables():
-    """Create all registered tables if they do not already exist."""
+    """Create all registered tables if they do not already exist, and safely apply incremental DDL."""
+    from sqlalchemy import text
     SQLModel.metadata.create_all(engine)
+
+    # Safe incremental schema upgrades for Neon Postgres
+    if "sqlite" not in settings.DATABASE_URL:
+        raw_conn = engine.raw_connection()
+        try:
+            raw_conn.set_isolation_level(0)  # AUTOCOMMIT
+            with raw_conn.cursor() as cursor:
+                try:
+                    cursor.execute("ALTER TYPE notificationtype ADD VALUE IF NOT EXISTS 'guidance_notice';")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        finally:
+            raw_conn.close()
+
+        with engine.begin() as conn:
+            try:
+                conn.execute(text("ALTER TABLE notification ADD COLUMN IF NOT EXISTS is_acknowledged BOOLEAN DEFAULT FALSE;"))
+                conn.execute(text("ALTER TABLE notification ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMP WITHOUT TIME ZONE;"))
+                conn.execute(text("ALTER TABLE notification ADD COLUMN IF NOT EXISTS call_slip_json TEXT;"))
+            except Exception:
+                pass
+
 
 
 def get_session():

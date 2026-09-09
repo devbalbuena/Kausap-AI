@@ -295,21 +295,30 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
   Future<void> _showIssueNoticeDialog(FlaggedIncidentItem item) async {
     HapticService.lightTap();
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final studentName = item.userName;
-    final studentEmail = item.userEmail;
+    final studentEmail = item.userEmail.isNotEmpty ? item.userEmail : 'student@urios.edu.ph';
+    final studentName = item.userName.isNotEmpty ? item.userName : studentEmail.split('@')[0];
 
     final locationCtrl = TextEditingController(text: "Urios Guidance & Counseling Center (Main Campus, 2nd Floor)");
+    final subjectCtrl = TextEditingController(text: "🏛️ Guidance Center Consultation Notice & Support Check-in");
     final noteCtrl = TextEditingController(
-      text: "Hi $studentName, please proceed to the Guidance & Counseling Center for a supportive, confidential 1-on-1 consultation.",
+      text: "Hi $studentName,\n\nPlease visit the Guidance & Counseling Center for a supportive, confidential 1-on-1 check-in. Our team is here to listen and assist you anytime during office hours.",
     );
 
-    String selectedDate = "Today";
-    String selectedTime = "2:00 PM - 3:00 PM";
+    String selectedDate = "Flexible / Walk-in";
+    String selectedTime = "Office Hours (8:00 AM - 5:00 PM)";
     String selectedUrgency = "Priority Consultation";
     bool isSubmitting = false;
 
-    final presetDates = ["Today", "Tomorrow", "Within 48 Hours"];
-    final presetTimes = ["9:00 AM - 10:00 AM", "10:30 AM - 11:30 AM", "1:30 PM - 2:30 PM", "2:00 PM - 3:00 PM", "3:30 PM - 4:30 PM", "Immediate / ASAP"];
+    final presetDates = ["Flexible / Walk-in", "Today", "Tomorrow", "Within 48 Hours"];
+    final presetTimes = [
+      "Office Hours (8:00 AM - 5:00 PM)",
+      "9:00 AM - 10:00 AM",
+      "10:30 AM - 11:30 AM",
+      "1:30 PM - 2:30 PM",
+      "2:00 PM - 3:00 PM",
+      "3:30 PM - 4:30 PM",
+      "Immediate / ASAP"
+    ];
     final presetUrgencies = ["Priority Consultation", "Urgent SOS Follow-Up", "Standard Check-in"];
 
     await showModalBottomSheet(
@@ -318,254 +327,419 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) => Container(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            top: 24,
-            left: 20,
-            right: 20,
-          ),
+          height: MediaQuery.of(context).size.height * 0.88,
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
+          child: Column(
+            children: [
+              // ── Gmail-Style Top Bar Header ──
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0284C7),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(Icons.account_balance_rounded, color: Color(0xFF0284C7), size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
+                    const Icon(Icons.mail_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "Father Saturnino Urios University",
+                          Text(
+                            "New Guidance Notice & Email",
                             style: TextStyle(
                               fontFamily: 'Poppins',
-                              fontSize: 11,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF0284C7),
-                              letterSpacing: 0.3,
+                              color: Colors.white,
                             ),
                           ),
                           Text(
-                            "Issue Guidance Call-Slip ($studentName)",
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF0F172A),
+                            "Father Saturnino Urios University · Guidance & Counseling Center",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11,
+                              color: Color(0xFFBAE6FD),
                             ),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                      icon: const Icon(Icons.close_rounded, color: Colors.white),
                       onPressed: () => Navigator.pop(ctx),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                const Text(
-                  "Dispatches an official physical consultation notice to the student's app dashboard and sends a formal email invitation.",
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B), height: 1.35),
-                ),
-                const SizedBox(height: 18),
+              ),
 
-                // Location Field
-                const Text("Office Location *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: locationCtrl,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.location_on_rounded, color: Color(0xFF0284C7), size: 20),
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              // ── Scrollable Email Compose Body ──
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── To Field ──
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text(
+                              "To:",
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE0F2FE),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFBAE6FD)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 10,
+                                    backgroundColor: const Color(0xFF0284C7),
+                                    child: Text(
+                                      studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S',
+                                      style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "$studentName ($studentEmail)",
+                                    style: const TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0369A1),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ── Subject Field ──
+                      TextField(
+                        controller: subjectCtrl,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.subject_rounded, size: 18, color: Color(0xFF0284C7)),
+                          labelText: "Subject",
+                          labelStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF64748B)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ── Email Message Body ──
+                      const Text(
+                        "Email Message & Guidance Instructions *",
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF334155)),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: noteCtrl,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: "Type supportive consultation message or instructions for the student...",
+                          hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.all(14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Optional Physical Visit & Schedule Details ──
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0F2FE),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.event_note_rounded, size: 16, color: Color(0xFF0284C7)),
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Physical Visit & Timing (Optional)",
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12.5,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      Text(
+                                        "Select specific slot or leave as Flexible Walk-in if you are occupied.",
+                                        style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Consultation Date
+                            const Text("Consultation Date:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: presetDates.map((d) {
+                                final isSel = selectedDate == d;
+                                return ChoiceChip(
+                                  label: Text(d),
+                                  selected: isSel,
+                                  selectedColor: const Color(0xFF0284C7),
+                                  backgroundColor: Colors.white,
+                                  labelStyle: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11,
+                                    fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSel ? Colors.white : const Color(0xFF475569),
+                                  ),
+                                  side: BorderSide(color: isSel ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1)),
+                                  onSelected: (v) {
+                                    if (v) setSheetState(() => selectedDate = d);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Preferred Time Slot
+                            const Text("Preferred Time Slot:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: presetTimes.map((t) {
+                                final isSel = selectedTime == t;
+                                return ChoiceChip(
+                                  label: Text(t),
+                                  selected: isSel,
+                                  selectedColor: const Color(0xFF0284C7),
+                                  backgroundColor: Colors.white,
+                                  labelStyle: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 10.5,
+                                    fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSel ? Colors.white : const Color(0xFF475569),
+                                  ),
+                                  side: BorderSide(color: isSel ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1)),
+                                  onSelected: (v) {
+                                    if (v) setSheetState(() => selectedTime = t);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Priority Level
+                            const Text("Priority Level:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: presetUrgencies.map((u) {
+                                final isSel = selectedUrgency == u;
+                                final color = u.contains('Urgent') ? const Color(0xFFDC2626) : const Color(0xFF0284C7);
+                                return ChoiceChip(
+                                  label: Text(u),
+                                  selected: isSel,
+                                  selectedColor: color,
+                                  backgroundColor: Colors.white,
+                                  labelStyle: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 10.5,
+                                    fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSel ? Colors.white : const Color(0xFF475569),
+                                  ),
+                                  side: BorderSide(color: isSel ? color : const Color(0xFFCBD5E1)),
+                                  onSelected: (v) {
+                                    if (v) setSheetState(() => selectedUrgency = u);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Location
+                            const Text("Office Location:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
+                            const SizedBox(height: 4),
+                            TextField(
+                              controller: locationCtrl,
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF0284C7)),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                              ),
+                              style: const TextStyle(fontSize: 11.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 14),
+              ),
 
-                // Date Selection Chips
-                const Text("Consultation Date *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  children: presetDates.map((d) {
-                    final isSel = selectedDate == d;
-                    return ChoiceChip(
-                      label: Text(d),
-                      selected: isSel,
-                      selectedColor: const Color(0xFF0284C7),
-                      backgroundColor: const Color(0xFFF1F5F9),
-                      labelStyle: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                        color: isSel ? Colors.white : const Color(0xFF475569),
-                      ),
-                      onSelected: (v) {
-                        if (v) setSheetState(() => selectedDate = d);
-                      },
-                    );
-                  }).toList(),
+              // ── Bottom Action Footer ──
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
                 ),
-                const SizedBox(height: 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                      child: const Text("Discard", style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              setSheetState(() => isSubmitting = true);
+                              try {
+                                final callSlipPayload = {
+                                  "flag_id": item.id,
+                                  "user_email": studentEmail,
+                                  "student_name": studentName,
+                                  "subject": subjectCtrl.text.trim(),
+                                  "location": locationCtrl.text.trim(),
+                                  "appointment_date": selectedDate,
+                                  "appointment_time": selectedTime,
+                                  "counselor_note": noteCtrl.text.trim(),
+                                  "urgency": selectedUrgency,
+                                  "issued_at": DateTime.now().toIso8601String(),
+                                };
 
-                // Time Selection Chips
-                const Text("Preferred Time Slot *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: presetTimes.map((t) {
-                    final isSel = selectedTime == t;
-                    return ChoiceChip(
-                      label: Text(t),
-                      selected: isSel,
-                      selectedColor: const Color(0xFF0284C7),
-                      backgroundColor: const Color(0xFFF1F5F9),
-                      labelStyle: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                        color: isSel ? Colors.white : const Color(0xFF475569),
-                      ),
-                      onSelected: (v) {
-                        if (v) setSheetState(() => selectedTime = t);
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 14),
+                                if (item.id.isNotEmpty) {
+                                  await _api.post(
+                                    '/admin/flagged-messages/${item.id}/issue-notice',
+                                    body: callSlipPayload,
+                                    silent: true,
+                                  );
+                                }
 
-                // Urgency
-                const Text("Priority Level", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  children: presetUrgencies.map((u) {
-                    final isSel = selectedUrgency == u;
-                    return ChoiceChip(
-                      label: Text(u),
-                      selected: isSel,
-                      selectedColor: const Color(0xFFDC2626),
-                      backgroundColor: const Color(0xFFF1F5F9),
-                      labelStyle: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                        color: isSel ? Colors.white : const Color(0xFF475569),
-                      ),
-                      onSelected: (v) {
-                        if (v) setSheetState(() => selectedUrgency = u);
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 14),
+                                if (ctx.mounted) Navigator.pop(ctx);
 
-                // Counselor Note / Instructions
-                const Text("Guidance & Compliance Note *", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: noteCtrl,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: "Add specific instructions or reassuring message for the student...",
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                  ),
-                ),
-                const SizedBox(height: 20),
+                                setState(() {
+                                  item.status = 'in_action';
+                                  item.callSlip = callSlipPayload;
+                                  item.isAcknowledged = false;
+                                  _activeIncidents.removeWhere((i) => i.id == item.id);
+                                  _inActionIncidents.removeWhere((i) => i.id == item.id);
+                                  _inActionIncidents.insert(0, item);
+                                });
 
-                // Submit Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: isSubmitting
-                        ? null
-                        : () async {
-                            setSheetState(() => isSubmitting = true);
-                            try {
-                              final callSlipPayload = {
-                                "flag_id": item.id,
-                                "user_email": studentEmail,
-                                "student_name": studentName,
-                                "location": locationCtrl.text.trim(),
-                                "appointment_date": selectedDate,
-                                "appointment_time": selectedTime,
-                                "counselor_note": noteCtrl.text.trim(),
-                                "urgency": selectedUrgency,
-                                "issued_at": DateTime.now().toIso8601String(),
-                              };
+                                _tabController.animateTo(1);
 
-                              if (item.id.isNotEmpty) {
-                                await _api.post(
-                                  '/admin/flagged-messages/${item.id}/issue-notice',
-                                  body: callSlipPayload,
-                                  silent: true,
+                                HapticService.success();
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            "Notice dispatched to $studentName! Moved to 'In Action'.",
+                                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF0284C7),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                );
+                              } catch (e) {
+                                setSheetState(() => isSubmitting = false);
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(content: Text("Failed to dispatch notice: $e"), backgroundColor: const Color(0xFFDC2626)),
                                 );
                               }
-
-                              if (ctx.mounted) Navigator.pop(ctx);
-
-                              setState(() {
-                                item.status = 'in_action';
-                                item.callSlip = callSlipPayload;
-                                item.isAcknowledged = false;
-                                _activeIncidents.removeWhere((i) => i.id == item.id);
-                                _inActionIncidents.removeWhere((i) => i.id == item.id);
-                                _inActionIncidents.insert(0, item);
-                              });
-
-                              _tabController.animateTo(1);
-
-                              HapticService.success();
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text("Guidance call-slip dispatched to $studentName! Moved to 'In Action'."),
-                                  backgroundColor: const Color(0xFF0284C7),
-                                ),
-                              );
-                            } catch (e) {
-                              setSheetState(() => isSubmitting = false);
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(content: Text("Failed to dispatch notice: $e"), backgroundColor: const Color(0xFFDC2626)),
-                              );
-                            }
-                          },
-                    icon: isSubmitting
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Icon(Icons.send_rounded, size: 18),
-                    label: Text(
-                      isSubmitting ? "Dispatching Notice..." : "Dispatch Call-Slip & Send Email",
-                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14),
+                            },
+                      icon: isSubmitting
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Icon(Icons.send_rounded, size: 16),
+                      label: Text(
+                        isSubmitting ? "Sending..." : "Send Notice & Email",
+                        style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 1,
+                      ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
-                    ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

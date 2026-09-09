@@ -494,12 +494,13 @@ def issue_guidance_notice(
     Issue an official Urios Guidance Office consultation call-slip / notice to the student.
     Dispatches in-app notification + Brevo transactional email, moving case to 'In Action'.
     """
-    appointment_date = payload.get("appointment_date", "Today")
-    appointment_time = payload.get("appointment_time", "2:00 PM - 3:00 PM")
-    location = payload.get("location", "Urios Guidance & Counseling Center (Main Campus, 2nd Floor)")
+    appointment_date = payload.get("appointment_date") or "Flexible / Walk-in"
+    appointment_time = payload.get("appointment_time") or "Office Hours (8:00 AM - 5:00 PM)"
+    location = payload.get("location") or "Urios Guidance & Counseling Center (Main Campus, 2nd Floor)"
     counselor_name = payload.get("counselor_name") or admin.full_name or "Urios Guidance Counselor"
-    counselor_note = payload.get("counselor_note", "Please visit the Guidance Center for a supportive, confidential 1-on-1 check-in.")
-    urgency = payload.get("urgency", "Priority Guidance Consultation")
+    counselor_note = payload.get("counselor_note") or payload.get("body") or "Please visit the Guidance Center for a supportive, confidential 1-on-1 check-in."
+    urgency = payload.get("urgency") or "Priority Guidance Consultation"
+    subject = payload.get("subject") or f"🏛️ Guidance Office Consultation Call-Slip — {payload.get('student_name', 'Student')}"
     target_user_id_str = payload.get("user_id")
 
     # Locate student user
@@ -521,11 +522,12 @@ def issue_guidance_notice(
         except Exception:
             pass
 
-    student_name = student_user.full_name or "Student" if student_user else "Student"
-    student_email = student_user.email if student_user else payload.get("user_email", "student@urios.edu.ph")
+    student_name = payload.get("student_name") or (student_user.full_name if student_user else "Student")
+    student_email = payload.get("user_email") or (student_user.email if student_user else "student@urios.edu.ph")
 
     call_slip_payload = {
         "flag_id": message_id,
+        "subject": subject,
         "counselor_name": counselor_name,
         "counselor_email": admin.email,
         "counselor_note": counselor_note,
@@ -543,8 +545,8 @@ def issue_guidance_notice(
     if student_user:
         notif = Notification(
             user_id=student_user.id,
-            title="🏛️ Urios Guidance Office: Consultation Notice",
-            body=f"Call-Slip from {counselor_name}: Please visit {location} on {appointment_date} at {appointment_time}. Note: \"{counselor_note}\"",
+            title=subject,
+            body=f"Call-Slip from {counselor_name}: Please visit {location} ({appointment_date} · {appointment_time}). Note: \"{counselor_note}\"",
             type=NotificationType.guidance_notice,
             is_read=False,
             is_acknowledged=False,
@@ -576,6 +578,7 @@ def issue_guidance_notice(
             location=location,
             message=counselor_note,
             urgency=urgency,
+            subject=subject,
         )
 
     return {
