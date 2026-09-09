@@ -335,6 +335,23 @@ async def post_message(
                 except Exception as e:
                     raise HTTPException(status_code=500, detail=f"AI provider error: {str(e)}")
 
+    # ── Update Session Topic to Persona Name if generic ────────────────────────
+    persona_display_names = {
+        "buddy": "Kausap Buddy (Mascot)",
+        "maya": "Ate Maya",
+        "ben": "Kuya Ben",
+        "santos": "Doc Santos",
+        "coach_leo": "Coach Leo",
+        "tita_grace": "Tita Grace",
+        "prof_gabriel": "Prof. Gabriel",
+        "serena_zen": "Serena Zen",
+        "coach_alex": "Coach Alex",
+    }
+    target_topic = persona_display_names.get(payload.persona or "buddy", "Kausap Buddy (Mascot)")
+    if not chat_session.topic or chat_session.topic in ("General", "Kausap AI"):
+        chat_session.topic = target_topic
+        db.add(chat_session)
+
     # ── Save Assistant reply to DB ─────────────────────────────────────────────
     ai_msg = ChatMessage(
         session_id=chat_session.id,
@@ -354,8 +371,30 @@ def delete_session(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_session)],
 ):
-    """Delete a chat session and all its messages."""
+    """Delete a chat session, its messages, and detach token logs."""
     chat_session = _get_own_session(session_id, current_user, db)
+
+    # 1. Delete all child ChatMessages (prevents FK violation on chatsession delete)
+    messages = db.exec(
+        select(ChatMessage).where(ChatMessage.session_id == chat_session.id)
+    ).all()
+    for msg in messages:
+        db.delete(msg)
+
+    # 2. Detach TokenUsageLogs that reference this session (NULL-out session_id)
+    try:
+        token_logs = db.exec(
+            select(TokenUsageLog).where(TokenUsageLog.session_id == chat_session.id)
+        ).all()
+        for log in token_logs:
+            log.session_id = None
+            db.add(log)
+    except Exception:
+        pass  # TokenUsageLog may not exist in all environments
+
+    db.flush()
+
+    # 3. Now safely delete the session itself
     db.delete(chat_session)
     db.commit()
     return None
@@ -367,12 +406,28 @@ class TtsRequest(BaseModel):
     emotion: Optional[str] = None
 
 
+# ── Persona-to-Voice mapping (ElevenLabs Voice IDs) ─────────────────────────
+# Each AI persona has a distinct voice to reinforce their unique personality.
+PERSONA_VOICE_MAP: Dict[str, str] = {
+    "buddy":        "pFZP5JQG7iQjIQuC4Bku",  # Lily — Sweet, youthful companion (mascot)
+    "maya":         "jqcCZkN6Knx8BJ5TBdYR",  # Zara — Warm conversational Filipina Ate
+    "ben":          "TX3LPaxmHKxFdv7VOQHJ",  # Liam — Natural, casual & friendly young Filipino Kuya
+    "santos":       "onwK4e9ZLuTAKqWW03F9",  # Daniel — Deep, calm, empathetic & reassuring clinician
+    "coach_leo":    "ErXwobaYiN019PkySvjV",  # Antoni — Energetic confident mentor
+    "tita_grace":   "ThT5KcBeYPX3keUQqHPh",  # Dorothy — Nurturing warm maternal guide
+    "prof_gabriel": "pNInz6obpgDQGcFmaJgB",  # Adam — Articulate structured academic mentor
+    "serena_zen":   "Xb7hH8MSUJpSbSDYk0k2",  # Alice — Gentle, tranquil whisper
+    "coach_alex":   "cgSgspJ2msm6clMCkdW9",  # Jessica — Dynamic, upbeat motivation voice
+}
+
+
 @router.post("/tts")
 async def generate_tts(
     payload: TtsRequest,
 ):
     """
-    Generate realistic human speech audio via ElevenLabs (Zara Voice: jqcCZkN6Knx8BJ5TBdYR).
+    Generate realistic human speech via ElevenLabs with per-persona voice mapping.
+    Pass 'persona' in the request body to get a distinct voice per AI companion.
     Returns audio metadata and base64 audio data URL for instant client playback.
     """
     import base64
@@ -387,10 +442,12 @@ async def generate_tts(
 
     # 1. Try ElevenLabs Primary (Zara voice / High-fidelity conversational)
     if settings.ELEVENLABS_API_KEY:
-        target_voice = payload.voice or settings.ELEVENLABS_VOICE_ID or "jqcCZkN6Knx8BJ5TBdYR"
-        # Prioritize Zara, then young/warm 20s conversational female voices (Jessica, Lily, Alice)
+        # Resolve voice: explicit payload voice > persona-mapped voice > settings default > fallback
+        persona_voice = PERSONA_VOICE_MAP.get(payload.voice or "") if payload.voice else None
+        target_voice = persona_voice or settings.ELEVENLABS_VOICE_ID or "jqcCZkN6Knx8BJ5TBdYR"
+        # Try primary persona voice first, then fallbacks
         voices_to_try = [
-            (target_voice, "Zara"),
+            (target_voice, "Persona Voice"),
             ("cgSgspJ2msm6clMCkdW9", "Jessica (Young Conversational)"),
             ("pFZP5JQG7iQjIQuC4Bku", "Lily (Sweet Companion)"),
             ("Xb7hH8MSUJpSbSDYk0k2", "Alice (Bright & Gentle)"),

@@ -255,6 +255,15 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       // 1. Check built-in & premium avatar roster
       final found = AvatarData.findById(avatarId);
       if (found != null && mounted) {
+        if (found.isPremium) {
+          final isPro = await _storage.read(key: 'is_pro_member');
+          final tier = await _storage.read(key: 'pro_plan_tier');
+          final bool isSubscribed = (isPro == 'true' || tier == 'annual' || tier == 'monthly');
+          if (!isSubscribed) {
+            setState(() => _currentAvatar = AvatarData.all.first);
+            return;
+          }
+        }
         setState(() => _currentAvatar = found);
         return;
       }
@@ -325,6 +334,44 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     }
   }
 
+  /// Returns the persona key for the current avatar (used for TTS voice mapping).
+  String get _personaKey {
+    final avatarId = _currentAvatar.id.toLowerCase();
+    if (avatarId.contains('maya') || avatarId == 'ate_maya') return 'maya';
+    if (avatarId.contains('ben') || avatarId == 'kuya_ben') return 'ben';
+    if (avatarId.contains('santos') || avatarId == 'doc_santos') return 'santos';
+    if (avatarId.contains('leo') || avatarId == 'coach_leo') return 'coach_leo';
+    if (avatarId.contains('grace') || avatarId == 'tita_grace') return 'tita_grace';
+    if (avatarId.contains('gabriel') || avatarId == 'prof_gabriel') return 'prof_gabriel';
+    if (avatarId.contains('serena') || avatarId.contains('zen') || avatarId == 'serena_zen') return 'serena_zen';
+    if (avatarId.contains('alex') || avatarId == 'coach_alex') return 'coach_alex';
+    return 'buddy';
+  }
+
+  /// Returns a persona-specific English welcome greeting.
+  String get _personaGreeting {
+    switch (_personaKey) {
+      case 'maya':
+        return "Hi! I'm Ate Maya 💙 Your campus ate is here — what's on your heart today?";
+      case 'ben':
+        return "Hey! I'm Kuya Ben 📚 Ready to tackle those academic challenges together. What's stressing you out?";
+      case 'santos':
+        return "Hello! I'm Doc Santos 🌿 Let's find some clarity and calm. What's been weighing on your mind?";
+      case 'coach_leo':
+        return "Hey there! I'm Coach Leo 💪 Let's map out your next win. What goal are we working on today?";
+      case 'tita_grace':
+        return "Hello, anak! I'm Tita Grace 💜 You are safe here. What's been heavy on your heart lately?";
+      case 'prof_gabriel':
+        return "Good day! I'm Prof. Gabriel 📖 Let's build your review strategy. What are you preparing for?";
+      case 'serena_zen':
+        return "Hello 🌙 I'm Serena Zen. Take a gentle breath... Let's release today's tension together. How are you feeling right now?";
+      case 'coach_alex':
+        return "Hey, you showed up — that's already a WIN! 🔥 I'm Coach Alex. What habit or goal are we energizing today?";
+      default:
+        return "Hi! I'm Kausap Buddy ✨ Your 24/7 wellness companion is here. How are you feeling today?";
+    }
+  }
+
   void _toggleTts(String text, {MascotEmotion? emotion}) {
     if (_currentlySpeakingContent == text && VoiceAudioService().isSpeaking) {
       VoiceAudioService().stopSpeaking();
@@ -353,9 +400,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           break;
       }
 
+      // Pass persona key as voice so backend selects the right ElevenLabs voice
       VoiceAudioService().speak(
         text,
         emotion: emotionKey,
+        voice: _personaKey,
         onDone: () {
           if (mounted) setState(() => _currentlySpeakingContent = null);
         },
@@ -402,6 +451,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       final sessionData = {
         'id': _sessionId ?? DateTime.now().millisecondsSinceEpoch.toString(),
         'date': DateTime.now().toIso8601String(),
+        'avatarId': _currentAvatar.id,
         'avatarName': _currentAvatar.name,
         'messages': _messages.map((m) => m.toJson()).toList(),
       };
@@ -432,19 +482,40 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     });
   }
 
-  void _openChatHistory() {
+  Future<void> _openChatHistory() async {
     setState(() => _showMenu = false);
+    // Auto-save current session before navigating to history
+    await _saveSessionToHistory();
+    if (!mounted) return;
+
     Navigator.of(context).push(
       slideRoute(
         ChatHistoryScreen(
-          onResumeSession: (resumedSessionId, pastMessages) {
+          onResumeSession: (resumedSessionId, pastMessages, avatarId, avatarName) {
+            // Match the companion avatar belonging to this past session
+            AvatarModel? matched;
+            if (avatarId != null && avatarId.isNotEmpty) {
+              matched = AvatarData.all.where((a) => a.id == avatarId).firstOrNull;
+            }
+            if (matched == null && avatarName != null && avatarName.isNotEmpty) {
+              final lowerName = avatarName.toLowerCase();
+              matched = AvatarData.all.where((a) {
+                final aLower = a.name.toLowerCase();
+                return aLower == lowerName || aLower.contains(lowerName) || lowerName.contains(aLower);
+              }).firstOrNull;
+            }
+            matched ??= AvatarData.all.first;
+
             setState(() {
+              _currentAvatar = matched!;
               _sessionId = resumedSessionId;
               _messages.clear();
               for (final m in pastMessages) {
                 _messages.add(_ChatMessage.fromJson(m));
               }
+              _mascotEmotion = MascotEmotion.neutral;
             });
+            _storage.write(key: 'selected_chatbot_avatar_id', value: matched.id);
             _scrollToBottom();
           },
         ),
@@ -864,14 +935,19 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   Future<void> _openSelectAvatar() async {
     setState(() => _showMenu = false);
+    // Save current conversation to history before switching companions
+    await _saveSessionToHistory();
+    if (!mounted) return;
     final result = await Navigator.of(context).push<AvatarModel>(
       slideRoute(SelectAvatarScreen(currentAvatar: _currentAvatar))
     );
     if (result != null && mounted) {
       setState(() {
         _currentAvatar = result;
+        // Reset session so each persona starts a fresh, independent conversation
         _sessionId = null;
         _messages.clear();
+        _mascotEmotion = MascotEmotion.neutral;
       });
       await _storage.write(key: 'selected_chatbot_avatar_id', value: result.id);
     }
@@ -1305,7 +1381,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   ),
                 SizedBox(height: isSpacious ? 16 : 12),
                 Text(
-                  'Magandang araw! I\'m ${_currentAvatar.name} ✨',
+                  _currentAvatar.isMascot
+                      ? 'Hi! I\'m ${_currentAvatar.name} ✨'
+                      : 'Hello! I\'m ${_currentAvatar.name} ✨',
                   style: AppTextStyles.heading2.copyWith(
                     fontSize: isSpacious ? 20 : 18,
                     fontWeight: FontWeight.w700,
@@ -1326,62 +1404,17 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
-                // Confidentiality Status & Counselor Sharing Chip
-                Builder(
-                  builder: (ctx) {
-                    final bool isSharedWithCounselor = ctx.watch<AuthProvider>().currentUser?['share_chat_with_counselor'] == true;
-                    return InkWell(
-                      onTap: () {
-                        HapticService.lightTap();
-                        CounselorSharingDialog.show(ctx, onStatusChanged: (_) {
-                          if (mounted) setState(() {});
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSharedWithCounselor ? const Color(0xFFE0F2FE) : Colors.white.withAlpha(220),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSharedWithCounselor ? const Color(0xFF7DD3FC) : const Color(0xFFCBD5E1),
-                          ),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1)),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isSharedWithCounselor ? Icons.shield_rounded : Icons.lock_outline_rounded,
-                              size: 13,
-                              color: isSharedWithCounselor ? const Color(0xFF0284C7) : const Color(0xFF64748B),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              isSharedWithCounselor
-                                  ? 'Counselor Sharing: ON • Shared'
-                                  : '100% Confidential • Hidden from Counselors',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isSharedWithCounselor ? const Color(0xFF0284C7) : const Color(0xFF475569),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              size: 13,
-                              color: isSharedWithCounselor ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                const SizedBox(height: 8),
+                // Persona-specific English welcome subtitle
+                Text(
+                  _personaGreeting,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: isSpacious ? 13 : 12,
+                    color: const Color(0xFF475569),
+                    height: 1.45,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
                 if (isSpacious) ...[
                   const SizedBox(height: 18),

@@ -6,8 +6,15 @@ import '../../utils/date_helper.dart';
 import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 
+typedef ResumeSessionCallback = void Function(
+  String? sessionId,
+  List<Map<String, dynamic>> messages,
+  String? avatarId,
+  String? avatarName,
+);
+
 class ChatHistoryScreen extends StatefulWidget {
-  final Function(String? sessionId, List<Map<String, dynamic>> messages)? onResumeSession;
+  final ResumeSessionCallback? onResumeSession;
 
   const ChatHistoryScreen({super.key, this.onResumeSession});
 
@@ -67,10 +74,14 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
 
             if (parsedMsgs.isNotEmpty) {
               final existingIdx = list.indexWhere((s) => s['id']?.toString() == sId);
+              final String? existingAvatarName = existingIdx >= 0 ? list[existingIdx]['avatarName']?.toString() : null;
+              final String? existingAvatarId = existingIdx >= 0 ? list[existingIdx]['avatarId']?.toString() : null;
+
               final sessionMap = {
                 'id': sId,
                 'date': remoteSession['created_at']?.toString() ?? DateTime.now().toIso8601String(),
-                'avatarName': remoteSession['topic'] ?? 'Kausap AI',
+                'avatarId': existingAvatarId ?? remoteSession['avatar_id'] ?? remoteSession['avatarId'],
+                'avatarName': existingAvatarName ?? remoteSession['topic'] ?? 'Kausap Buddy (Mascot)',
                 'messages': parsedMsgs,
               };
 
@@ -136,36 +147,17 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     }
   }
 
-  Future<void> _clearAllSessions() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Clear Chat History?'),
-        content: const Text('This will delete all past conversations saved on this device.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Clear All', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      for (final s in _sessions) {
-        final sId = s['id']?.toString();
-        if (sId != null && sId.contains('-')) {
-          try {
-            await ApiClient().delete('${ApiConfig.chatSessions}/$sId', silent: true);
-          } catch (_) {}
-        }
-      }
-      await _storage.delete(key: 'chat_history_sessions');
-      if (mounted) {
-        setState(() => _sessions = []);
-      }
-    }
+  String _getAvatarEmoji(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('maya')) return '👩‍🎓';
+    if (lower.contains('ben')) return '👨‍🎓';
+    if (lower.contains('santos') || lower.contains('doc')) return '🩺';
+    if (lower.contains('leo') || lower.contains('coach leo')) return '🏆';
+    if (lower.contains('grace') || lower.contains('tita')) return '💜';
+    if (lower.contains('gabriel') || lower.contains('prof')) return '📖';
+    if (lower.contains('serena') || lower.contains('zen')) return '🌙';
+    if (lower.contains('alex')) return '🔥';
+    return '🤖';
   }
 
   String _formatSessionDate(String? isoDate) {
@@ -193,14 +185,6 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          if (_sessions.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),
-              tooltip: 'Clear History',
-              onPressed: _clearAllSessions,
-            ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -296,20 +280,24 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           leading: CircleAvatar(
                             backgroundColor: AppColors.primary.withAlpha(25),
-                            child: const Text('🤖', style: TextStyle(fontSize: 18)),
+                            child: Text(_getAvatarEmoji(avatarName), style: const TextStyle(fontSize: 18)),
                           ),
                           title: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                avatarName,
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                              Expanded(
+                                child: Text(
+                                  avatarName,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               Text(
                                 dateStr,
                                 style: const TextStyle(
@@ -334,9 +322,19 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                               ),
                             ),
                           ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                            tooltip: 'Delete this chat',
+                            onPressed: () => _deleteSession(idx),
+                          ),
                           onTap: () {
                             if (widget.onResumeSession != null) {
-                              widget.onResumeSession!(session['id']?.toString(), messages);
+                              widget.onResumeSession!(
+                                session['id']?.toString(),
+                                messages,
+                                session['avatarId']?.toString(),
+                                session['avatarName']?.toString(),
+                              );
                               Navigator.pop(context);
                             }
                           },

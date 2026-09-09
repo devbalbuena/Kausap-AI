@@ -22,6 +22,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
   late AvatarModel _selected;
   List<AvatarModel> _customAvatars = [];
   int _selectedFilterIndex = 0; // 0: All, 1: Campus Peers, 2: Premium Specialists, 3: My Custom
+  bool _isProUser = false;
 
   final List<String> _filters = ['All', '🌱 Campus Peers', '👑 Premium Specialists', '✨ My Custom'];
 
@@ -29,7 +30,20 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
   void initState() {
     super.initState();
     _selected = widget.currentAvatar;
+    _checkProStatus();
     _loadCustomAvatars();
+  }
+
+  Future<void> _checkProStatus() async {
+    try {
+      final tier = await _storage.read(key: 'pro_plan_tier');
+      final isPro = await _storage.read(key: 'is_pro_member');
+      if (mounted) {
+        setState(() {
+          _isProUser = (tier == 'annual' || tier == 'monthly' || isPro == 'true');
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadCustomAvatars() async {
@@ -73,7 +87,143 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
     await _storage.write(key: 'custom_avatars_list_json', value: jsonEncode(list));
   }
 
+  void _showPremiumLockedDialog(AvatarModel avatar) {
+    HapticService.mediumTap();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFEF3C7), Color(0xFFFDE68A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: const Color(0xFFF59E0B), width: 2),
+                ),
+                child: const Center(
+                  child: Text('👑', style: TextStyle(fontSize: 34)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Unlock ${avatar.name}',
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFF59E0B)),
+                ),
+                child: Text(
+                  avatar.roleTitle,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFB45309),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                '${avatar.name} is an advanced specialist persona available exclusively to Kausap Premium members.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  color: Color(0xFF475569),
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(context, slideRoute(const UpgradePlanScreen())).then((_) {
+                      _checkProStatus();
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('👑', style: TextStyle(fontSize: 16)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Upgrade to Premium to Unlock',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Maybe Later',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _onSelectAvatar(AvatarModel avatar) async {
+    if (avatar.isPremium && !_isProUser) {
+      _showPremiumLockedDialog(avatar);
+      return;
+    }
     HapticService.lightTap();
     setState(() => _selected = avatar);
     await _storage.write(key: 'selected_chatbot_avatar_id', value: avatar.id);
@@ -126,28 +276,16 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                     ),
                     child: avatar.customConfig != null
                         ? CustomAvatarWidget(config: avatar.customConfig!, size: 84)
-                        : (avatar.isMascot
-                            ? Container(
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
-                                  ),
-                                ),
-                                child: const Center(
-                                  child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 48),
-                                ),
-                              )
-                            : ClipOval(
-                                child: Image.asset(
-                                  avatar.imagePath,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => Container(
-                                    color: const Color(0xFFEEF2FF),
-                                    child: const Icon(Icons.person, color: AppColors.primary, size: 44),
-                                  ),
-                                ),
-                              )),
+                        : ClipOval(
+                            child: Image.asset(
+                              avatar.imagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: const Color(0xFFEEF2FF),
+                                child: const Icon(Icons.person, color: AppColors.primary, size: 44),
+                              ),
+                            ),
+                          ),
                   ),
                   if (avatar.isPremium)
                     Container(
@@ -271,12 +409,26 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    _onSelectAvatar(avatar);
+                    if (avatar.isPremium && !_isProUser) {
+                      _showPremiumLockedDialog(avatar);
+                    } else {
+                      _onSelectAvatar(avatar);
+                    }
                   },
-                  icon: const Icon(Icons.check_circle_rounded, size: 18),
-                  label: Text(_selected.id == avatar.id ? 'Already Selected' : 'Chat with ${avatar.name}'),
+                  icon: Icon(
+                    (avatar.isPremium && !_isProUser) ? Icons.lock_rounded : Icons.check_circle_rounded,
+                    size: 18,
+                  ),
+                  label: Text(
+                    (avatar.isPremium && !_isProUser)
+                        ? 'Unlock ${avatar.name} with Premium'
+                        : (_selected.id == avatar.id ? 'Already Selected' : 'Chat with ${avatar.name}'),
+                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: avatar.isPremium ? const Color(0xFFD97706) : AppColors.primary,
+                    backgroundColor: (avatar.isPremium && !_isProUser)
+                        ? const Color(0xFFD97706)
+                        : (avatar.isPremium ? const Color(0xFFD97706) : AppColors.primary),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -638,6 +790,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                           avatar: avatar,
                           isSelected: _selected.id == avatar.id,
                           isCustom: isCustom,
+                          isLocked: avatar.isPremium && !_isProUser,
                           onTap: () => _onSelectAvatar(avatar),
                           onInfoTap: () => _showAvatarDetailSheet(avatar),
                           onEditTap: isCustom ? () => _openCustomAvatarStudio(editAvatar: avatar) : null,
@@ -656,6 +809,7 @@ class _AvatarCard extends StatelessWidget {
   final AvatarModel avatar;
   final bool isSelected;
   final bool isCustom;
+  final bool isLocked;
   final VoidCallback onTap;
   final VoidCallback onInfoTap;
   final VoidCallback? onEditTap;
@@ -664,6 +818,7 @@ class _AvatarCard extends StatelessWidget {
     required this.avatar,
     required this.isSelected,
     this.isCustom = false,
+    this.isLocked = false,
     required this.onTap,
     required this.onInfoTap,
     this.onEditTap,
@@ -710,8 +865,18 @@ class _AvatarCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(6),
+                        border: isLocked ? Border.all(color: const Color(0xFFF59E0B), width: 1) : null,
                       ),
-                      child: const Text('👑', style: TextStyle(fontSize: 10)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isLocked) ...[
+                            const Icon(Icons.lock_rounded, size: 9, color: Color(0xFFB45309)),
+                            const SizedBox(width: 2),
+                          ],
+                          const Text('👑', style: TextStyle(fontSize: 10)),
+                        ],
+                      ),
                     ),
                   if (isCustom || avatar.customConfig != null)
                     GestureDetector(
@@ -784,28 +949,16 @@ class _AvatarCard extends StatelessWidget {
                     ),
                     child: avatar.customConfig != null
                         ? CustomAvatarWidget(config: avatar.customConfig!, size: 66)
-                        : (avatar.isMascot
-                            ? Container(
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [Color(0xFF0077B6), Color(0xFF00B4D8)],
-                                  ),
-                                ),
-                                child: const Center(
-                                  child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 36),
-                                ),
-                              )
-                            : ClipOval(
-                                child: Image.asset(
-                                  avatar.imagePath,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => Container(
-                                    color: const Color(0xFFEEF2FF),
-                                    child: const Icon(Icons.person, color: AppColors.primary, size: 34),
-                                  ),
-                                ),
-                              )),
+                        : ClipOval(
+                            child: Image.asset(
+                              avatar.imagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: const Color(0xFFEEF2FF),
+                                child: const Icon(Icons.person, color: AppColors.primary, size: 34),
+                              ),
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 8),
                   Text(
