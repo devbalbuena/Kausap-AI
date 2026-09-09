@@ -50,6 +50,7 @@ dependencies:
   confetti: ^0.8.0
   cached_network_image: ^3.4.1
   sentry_flutter: ^8.14.2
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

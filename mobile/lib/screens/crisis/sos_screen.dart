@@ -28,7 +28,7 @@ class _SosScreenState extends State<SosScreen> with SingleTickerProviderStateMix
   int _currentPhaseIndex = 0; // 0: Inhale (4s), 1: Hold (7s), 2: Exhale (8s)
   bool _isBreathingActive = false;
   int _selectedGroundingTab = 0; // 0: 4-7-8 Breathing, 1: 5-4-3-2-1 Grounding
-  bool _isGroundingExpanded = true; // Collapsible toggle
+  bool _isGroundingExpanded = false; // Collapsed by default — opens when tapped
   bool _isSoundMuted = false; // Sound mute/on toggle
 
   final List<(String, int, String, Color)> _breathingPhases = [
