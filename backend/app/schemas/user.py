@@ -97,10 +97,12 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[str] = None
+    phone_number: Optional[str] = None
     birthday: Optional[date] = None
     gender: Optional[GenderEnum] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     nationality: Optional[str] = None
     hobbies: Optional[str] = None
+    department_title: Optional[str] = None
     share_chat_with_counselor: Optional[bool] = None

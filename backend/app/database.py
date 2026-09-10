@@ -64,6 +64,7 @@ def create_db_and_tables():
                 conn.execute(text("ALTER TABLE notification ADD COLUMN IF NOT EXISTS is_acknowledged BOOLEAN DEFAULT FALSE;"))
                 conn.execute(text("ALTER TABLE notification ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMP WITHOUT TIME ZONE;"))
                 conn.execute(text("ALTER TABLE notification ADD COLUMN IF NOT EXISTS call_slip_json TEXT;"))
+                conn.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS department_title VARCHAR;'))
             except Exception:
                 pass
 

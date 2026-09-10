@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
@@ -197,9 +198,31 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
 
   Widget _buildNoticeCard(Map<String, dynamic> notice) {
     final title = notice['title'] ?? 'Guidance Consultation Notice';
-    final body = notice['body'] ?? '';
+    final rawBody = notice['body'] ?? '';
     final isAck = notice['is_acknowledged'] == true;
     final createdAt = notice['created_at'];
+
+    // Parse call slip details
+    Map<String, dynamic> callSlip = {};
+    if (notice['call_slip_json'] != null) {
+      try {
+        final raw = notice['call_slip_json'];
+        if (raw is Map) {
+          callSlip = Map<String, dynamic>.from(raw);
+        } else if (raw is String && raw.trim().isNotEmpty) {
+          callSlip = Map<String, dynamic>.from(jsonDecode(raw));
+        }
+      } catch (_) {}
+    }
+
+    final counselorName = callSlip['counselor_name'] ?? 'Urios Guidance Counselor';
+    final counselorDept = callSlip['counselor_department'] ?? 'Guidance & Counseling Center';
+    final location = callSlip['location'] ?? 'Urios Guidance Center (Main Campus, 2nd Floor)';
+    final apptDate = callSlip['appointment_date'] ?? 'Flexible / Walk-in';
+    final apptTime = callSlip['appointment_time'] ?? 'Office Hours (8:00 AM - 5:00 PM)';
+    final counselorNote = (callSlip['counselor_note'] != null && callSlip['counselor_note'].toString().trim().isNotEmpty)
+        ? callSlip['counselor_note'].toString()
+        : rawBody;
 
     String dateStr = '';
     if (createdAt != null) {
@@ -325,7 +348,7 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Info Box
+                // Info Box with Counselor & Department
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -335,13 +358,73 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
                   ),
                   child: Column(
                     children: [
+                      // Counselor & Department Row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.person_rounded, size: 16, color: Color(0xFF0284C7)),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Counselor: ',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                          Expanded(
+                            child: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                Text(
+                                  counselorName,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0F2FE),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFBAE6FD)),
+                                  ),
+                                  child: Text(
+                                    counselorDept,
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0369A1),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 14, color: Color(0xFFE2E8F0)),
                       _buildInfoRow(
                         Icons.location_on_rounded,
                         'Location',
-                        'Urios Guidance Center (Main Campus, 2nd Floor)',
+                        location,
                         const Color(0xFF0284C7),
                       ),
-                      const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                      const Divider(height: 14, color: Color(0xFFE2E8F0)),
+                      _buildInfoRow(
+                        Icons.calendar_today_rounded,
+                        'Date & Time',
+                        '$apptDate • $apptTime',
+                        const Color(0xFF6366F1),
+                      ),
+                      const Divider(height: 14, color: Color(0xFFE2E8F0)),
                       _buildInfoRow(
                         Icons.access_time_filled_rounded,
                         'Notice Issued',
@@ -365,7 +448,7 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  body,
+                  counselorNote,
                   style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13,

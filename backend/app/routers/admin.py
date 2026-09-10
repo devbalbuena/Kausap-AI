@@ -24,7 +24,11 @@ from app.schemas.audit import AuditLogRead
 from app.schemas.mood import MoodEntryRead
 import json
 from app.models.notification import Notification, NotificationType
-from app.services.email_service import send_guidance_call_slip_email
+from app.services.email_service import (
+    send_guidance_call_slip_email,
+    send_counselor_verification_otp_email,
+    send_counselor_welcome_credentials_email,
+)
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -498,6 +502,7 @@ def issue_guidance_notice(
     appointment_time = payload.get("appointment_time") or "Office Hours (8:00 AM - 5:00 PM)"
     location = payload.get("location") or "Urios Guidance & Counseling Center (Main Campus, 2nd Floor)"
     counselor_name = payload.get("counselor_name") or admin.full_name or "Urios Guidance Counselor"
+    counselor_department = payload.get("counselor_department") or admin.department_title or "Guidance Counselor"
     counselor_note = payload.get("counselor_note") or payload.get("body") or "Please visit the Guidance Center for a supportive, confidential 1-on-1 check-in."
     urgency = payload.get("urgency") or "Priority Guidance Consultation"
     subject = payload.get("subject") or f"🏛️ Guidance Office Consultation Call-Slip — {payload.get('student_name', 'Student')}"
@@ -529,6 +534,7 @@ def issue_guidance_notice(
         "flag_id": message_id,
         "subject": subject,
         "counselor_name": counselor_name,
+        "counselor_department": counselor_department,
         "counselor_email": admin.email,
         "counselor_note": counselor_note,
         "appointment_date": appointment_date,
@@ -546,7 +552,7 @@ def issue_guidance_notice(
         notif = Notification(
             user_id=student_user.id,
             title=subject,
-            body=f"Call-Slip from {counselor_name}: Please visit {location} ({appointment_date} · {appointment_time}). Note: \"{counselor_note}\"",
+            body=f"Call-Slip from {counselor_name} ({counselor_department}): Please visit {location} ({appointment_date} · {appointment_time}). Note: \"{counselor_note}\"",
             type=NotificationType.guidance_notice,
             is_read=False,
             is_acknowledged=False,
@@ -573,6 +579,7 @@ def issue_guidance_notice(
             to_email=student_email,
             to_name=student_name,
             counselor_name=counselor_name,
+            counselor_department=counselor_department,
             appointment_date=appointment_date,
             appointment_time=appointment_time,
             location=location,
@@ -755,6 +762,13 @@ def send_counselor_verification_code(
     code = "".join(random.choices(string.digits, k=6))
     counselor_verification_cache[email_clean] = code
 
+    counselor_name = f"{payload.first_name} {payload.last_name}".strip() if payload.first_name else "Counselor"
+    send_counselor_verification_otp_email(
+        to_email=email_clean,
+        to_name=counselor_name,
+        otp_code=code,
+    )
+
     print(f"--- FSUU COUNSELOR VERIFICATION --- Sent OTP {code} to {email_clean}")
 
     return {
@@ -817,6 +831,14 @@ def create_counselor(
     session.add(new_counselor)
     session.commit()
     session.refresh(new_counselor)
+
+    # Dispatch official welcome & credentials email via Brevo
+    send_counselor_welcome_credentials_email(
+        to_email=new_counselor.email,
+        to_name=new_counselor.full_name,
+        temporary_password=payload.password,
+        department_title=new_counselor.department_title or "Guidance Counselor",
+    )
 
     _write_audit(
         session,

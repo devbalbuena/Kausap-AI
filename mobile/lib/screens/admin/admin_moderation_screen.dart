@@ -660,10 +660,18 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                           : () async {
                               setSheetState(() => isSubmitting = true);
                               try {
+                                final authUser = context.read<AuthProvider>().currentUser;
+                                final counselorFullName = "${authUser?['first_name'] ?? ''} ${authUser?['last_name'] ?? ''}".trim().isEmpty
+                                    ? 'Guidance Counselor'
+                                    : "${authUser?['first_name'] ?? ''} ${authUser?['last_name'] ?? ''}".trim();
+                                final counselorDept = authUser?['department_title'] ?? 'Guidance Counselor';
+
                                 final callSlipPayload = {
                                   "flag_id": item.id,
                                   "user_email": studentEmail,
                                   "student_name": studentName,
+                                  "counselor_name": counselorFullName,
+                                  "counselor_department": counselorDept,
                                   "subject": subjectCtrl.text.trim(),
                                   "location": locationCtrl.text.trim(),
                                   "appointment_date": selectedDate,

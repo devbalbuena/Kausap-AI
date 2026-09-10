@@ -14,6 +14,7 @@ import '../settings/accessibility_settings_screen.dart';
 import '../settings/appearance_settings_screen.dart';
 import '../settings/language_settings_screen.dart';
 import '../settings/notification_settings_screen.dart';
+import '../settings/change_password_screen.dart';
 import '../settings/security_screen.dart';
 import '../settings/privacy_screen.dart';
 import '../settings/about_screen.dart';
@@ -188,6 +189,17 @@ class _CounselorProfileScreenState extends State<CounselorProfileScreen> {
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const NotificationSettingsScreen()));
+                    },
+                  ),
+                  _buildDivider(),
+                  _buildListItem(
+                    icon: Icons.key_rounded,
+                    iconColor: const Color(0xFF0284C7),
+                    title: 'Change Login Password',
+                    subtitle: 'Update your temporary or account password',
+                    onTap: () {
+                      HapticService.lightTap();
+                      Navigator.push(context, slideRoute(const ChangePasswordScreen()));
                     },
                   ),
                   _buildDivider(),

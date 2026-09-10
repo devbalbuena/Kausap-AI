@@ -22,6 +22,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;
   late final TextEditingController _emailController;
+  late final TextEditingController _departmentTitleController;
+  late final TextEditingController _phoneController;
+  bool _isStaff = false;
 
   File? _imageFile;
   String? _avatarUrl;
@@ -57,9 +60,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     final user = context.read<AuthProvider>().currentUser;
+    final role = (user?['role'] ?? 'client').toString().toLowerCase();
+    _isStaff = role == 'counselor' || role == 'admin' || role == 'superadmin';
+
     _firstNameController = TextEditingController(text: user?['first_name'] ?? '');
     _lastNameController = TextEditingController(text: user?['last_name'] ?? '');
     _emailController = TextEditingController(text: user?['email'] ?? '');
+    _departmentTitleController = TextEditingController(text: user?['department_title'] ?? (role == 'counselor' ? 'Guidance Counselor' : ''));
+    _phoneController = TextEditingController(text: user?['phone_number'] ?? '');
 
     try {
       _birthday = DateTime.parse(user?['birthday'] ?? '2000-01-01');
@@ -80,6 +88,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
+    _departmentTitleController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -315,7 +325,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final firstName = _firstNameController.text.trim();
       final lastName = _lastNameController.text.trim();
 
-      await authProvider.updateProfile({
+      final payload = <String, dynamic>{
         'first_name': firstName,
         'last_name': lastName,
         'birthday': DateFormat('yyyy-MM-dd').format(_birthday),
@@ -323,7 +333,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'nationality': _nationality,
         'hobbies': _selectedHobbies.join(', '),
         'avatar_url': avatarValue,
-      });
+      };
+
+      if (_isStaff) {
+        payload['department_title'] = _departmentTitleController.text.trim();
+        payload['phone_number'] = _phoneController.text.trim();
+      }
+
+      await authProvider.updateProfile(payload);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -520,6 +537,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 ),
                               ),
                               const SizedBox(height: 16),
+
+                              if (_isStaff) ...[
+                                // Department / Title
+                                _buildFieldLabel('Department / Professional Title'),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _departmentTitleController,
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500),
+                                  decoration: _buildInputDecoration(
+                                    hint: 'e.g. Guidance Counselor III, Psychometrician',
+                                    suffixIcon: Icons.badge_outlined,
+                                  ),
+                                  validator: (val) => (_isStaff && (val == null || val.trim().isEmpty)) ? 'Please enter department or title' : null,
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Phone Number
+                                _buildFieldLabel('Contact Phone Number'),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _phoneController,
+                                  keyboardType: TextInputType.phone,
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500),
+                                  decoration: _buildInputDecoration(
+                                    hint: 'e.g. 09123456789',
+                                    suffixIcon: Icons.phone_outlined,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
 
                               // Birthday Picker
                               _buildFieldLabel('Birthday'),

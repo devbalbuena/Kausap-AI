@@ -607,7 +607,7 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                                   children: [
                                     Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 24),
                                     SizedBox(width: 8),
-                                    Text("Counselor Verified!", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+                                    Text("Counselor Provisioned!", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
                                   ],
                                 ),
                                 content: Column(
@@ -615,6 +615,36 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text("Successfully verified and provisioned staff account for $fn $ln.", style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF0F172A))),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(6)),
+                                      child: Text(
+                                        "Department: ${dept.isNotEmpty ? dept : 'Guidance Counselor'}",
+                                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF0369A1)),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF0FDF4),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.mark_email_read_rounded, color: Color(0xFF16A34A), size: 18),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              "Welcome & login credentials email dispatched to $email.",
+                                              style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF166534)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                     const SizedBox(height: 12),
                                     Container(
                                       padding: const EdgeInsets.all(12),
@@ -633,7 +663,7 @@ class _AdminCounselorsScreenState extends State<AdminCounselorsScreen> {
                                 actions: [
                                   OutlinedButton.icon(
                                     onPressed: () {
-                                      Clipboard.setData(ClipboardData(text: "Kausap AI Counselor Account\nEmail: $email\nTemporary Password: $pw"));
+                                      Clipboard.setData(ClipboardData(text: "Kausap AI Counselor Account\nEmail: $email\nTemporary Password: $pw\nDepartment: ${dept.isNotEmpty ? dept : 'Guidance Counselor'}"));
                                       HapticService.lightTap();
                                       ScaffoldMessenger.of(this.context).showSnackBar(
                                         const SnackBar(content: Text("Credentials copied to clipboard! 📋"), backgroundColor: Color(0xFF0284C7)),

@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_client.dart';
 import '../../services/clinical_audit_service.dart';
 import '../../utils/haptic_service.dart';
+import '../../providers/auth_provider.dart';
 
 class CounselorTriageTab extends StatefulWidget {
   const CounselorTriageTab({super.key});
@@ -678,11 +680,19 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                           : () async {
                               setSheetState(() => isSubmitting = true);
                               try {
+                                final authUser = context.read<AuthProvider>().currentUser;
+                                final counselorFullName = "${authUser?['first_name'] ?? ''} ${authUser?['last_name'] ?? ''}".trim().isEmpty
+                                    ? 'Guidance Counselor'
+                                    : "${authUser?['first_name'] ?? ''} ${authUser?['last_name'] ?? ''}".trim();
+                                final counselorDept = authUser?['department_title'] ?? 'Guidance Counselor';
+
                                 final callSlipPayload = {
                                   "flag_id": flagId,
                                   "user_id": studentId,
                                   "user_email": studentEmail,
                                   "student_name": studentName,
+                                  "counselor_name": counselorFullName,
+                                  "counselor_department": counselorDept,
                                   "subject": subjectCtrl.text.trim(),
                                   "location": locationCtrl.text.trim(),
                                   "appointment_date": selectedDate,
