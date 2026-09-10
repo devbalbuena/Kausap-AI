@@ -7,16 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlmodel import Session, select, func
 from app.database import get_session
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.notification import Notification, NotificationType
+from app.models.mood import MoodEntry
+from app.models.chat import ChatMessage, ChatSession
+from app.models.audit_log import AuditLog
 from app.schemas.notification import NotificationRead
 from app.core.deps import get_current_user
 from app.core.config import settings
-
-from app.models.mood import MoodEntry
-
-from app.models.user import User, UserRole
-from app.models.chat import ChatMessage, ChatSession
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
