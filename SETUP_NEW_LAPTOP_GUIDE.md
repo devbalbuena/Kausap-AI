@@ -1,133 +1,193 @@
-# 🚀 Kausap AI — New Laptop Setup & Installation Guide (Method 1)
+# 🚀 Kausap AI — New Laptop Setup & Dependency Installation Guide
 
-This guide walks you through setting up and running **Kausap AI** on your new laptop in just a few simple steps.
-
----
-
-## 📋 Table of Contents
-1. [Step 1: Install Required Software](#-step-1-install-required-software)
-2. [Step 2: Clone the Project (Method 1)](#-step-2-clone-the-project-method-1)
-3. [Step 3: Copy the Secret `.env` File](#-step-3-copy-the-secret-env-file)
-4. [Step 4: Install Dependencies & Verify](#-step-4-install-dependencies--verify)
-5. [Step 5: Starting a New Chat in Antigravity IDE](#-step-5-starting-a-new-chat-in-antigravity-ide)
-6. [🔑 Test Accounts & Credentials](#-test-accounts--credentials)
+This comprehensive guide lists all software, SDKs, dependencies, environment keys, and step-by-step commands needed to set up **Kausap AI** on a new laptop.
 
 ---
 
-## 🛠️ Step 1: Install Required Software
+## 📋 Quick Summary Checklist
 
-Install the following tools on the new laptop:
+| Tool / Dependency | Version Recommendation | Purpose |
+| :--- | :--- | :--- |
+| **Git for Windows** | Latest (2.40+) | Version control & repository cloning |
+| **Flutter SDK** | Stable (3.24.x – 3.47.x) | Mobile & Web application framework |
+| **Dart SDK** | Bundled with Flutter (3.5+) | App language runtime |
+| **Python** | 3.10, 3.11, 3.12, or 3.13 | Backend API runtime (`FastAPI`, `SQLModel`) |
+| **Google Chrome** | Latest | Immediate web debugging (`flutter run -d chrome`) |
+| **Android Studio** *(Optional for APK)* | Latest Ladybug / Iguana | Android SDK, Command-line Tools, Emulator |
+| **Antigravity IDE / VS Code** | Latest | AI pair programming & code editing |
+
+---
+
+## 🛠️ Step 1: Install Required Software on New Laptop
 
 ### 1. **Git for Windows**
-* **Download:** [https://git-scm.com/download/win](https://git-scm.com/download/win)
-* **Installation:** Run installer and keep the default settings.
+- **Download:** [https://git-scm.com/download/win](https://git-scm.com/download/win)
+- **Install:** Run installer with default options.
+- **Verify in PowerShell:**
+  ```powershell
+  git --version
+  ```
+
+---
 
 ### 2. **Flutter SDK**
-* **Download:** [https://docs.flutter.dev/get-started/install/windows](https://docs.flutter.dev/get-started/install/windows)
-* **Setup:**
-  1. Extract the zip file to `C:\src\flutter` (do NOT extract inside `Program Files`).
-  2. Add `C:\src\flutter\bin` to your Windows **Environment Variables (PATH)**.
-  3. Open a new PowerShell / Command Prompt and verify:
-     ```bash
+- **Download:** [https://docs.flutter.dev/get-started/install/windows](https://docs.flutter.dev/get-started/install/windows)
+- **Setup:**
+  1. Extract the zip file to `C:\src\flutter` (do NOT install in `C:\Program Files`).
+  2. Add `C:\src\flutter\bin` to your Windows **Environment Variables (`PATH`)**.
+  3. Open a new PowerShell window and run:
+     ```powershell
      flutter doctor
      ```
 
-### 3. **Android Studio (or Physical Android Phone)**
-* **Download:** [https://developer.android.com/studio](https://developer.android.com/studio)
-* **Setup:** Open Android Studio → **SDK Manager** → **SDK Tools** → check **"Android SDK Command-line Tools"** and click **Apply**.
-* *(Alternative)*: You can test directly on your physical Android phone by enabling **Developer Options → USB Debugging**.
+---
 
-### 4. **Python 3.10 or 3.11** *(Optional — for local backend)*
-* **Download:** [https://www.python.org/downloads/](https://www.python.org/downloads/)
-* ⚠️ **Important:** During installation, make sure to check the box **"Add Python to PATH"**.
+### 3. **Python (3.10 – 3.13)**
+- **Download:** [https://www.python.org/downloads/](https://www.python.org/downloads/)
+- ⚠️ **CRITICAL:** Check the box **"Add python.exe to PATH"** on the first installation screen!
+- **Verify in PowerShell:**
+  ```powershell
+  python --version
+  ```
 
 ---
 
-## 📥 Step 2: Clone the Project (Method 1)
+### 4. **Google Chrome**
+- **Download:** [https://www.google.com/chrome/](https://www.google.com/chrome/)
+- Used for instant, zero-setup Flutter web testing (`flutter run -d chrome`).
 
-1. Open PowerShell or Command Prompt on the new laptop.
-2. Choose where you want to store the project (e.g., `C:\` or `C:\Users\<Name>\Documents`):
-   ```bash
+---
+
+### 5. **Android Studio** *(Only needed if building Android APK / running Android Emulator)*
+- **Download:** [https://developer.android.com/studio](https://developer.android.com/studio)
+- **Setup:** Open Android Studio → **SDK Manager** → **SDK Tools** → check:
+  - ✅ **Android SDK Build-Tools**
+  - ✅ **Android SDK Command-line Tools (latest)**
+  - ✅ **Android SDK Platform-Tools**
+- Run `flutter doctor --android-licenses` in terminal and accept prompts.
+
+---
+
+## 📥 Step 2: Clone the Project from GitHub
+
+1. Open PowerShell on the new laptop.
+2. Navigate to your desired workspace folder (e.g. `C:\`):
+   ```powershell
    cd C:\
    git clone https://github.com/devbalbuena/Kausap-AI.git
-   ```
-3. Navigate into the cloned folder:
-   ```bash
    cd Kausap-AI
    ```
 
 ---
 
-## 🔐 Step 3: Copy the Secret `.env` File
+## 🔐 Step 3: Copy Your Secret `backend/.env` File
 
-For security, API keys and database credentials are not stored on GitHub. You need to copy your `backend/.env` file from the old laptop:
+API keys and database connection strings are never committed to GitHub for security.
 
-1. On your **old laptop**, open the folder: `c:\kausap-ai\backend\`
-2. Copy the file named `.env` to a USB flash drive (or send the text to yourself on Messenger/Discord).
+1. On your **old laptop**, open: `C:\Kausap-AI\backend\.env`
+2. Copy the `.env` file (via USB flash drive, Google Drive, or secure message).
 3. On your **new laptop**, paste it into:
    ```text
-   Kausap-AI\backend\.env
+   C:\Kausap-AI\backend\.env
    ```
 
----
+### 📄 `.env` File Reference Format:
+```dotenv
+# Database (Neon Serverless Postgres)
+DATABASE_URL=postgresql://user:password@ep-xxxx.neon.tech/neondb?sslmode=require
 
-## 📦 Step 4: Install Dependencies & Verify
+# Security / JWT
+SECRET_KEY=your-jwt-secret-key
 
-### 📱 1. Mobile App Setup:
-1. In PowerShell, navigate to the `mobile` folder:
-   ```bash
-   cd mobile
-   flutter pub get
-   ```
-2. Run analyzer to confirm everything is 100% clean:
-   ```bash
-   dart analyze lib
-   ```
-   *(It should say `No issues found!`)*
+# AI Provider
+OPENAI_API_KEY=sk-proj-your-openai-api-key
 
-3. Run the app on an emulator or connected phone:
-   ```bash
-   flutter run
-   ```
+# Fallback AI Providers (Optional)
+GEMINI_API_KEY=AIzaSy...
+MISTRAL_API_KEY=...
 
-> 💡 **Note:** The mobile app is already connected to your live cloud backend on Render (`https://kausap-ai.onrender.com`) and cloud Neon Postgres DB, so you don't even need to run a local backend to test!
+# Voice Synthesis (Optional)
+ELEVENLABS_API_KEY=sk_...
+ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
 
----
-
-### 🐍 2. Local Backend Setup *(Optional)*:
-If you want to run the FastAPI backend locally:
-```bash
-cd backend
-python -m venv venv
-.\venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+# Brevo Transactional Email (For 6-Digit OTP, Counselor Provisioning & Call-Slips)
+BREVO_API_KEY=xkeysib-your-brevo-api-key
+BREVO_SENDER_EMAIL=your-verified-brevo-email@gmail.com
+BREVO_SENDER_NAME=Kausap AI - Guidance & Counseling Office
 ```
 
 ---
 
-## 💬 Step 5: Starting a New Chat in Antigravity IDE
+## 📦 Step 4: Install Dependencies
 
-1. Open **Antigravity IDE** on your new laptop.
-2. Click **File → Open Folder** and select `C:\Kausap-AI` (or wherever you cloned it).
-3. Start a new chat with Antigravity! You can simply say:
+### 🐍 1. Setup Backend (FastAPI + SQLModel)
+Open PowerShell in the project root:
+```powershell
+cd C:\Kausap-AI\backend
 
-> *"Hi! I just cloned this project to my new laptop. Please review `walkthrough.md` and let me know where we stand."*
+# 1. Create Python virtual environment
+python -m venv venv
 
-The AI assistant will automatically read the full project history, previous decisions, and architecture from `walkthrough.md` and `implementation_plan.md` and continue assisting you seamlessly!
+# 2. Activate virtual environment
+.\venv\Scripts\activate
+
+# 3. Install all pip dependencies
+pip install -r requirements.txt
+
+# 4. Verify tests pass (0 errors)
+python test_all_phases.py
+```
+
+### 📱 2. Setup Mobile / Frontend (Flutter)
+Open PowerShell in the project root:
+```powershell
+cd C:\Kausap-AI\mobile
+
+# 1. Download Flutter packages
+flutter pub get
+
+# 2. Verify code analysis is 100% clean
+flutter analyze
+```
 
 ---
 
-## 🔑 Test Accounts & Credentials
+## 🚀 Step 5: Running the System
 
-| Role | Email | Password | What Happens on Login |
-|---|---|---|---|
-| 🛡️ **Administrator** | `admin@kausap.ai` | `Admin@123456` | Automatically opens the **Admin Control Center** (Student Directory, Crisis Moderation, RA 11036 Compliance). |
-| 👤 **Student / User** | `balbuenadexter2@gmail.com` | `Password@123` | Automatically opens the **Student Wellness App** (Home, Activity Hub, Kausap AI Chat, 📊 Insights & Screeners Hub). |
+### Terminal 1 — Start the Backend Server:
+```powershell
+cd C:\Kausap-AI\backend
+.\venv\Scripts\activate
+uvicorn app.main:app --reload --port 8000
+```
+- API Swagger Docs: `http://localhost:8000/docs`
+
+### Terminal 2 — Start the Flutter App:
+```powershell
+cd C:\Kausap-AI\mobile
+
+# Run in Chrome browser (Fastest for testing):
+flutter run -d chrome
+
+# Or run on connected Android phone / emulator:
+flutter run
+```
 
 ---
 
-## 📲 Direct APK Download (Beta 15)
-If you just want to install the latest build on your Android phone right now:
-* 🔗 **Latest Release Page:** [https://github.com/devbalbuena/Kausap-AI/releases/tag/beta-v15](https://github.com/devbalbuena/Kausap-AI/releases/tag/beta-v15)
-* 📥 **Direct APK Download:** [Download arm64-v8a APK](https://github.com/devbalbuena/Kausap-AI/releases/download/beta-v15/KausapAI-beta-build15-2026-08-19-arm64-v8a.apk)
+## 🔑 Default Test Accounts & Roles
+
+| Role | Email | Password | Access / Destination |
+| :--- | :--- | :--- | :--- |
+| 🛡️ **Super Admin** | `admin@kausap.ai` | `Admin@123456` | **Admin Control Center** (Student Directory, Provision Counselors, Audit Logs, Telemetry). |
+| 🩺 **Counselor** | *(Created via Admin)* | *(Sent via Brevo Email)* | **Counselor Clinical Portal** (Active Triage, In Action Call-Slips, Resolved Logs). |
+| 👤 **Student / Client** | `balbuenadexter2@gmail.com` | `Password@123` | **Student App** (Home, SOS Hotline, Kausap Chat, Mood Check-in, Guidance Mailbox). |
+
+---
+
+## 💡 Quick Tips for Antigravity IDE on New Laptop
+1. Download & open **Antigravity IDE**.
+2. Go to **File → Open Folder** and select `C:\Kausap-AI`.
+3. In your first chat, you can say:
+   > *"Hi! I just cloned the repository to my new laptop. Please check where we left off."*
+   Antigravity will automatically inspect the codebase and continue seamlessly!
