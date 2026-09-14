@@ -40,6 +40,8 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
   List<Map<String, dynamic>> _moodEntries = [];
   bool _isExporting = false;
   bool _isMonthlyView = false;
+  // 'weekly' | 'monthly' | 'all' — controls Emotion Breakdown + Top Factors
+  String _breakdownTimeframe = 'weekly';
 
   @override
   void initState() {
@@ -351,24 +353,46 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     return dailyAverages;
   }
 
-  // Calculate dynamic emotion breakdown from actual mood entries
-  Map<String, int> _computeEmotionCounts() {
-    final Map<String, int> counts = {};
+  // Returns a filtered subset of _moodEntries based on the breakdown timeframe
+  List<Map<String, dynamic>> _getFilteredEntries(String timeframe) {
+    if (timeframe == 'all') return _moodEntries;
+    final now = DateTime.now();
+    if (timeframe == 'weekly') {
+      // Current week: Monday 00:00 to now
+      final monday = DateTime(now.year, now.month, now.day)
+          .subtract(Duration(days: now.weekday - 1));
+      return _moodEntries.where((e) {
+        final dt = _parseDateLocal(e['created_at']);
+        return dt != null && !dt.isBefore(monday);
+      }).toList();
+    } else {
+      // 'monthly': current calendar month
+      final monthStart = DateTime(now.year, now.month, 1);
+      return _moodEntries.where((e) {
+        final dt = _parseDateLocal(e['created_at']);
+        return dt != null && !dt.isBefore(monthStart);
+      }).toList();
+    }
+  }
 
-    for (final entry in _moodEntries) {
+  // Calculate dynamic emotion breakdown from actual mood entries, filtered by timeframe
+  Map<String, int> _computeEmotionCounts({String? timeframe}) {
+    final entries = _getFilteredEntries(timeframe ?? _breakdownTimeframe);
+    final Map<String, int> counts = {};
+    for (final entry in entries) {
       final feelings = _extractEmotionsList(entry['feelings'] ?? entry['emotions']);
       for (final f in feelings) {
         counts[f] = (counts[f] ?? 0) + 1;
       }
     }
-
     return counts;
   }
 
-  // Calculate dynamic stressors & campus triggers strictly from actual entries
-  Map<String, int> _computeTriggerCounts() {
+  // Calculate dynamic stressors & campus triggers strictly from actual entries, filtered by timeframe
+  Map<String, int> _computeTriggerCounts({String? timeframe}) {
+    final entries = _getFilteredEntries(timeframe ?? _breakdownTimeframe);
     final Map<String, int> counts = {};
-    for (final entry in _moodEntries) {
+    for (final entry in entries) {
       final triggers = _extractEmotionsList(entry['emotions'] ?? entry['feelings'] ?? entry['reasons'] ?? entry['triggers'] ?? entry['context_tags']);
       for (final t in triggers) {
         counts[t] = (counts[t] ?? 0) + 1;
@@ -1126,6 +1150,8 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
 
   // ── Tab 2: Trends & Analytics (Unified Real-Time Dynamic Mood & Health Data) ──
   Widget _buildTrendsTab() {
+    // Keep breakdownTimeframe in sync with the top Weekly/Monthly toggle
+    // but allow independent override via the Emotion Breakdown card's own toggle
     final emotionCounts = _computeEmotionCounts();
     final totalEmotions = emotionCounts.values.fold(0, (a, b) => a + b);
     final avgScore = _isMonthlyView ? _computeAverageMoodScore() : _computeThisWeekAverage();
@@ -1136,6 +1162,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     final monthlySpots = _computeMonthlySpots();
     final stabilityStatus = _computeStabilityStatus();
     final dominantColor = _getEmotionColor(topEmotion);
+    final filteredForBreakdown = _getFilteredEntries(_breakdownTimeframe);
 
     return RefreshIndicator(
       color: AppColors.primary,
@@ -1143,6 +1170,73 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
+
+          // ── Zero-State Banner (shown only when no mood data exists) ─────────
+          if (_moodEntries.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFEFF6FF), Color(0xFFE0F2FE)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFBAE6FD)),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4)),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Text('📊', style: TextStyle(fontSize: 40)),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'No Mood Data Yet',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Your Emotion Breakdown, Mood Trajectory, and\nTop Factors will appear here once you log your\nfirst mood check-in on the Home tab.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      color: Color(0xFF64748B),
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // Switch to Home tab (index 0)
+                      if (context.mounted) {
+                        DefaultTabController.of(context).animateTo(0);
+                      }
+                    },
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                    label: const Text(
+                      'Log My First Mood',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // ── 1. Top Key Stat Metrics Cards ──────────────────────────────────
           Row(
             children: [
@@ -1223,7 +1317,11 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                       child: Row(
                         children: [
                           GestureDetector(
-                            onTap: () => setState(() => _isMonthlyView = false),
+                            onTap: () => setState(() {
+                              _isMonthlyView = false;
+                              // Sync top toggle with breakdown timeframe (weekly)
+                              _breakdownTimeframe = 'weekly';
+                            }),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
@@ -1245,7 +1343,13 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => setState(() => _isMonthlyView = true),
+                            onTap: () => setState(() {
+                              _isMonthlyView = true;
+                              // Sync top toggle with breakdown timeframe
+                              if (_breakdownTimeframe == 'weekly') {
+                                _breakdownTimeframe = 'monthly';
+                              }
+                            }),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
@@ -1550,15 +1654,44 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  totalEmotions > 0
-                      ? "All-time breakdown of recorded feelings ($totalEmotions data point${totalEmotions == 1 ? '' : 's'})"
-                      : "All-time breakdown of recorded feelings (0 tags recorded)",
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        () {
+                          final label = _breakdownTimeframe == 'weekly'
+                              ? 'This week'
+                              : (_breakdownTimeframe == 'monthly' ? 'This month' : 'All-time');
+                          return totalEmotions > 0
+                              ? "$label · $totalEmotions data point${totalEmotions == 1 ? '' : 's'}"
+                              : "$label · no tags recorded yet";
+                        }(),
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // ── Independent Emotion Breakdown Timeframe Toggle ──
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildBreakdownToggleBtn('W', 'weekly'),
+                          _buildBreakdownToggleBtn('M', 'monthly'),
+                          _buildBreakdownToggleBtn('All', 'all'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 
-                if (_moodEntries.isEmpty || totalEmotions == 0)
+                if (filteredForBreakdown.isEmpty || totalEmotions == 0)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                     decoration: BoxDecoration(
@@ -1578,10 +1711,14 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           child: const Center(child: Text("🏷️", style: TextStyle(fontSize: 18))),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            "No factor tags recorded yet. When checking in on the Home tab, select what influences your day to see your visual breakdown here!",
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.4),
+                            _breakdownTimeframe == 'weekly'
+                                ? 'No factor tags recorded this week yet. Check in today to start your weekly breakdown!'
+                                : (_breakdownTimeframe == 'monthly'
+                                    ? 'No factor tags recorded this month. Log your mood to start your monthly breakdown!'
+                                    : 'No factor tags recorded yet. Select what influences your day when checking in on the Home tab to see your visual breakdown here!'),
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.4),
                           ),
                         ),
                       ],
@@ -1655,6 +1792,27 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 const SizedBox(height: 14),
                 if (triggerCounts.isNotEmpty)
                   _buildInfluencingFactorsCloud(triggerCounts)
+                else if (_breakdownTimeframe == 'weekly' && filteredForBreakdown.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Text('🌱', style: TextStyle(fontSize: 18)),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'No mood factors tagged this week yet. Tap a mood on the Home tab and select your influencing factors to track them here!',
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF166534), height: 1.35),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 else
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -1674,6 +1832,19 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                if (triggerCounts.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      _breakdownTimeframe == 'weekly'
+                          ? 'Showing this week\'s factors (${_getFilteredEntries('weekly').length} check-ins)'
+                          : (_breakdownTimeframe == 'monthly'
+                              ? 'Showing this month\'s factors (${_getFilteredEntries('monthly').length} check-ins)'
+                              : 'Showing all-time factors (${_moodEntries.length} check-ins)'),
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF94A3B8)),
                     ),
                   ),
               ],
@@ -2517,6 +2688,12 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       Color(0xFF8B5CF6),
       Color(0xFFEF4444),
       Color(0xFF06B6D4),
+      Color(0xFFEC4899),
+      Color(0xFF84CC16),
+      Color(0xFFF97316),
+      Color(0xFF14B8A6),
+      Color(0xFFA855F7),
+      Color(0xFF3B82F6),
     ];
     int colorIdx = 0;
     final sections = <PieChartSectionData>[];
@@ -2548,11 +2725,17 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       Color(0xFF8B5CF6),
       Color(0xFFEF4444),
       Color(0xFF06B6D4),
+      Color(0xFFEC4899),
+      Color(0xFF84CC16),
+      Color(0xFFF97316),
+      Color(0xFF14B8A6),
+      Color(0xFFA855F7),
+      Color(0xFF3B82F6),
     ];
     int colorIdx = 0;
     final list = <Widget>[];
 
-    counts.entries.take(5).forEach((entry) {
+    counts.entries.take(6).forEach((entry) {
       final pct = total > 0 ? ((entry.value / total) * 100).round() : 0;
       final color = colors[colorIdx % colors.length];
       colorIdx++;
@@ -2577,6 +2760,46 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           ),
           Text(pct, style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
         ],
+      ),
+    );
+  }
+
+  /// Helper: compact toggle button for Emotion Breakdown's W / M / All toggle pill
+  Widget _buildBreakdownToggleBtn(String label, String value) {
+    final isActive = _breakdownTimeframe == value;
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        setState(() {
+          _breakdownTimeframe = value;
+          // Also sync the top Mood Trajectory toggle for visual consistency
+          if (value == 'weekly') {
+            _isMonthlyView = false;
+          } else if (value == 'monthly') {
+            _isMonthlyView = true;
+          }
+          // 'all' keeps _isMonthlyView = true to avoid reset
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
+          boxShadow: isActive
+              ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: isActive ? AppColors.primary : const Color(0xFF94A3B8),
+          ),
+        ),
       ),
     );
   }
