@@ -19,7 +19,7 @@ def main():
     print("=== Testing 2-Day Yellow Warning & 3-Day Red Alert Triage Protocol ===")
     
     # 1. Login as Student and log 3 consecutive rough moods
-    student_token = login("balbuenadexter2@gmail.com", "Password@123")
+    student_token = login("balbuenadexter2@gmail.com", "password123")
     print("  PASS: Authenticated Student (balbuenadexter2@gmail.com)")
 
     # Log Rough mood 1

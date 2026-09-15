@@ -390,11 +390,9 @@ def list_flagged_messages(
     for audit in resolved_audits:
         try:
             msg_uuid = uuid.UUID(audit.target_id)
-            if msg_uuid in seen_ids:
-                continue
-            seen_ids.add(msg_uuid)
             msg = session.get(ChatMessage, msg_uuid)
             if msg:
+                seen_ids.add(msg_uuid)
                 chat_session = session.get(ChatSession, msg.session_id)
                 user = session.get(User, chat_session.user_id) if chat_session else None
                 flagged.append(
@@ -479,6 +477,117 @@ def list_flagged_messages(
                 acknowledged_at=ack_at,
                 flag_reason=reason_text,
                 risk_level=da.risk_level,
+                resolved_at=audit.created_at if (audit and audit.action == "resolve_flag") else None,
+                resolution_note=audit.detail if (audit and audit.action == "resolve_flag") else None,
+            )
+        )
+
+    # 5. Surface standalone guidance-notice entries that were NOT attached to any
+    #    existing flagged message or distress pattern.  These arise when the
+    #    counselor issued a notice for a student whose original chat-flag was
+    #    already cleared (risk_flag set to False) or whose flag ID is a synthetic
+    #    distress UUID that's no longer live.  We reconstruct the In-Action card
+    #    entirely from the JSON stored in the AuditLog.detail field.
+    standalone_notice_audits = session.exec(
+        select(AuditLog)
+        .where(AuditLog.action == "issue_guidance_notice")
+        .order_by(AuditLog.created_at.desc())
+    ).all()
+
+    for notice_audit in standalone_notice_audits:
+        target_id_str = notice_audit.target_id
+
+        # Skip if this target was already handled in sections 1-4
+        try:
+            target_as_uuid = uuid.UUID(target_id_str)
+        except ValueError:
+            target_as_uuid = None
+
+        already_seen = (
+            target_id_str in [str(x) for x in seen_ids]
+            or (target_as_uuid is not None and target_as_uuid in seen_ids)
+        )
+        if already_seen:
+            continue
+
+        # Parse the stored call-slip JSON
+        try:
+            call_slip_data = json.loads(notice_audit.detail) if notice_audit.detail and notice_audit.detail.startswith("{") else {"counselor_note": notice_audit.detail}
+        except Exception:
+            call_slip_data = {"counselor_note": notice_audit.detail}
+
+        student_name = call_slip_data.get("student_name", "Student")
+        student_email = call_slip_data.get("student_email", "")
+        notice_created_at = notice_audit.created_at
+
+        # Try to look up the real student user for a stable user_id
+        student_user_id = None
+        student_user_obj: Optional[User] = None
+        if student_email:
+            student_user_obj = session.exec(select(User).where(User.email == student_email)).first()
+            if student_user_obj:
+                student_user_id = student_user_obj.id
+
+        # Build a stable synthetic UUID for this notice entry so the UI can key on it.
+        # Compute it early so we can also check resolve_flag audits by this ID.
+        synthetic_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"notice_{target_id_str}_{notice_audit.id}")
+        synthetic_id_str = str(synthetic_id)
+
+        # Check if this notice was subsequently resolved — the Flutter app sends
+        # the synthetic_id as the message_id when calling PATCH /resolve, so we
+        # look for resolve_flag audits keyed by EITHER the original target_id OR
+        # the synthetic UUID (whichever the counselor used).
+        resolve_audit = session.exec(
+            select(AuditLog)
+            .where(
+                AuditLog.action == "resolve_flag",
+                AuditLog.target_id.in_([target_id_str, synthetic_id_str]),  # type: ignore[union-attr]
+            )
+            .order_by(AuditLog.created_at.desc())
+        ).first()
+
+        is_resolved_val = resolve_audit is not None
+        status_val = "resolved" if is_resolved_val else "in_action"
+        resolved_at_val = resolve_audit.created_at if resolve_audit else None
+        resolution_note_val = resolve_audit.detail if resolve_audit else None
+
+        # Check acknowledgement
+        is_ack = False
+        ack_at = None
+        if student_user_obj:
+            student_notif = session.exec(
+                select(Notification).where(
+                    Notification.user_id == student_user_obj.id,
+                    Notification.type == NotificationType.guidance_notice,
+                ).order_by(Notification.created_at.desc())
+            ).first()
+            if student_notif and student_notif.is_acknowledged:
+                is_ack = True
+                ack_at = student_notif.acknowledged_at
+
+        if synthetic_id in seen_ids:
+            continue
+        seen_ids.add(synthetic_id)
+
+        flagged.append(
+            FlaggedMessageRead(
+                id=synthetic_id,
+                session_id=None,
+                user_id=student_user_id or notice_audit.admin_id,
+                user_email=student_email or "",
+                user_name=student_name,
+                role="user",
+                content=call_slip_data.get("counselor_note") or f"Guidance notice issued by {notice_audit.admin_email}",
+                created_at=notice_created_at,
+                is_resolved=is_resolved_val,
+                status=status_val,
+                call_slip=call_slip_data,
+                is_acknowledged=is_ack,
+                acknowledged_at=ack_at,
+                flag_reason="Guidance Office Call-Slip Issued",
+                risk_level="orange",
+                resolved_at=resolved_at_val,
+                resolution_note=resolution_note_val,
             )
         )
 
