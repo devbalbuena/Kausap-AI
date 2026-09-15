@@ -139,31 +139,34 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     }
   }
 
-  Future<void> _deleteSession(int index) async {
-    final deleted = _sessions.removeAt(index);
+  @override
+  void dispose() {
+    // Clear any active SnackBars when user leaves Chat History
+    ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
+    super.dispose();
+  }
+
+  Future<void> _deleteSession(Map<String, dynamic> session) async {
+    final sessionId = session['id']?.toString();
+    setState(() {
+      _sessions.removeWhere((s) => s['id']?.toString() == sessionId);
+    });
     await _storage.write(key: 'chat_history_sessions', value: jsonEncode(_sessions));
 
-    // Also delete from backend database if valid UUID
-    final sessionId = deleted['id']?.toString();
-    if (sessionId != null && sessionId.contains('-')) {
+    // Also delete permanently from backend database if valid UUID
+    if (sessionId != null && sessionId.isNotEmpty && sessionId.contains('-')) {
       try {
         await ApiClient().delete('${ApiConfig.chatSessions}/$sessionId', silent: true);
       } catch (_) {}
     }
 
     if (mounted) {
-      setState(() {});
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Chat session deleted.'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () async {
-              _sessions.insert(index, deleted);
-              await _storage.write(key: 'chat_history_sessions', value: jsonEncode(_sessions));
-              if (mounted) setState(() {});
-            },
-          ),
+        const SnackBar(
+          content: Text('Chat session deleted.'),
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -321,7 +324,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                         ),
                         child: const Icon(Icons.delete_rounded, color: Colors.white),
                       ),
-                      onDismissed: (_) => _deleteSession(idx),
+                      onDismissed: (_) => _deleteSession(session),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
@@ -388,7 +391,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
                             tooltip: 'Delete this chat',
-                            onPressed: () => _deleteSession(idx),
+                            onPressed: () => _deleteSession(session),
                           ),
                           onTap: () {
                             if (widget.onResumeSession != null) {

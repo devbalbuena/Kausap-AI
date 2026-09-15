@@ -374,8 +374,13 @@ def delete_session(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_session)],
 ):
-    """Delete a chat session, its messages, and detach token logs."""
-    chat_session = _get_own_session(session_id, current_user, db)
+    """Delete a chat session, its messages, and detach token logs. Idempotent: 204 if already deleted."""
+    chat_session = db.get(ChatSession, session_id)
+    if chat_session is None:
+        # Already deleted or not found — return 204 for clean idempotent delete
+        return None
+    if chat_session.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your chat session")
 
     # 1. Delete all child ChatMessages (prevents FK violation on chatsession delete)
     messages = db.exec(

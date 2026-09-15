@@ -348,27 +348,27 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     return 'buddy';
   }
 
-  /// Returns a persona-specific English welcome greeting.
-  String get _personaGreeting {
+  /// Returns a clean persona-specific subtitle/invitation without repeating the greeting.
+  String get _personaSubtitle {
     switch (_personaKey) {
       case 'maya':
-        return "Hi! I'm Ate Maya 💙 Your campus ate is here — what's on your heart today?";
+        return "Your campus ate is here — what's on your heart today?";
       case 'ben':
-        return "Hey! I'm Kuya Ben 📚 Ready to tackle those academic challenges together. What's stressing you out?";
+        return "Ready to tackle those academic challenges together. What's stressing you out?";
       case 'santos':
-        return "Hello! I'm Doc Santos 🌿 Let's find some clarity and calm. What's been weighing on your mind?";
+        return "Let's find some clarity and calm. What's been weighing on your mind?";
       case 'coach_leo':
-        return "Hey there! I'm Coach Leo 💪 Let's map out your next win. What goal are we working on today?";
+        return "Let's map out your next win. What goal are we working on today?";
       case 'tita_grace':
-        return "Hello, anak! I'm Tita Grace 💜 You are safe here. What's been heavy on your heart lately?";
+        return "You are safe here, anak. What's been heavy on your heart lately?";
       case 'prof_gabriel':
-        return "Good day! I'm Prof. Gabriel 📖 Let's build your review strategy. What are you preparing for?";
+        return "Let's build your review strategy. What are you preparing for?";
       case 'serena_zen':
-        return "Hello 🌙 I'm Serena Zen. Take a gentle breath... Let's release today's tension together. How are you feeling right now?";
+        return "Take a gentle breath... Let's release today's tension together.";
       case 'coach_alex':
-        return "Hey, you showed up — that's already a WIN! 🔥 I'm Coach Alex. What habit or goal are we energizing today?";
+        return "You showed up — that's already a win! What goal are we energizing today?";
       default:
-        return "Hi! I'm Kausap Buddy ✨ Your 24/7 wellness companion is here. How are you feeling today?";
+        return "Your 24/7 confidential companion for student wellness. How can I support you today?";
     }
   }
 
@@ -1391,30 +1391,19 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _currentAvatar.isMascot
-                      ? 'Your 24/7 confidential companion for student wellness. How can I help support you today?'
-                      : 'Your ${_currentAvatar.isPremium ? 'Specialist' : 'Companion'} for student mental wellness. How can I support you today?',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: isSpacious ? 13.5 : 12.5,
-                    color: const Color(0xFF475569),
-                    height: 1.4,
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    _personaSubtitle,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: isSpacious ? 14 : 13,
+                      color: const Color(0xFF475569),
+                      height: 1.45,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                // Persona-specific English welcome subtitle
-                Text(
-                  _personaGreeting,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: isSpacious ? 13 : 12,
-                    color: const Color(0xFF475569),
-                    height: 1.45,
-                  ),
-                  textAlign: TextAlign.center,
                 ),
                 if (isSpacious) ...[
                   const SizedBox(height: 18),
