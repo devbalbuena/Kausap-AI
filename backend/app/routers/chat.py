@@ -423,24 +423,24 @@ class TtsRequest(BaseModel):
 #   pitch = voice pitch     e.g. "+2Hz" slightly higher, "-3Hz" slightly lower
 #
 PERSONA_EDGE_VOICE_MAP: Dict[str, tuple] = {
-    # 👩 Ate Maya — warm, caring, conversational Filipina elder sister
-    "maya":         ("fil-PH-BlessicaNeural",  "+2%",  "+1Hz",  "Ate Maya (Blessica)"),
-    # 👨 Kuya Ben — friendly, casual, upbeat Filipino elder brother
-    "ben":          ("fil-PH-AngeloNeural",    "+3%",  "+0Hz",  "Kuya Ben (Angelo)"),
-    # 🌟 Buddy Mascot — sweet, cheerful, youthful companion
-    "buddy":        ("en-US-AnaNeural",        "+4%",  "+3Hz",  "Buddy (Ana)"),
+    # 👩 Ate Maya — warm, youthful college-aged girl / older sister (natural, warm, relatable)
+    "maya":         ("en-US-AvaMultilingualNeural",    "+2%",  "+0Hz",  "Ate Maya (Ava)"),
+    # 👨 Kuya Ben — natural, grounded, supportive older brother (college big brother)
+    "ben":          ("en-US-AndrewMultilingualNeural", "+2%",  "-1Hz",  "Kuya Ben (Andrew)"),
+    # 🌟 Buddy Mascot — cheerful, friendly kid companion (kid voice, not a baby)
+    "buddy":        ("en-US-AnaNeural",                "+1%",  "-2Hz",  "Buddy (Ana Kid)"),
     # 🩺 Dr. Santos — calm, empathetic, measured clinician
-    "santos":       ("en-US-GuyNeural",        "-5%",  "-4Hz",  "Dr. Santos (Guy)"),
+    "santos":       ("en-US-GuyNeural",                "-3%",  "-3Hz",  "Dr. Santos (Guy)"),
     # 💪 Coach Leo — energetic, confident motivational mentor
-    "coach_leo":    ("en-US-DavisNeural",      "+6%",  "+2Hz",  "Coach Leo (Davis)"),
-    # 🌸 Tita Grace — nurturing, warm, maternal Filipino auntie
-    "tita_grace":   ("fil-PH-BlessicaNeural",  "-3%",  "-1Hz",  "Tita Grace (Blessica)"),
+    "coach_leo":    ("en-US-DavisNeural",              "+5%",  "+1Hz",  "Coach Leo (Davis)"),
+    # 🌸 Tita Grace — nurturing, warm, maternal guide
+    "tita_grace":   ("en-PH-RosaNeural",               "-2%",  "-1Hz",  "Tita Grace (Rosa)"),
     # 📚 Prof Gabriel — articulate, thoughtful, composed academic
-    "prof_gabriel": ("en-US-AndrewNeural",     "-3%",  "-2Hz",  "Prof Gabriel (Andrew)"),
+    "prof_gabriel": ("en-US-BrianMultilingualNeural",  "-2%",  "-2Hz",  "Prof Gabriel (Brian)"),
     # 🧘 Serena Zen — gentle, tranquil, slow-breathing meditation guide
-    "serena_zen":   ("en-US-JennyNeural",      "-8%",  "-2Hz",  "Serena Zen (Jenny)"),
-    # ⚡ Coach Alex — dynamic, upbeat, high-energy female sports coach
-    "coach_alex":   ("en-US-JaneNeural",       "+5%",  "+2Hz",  "Coach Alex (Jane)"),
+    "serena_zen":   ("en-US-JennyNeural",              "-7%",  "-2Hz",  "Serena Zen (Jenny)"),
+    # ⚡ Coach Alex — dynamic, upbeat, high-energy sports coach
+    "coach_alex":   ("en-US-JaneNeural",               "+4%",  "+1Hz",  "Coach Alex (Jane)"),
 }
 
 # ElevenLabs fallback voice IDs (used only when Edge TTS fails)
@@ -465,7 +465,7 @@ async def generate_tts(
     Generate natural human speech for each AI persona.
 
     Provider priority:
-      1. Microsoft Edge TTS (Azure Neural) — FREE, unlimited, natural Filipino & English voices
+      1. Microsoft Edge TTS (Azure Neural) — FREE, unlimited, natural English & multilingual voices
       2. ElevenLabs — high-fidelity fallback (only when Edge TTS fails)
       3. Mistral Voxtral — last-resort fallback
 
@@ -483,7 +483,7 @@ async def generate_tts(
     if not clean_text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    snippet = clean_text[:600]  # Edge TTS handles longer text well
+    snippet = clean_text[:600]
 
     # ─── 1. PRIMARY: Microsoft Edge TTS (Azure Neural, 100% free & unlimited) ───
     try:
@@ -493,9 +493,9 @@ async def generate_tts(
         if persona_key in PERSONA_EDGE_VOICE_MAP:
             voice_name, rate, pitch, label = PERSONA_EDGE_VOICE_MAP[persona_key]
         else:
-            # Default: warm, friendly Filipina voice
+            # Default: warm, youthful, natural English voice
             voice_name, rate, pitch, label = (
-                "fil-PH-BlessicaNeural", "+0%", "+0Hz", "Blessica (Filipino)"
+                "en-US-AvaMultilingualNeural", "+2%", "+0Hz", "Ava (English)"
             )
 
         communicate = edge_tts.Communicate(
