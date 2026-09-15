@@ -414,21 +414,66 @@ class TtsRequest(BaseModel):
     emotion: Optional[str] = None
 
 
-# ── Persona-to-Voice mapping ───────────────────────────────────────────────────
-# Primary: Microsoft Edge TTS (Azure Neural — free, unlimited, natural human voices)
-# Each persona has a carefully chosen voice + prosody settings for maximum naturalness.
-#
-# Voice format: (edge_voice_name, rate, pitch, label)
-#   rate  = speaking speed  e.g. "+5%" slightly faster, "-5%" slightly slower
-#   pitch = voice pitch     e.g. "+2Hz" slightly higher, "-3Hz" slightly lower
-#
-PERSONA_EDGE_VOICE_MAP: Dict[str, tuple] = {
-    # 👩 Ate Maya — warm, youthful college-aged girl / older sister (natural, warm, relatable)
-    "maya":         ("en-US-AvaMultilingualNeural",    "+2%",  "+0Hz",  "Ate Maya (Ava)"),
-    # 👨 Kuya Ben — natural, grounded, supportive older brother (college big brother)
-    "ben":          ("en-US-AndrewMultilingualNeural", "+2%",  "-1Hz",  "Kuya Ben (Andrew)"),
-    # 🌟 Buddy Mascot — cheerful, friendly kid companion (kid voice, not a baby)
-    "buddy":        ("en-US-AnaNeural",                "+1%",  "-2Hz",  "Buddy (Ana Kid)"),
+# ── Persona-to-Voice Mapping (Dual-Engine: Tagalog/Taglish vs. English) ─────────
+# Edge TTS neural voices specifically tailored for natural cadence:
+# - When speaking Tagalog/Taglish: Uses native Filipino neural models (Blessica/Angelo)
+#   tuned with higher speed (+8% to +12%) and pitch so they sound youthful and energetic.
+# - When speaking English: Uses conversational American/multilingual models (Ava/Andrew)
+#   with +3% to +4% rate for natural, alert college-student pacing.
+
+TAGALOG_KEYWORDS = {
+    'kumusta', 'kamusta', 'nandito', 'talaga', 'salamat', 'hindi', 'di', 'wag', 'huwag',
+    'bakit', 'kayang', 'kaya', 'hinga', 'pahinga', 'oo', 'magandang', 'masaya', 'lungkot',
+    'pagod', 'para', 'naman', 'ba', 'po', 'opo', 'kuya', 'ate', 'tita', 'ikaw', 'ako',
+    'kami', 'tayo', 'sila', 'kanila', 'akin', 'iyong', 'aking', 'ano', 'kasi', 'pero',
+    'gusto', 'pwede', 'pala', 'yata', 'lang', 'din', 'rin', 'dun', 'dito', 'diyan',
+    'ganun', 'ganito', 'subukan', 'samahan', 'kwento', 'pag-asa', 'buhay', 'araw', 'gabi',
+    'natin', 'mo', 'ko', 'nyo', 'ninyo', 'mga', 'nga', 'ito', 'iyan', 'iyon', 'ayan',
+    'walang', 'may', 'meron', 'wala', 'sana', 'napagod', 'nahihirapan', 'sarili', 'tulong'
+}
+
+def _detect_is_tagalog(text: str) -> bool:
+    import re
+    words = re.findall(r'[a-zA-Z]+', text.lower())
+    if not words:
+        return False
+    match_count = sum(1 for w in words if w in TAGALOG_KEYWORDS)
+    return match_count >= 2 or (match_count >= 1 and len(words) <= 7) or ((match_count / len(words)) >= 0.10)
+
+def _optimize_text_for_edge_tts(raw_text: str) -> str:
+    """Preprocesses text for Edge TTS to create natural breathing pauses and smooth pronunciation."""
+    import re
+    # 1. Clean markdown, URLs, and bracketed action tags
+    text = re.sub(r'https?://\S+', '', raw_text)
+    text = re.sub(r'\[ACTION:[^\]]+\]', '', text)
+    text = re.sub(r'[*_~`#\[\]()•\n]', ' ', text)
+    # Remove emoji characters that might trip TTS
+    text = re.sub(r'[\U00010000-\U0010ffff]', '', text)
+    
+    # 2. Add conversational breathing pauses: replace semicolons/colons with em-dashes
+    text = text.replace(';', ' — ').replace(':', ' — ')
+    
+    # 3. Add slight pauses after warm conversational openers
+    text = re.sub(r'\b(Hey|Hi|Hello|Alam mo|Nandito lang ako|Huy|Hinga muna)\b,?', r'\1... ', text, count=1)
+    
+    # 4. Phonetic touch-ups
+    text = re.sub(r'\bw/o\b', 'without', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bw/\b', 'with', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpls\b', 'please', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bFSUU\b', 'F-S-U-U', text)
+    
+    # Collapse multiple spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+PERSONA_EDGE_VOICE_MAP_ENGLISH: Dict[str, tuple] = {
+    # 👩 Ate Maya — warm, youthful college-aged girl / older sister (natural, alert, empathetic)
+    "maya":         ("en-US-AvaMultilingualNeural",    "+4%",  "+1Hz",  "Ate Maya (Ava English)"),
+    # 👨 Kuya Ben — natural, grounded, steady big brother (college guy pacing)
+    "ben":          ("en-US-AndrewMultilingualNeural", "+3%",  "-1Hz",  "Kuya Ben (Andrew English)"),
+    # 🌟 Buddy Mascot — cheerful, friendly kid companion (ages 10-12, not baby)
+    "buddy":        ("en-US-AnaNeural",                "+2%",  "-2Hz",  "Buddy (Ana Kid)"),
     # 🩺 Dr. Santos — calm, empathetic, measured clinician
     "santos":       ("en-US-GuyNeural",                "-3%",  "-3Hz",  "Dr. Santos (Guy)"),
     # 💪 Coach Leo — energetic, confident motivational mentor
@@ -441,6 +486,20 @@ PERSONA_EDGE_VOICE_MAP: Dict[str, tuple] = {
     "serena_zen":   ("en-US-JennyNeural",              "-7%",  "-2Hz",  "Serena Zen (Jenny)"),
     # ⚡ Coach Alex — dynamic, upbeat, high-energy sports coach
     "coach_alex":   ("en-US-JaneNeural",               "+4%",  "+1Hz",  "Coach Alex (Jane)"),
+}
+
+PERSONA_EDGE_VOICE_MAP_TAGALOG: Dict[str, tuple] = {
+    # 👩 Ate Maya in Tagalog — Blessica tuned with +12% speed and +3Hz pitch for lively, youthful Filipina warmth
+    "maya":         ("fil-PH-BlessicaNeural",          "+12%", "+3Hz",  "Ate Maya (Blessica Filipina)"),
+    # 👨 Kuya Ben in Tagalog — Angelo tuned with +8% speed for an authentic Filipino big-brother voice
+    "ben":          ("fil-PH-AngeloNeural",            "+8%",  "+1Hz",  "Kuya Ben (Angelo Filipino)"),
+    # 🌟 Buddy in Tagalog — lively companion
+    "buddy":        ("en-US-AnaNeural",                "+2%",  "-2Hz",  "Buddy (Ana Kid)"),
+    # 🌸 Tita Grace in Tagalog — warm maternal auntie
+    "tita_grace":   ("fil-PH-BlessicaNeural",          "-2%",  "-1Hz",  "Tita Grace (Blessica)"),
+    # 🩺 Dr. Santos in Tagalog
+    "santos":       ("fil-PH-AngeloNeural",            "-2%",  "-2Hz",  "Dr. Santos (Filipino)"),
+    # Fallback to English map for other specialist roles
 }
 
 # ElevenLabs fallback voice IDs (used only when Edge TTS fails)
@@ -462,41 +521,39 @@ async def generate_tts(
     payload: TtsRequest,
 ):
     """
-    Generate natural human speech for each AI persona.
+    Generate natural human speech for each AI persona with intelligent language awareness.
 
     Provider priority:
-      1. Microsoft Edge TTS (Azure Neural) — FREE, unlimited, natural English & multilingual voices
+      1. Microsoft Edge TTS (Azure Neural) — FREE, unlimited, native Tagalog + English neural voices
       2. ElevenLabs — high-fidelity fallback (only when Edge TTS fails)
       3. Mistral Voxtral — last-resort fallback
-
-    Pass the persona key in payload.voice (e.g. 'maya', 'ben', 'buddy') to get
-    the correct voice for each AI companion.
     """
     import base64
     import io
-    import re
     import httpx
 
-    clean_text = re.sub(r'[*_~`#\[\]()•\n]', ' ', payload.text).strip()
-    # Collapse multiple spaces
-    clean_text = re.sub(r' +', ' ', clean_text)
-    if not clean_text:
+    cleaned_text = _optimize_text_for_edge_tts(payload.text)
+    if not cleaned_text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    snippet = clean_text[:600]
+    snippet = cleaned_text[:600]
+    is_tagalog = _detect_is_tagalog(snippet)
 
     # ─── 1. PRIMARY: Microsoft Edge TTS (Azure Neural, 100% free & unlimited) ───
     try:
         import edge_tts
 
         persona_key = (payload.voice or "").lower().strip()
-        if persona_key in PERSONA_EDGE_VOICE_MAP:
-            voice_name, rate, pitch, label = PERSONA_EDGE_VOICE_MAP[persona_key]
+        
+        # Route voice based on detected language:
+        if is_tagalog and persona_key in PERSONA_EDGE_VOICE_MAP_TAGALOG:
+            voice_name, rate, pitch, label = PERSONA_EDGE_VOICE_MAP_TAGALOG[persona_key]
+        elif persona_key in PERSONA_EDGE_VOICE_MAP_ENGLISH:
+            voice_name, rate, pitch, label = PERSONA_EDGE_VOICE_MAP_ENGLISH[persona_key]
+        elif is_tagalog:
+            voice_name, rate, pitch, label = ("fil-PH-BlessicaNeural", "+12%", "+3Hz", "Blessica (Filipino)")
         else:
-            # Default: warm, youthful, natural English voice
-            voice_name, rate, pitch, label = (
-                "en-US-AvaMultilingualNeural", "+2%", "+0Hz", "Ava (English)"
-            )
+            voice_name, rate, pitch, label = ("en-US-AvaMultilingualNeural", "+4%", "+1Hz", "Ava (English)")
 
         communicate = edge_tts.Communicate(
             text=snippet,
@@ -513,9 +570,9 @@ async def generate_tts(
                 audio_buffer.write(chunk["data"])
 
         audio_bytes = audio_buffer.getvalue()
-        if len(audio_bytes) > 500:  # Valid audio must be at least 500 bytes
+        if len(audio_bytes) > 500:
             audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
-            logger.info(f"[Kausap Voice] Edge TTS success: {label} ({voice_name})")
+            logger.info(f"[Kausap Voice] Edge TTS ({'Tagalog' if is_tagalog else 'English'}): {label} -> {voice_name}")
             return {
                 "status": "success",
                 "provider": "edge_tts",
