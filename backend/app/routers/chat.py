@@ -1,7 +1,10 @@
 from typing import Annotated, List, Optional, Dict, Any, Tuple
 import uuid
 import json
+import logging
 from datetime import datetime, timezone, timedelta
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -406,18 +409,46 @@ class TtsRequest(BaseModel):
     emotion: Optional[str] = None
 
 
-# ── Persona-to-Voice mapping (ElevenLabs Voice IDs) ─────────────────────────
-# Each AI persona has a distinct voice to reinforce their unique personality.
-PERSONA_VOICE_MAP: Dict[str, str] = {
-    "buddy":        "pFZP5JQG7iQjIQuC4Bku",  # Lily — Sweet, youthful companion (mascot)
-    "maya":         "jqcCZkN6Knx8BJ5TBdYR",  # Zara — Warm conversational Filipina Ate
-    "ben":          "TX3LPaxmHKxFdv7VOQHJ",  # Liam — Natural, casual & friendly young Filipino Kuya
-    "santos":       "onwK4e9ZLuTAKqWW03F9",  # Daniel — Deep, calm, empathetic & reassuring clinician
-    "coach_leo":    "ErXwobaYiN019PkySvjV",  # Antoni — Energetic confident mentor
-    "tita_grace":   "ThT5KcBeYPX3keUQqHPh",  # Dorothy — Nurturing warm maternal guide
-    "prof_gabriel": "pNInz6obpgDQGcFmaJgB",  # Adam — Articulate structured academic mentor
-    "serena_zen":   "Xb7hH8MSUJpSbSDYk0k2",  # Alice — Gentle, tranquil whisper
-    "coach_alex":   "cgSgspJ2msm6clMCkdW9",  # Jessica — Dynamic, upbeat motivation voice
+# ── Persona-to-Voice mapping ───────────────────────────────────────────────────
+# Primary: Microsoft Edge TTS (Azure Neural — free, unlimited, natural human voices)
+# Each persona has a carefully chosen voice + prosody settings for maximum naturalness.
+#
+# Voice format: (edge_voice_name, rate, pitch, label)
+#   rate  = speaking speed  e.g. "+5%" slightly faster, "-5%" slightly slower
+#   pitch = voice pitch     e.g. "+2Hz" slightly higher, "-3Hz" slightly lower
+#
+PERSONA_EDGE_VOICE_MAP: Dict[str, tuple] = {
+    # 👩 Ate Maya — warm, caring, conversational Filipina elder sister
+    "maya":         ("fil-PH-BlessicaNeural",  "+2%",  "+1Hz",  "Ate Maya (Blessica)"),
+    # 👨 Kuya Ben — friendly, casual, upbeat Filipino elder brother
+    "ben":          ("fil-PH-AngeloNeural",    "+3%",  "+0Hz",  "Kuya Ben (Angelo)"),
+    # 🌟 Buddy Mascot — sweet, cheerful, youthful companion
+    "buddy":        ("en-US-AnaNeural",        "+4%",  "+3Hz",  "Buddy (Ana)"),
+    # 🩺 Dr. Santos — calm, empathetic, measured clinician
+    "santos":       ("en-US-GuyNeural",        "-5%",  "-4Hz",  "Dr. Santos (Guy)"),
+    # 💪 Coach Leo — energetic, confident motivational mentor
+    "coach_leo":    ("en-US-DavisNeural",      "+6%",  "+2Hz",  "Coach Leo (Davis)"),
+    # 🌸 Tita Grace — nurturing, warm, maternal Filipino auntie
+    "tita_grace":   ("fil-PH-BlessicaNeural",  "-3%",  "-1Hz",  "Tita Grace (Blessica)"),
+    # 📚 Prof Gabriel — articulate, thoughtful, composed academic
+    "prof_gabriel": ("en-US-AndrewNeural",     "-3%",  "-2Hz",  "Prof Gabriel (Andrew)"),
+    # 🧘 Serena Zen — gentle, tranquil, slow-breathing meditation guide
+    "serena_zen":   ("en-US-JennyNeural",      "-8%",  "-2Hz",  "Serena Zen (Jenny)"),
+    # ⚡ Coach Alex — dynamic, upbeat, high-energy female sports coach
+    "coach_alex":   ("en-US-JaneNeural",       "+5%",  "+2Hz",  "Coach Alex (Jane)"),
+}
+
+# ElevenLabs fallback voice IDs (used only when Edge TTS fails)
+PERSONA_ELEVENLABS_VOICE_MAP: Dict[str, str] = {
+    "buddy":        "pFZP5JQG7iQjIQuC4Bku",
+    "maya":         "jqcCZkN6Knx8BJ5TBdYR",
+    "ben":          "TX3LPaxmHKxFdv7VOQHJ",
+    "santos":       "onwK4e9ZLuTAKqWW03F9",
+    "coach_leo":    "ErXwobaYiN019PkySvjV",
+    "tita_grace":   "ThT5KcBeYPX3keUQqHPh",
+    "prof_gabriel": "pNInz6obpgDQGcFmaJgB",
+    "serena_zen":   "Xb7hH8MSUJpSbSDYk0k2",
+    "coach_alex":   "cgSgspJ2msm6clMCkdW9",
 }
 
 
@@ -426,31 +457,82 @@ async def generate_tts(
     payload: TtsRequest,
 ):
     """
-    Generate realistic human speech via ElevenLabs with per-persona voice mapping.
-    Pass 'persona' in the request body to get a distinct voice per AI companion.
-    Returns audio metadata and base64 audio data URL for instant client playback.
+    Generate natural human speech for each AI persona.
+
+    Provider priority:
+      1. Microsoft Edge TTS (Azure Neural) — FREE, unlimited, natural Filipino & English voices
+      2. ElevenLabs — high-fidelity fallback (only when Edge TTS fails)
+      3. Mistral Voxtral — last-resort fallback
+
+    Pass the persona key in payload.voice (e.g. 'maya', 'ben', 'buddy') to get
+    the correct voice for each AI companion.
     """
     import base64
-    import httpx
+    import io
     import re
+    import httpx
 
     clean_text = re.sub(r'[*_~`#\[\]()•\n]', ' ', payload.text).strip()
+    # Collapse multiple spaces
+    clean_text = re.sub(r' +', ' ', clean_text)
     if not clean_text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    snippet = clean_text[:500]
+    snippet = clean_text[:600]  # Edge TTS handles longer text well
 
-    # 1. Try ElevenLabs Primary (Zara voice / High-fidelity conversational)
+    # ─── 1. PRIMARY: Microsoft Edge TTS (Azure Neural, 100% free & unlimited) ───
+    try:
+        import edge_tts
+
+        persona_key = (payload.voice or "").lower().strip()
+        if persona_key in PERSONA_EDGE_VOICE_MAP:
+            voice_name, rate, pitch, label = PERSONA_EDGE_VOICE_MAP[persona_key]
+        else:
+            # Default: warm, friendly Filipina voice
+            voice_name, rate, pitch, label = (
+                "fil-PH-BlessicaNeural", "+0%", "+0Hz", "Blessica (Filipino)"
+            )
+
+        communicate = edge_tts.Communicate(
+            text=snippet,
+            voice=voice_name,
+            rate=rate,
+            pitch=pitch,
+            volume="+0%",
+        )
+
+        # Collect all audio chunks into a buffer
+        audio_buffer = io.BytesIO()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_buffer.write(chunk["data"])
+
+        audio_bytes = audio_buffer.getvalue()
+        if len(audio_bytes) > 500:  # Valid audio must be at least 500 bytes
+            audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
+            logger.info(f"[Kausap Voice] Edge TTS success: {label} ({voice_name})")
+            return {
+                "status": "success",
+                "provider": "edge_tts",
+                "voice_used": label,
+                "voice_id": voice_name,
+                "mime_type": "audio/mpeg",
+                "audio_base64": audio_b64,
+                "data_url": f"data:audio/mpeg;base64,{audio_b64}",
+            }
+    except Exception as e:
+        logger.warning(f"[Kausap Voice] Edge TTS failed, trying ElevenLabs fallback: {e}")
+
+    # ─── 2. FALLBACK: ElevenLabs (if Edge TTS is unavailable) ────────────────────
     if settings.ELEVENLABS_API_KEY:
-        # Resolve voice: explicit payload voice > persona-mapped voice > settings default > fallback
-        persona_voice = PERSONA_VOICE_MAP.get(payload.voice or "") if payload.voice else None
+        persona_key = (payload.voice or "").lower().strip()
+        persona_voice = PERSONA_ELEVENLABS_VOICE_MAP.get(persona_key)
         target_voice = persona_voice or settings.ELEVENLABS_VOICE_ID or "jqcCZkN6Knx8BJ5TBdYR"
-        # Try primary persona voice first, then fallbacks
+
         voices_to_try = [
             (target_voice, "Persona Voice"),
-            ("cgSgspJ2msm6clMCkdW9", "Jessica (Young Conversational)"),
+            ("jqcCZkN6Knx8BJ5TBdYR", "Zara (Warm Conversational)"),
             ("pFZP5JQG7iQjIQuC4Bku", "Lily (Sweet Companion)"),
-            ("Xb7hH8MSUJpSbSDYk0k2", "Alice (Bright & Gentle)"),
         ]
 
         headers = {
@@ -476,6 +558,7 @@ async def generate_tts(
                     res = await client.post(url, headers=headers, json=req_payload)
                     if res.status_code == 200 and len(res.content) > 1000:
                         audio_b64 = base64.b64encode(res.content).decode("ascii")
+                        logger.info(f"[Kausap Voice] ElevenLabs fallback success: {v_label}")
                         return {
                             "status": "success",
                             "provider": "elevenlabs",
@@ -488,7 +571,7 @@ async def generate_tts(
                 except Exception:
                     continue
 
-    # 2. Fallback: Mistral Voxtral (if ElevenLabs is unreachable)
+    # ─── 3. LAST RESORT: Mistral Voxtral ─────────────────────────────────────────
     if settings.MISTRAL_API_KEY:
         try:
             headers = {
@@ -501,11 +584,16 @@ async def generate_tts(
                 "voice": "fr_marie_neutral",
             }
             async with httpx.AsyncClient(timeout=18.0) as client:
-                res = await client.post("https://api.mistral.ai/v1/audio/speech", headers=headers, json=req_body)
+                res = await client.post(
+                    "https://api.mistral.ai/v1/audio/speech",
+                    headers=headers,
+                    json=req_body,
+                )
                 if res.status_code == 200:
                     data = res.json()
                     audio_b64 = data.get("audio_data", "")
                     if audio_b64:
+                        logger.warning("[Kausap Voice] Using Mistral Voxtral as last-resort TTS")
                         return {
                             "status": "success",
                             "provider": "mistral",
