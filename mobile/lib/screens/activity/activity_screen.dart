@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
 import '../../theme/app_theme.dart';
@@ -291,7 +292,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
     // Calculate mindful minutes this week
     try {
-      final rawHistory = await _storage.read(key: 'activity_history');
+      SharedPreferences? prefs;
+      try { prefs = await SharedPreferences.getInstance(); } catch (_) {}
+
+      // Read from FlutterSecureStorage first, then SharedPreferences fallback
+      String? rawHistory = await _storage.read(key: 'activity_history');
+      rawHistory ??= prefs?.getString('activity_history');
+
       if (rawHistory != null) {
         final history = jsonDecode(rawHistory) as List;
         final now = DateTime.now();
@@ -316,9 +323,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Future<void> _loadCompletions() async {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final Map<String, bool> result = {};
+    SharedPreferences? prefs;
+    try { prefs = await SharedPreferences.getInstance(); } catch (_) {}
+
     for (final a in activityList) {
+      // Try FlutterSecureStorage first, then SharedPreferences fallback
       final val = await _storage.read(key: 'activity_${a.id}_$today');
-      result[a.id] = val == 'completed';
+      if (val == 'completed') {
+        result[a.id] = true;
+      } else {
+        result[a.id] = prefs?.getString('activity_${a.id}_$today') == 'completed';
+      }
     }
 
     // Dynamic activity streak from activity_history
@@ -1205,7 +1220,14 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
 
   Future<void> _loadHistory() async {
     try {
-      final raw = await _storage.read(key: 'activity_history');
+      // Try FlutterSecureStorage first, then SharedPreferences fallback
+      String? raw = await _storage.read(key: 'activity_history');
+      if (raw == null) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          raw = prefs.getString('activity_history');
+        } catch (_) {}
+      }
       if (raw != null) {
         final list = List<Map<String, dynamic>>.from(
           (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e as Map)),

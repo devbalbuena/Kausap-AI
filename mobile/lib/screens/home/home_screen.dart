@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
 import '../../theme/app_theme.dart';
@@ -582,10 +583,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         } catch (_) {}
       }
 
-      // 3. Check mindfulness
+      // 3. Check mindfulness — read from FlutterSecureStorage first, then SharedPreferences fallback
+      //    (SharedPreferences survives Chrome hard refresh; SecureStorage may lose web encryption key)
       final savedMindfulness = await storage.read(key: 'mindfulness_$todayStr');
       if (savedMindfulness == 'completed') {
         mindfulnessCompleted = true;
+      } else {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          if (prefs.getString('mindfulness_$todayStr') == 'completed') {
+            mindfulnessCompleted = true;
+          }
+        } catch (_) {}
       }
     } catch (_) {}
 

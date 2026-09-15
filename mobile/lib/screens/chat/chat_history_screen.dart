@@ -77,11 +77,33 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
               final String? existingAvatarName = existingIdx >= 0 ? list[existingIdx]['avatarName']?.toString() : null;
               final String? existingAvatarId = existingIdx >= 0 ? list[existingIdx]['avatarId']?.toString() : null;
 
+              // Try to get avatar from local cache first, then remote fields
+              String? resolvedAvatarId = existingAvatarId ?? remoteSession['avatar_id']?.toString() ?? remoteSession['avatarId']?.toString();
+              String? resolvedAvatarName = existingAvatarName;
+
+              // If remote topic is generic (e.g. "Free Talk") or missing a persona name,
+              // infer the persona from the first assistant message content
+              final remoteTopic = remoteSession['topic']?.toString() ?? '';
+              final isGenericTopic = remoteTopic.isEmpty ||
+                  remoteTopic == 'Free Talk' ||
+                  remoteTopic == 'Chat' ||
+                  remoteTopic == 'New Session';
+
+              if ((resolvedAvatarName == null || resolvedAvatarName.isEmpty) && isGenericTopic) {
+                final inferred = _inferPersonaFromMessages(parsedMsgs);
+                if (inferred != null) {
+                  resolvedAvatarName = inferred[0];
+                  resolvedAvatarId ??= inferred[1];
+                }
+              }
+
+              resolvedAvatarName ??= isGenericTopic ? 'Kausap Buddy (Mascot)' : remoteTopic;
+
               final sessionMap = {
                 'id': sId,
                 'date': remoteSession['created_at']?.toString() ?? DateTime.now().toIso8601String(),
-                'avatarId': existingAvatarId ?? remoteSession['avatar_id'] ?? remoteSession['avatarId'],
-                'avatarName': existingAvatarName ?? remoteSession['topic'] ?? 'Kausap Buddy (Mascot)',
+                'avatarId': resolvedAvatarId,
+                'avatarName': resolvedAvatarName,
                 'messages': parsedMsgs,
               };
 
@@ -158,6 +180,47 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     if (lower.contains('serena') || lower.contains('zen')) return '🌙';
     if (lower.contains('alex')) return '🔥';
     return '🤖';
+  }
+
+  /// Scans the first assistant message to detect which AI persona sent it.
+  /// Returns [name, avatarId] or null if undetectable.
+  List<String>? _inferPersonaFromMessages(List<Map<String, dynamic>> messages) {
+    // Look at first few assistant messages for persona self-identification
+    final assistantMsgs = messages
+        .where((m) => (m['role'] ?? m['sender'] ?? '').toString() == 'assistant')
+        .take(3);
+
+    for (final m in assistantMsgs) {
+      final content = (m['content'] ?? '').toString().toLowerCase();
+      if (content.contains('ate maya') || content.contains("i'm maya") || content.contains('i am maya')) {
+        return ['Ate Maya', 'maya'];
+      }
+      if (content.contains('kuya ben') || content.contains("i'm ben") || content.contains('i am ben')) {
+        return ['Kuya Ben', 'ben'];
+      }
+      if (content.contains('coach leo') || content.contains("i'm leo")) {
+        return ['Coach Leo', 'coach_leo'];
+      }
+      if (content.contains('tita grace') || content.contains("i'm grace")) {
+        return ['Tita Grace', 'tita_grace'];
+      }
+      if (content.contains('doc santos') || content.contains('dr. santos') || content.contains('doctor santos')) {
+        return ['Doc Santos', 'santos'];
+      }
+      if (content.contains('prof. gabriel') || content.contains('prof gabriel') || content.contains("i'm gabriel")) {
+        return ['Prof. Gabriel', 'prof_gabriel'];
+      }
+      if (content.contains('serena') || content.contains('zen')) {
+        return ['Serena Zen', 'serena_zen'];
+      }
+      if (content.contains('coach alex') || content.contains("i'm alex")) {
+        return ['Coach Alex', 'coach_alex'];
+      }
+      if (content.contains('kausap buddy') || content.contains('buddy')) {
+        return ['Kausap Buddy (Mascot)', 'buddy'];
+      }
+    }
+    return null;
   }
 
   String _formatSessionDate(String? isoDate) {

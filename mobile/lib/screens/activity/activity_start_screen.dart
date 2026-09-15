@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
 import '../../services/ambient_audio_service.dart';
@@ -93,13 +94,18 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
     _timer?.cancel();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-    // Save daily completion key
+    // Save daily completion key — write to BOTH storages:
+    // 1. FlutterSecureStorage (encrypted, persistent across sessions on native)
+    // 2. SharedPreferences (non-encrypted, web-safe — survives Chrome hard refresh)
     await _storage.write(
       key: 'activity_${_activityId}_$today',
       value: 'completed',
     );
-    // Also mark mindfulness quest for the day
     await _storage.write(key: 'mindfulness_$today', value: 'completed');
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('activity_${_activityId}_$today', 'completed');
+    await prefs.setString('mindfulness_$today', 'completed');
 
     // Show post-exercise reflection dialog before popping
     if (!mounted) return;
@@ -107,18 +113,29 @@ class _ActivityStartScreenState extends State<ActivityStartScreen>
   }
 
   Future<void> _appendHistory(String date, {String? moodFeedback}) async {
-    final raw = await _storage.read(key: 'activity_history');
-    final List<dynamic> history = raw != null ? jsonDecode(raw) as List : [];
-    history.insert(0, {
+    final newEntry = {
       'id': _activityId,
       'title': widget.activity.title,
       'date': date,
       'durationSeconds': _elapsedSeconds > 0 ? _elapsedSeconds : _totalSeconds,
       'moodFeedback': moodFeedback ?? 'Refreshed',
       'completedAt': DateTime.now().toIso8601String(),
-    });
+    };
+
+    // Write to FlutterSecureStorage
+    final raw = await _storage.read(key: 'activity_history');
+    final List<dynamic> history = raw != null ? jsonDecode(raw) as List : [];
+    history.insert(0, newEntry);
     final trimmed = history.take(200).toList();
     await _storage.write(key: 'activity_history', value: jsonEncode(trimmed));
+
+    // Also write to SharedPreferences (web-safe fallback)
+    final prefs = await SharedPreferences.getInstance();
+    final rawPrefs = prefs.getString('activity_history');
+    final List<dynamic> historyPrefs = rawPrefs != null ? jsonDecode(rawPrefs) as List : [];
+    historyPrefs.insert(0, newEntry);
+    final trimmedPrefs = historyPrefs.take(200).toList();
+    await prefs.setString('activity_history', jsonEncode(trimmedPrefs));
   }
 
   Future<void> _showCompletionReflectionDialog(String today) async {
