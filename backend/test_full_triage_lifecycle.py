@@ -32,7 +32,7 @@ def main():
     
     # 1. Authenticate Counselor & Student
     c_token = post_json(f'{BASE_URL}/auth/login', {'email': 'counselor@urios.edu.ph', 'password': 'Counselor123!'})['access_token']
-    s_token = post_json(f'{BASE_URL}/auth/login', {'email': 'balbuenadexter2@gmail.com', 'password': 'password123'})['access_token']
+    s_token = post_json(f'{BASE_URL}/auth/login', {'email': 'client1@example.com', 'password': 'password123'})['access_token']
     print("  PASS: Authenticated Counselor and Student")
 
     # 2. Get Flagged Messages

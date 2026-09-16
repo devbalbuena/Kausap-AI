@@ -18,9 +18,9 @@ def login(email, password):
 def main():
     print("=== Testing 2-Day Yellow Warning & 3-Day Red Alert Triage Protocol ===")
     
-    # 1. Login as Student and log 3 consecutive rough moods
-    student_token = login("balbuenadexter2@gmail.com", "password123")
-    print("  PASS: Authenticated Student (balbuenadexter2@gmail.com)")
+    # 1. Login as Mock Test Student and log 3 consecutive rough moods
+    student_token = login("client1@example.com", "password123")
+    print("  PASS: Authenticated Test Student (client1@example.com)")
 
     # Log Rough mood 1
     req1 = urllib.request.Request(
@@ -67,7 +67,7 @@ def main():
     with urllib.request.urlopen(req_patterns) as resp:
         patterns = json.loads(resp.read().decode("utf-8"))
         assert len(patterns) >= 1
-        found_alert = next((p for p in patterns if p["email"] == "balbuenadexter2@gmail.com"), None)
+        found_alert = next((p for p in patterns if p["email"] == "client1@example.com"), None)
         assert found_alert is not None
         assert found_alert["risk_level"] == "red"
         assert found_alert["consecutive_days"] >= 3
@@ -81,7 +81,7 @@ def main():
     )
     with urllib.request.urlopen(req_flagged) as resp:
         flagged = json.loads(resp.read().decode("utf-8"))
-        distress_flag = next((f for f in flagged if f["user_email"] == "balbuenadexter2@gmail.com" and "Distress" in (f.get("flag_reason") or "")), None)
+        distress_flag = next((f for f in flagged if f["user_email"] == "client1@example.com" and "Distress" in (f.get("flag_reason") or "")), None)
         assert distress_flag is not None
         print(f"  PASS: Verified Unified Crisis Triage Flag: '{distress_flag['flag_reason']}' for {distress_flag['user_name']}")
 
