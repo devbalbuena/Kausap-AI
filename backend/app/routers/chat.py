@@ -504,12 +504,12 @@ PERSONA_EDGE_VOICE_MAP_TAGALOG: Dict[str, tuple] = {
 
 # ElevenLabs high-fidelity natural human voices (Tested & verified for Free & Paid plans)
 PERSONA_ELEVENLABS_VOICE_MAP: Dict[str, str] = {
-    # 👩 Ate Maya — Bella (Warm, youthful, empathetic sister)
-    "maya":         "EXAVITQu4vr4xnSDxMaL",
+    # 👩 Ate Maya — Jessica (Bright, youthful, friendly college sister — closest to Zara)
+    "maya":         "cgSgspJ2msm6clMCkdW9",
     # 👨 Kuya Ben — Antoni (Friendly, encouraging big brother)
     "ben":          "ErXwobaYiN019PkySvjV",
-    # 🌟 Buddy Mascot — Jessica (Cheerful, bright companion)
-    "buddy":        "cgSgspJ2msm6clMCkdW9",
+    # 🌟 Buddy Mascot — Lily (Warm, youthful companion)
+    "buddy":        "pFZP5JQG7iQjIQuC4Bku",
     # 🩺 Dr. Santos — Daniel (Calm, measured clinician)
     "santos":       "onwK4e9ZLuTAKqWW03F9",
     # 💪 Coach Leo — Liam (Dynamic, upbeat mentor)
