@@ -22,6 +22,7 @@ from app.schemas.admin import (
 )
 from app.schemas.audit import AuditLogRead
 from app.schemas.mood import MoodEntryRead
+from app.schemas.chat import ChatSessionRead, ChatMessageRead
 import json
 from app.models.notification import Notification, NotificationType
 from app.services.email_service import (
