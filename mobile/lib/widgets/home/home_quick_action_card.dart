@@ -32,10 +32,10 @@ class HomeQuickActionCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: KausapColors.border(context)),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withAlpha(12),
+                color: KausapColors.accentShadow(context),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
@@ -66,9 +66,9 @@ class HomeQuickActionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
-                color: AppColors.textSecondary,
+                color: KausapColors.textMuted(context),
                 size: 24,
                 semanticLabel: 'navigate',
               ),
@@ -91,10 +91,10 @@ class HomeQuoteCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withAlpha(12),
+            color: KausapColors.accentShadow(context),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -102,13 +102,13 @@ class HomeQuoteCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text('"', style: TextStyle(fontSize: 32, color: AppColors.divider)),
+          Text('"', style: TextStyle(fontSize: 32, color: KausapColors.border(context))),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'It is better to conquer yourself than to win a thousand battles',
               style: AppTextStyles.body.copyWith(
-                color: const Color(0xFF707070),
+                color: KausapColors.textMuted(context),
                 fontStyle: FontStyle.italic,
                 height: 1.5,
               ),
@@ -133,15 +133,18 @@ class HomeScreenerPromoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0077B6), Color(0xFF0096C7)],
+        gradient: LinearGradient(
+          colors: [
+            KausapColors.accent(context),
+            KausapColors.accent(context).withAlpha(210),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0077B6).withAlpha(40),
+            color: KausapColors.accentShadow(context),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -174,7 +177,7 @@ class HomeScreenerPromoCard extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF0077B6),
+              foregroundColor: KausapColors.accent(context),
               minimumSize: const Size(0, 36),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               shape: RoundedRectangleBorder(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
 
 class AppearanceSettingsScreen extends StatelessWidget {
@@ -88,6 +87,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                       label: 'Light',
                       isSelected: currentThemeMode == ThemeMode.light,
                       isDarkScreen: isDark,
+                      accentColor: currentAccent,
                       onTap: () {
                         HapticService.mediumTap();
                         themeProvider.setThemeMode(ThemeMode.light);
@@ -101,6 +101,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                       label: 'Dark',
                       isSelected: currentThemeMode == ThemeMode.dark,
                       isDarkScreen: isDark,
+                      accentColor: currentAccent,
                       onTap: () {
                         HapticService.mediumTap();
                         themeProvider.setThemeMode(ThemeMode.dark);
@@ -114,6 +115,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                       label: 'System',
                       isSelected: currentThemeMode == ThemeMode.system,
                       isDarkScreen: isDark,
+                      accentColor: currentAccent,
                       onTap: () {
                         HapticService.mediumTap();
                         themeProvider.setThemeMode(ThemeMode.system);
@@ -352,6 +354,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
     required String label,
     required bool isSelected,
     required bool isDarkScreen,
+    required Color accentColor,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -361,11 +364,11 @@ class AppearanceSettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withAlpha(isDarkScreen ? 40 : 15)
+              ? accentColor.withAlpha(isDarkScreen ? 40 : 15)
               : (isDarkScreen ? const Color(0xFF1E293B) : Colors.white),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppColors.primary : (isDarkScreen ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            color: isSelected ? accentColor : (isDarkScreen ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -374,7 +377,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
             Icon(
               icon,
               size: 24,
-              color: isSelected ? AppColors.primary : (isDarkScreen ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+              color: isSelected ? accentColor : (isDarkScreen ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
             ),
             const SizedBox(height: 8),
             Text(
@@ -383,7 +386,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                 fontFamily: 'Poppins',
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 fontSize: 13,
-                color: isSelected ? AppColors.primary : (isDarkScreen ? Colors.white : const Color(0xFF0F172A)),
+                color: isSelected ? accentColor : (isDarkScreen ? Colors.white : const Color(0xFF0F172A)),
               ),
             ),
           ],

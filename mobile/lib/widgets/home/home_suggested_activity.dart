@@ -28,10 +28,10 @@ class HomeSuggestedActivity extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: KausapColors.border(context)),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withAlpha(12),
+                color: KausapColors.accentShadow(context),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),

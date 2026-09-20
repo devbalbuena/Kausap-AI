@@ -178,19 +178,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final avatarUrl = user?['avatar_url'] ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Profile',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
       ),
       body: Center(

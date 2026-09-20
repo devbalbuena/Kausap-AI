@@ -1452,17 +1452,17 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.bolt_rounded, size: 16, color: Color(0xFF0284C7)),
-                      SizedBox(width: 4),
+                      Icon(Icons.bolt_rounded, size: 16, color: KausapColors.accent(context)),
+                      const SizedBox(width: 4),
                       Text(
                         'Quick-Start Prompts',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E293B),
+                          color: KausapColors.textPrimary(context),
                         ),
                       ),
                     ],
@@ -1472,10 +1472,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: KausapColors.subtleBg(context),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
                           Text(
                             'Hide',
@@ -1483,11 +1483,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                               fontFamily: 'Poppins',
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF64748B),
+                              color: KausapColors.textMuted(context),
                             ),
                           ),
-                          SizedBox(width: 2),
-                          Icon(Icons.keyboard_arrow_up_rounded, size: 14, color: Color(0xFF64748B)),
+                          const SizedBox(width: 2),
+                          Icon(Icons.keyboard_arrow_up_rounded, size: 14, color: KausapColors.textMuted(context)),
                         ],
                       ),
                     ),
@@ -1502,7 +1502,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: Material(
-                  color: Colors.white,
+                  color: KausapColors.cardBg(context),
                   borderRadius: BorderRadius.circular(16),
                   child: InkWell(
                     onTap: () {
@@ -1514,7 +1514,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        border: Border.all(color: KausapColors.border(context)),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x06000000),
@@ -1531,20 +1531,20 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                               children: [
                                 Text(
                                   item['title']!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF0F172A),
+                                    color: KausapColors.textPrimary(context),
                                   ),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   item['desc']!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 11.5,
-                                    color: Color(0xFF64748B),
+                                    color: KausapColors.textMuted(context),
                                   ),
                                 ),
                               ],
@@ -1553,14 +1553,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
+                            decoration: BoxDecoration(
+                              color: KausapColors.accentSubtle(context),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_forward_ios_rounded,
                               size: 12,
-                              color: Color(0xFF0284C7),
+                              color: KausapColors.accent(context),
                             ),
                           ),
                         ],
@@ -1655,7 +1655,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         constraints: const BoxConstraints(maxWidth: 265),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: KausapColors.cardBg(context),
                           borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(2),
                             topRight: Radius.circular(16),
@@ -1674,7 +1674,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           displayText,
                           style: AppTextStyles.body.copyWith(
                             fontSize: 14,
-                            color: const Color(0xFF191C21),
+                            color: KausapColors.textPrimary(context),
                             height: 1.43,
                           ),
                         ),
@@ -1928,15 +1928,15 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         child: Container(
           constraints: const BoxConstraints(maxWidth: 260),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            color: KausapColors.accent(context),
+            borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(16),
               topRight: Radius.circular(2),
               bottomLeft: Radius.circular(16),
               bottomRight: Radius.circular(16),
             ),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
                 color: Color(0x0D000000),
                 blurRadius: 1,
@@ -2239,7 +2239,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         ),
                         child: Icon(
                           _isRecordingVoice ? Icons.stop_circle_rounded : Icons.mic_none_rounded,
-                          color: _isRecordingVoice ? const Color(0xFFDC2626) : AppColors.primary,
+                          color: _isRecordingVoice ? const Color(0xFFDC2626) : KausapColors.accent(context),
                           size: 22,
                         ),
                       ),
@@ -2255,14 +2255,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       child: Container(
                         width: 34,
                         height: 34,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
+                        decoration: BoxDecoration(
+                          color: KausapColors.accent(context),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Color(0x330077B6),
+                              color: KausapColors.accentShadow(context),
                               blurRadius: 6,
-                              offset: Offset(0, 2),
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
@@ -3119,14 +3119,14 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFF0F9FF) : const Color(0xFFF8FAFC),
+                      color: isSelected ? KausapColors.accentSubtle(context) : KausapColors.subtleBg(context),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                        color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                         width: isSelected ? 2 : 1,
                       ),
                       boxShadow: isSelected
-                          ? const [BoxShadow(color: Color(0x140284C7), blurRadius: 8, offset: Offset(0, 2))]
+                          ? [BoxShadow(color: KausapColors.accent(context).withAlpha(30), blurRadius: 8, offset: const Offset(0, 2))]
                           : [],
                     ),
                     child: Row(
@@ -3143,16 +3143,16 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                                   fontFamily: 'Poppins',
                                   fontSize: 13.5,
                                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                  color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF1E293B),
+                                  color: isSelected ? KausapColors.accent(context) : KausapColors.textPrimary(context),
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 s.subtitle,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 11,
-                                  color: Color(0xFF64748B),
+                                  color: KausapColors.textMuted(context),
                                 ),
                               ),
                             ],
@@ -3161,13 +3161,13 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: isPlayingThis ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                            color: isPlayingThis ? KausapColors.accent(context) : KausapColors.border(context),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             isPlayingThis ? Icons.stop_rounded : Icons.play_arrow_rounded,
                             size: 18,
-                            color: isPlayingThis ? Colors.white : const Color(0xFF475569),
+                            color: isPlayingThis ? Colors.white : KausapColors.textMuted(context),
                           ),
                         ),
                       ],
@@ -3182,9 +3182,9 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: KausapColors.subtleBg(context),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: KausapColors.border(context)),
                 ),
                 child: Row(
                   children: [
@@ -3194,7 +3194,7 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                           : _audio.volume > 0
                               ? Icons.volume_down_rounded
                               : Icons.volume_mute_rounded,
-                      color: const Color(0xFF0284C7),
+                      color: KausapColors.accent(context),
                       size: 22,
                     ),
                     const SizedBox(width: 8),
@@ -3204,9 +3204,9 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                           trackHeight: 4,
                           thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
                           overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                          activeTrackColor: const Color(0xFF0284C7),
-                          inactiveTrackColor: const Color(0xFFCBD5E1),
-                          thumbColor: const Color(0xFF0284C7),
+                          activeTrackColor: KausapColors.accent(context),
+                          inactiveTrackColor: KausapColors.border(context),
+                          thumbColor: KausapColors.accent(context),
                         ),
                         child: Slider(
                           value: _audio.volume,
@@ -3220,11 +3220,11 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                     ),
                     Text(
                       '${(_audio.volume * 100).toInt()}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569),
+                        color: KausapColors.textMuted(context),
                       ),
                     ),
                   ],
@@ -3247,7 +3247,7 @@ class _AmbientSoundscapeSheetState extends State<_AmbientSoundscapeSheet> {
                       icon: Icon(_audio.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
                       label: Text(_audio.isPlaying ? 'Pause Soundscape' : 'Play Soundscape'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _audio.isPlaying ? const Color(0xFFEF4444) : const Color(0xFF0284C7),
+                        backgroundColor: _audio.isPlaying ? const Color(0xFFEF4444) : KausapColors.accent(context),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

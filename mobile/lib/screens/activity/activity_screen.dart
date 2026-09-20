@@ -428,7 +428,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final recommended = _getRecommendedActivity();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
@@ -491,17 +491,20 @@ class _ActivityScreenState extends State<ActivityScreen> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0284C7), Color(0xFF0D9488)],
+            gradient: LinearGradient(
+              colors: [
+                KausapColors.accent(context),
+                KausapColors.accent(context).withAlpha(190),
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(9),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Color(0x330284C7),
+                color: KausapColors.accentShadow(context),
                 blurRadius: 8,
-                offset: Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -510,7 +513,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           ),
         ),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -520,7 +523,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   fontFamily: 'Poppins',
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: KausapColors.textPrimary(context),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -529,7 +532,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 11.5,
-                  color: Color(0xFF64748B),
+                  color: KausapColors.textMuted(context),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -551,9 +554,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: KausapColors.cardBg(context),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: KausapColors.border(context)),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x0A000000),
@@ -562,8 +565,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 ),
               ],
             ),
-            child: const Center(
-              child: Icon(Icons.history_rounded, color: Color(0xFF334155), size: 19),
+            child: Center(
+              child: Icon(Icons.history_rounded, color: KausapColors.textPrimary(context), size: 19),
             ),
           ),
         ),
@@ -577,14 +580,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
             final avatar = CircleAvatar(
               radius: 16,
-              backgroundColor: AppColors.primary.withAlpha(25),
+              backgroundColor: KausapColors.accentSubtle(context),
               backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
                   ? NetworkImage(avatarUrl)
                   : null,
               child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
                   ? Text(
                       initial,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary),
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: KausapColors.accent(context)),
                     )
                   : null,
             );
@@ -607,13 +610,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     children: [
                       CircleAvatar(
                         radius: 14,
-                        backgroundColor: AppColors.primary.withAlpha(20),
+                        backgroundColor: KausapColors.accentSubtle(context),
                         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
                             ? NetworkImage(avatarUrl)
                             : null,
                         child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
                             ? Text(initial,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: KausapColors.accent(context)))
                             : null,
                       ),
                       const SizedBox(width: 10),
@@ -640,9 +643,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Widget _buildSearchBar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -654,14 +657,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
       child: TextField(
         controller: _searchController,
         onChanged: (val) => setState(() => _searchQuery = val.trim()),
-        style: const TextStyle(fontFamily: 'Inter', fontSize: 13.5, color: Color(0xFF0F172A)),
+        style: TextStyle(fontFamily: 'Inter', fontSize: 13.5, color: KausapColors.textPrimary(context)),
         decoration: InputDecoration(
           hintText: 'Search breathing, meditation, grounding...',
-          hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF94A3B8)),
-          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF94A3B8), size: 20),
+          hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textHint(context)),
+          prefixIcon: Icon(Icons.search_rounded, color: KausapColors.textHint(context), size: 20),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear_rounded, size: 18, color: Color(0xFF94A3B8)),
+                  icon: Icon(Icons.clear_rounded, size: 18, color: KausapColors.textHint(context)),
                   onPressed: () {
                     _searchController.clear();
                     setState(() => _searchQuery = '');
@@ -696,15 +699,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF0284C7) : Colors.white,
+                  color: isSelected ? KausapColors.accent(context) : KausapColors.cardBg(context),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+                    color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF0284C7).withAlpha(60),
+                            color: KausapColors.accent(context).withAlpha(60),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -717,7 +720,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     fontFamily: 'Poppins',
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? Colors.white : const Color(0xFF475569),
+                    color: isSelected ? Colors.white : KausapColors.textMuted(context),
                   ),
                 ),
               ),
@@ -901,9 +904,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -931,18 +934,18 @@ class _ActivityScreenState extends State<ActivityScreen> {
                       fontFamily: 'Poppins',
                       fontSize: hasStreak ? 13 : 12,
                       fontWeight: FontWeight.w700,
-                      color: hasStreak ? const Color(0xFF0F172A) : const Color(0xFF0284C7),
+                      color: hasStreak ? KausapColors.textPrimary(context) : KausapColors.accent(context),
                     ),
                   ),
                   Text(
                     hasStreak ? 'Active Streak' : 'No streak yet',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: KausapColors.textMuted(context)),
                   ),
                 ],
               ),
             ],
           ),
-          Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+          Container(width: 1, height: 28, color: KausapColors.border(context)),
           // ── Minutes ──
           Row(
             children: [
@@ -957,12 +960,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
                       fontFamily: 'Poppins',
                       fontSize: hasMinutes ? 13 : 12,
                       fontWeight: FontWeight.w700,
-                      color: hasMinutes ? const Color(0xFF0F172A) : const Color(0xFF0284C7),
+                      color: hasMinutes ? KausapColors.textPrimary(context) : KausapColors.accent(context),
                     ),
                   ),
                   Text(
                     hasMinutes ? 'This Week' : 'This Week',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: KausapColors.textMuted(context)),
                   ),
                 ],
               ),
@@ -981,10 +984,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: isDone ? const Color(0xFFF0FDF4) : Colors.white,
+        color: isDone
+            ? (KausapColors.isDark(context) ? const Color(0xFF132E20) : const Color(0xFFF0FDF4))
+            : KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDone ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+          color: isDone ? KausapColors.success.withAlpha(120) : KausapColors.border(context),
           width: isDone ? 1.5 : 1,
         ),
         boxShadow: const [
@@ -1061,7 +1066,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             padding: const EdgeInsets.all(4),
                             child: Icon(
                               isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                              color: isFav ? const Color(0xFFEF4444) : const Color(0xFF94A3B8),
+                              color: isFav ? const Color(0xFFEF4444) : KausapColors.textHint(context),
                               size: 20,
                             ),
                           ),
@@ -1075,20 +1080,20 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 // Title & Description
                 Text(
                   activity.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: KausapColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   activity.description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12.5,
-                    color: Color(0xFF64748B),
+                    color: KausapColors.textMuted(context),
                     height: 1.35,
                   ),
                 ),
@@ -1126,37 +1131,43 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF64748B)),
+                        Icon(Icons.access_time_rounded, size: 14, color: KausapColors.textMuted(context)),
                         const SizedBox(width: 4),
                         Text(
                           activity.duration,
-                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: KausapColors.textMuted(context)),
                         ),
                         const SizedBox(width: 10),
-                        Container(width: 4, height: 4, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFCBD5E1))),
+                        Container(width: 4, height: 4, decoration: BoxDecoration(shape: BoxShape.circle, color: KausapColors.border(context))),
                         const SizedBox(width: 10),
                         Text(
                           activity.difficulty,
-                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: KausapColors.textMuted(context)),
                         ),
                       ],
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isDone ? const Color(0xFFDCFCE7) : const Color(0xFFE0F2FE),
+                        color: isDone ? const Color(0xFFDCFCE7) : KausapColors.accentSubtle(context),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 13,
+                            color: isDone ? const Color(0xFF16A34A) : KausapColors.accent(context),
+                          ),
+                          const SizedBox(width: 4),
                           Text(
-                            isDone ? 'Do Again' : 'Start ➔',
+                            isDone ? 'Practice Again' : 'Start',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
-                              color: isDone ? const Color(0xFF16A34A) : const Color(0xFF0284C7),
+                              color: isDone ? const Color(0xFF16A34A) : KausapColors.accent(context),
                             ),
                           ),
                         ],
@@ -1172,34 +1183,32 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
+  // ── Empty State ───────────────────────────────────────────────────────────
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: const Column(
-        children: [
-          Text('🔍', style: TextStyle(fontSize: 40)),
-          SizedBox(height: 12),
-          Text(
-            'No matching activities found',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-          ),
-          SizedBox(height: 4),
-          Text(
-            'Try adjusting your search or category filter.',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      child: Center(
+        child: Column(
+          children: [
+            const Text('🔍', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text(
+              'No activities found',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: KausapColors.textPrimary(context)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Try changing your search or category filter.',
+              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Activity History Bottom Sheet ─────────────────────────────────────────────
+// ── Activity History Bottom Sheet ───────────────────────────────────────────
 class ActivityHistorySheet extends StatefulWidget {
   const ActivityHistorySheet({super.key});
 
@@ -1209,8 +1218,8 @@ class ActivityHistorySheet extends StatefulWidget {
 
 class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
   static const _storage = FlutterSecureStorage();
-  bool _isLoading = true;
   List<Map<String, dynamic>> _history = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -1220,25 +1229,16 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
 
   Future<void> _loadHistory() async {
     try {
-      // Try FlutterSecureStorage first, then SharedPreferences fallback
+      SharedPreferences? prefs;
+      try { prefs = await SharedPreferences.getInstance(); } catch (_) {}
+
       String? raw = await _storage.read(key: 'activity_history');
-      if (raw == null) {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          raw = prefs.getString('activity_history');
-        } catch (_) {}
-      }
+      raw ??= prefs?.getString('activity_history');
+
       if (raw != null) {
-        final list = List<Map<String, dynamic>>.from(
-          (jsonDecode(raw) as List).map((e) => Map<String, dynamic>.from(e as Map)),
-        );
-        if (mounted) {
-          setState(() {
-            _history = list;
-            _isLoading = false;
-          });
-          return;
-        }
+        final list = List<Map<String, dynamic>>.from(jsonDecode(raw));
+        list.sort((a, b) => (b['date'] ?? '').compareTo(a['date'] ?? ''));
+        if (mounted) setState(() => _history = list);
       }
     } catch (_) {}
     if (mounted) setState(() => _isLoading = false);
@@ -1248,9 +1248,9 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.72,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: KausapColors.cardBg(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         children: [
@@ -1259,7 +1259,7 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
             width: 44,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFCBD5E1),
+              color: KausapColors.border(context),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -1269,43 +1269,43 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.history_rounded, color: Color(0xFF0284C7), size: 22),
-                    SizedBox(width: 8),
+                    Icon(Icons.history_rounded, color: KausapColors.accent(context), size: 22),
+                    const SizedBox(width: 8),
                     Text(
                       'Activity History',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: KausapColors.textPrimary(context)),
                     ),
                   ],
                 ),
                 Text(
                   '${_history.length} sessions',
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: KausapColors.textMuted(context)),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          Divider(height: 1, color: KausapColors.border(context)),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _history.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('🧘', style: TextStyle(fontSize: 48)),
-                            SizedBox(height: 12),
+                            const Text('🧘', style: TextStyle(fontSize: 48)),
+                            const SizedBox(height: 12),
                             Text(
                               'No activity logs yet',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: KausapColors.textPrimary(context)),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
                               'Complete an exercise today to start tracking!',
-                              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                             ),
                           ],
                         ),
@@ -1324,9 +1324,9 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
                           return Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
+                              color: KausapColors.subtleBg(context),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              border: Border.all(color: KausapColors.border(context)),
                             ),
                             child: Row(
                               children: [
@@ -1345,12 +1345,12 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
                                     children: [
                                       Text(
                                         title,
-                                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: KausapColors.textPrimary(context)),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         dateStr,
-                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                                        style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context)),
                                       ),
                                     ],
                                   ),
@@ -1358,13 +1358,13 @@ class _ActivityHistorySheetState extends State<ActivityHistorySheet> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: KausapColors.cardBg(context),
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    border: Border.all(color: KausapColors.border(context)),
                                   ),
                                   child: Text(
                                     '$mins mins',
-                                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF0284C7)),
+                                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: KausapColors.accent(context)),
                                   ),
                                 ),
                               ],

@@ -63,20 +63,20 @@ class HomeArticlesSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.article_outlined, color: AppColors.primary, size: 22),
+                Icon(Icons.article_outlined, color: KausapColors.accent(context), size: 22),
                 const SizedBox(width: 8),
                 Text('Articles & Insights', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
               ],
             ),
             GestureDetector(
               onTap: onSeeAllTap,
-              child: const Text(
+              child: Text(
                 'See All',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+                  color: KausapColors.accent(context),
                 ),
               ),
             ),
@@ -102,14 +102,14 @@ class HomeArticlesSection extends StatelessWidget {
                 child: Container(
                   width: 250,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: KausapColors.cardBg(context),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: article.isFeatured
                           ? const Color(0xFFF59E0B)
                           : isMoodRec
                               ? article.themeColor.withAlpha(80)
-                              : const Color(0x1AC0C9C2),
+                              : KausapColors.border(context),
                       width: article.isFeatured ? 1.5 : 1,
                     ),
                     boxShadow: [
@@ -218,11 +218,11 @@ class HomeArticlesSection extends StatelessWidget {
                             children: [
                               Text(
                                 article.title,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1F2937),
+                                  color: KausapColors.textPrimary(context),
                                   height: 1.25,
                                 ),
                                 maxLines: 2,
@@ -247,17 +247,17 @@ class HomeArticlesSection extends StatelessWidget {
                                   Expanded(
                                     child: Text(
                                       article.author,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontSize: 11,
-                                        color: Color(0xFF4B5563),
+                                        color: KausapColors.textMuted(context),
                                         fontWeight: FontWeight.w500,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
+                                  Icon(Icons.arrow_forward_rounded, size: 14, color: KausapColors.accent(context)),
                                 ],
                               ),
                             ],

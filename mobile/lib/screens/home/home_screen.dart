@@ -797,17 +797,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0284C7), Color(0xFF0077B6), Color(0xFF06B6D4)],
+              gradient: LinearGradient(
+                colors: [
+                  KausapColors.accent(context),
+                  KausapColors.accent(context).withAlpha(190),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(9),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x330284C7),
+                  color: KausapColors.accentShadow(context),
                   blurRadius: 8,
-                  offset: Offset(0, 2),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -823,7 +826,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Text(
             'Kausap AI',
             style: AppTextStyles.brandName.copyWith(
-              color: const Color(0xFF0284C7),
+              color: KausapColors.accent(context),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -873,12 +876,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: _guidanceNoticesCount > 0 ? const Color(0xFFE0F2FE) : Colors.transparent,
+                      color: _guidanceNoticesCount > 0 ? KausapColors.accentSubtle(context) : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       _guidanceNoticesCount > 0 ? Icons.mark_email_unread_rounded : Icons.mail_outline_rounded,
-                      color: _guidanceNoticesCount > 0 ? const Color(0xFF0284C7) : AppColors.textPrimary,
+                      color: _guidanceNoticesCount > 0 ? KausapColors.accent(context) : KausapColors.textPrimary(context),
                       size: 22,
                     ),
                   ),
@@ -944,7 +947,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               displayCount > 0
                                   ? Icons.notifications_active_rounded
                                   : Icons.notifications_outlined,
-                              color: displayCount > 0 ? AppColors.primary : AppColors.textPrimary,
+                              color: displayCount > 0 ? KausapColors.accent(context) : KausapColors.textPrimary(context),
                               size: 24,
                             ),
                           ),
@@ -1001,7 +1004,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               final avatarUrl = user['avatar_url'] as String?;
               final avatar = CircleAvatar(
                 radius: 16,
-                backgroundColor: AppColors.primary.withAlpha(30),
+                backgroundColor: KausapColors.accentSubtle(context),
                 backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
                     ? NetworkImage(avatarUrl)
                     : null,
@@ -1009,7 +1012,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ? Text(
                         initial,
                         style: AppTextStyles.label.copyWith(
-                          color: AppColors.primary,
+                          color: KausapColors.accent(context),
                           fontWeight: FontWeight.w700,
                         ),
                       )
@@ -1035,13 +1038,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       children: [
                         CircleAvatar(
                           radius: 14,
-                          backgroundColor: AppColors.primary.withAlpha(20),
+                          backgroundColor: KausapColors.accentSubtle(context),
                           backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
                               ? NetworkImage(avatarUrl)
                               : null,
                           child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
                               ? Text(initial,
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: KausapColors.accent(context)))
                               : null,
                         ),
                         const SizedBox(width: 10),
@@ -1078,14 +1081,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x080077B6),
+            color: KausapColors.accentShadow(context),
             blurRadius: 16,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1109,28 +1112,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
+                        color: KausapColors.accentSubtle(context),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFBAE6FD)),
+                        border: Border.all(color: KausapColors.accent(context).withAlpha(40)),
                       ),
-                      child: const Text(
+                      child: Text(
                         '🌱 Campus Wellness Shield',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0284C7),
+                          color: KausapColors.accent(context),
                         ),
                       ),
                     ),
                     const SizedBox(height: 5),
                     Text(
                       '$greetingText,\n$formattedName! $greetingEmoji',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: KausapColors.textPrimary(context),
                         height: 1.25,
                       ),
                     ),
@@ -1139,10 +1142,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       hasMood
                           ? 'Feeling $moodLabel right now • Keep blooming 🌱'
                           : 'How are you feeling right now? Tap a mood below 💙',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
-                        color: Color(0xFF64748B),
+                        color: KausapColors.textMuted(context),
                         height: 1.35,
                       ),
                     ),
@@ -1169,9 +1172,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF0F9FF),
+                          color: KausapColors.accentSubtle(context),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+                          border: Border.all(color: KausapColors.accent(context).withAlpha(40), width: 1.2),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -1181,17 +1184,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             Expanded(
                               child: Text(
                                 'Kausap Buddy: "${_activeCompanionAffirmation!}"',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0369A1),
+                                  color: KausapColors.accent(context),
                                   height: 1.3,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 6),
-                            const Icon(Icons.close_rounded, size: 14, color: Color(0xFF94A3B8)),
+                            Icon(Icons.close_rounded, size: 14, color: KausapColors.textMuted(context)),
                           ],
                         ),
                       ),
@@ -1219,14 +1222,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x06000000),
+            color: KausapColors.accentShadow(context),
             blurRadius: 14,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1236,17 +1239,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 16),
-                  SizedBox(width: 6),
+                  const Icon(Icons.favorite_rounded, color: KausapColors.danger, size: 16),
+                  const SizedBox(width: 6),
                   Text(
                     'Daily Mood Check-In',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
+                      color: KausapColors.textPrimary(context),
                     ),
                   ),
                 ],
@@ -1254,7 +1257,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: hasLogged ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                  color: hasLogged ? KausapColors.successSubtle : KausapColors.border(context),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1263,7 +1266,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     fontFamily: 'Poppins',
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
-                    color: hasLogged ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                    color: hasLogged ? KausapColors.success : KausapColors.textMuted(context),
                   ),
                 ),
               ),
@@ -1287,10 +1290,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: isCurrent ? col.withAlpha(25) : const Color(0xFFF8FAFC),
+                        color: isCurrent ? col.withAlpha(25) : KausapColors.border(context).withAlpha(60),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isCurrent ? col : const Color(0xFFE2E8F0),
+                          color: isCurrent ? col : KausapColors.border(context),
                           width: isCurrent ? 2 : 1,
                         ),
                       ),
@@ -1305,7 +1308,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               fontFamily: 'Poppins',
                               fontSize: 11,
                               fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                              color: isCurrent ? col : const Color(0xFF64748B),
+                              color: isCurrent ? col : KausapColors.textMuted(context),
                             ),
                           ),
                         ],
@@ -1330,17 +1333,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isAck ? const Color(0xFFF0FDF4) : const Color(0xFFEFF6FF),
+        color: isAck ? KausapColors.successSubtle : KausapColors.accentSubtle(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isAck ? const Color(0xFF86EFAC) : const Color(0xFF38BDF8),
+          color: isAck ? KausapColors.success.withAlpha(80) : KausapColors.accent(context).withAlpha(80),
           width: 1.5,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0A0284C7),
+            color: KausapColors.accentShadow(context),
             blurRadius: 14,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1352,12 +1355,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isAck ? const Color(0xFFDCFCE7) : const Color(0xFF0284C7),
+                  color: isAck ? KausapColors.successSubtle : KausapColors.accentLight(context),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   Icons.account_balance_rounded,
-                  color: isAck ? const Color(0xFF16A34A) : Colors.white,
+                  color: isAck ? KausapColors.success : KausapColors.accent(context),
                   size: 18,
                 ),
               ),
@@ -1366,23 +1369,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Father Saturnino Urios University',
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0284C7),
+                        color: KausapColors.accent(context),
                         letterSpacing: 0.3,
                       ),
                     ),
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: KausapColors.textPrimary(context),
                       ),
                     ),
                   ],
@@ -1417,10 +1420,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           const SizedBox(height: 10),
           Text(
             body,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 12,
-              color: Color(0xFF334155),
+              color: KausapColors.textMuted(context),
               height: 1.35,
             ),
           ),
@@ -1482,6 +1485,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   /// Builds the home tab content (the main scrollable dashboard)
   Widget _buildHomeTab() {
+    final isCustomAccent = KausapColors.isCustomAccent(context);
+
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
@@ -1526,9 +1531,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                     const SizedBox(height: 14),
                     HomeQuickActionCard(
-                      iconBg: const Color(0xFFFEF3C7),
+                      iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : const Color(0xFFFEF3C7),
                       icon: Icons.edit_note_rounded,
-                      iconColor: const Color(0xFFD97706),
+                      iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFFD97706),
                       title: 'Daily Journal',
                       subtitle: 'Write your thoughts and reflect',
                       onTap: () async {
@@ -1541,27 +1546,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                     const SizedBox(height: 12),
                     HomeQuickActionCard(
-                      iconBg: AppColors.chatbotIcon,
+                      iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : AppColors.chatbotIcon,
                       icon: Icons.smart_toy_rounded,
-                      iconColor: const Color(0xFF0077B6),
+                      iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFF0077B6),
                       title: 'Talk to Kausap AI',
                       subtitle: '24/7 confidential wellness companion',
                       onTap: () => setState(() => _navIndex = 2),
                     ),
                     const SizedBox(height: 12),
                     HomeQuickActionCard(
-                      iconBg: const Color(0xFFD1FAE5),
+                      iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : const Color(0xFFD1FAE5),
                       icon: Icons.self_improvement_rounded,
-                      iconColor: const Color(0xFF059669),
+                      iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFF059669),
                       title: 'Mindfulness Exercises',
                       subtitle: 'Breathe, meditate & relax',
                       onTap: () => setState(() => _navIndex = 1),
                     ),
                     const SizedBox(height: 12),
                     HomeQuickActionCard(
-                      iconBg: const Color(0xFFEFF6FF),
+                      iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : const Color(0xFFEFF6FF),
                       icon: Icons.analytics_rounded,
-                      iconColor: const Color(0xFF3B82F6),
+                      iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFF3B82F6),
                       title: 'Self-Assessments',
                       subtitle: 'PHQ-9 Depression & GAD-7 Anxiety Screeners',
                       onTap: () => setState(() => _navIndex = 3),
@@ -1669,7 +1674,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           Icon(
                             items[i].$1,
                             size: 24,
-                            color: selected ? AppColors.primary : AppColors.textPrimary,
+                            color: selected ? KausapColors.accent(context) : KausapColors.textMuted(context),
                             semanticLabel: items[i].$2,
                           ),
                           const SizedBox(height: 2),
@@ -1677,7 +1682,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             items[i].$2,
                             style: AppTextStyles.caption.copyWith(
                               fontSize: 10,
-                              color: selected ? AppColors.primary : AppColors.textPrimary,
+                              color: selected ? KausapColors.accent(context) : KausapColors.textMuted(context),
                               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                             ),
                           ),

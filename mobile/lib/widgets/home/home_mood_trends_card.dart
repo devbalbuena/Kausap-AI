@@ -46,10 +46,10 @@ class HomeMoodTrendsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withAlpha(15),
+            color: KausapColors.accentShadow(context),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -69,10 +69,10 @@ class HomeMoodTrendsCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withAlpha(20),
+                      color: KausapColors.accentSubtle(context),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.bar_chart_rounded, color: AppColors.primary, size: 20),
+                    child: Icon(Icons.bar_chart_rounded, color: KausapColors.accent(context), size: 20),
                   ),
                   const SizedBox(width: 10),
                   Column(

@@ -212,9 +212,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       if (!mounted) return;
       setState(() => _isExporting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Personal Wellness Report downloaded to your device!"),
-          backgroundColor: AppColors.primary,
+        SnackBar(
+          content: const Text("Personal Wellness Report downloaded to your device!"),
+          backgroundColor: KausapColors.accent(context),
         ),
       );
     });
@@ -240,13 +240,198 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     final weeklyBars = _computeWeeklyBars();
     double sum = 0;
     int count = 0;
-    for (final val in weeklyBars) {
-      if (val != null) {
-        sum += val;
+    for (final b in weeklyBars) {
+      if (b != null) {
+        sum += b;
         count++;
       }
     }
     return count > 0 ? (sum / count) : 0.0;
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                KausapColors.accent(context),
+                KausapColors.accent(context).withAlpha(190),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: [
+              BoxShadow(
+                color: KausapColors.accent(context).withAlpha(50),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Icon(Icons.analytics_rounded, color: Colors.white, size: 18),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Insights & Screeners',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: KausapColors.textPrimary(context),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                'Self-Assessments & Mental Health Trends',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11.5,
+                  color: KausapColors.textMuted(context),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        // History Tool Button
+        GestureDetector(
+          onTap: () {
+            HapticService.lightTap();
+            _openHistoryScreen();
+          },
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: KausapColors.cardBg(context),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: KausapColors.border(context)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(Icons.history_rounded, color: KausapColors.textPrimary(context), size: 19),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Download Report Tool Button
+        GestureDetector(
+          onTap: _isExporting
+              ? null
+              : () {
+                  HapticService.lightTap();
+                  _exportReport();
+                },
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: KausapColors.cardBg(context),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: KausapColors.border(context)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Center(
+              child: _isExporting
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: KausapColors.accent(context)),
+                    )
+                  : Icon(Icons.download_rounded, color: KausapColors.textPrimary(context), size: 19),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Consumer<AuthProvider>(
+          builder: (context, auth, _) {
+            final user = auth.currentUser ?? {};
+            final name = user['first_name'] ?? 'U';
+            final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+            final avatarUrl = user['avatar_url'] as String?;
+            final avatar = CircleAvatar(
+              radius: 16,
+              backgroundColor: KausapColors.accent(context).withAlpha(25),
+              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                  ? NetworkImage(avatarUrl)
+                  : null,
+              child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                  ? Text(
+                      initial,
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: KausapColors.accent(context)),
+                    )
+                  : null,
+            );
+            return PopupMenuButton<String>(
+              offset: const Offset(0, 44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 8,
+              child: avatar,
+              onSelected: (value) {
+                if (value == 'profile') {
+                  HapticService.lightTap();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem<String>(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: KausapColors.accent(context).withAlpha(20),
+                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
+                            ? NetworkImage(avatarUrl)
+                            : null,
+                        child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
+                            ? Text(initial,
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: KausapColors.accent(context)))
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
+                          Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context))),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
   }
 
   // Robust date parser that handles UTC strings and converts to local timezone
@@ -438,192 +623,10 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
         .then((_) => _loadData());
   }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0284C7), Color(0xFF0077B6), Color(0xFF06B6D4)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(9),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x330284C7),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Icon(Icons.analytics_rounded, color: Colors.white, size: 18),
-          ),
-        ),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Insights & Screeners',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                'Self-Assessments & Mental Health Trends',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11.5,
-                  color: Color(0xFF64748B),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        // History Tool Button
-        GestureDetector(
-          onTap: () {
-            HapticService.lightTap();
-            _openHistoryScreen();
-          },
-          child: Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 4,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(Icons.history_rounded, color: Color(0xFF334155), size: 19),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Download Report Tool Button
-        GestureDetector(
-          onTap: _isExporting
-              ? null
-              : () {
-                  HapticService.lightTap();
-                  _exportReport();
-                },
-          child: Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 4,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Center(
-              child: _isExporting
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0284C7)),
-                    )
-                  : const Icon(Icons.download_rounded, color: Color(0xFF334155), size: 19),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Consumer<AuthProvider>(
-          builder: (context, auth, _) {
-            final user = auth.currentUser ?? {};
-            final name = user['first_name'] ?? 'U';
-            final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-            final avatarUrl = user['avatar_url'] as String?;
-            final avatar = CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary.withAlpha(25),
-              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
-                  ? NetworkImage(avatarUrl)
-                  : null,
-              child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
-                  ? Text(
-                      initial,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary),
-                    )
-                  : null,
-            );
-            return PopupMenuButton<String>(
-              offset: const Offset(0, 44),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 8,
-              child: avatar,
-              onSelected: (value) {
-                if (value == 'profile') {
-                  HapticService.lightTap();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                }
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem<String>(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: AppColors.primary.withAlpha(20),
-                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
-                            ? NetworkImage(avatarUrl)
-                            : null,
-                        child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
-                            ? Text(initial,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
-                            : null,
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
-                          const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -632,16 +635,16 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
               child: _buildHeader(),
             ),
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                  bottom: BorderSide(color: KausapColors.border(context), width: 1),
                 ),
               ),
               child: TabBar(
                 controller: _tabController,
-                labelColor: AppColors.primary,
-                unselectedLabelColor: const Color(0xFF64748B),
-                indicatorColor: AppColors.primary,
+                labelColor: KausapColors.accent(context),
+                unselectedLabelColor: KausapColors.textMuted(context),
+                indicatorColor: KausapColors.accent(context),
                 indicatorWeight: 2.5,
                 labelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13),
                 unselectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500, fontSize: 13),
@@ -679,13 +682,16 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0077B6), Color(0xFF0096C7)],
+              gradient: LinearGradient(
+                colors: [
+                  KausapColors.accent(context),
+                  KausapColors.accent(context).withAlpha(200),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: const [BoxShadow(color: Color(0x1A0077B6), blurRadius: 10, offset: Offset(0, 4))],
+              boxShadow: [BoxShadow(color: KausapColors.accent(context).withAlpha(50), blurRadius: 10, offset: const Offset(0, 4))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -719,11 +725,11 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.download_rounded, size: 14, color: AppColors.primary),
-                            SizedBox(width: 4),
-                            Text("Download Report", style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
+                            Icon(Icons.download_rounded, size: 14, color: KausapColors.accent(context)),
+                            const SizedBox(width: 4),
+                            Text("Download Report", style: TextStyle(color: KausapColors.accent(context), fontSize: 11, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -736,7 +742,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           const SizedBox(height: 20),
 
           // Available Check-Ins
-          const Text("Available Self-Check-Ins", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2C3E50))),
+          Text("Available Self-Check-Ins", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: KausapColors.textPrimary(context))),
           const SizedBox(height: 10),
 
           _buildScreenerCard(
@@ -773,11 +779,11 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Recent Check-In Records", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2C3E50))),
+              Text("Recent Check-In Records", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: KausapColors.textPrimary(context))),
               if (_assessmentHistory.isNotEmpty)
                 TextButton(
                   onPressed: _openHistoryScreen,
-                  child: const Text("View All", style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                  child: Text("View All", style: TextStyle(color: KausapColors.accent(context), fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
             ],
           ),
@@ -787,26 +793,26 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: KausapColors.cardBg(context),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE8EAED)),
+                border: Border.all(color: KausapColors.border(context)),
               ),
               child: Column(
                 children: [
                   const Icon(Icons.assignment_outlined, size: 36, color: Color(0xFF9E9E9E)),
                   const SizedBox(height: 10),
-                  const Text("No Check-Ins Taken Yet", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2C3E50))),
+                  Text("No Check-Ins Taken Yet", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: KausapColors.textPrimary(context))),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     "Take a quick check-in above to establish your personal emotional baseline.",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Color(0xFF707974)),
+                    style: TextStyle(fontSize: 12, color: KausapColors.textMuted(context)),
                   ),
                   const SizedBox(height: 14),
                   ElevatedButton(
                     onPressed: () => _startDirectScreener('phq9'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: KausapColors.accent(context),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -841,9 +847,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: KausapColors.cardBg(context),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE8EAED)),
+                    border: Border.all(color: KausapColors.border(context)),
                     boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 2))],
                   ),
                   child: Column(
@@ -867,9 +873,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(testName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50))),
+                                Text(testName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: KausapColors.textPrimary(context))),
                                 const SizedBox(height: 2),
-                                Text("Score: $score/$maxScore • Date: $date", style: const TextStyle(fontSize: 11, color: Color(0xFF707974))),
+                                Text("Score: $score/$maxScore • Date: $date", style: TextStyle(fontSize: 11, color: KausapColors.textMuted(context))),
                               ],
                             ),
                           ),
@@ -892,12 +898,12 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: KausapColors.subtleBg(context),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             progressNote,
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF475569)),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textPrimary(context)),
                           ),
                         ),
                       ] else if (empatheticInsight != null && empatheticInsight.isNotEmpty) ...[
@@ -906,12 +912,12 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: KausapColors.subtleBg(context),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             empatheticInsight,
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF475569)),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textPrimary(context)),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -942,9 +948,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
           child: Column(
@@ -957,7 +963,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -977,8 +983,8 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(testName, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF0F172A))),
-                        Text('Recorded on $date', style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                        Text(testName, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15, color: KausapColors.textPrimary(context))),
+                        Text('Recorded on $date', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context))),
                       ],
                     ),
                   ),
@@ -1002,7 +1008,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(severity, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: severityColor)),
-                          const Text('Personal self-assessment score', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                          Text('Personal self-assessment score', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context))),
                         ],
                       ),
                     ),
@@ -1014,20 +1020,20 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEEF2FF),
+                  color: const Color(0xFFEEF2FF).withAlpha(KausapColors.isDark(context) ? 40 : 255),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Text('💡 ', style: TextStyle(fontSize: 13)),
-                        Text('Empathetic Insight', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF3730A3))),
+                        const Text('💡 ', style: TextStyle(fontSize: 13)),
+                        Text('Empathetic Insight', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 12, color: KausapColors.isDark(context) ? Colors.indigo.shade200 : const Color(0xFF3730A3))),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(empatheticInsight, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF312E81), height: 1.4)),
+                    Text(empatheticInsight, style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.isDark(context) ? Colors.indigo.shade100 : const Color(0xFF312E81), height: 1.4)),
                   ],
                 ),
               ),
@@ -1036,11 +1042,11 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: KausapColors.subtleBg(context),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: KausapColors.border(context)),
                 ),
-                child: Text(progressNote, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF334155))),
+                child: Text(progressNote, style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textPrimary(context))),
               ),
               const SizedBox(height: 18),
               Row(
@@ -1073,7 +1079,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                       icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
                       label: const Text('Talk to AI 💬', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: KausapColors.accent(context),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1100,9 +1106,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8EAED)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
       ),
       child: Column(
@@ -1117,12 +1123,12 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF2C3E50))),
+                child: Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: KausapColors.textPrimary(context))),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
-                child: Text(time, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                decoration: BoxDecoration(color: KausapColors.subtleBg(context), borderRadius: BorderRadius.circular(8)),
+                child: Text(time, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: KausapColors.textMuted(context))),
               ),
             ],
           ),
@@ -1165,7 +1171,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     final filteredForBreakdown = _getFilteredEntries(_breakdownTimeframe);
 
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: KausapColors.accent(context),
       onRefresh: _loadData,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -1177,13 +1183,16 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFEFF6FF), Color(0xFFE0F2FE)],
+                gradient: LinearGradient(
+                  colors: [
+                    KausapColors.accent(context).withAlpha(20),
+                    KausapColors.accent(context).withAlpha(40),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFBAE6FD)),
+                border: Border.all(color: KausapColors.accent(context).withAlpha(60)),
                 boxShadow: const [
                   BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4)),
                 ],
@@ -1192,23 +1201,23 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 children: [
                   const Text('📊', style: TextStyle(fontSize: 40)),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'No Mood Data Yet',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
-                      color: Color(0xFF0F172A),
+                      color: KausapColors.textPrimary(context),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'Your Emotion Breakdown, Mood Trajectory, and\nTop Factors will appear here once you log your\nfirst mood check-in on the Home tab.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12.5,
-                      color: Color(0xFF64748B),
+                      color: KausapColors.textMuted(context),
                       height: 1.5,
                     ),
                   ),
@@ -1226,7 +1235,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                       style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: KausapColors.accent(context),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -1245,8 +1254,11 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   emoji: _getMoodEmoji(avgScore > 0 ? avgScore : 3.0),
                   value: avgScore > 0 ? "${avgScore.toStringAsFixed(1)} / 5.0" : "— / 5.0",
                   label: _isMonthlyView ? "All-Time Mood" : "Weekly Mood",
-                  bgGradient: const [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
-                  accentColor: const Color(0xFF0284C7),
+                  bgGradient: [
+                    KausapColors.accent(context).withAlpha(20),
+                    KausapColors.accent(context).withAlpha(45),
+                  ],
+                  accentColor: KausapColors.accent(context),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1257,7 +1269,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   label: "Top Factor",
                   bgGradient: topEmotion != null
                       ? [dominantColor.withAlpha(20), dominantColor.withAlpha(45)]
-                      : const [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+                      : [KausapColors.subtleBg(context), KausapColors.subtleBg(context)],
                   accentColor: dominantColor,
                 ),
               ),
@@ -1267,7 +1279,10 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   emoji: "📋",
                   value: "$totalLogs",
                   label: _isMonthlyView ? "Total Logs" : "Logs This Week",
-                  bgGradient: const [Color(0xFFFAF5FF), Color(0xFFF3E8FF)],
+                  bgGradient: [
+                    const Color(0xFF7C3AED).withAlpha(20),
+                    const Color(0xFF7C3AED).withAlpha(45),
+                  ],
                   accentColor: const Color(0xFF7C3AED),
                 ),
               ),
@@ -1279,9 +1294,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: KausapColors.cardBg(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: KausapColors.border(context)),
               boxShadow: const [
                 BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4)),
               ],
@@ -1292,17 +1307,17 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.show_chart_rounded, color: AppColors.primary, size: 20),
-                        SizedBox(width: 8),
+                        Icon(Icons.show_chart_rounded, color: KausapColors.accent(context), size: 20),
+                        const SizedBox(width: 8),
                         Text(
                           "Mood Trajectory",
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w700,
                             fontSize: 14.5,
-                            color: Color(0xFF0F172A),
+                            color: KausapColors.textPrimary(context),
                           ),
                         ),
                       ],
@@ -1311,7 +1326,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                     Container(
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: KausapColors.subtleBg(context),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -1325,7 +1340,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
-                                color: !_isMonthlyView ? Colors.white : Colors.transparent,
+                                color: !_isMonthlyView ? KausapColors.cardBg(context) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(6),
                                 boxShadow: !_isMonthlyView
                                     ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))]
@@ -1337,7 +1352,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                   fontFamily: 'Poppins',
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: !_isMonthlyView ? AppColors.primary : const Color(0xFF64748B),
+                                  color: !_isMonthlyView ? KausapColors.accent(context) : KausapColors.textMuted(context),
                                 ),
                               ),
                             ),
@@ -1353,7 +1368,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
-                                color: _isMonthlyView ? Colors.white : Colors.transparent,
+                                color: _isMonthlyView ? KausapColors.cardBg(context) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(6),
                                 boxShadow: _isMonthlyView
                                     ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))]
@@ -1365,7 +1380,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                   fontFamily: 'Poppins',
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: _isMonthlyView ? AppColors.primary : const Color(0xFF64748B),
+                                  color: _isMonthlyView ? KausapColors.accent(context) : KausapColors.textMuted(context),
                                 ),
                               ),
                             ),
@@ -1383,18 +1398,18 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                         _isMonthlyView
                             ? "30-day emotional wellness progression over 4 weeks."
                             : "7-day day-by-day emotional progression for this week.",
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: KausapColors.subtleBg(context),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         stabilityStatus,
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.w600, color: KausapColors.textPrimary(context)),
                       ),
                     ),
                   ],
@@ -1421,11 +1436,11 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                       // Chart Canvas
                       Expanded(
                         child: (_isMonthlyView ? monthlySpots.isEmpty : weeklySpots.isEmpty)
-                            ? const Center(
+                            ? Center(
                                 child: Text(
                                   "No logs recorded for this period.\nCheck in on the Home tab! 😊",
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                                 ),
                               )
                             : LineChart(
@@ -1471,7 +1486,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                     drawVerticalLine: false,
                                     horizontalInterval: 1.0,
                                     getDrawingHorizontalLine: (value) => FlLine(
-                                      color: const Color(0xFFF1F5F9),
+                                      color: KausapColors.border(context).withAlpha(100),
                                       strokeWidth: 1,
                                     ),
                                   ),
@@ -1491,11 +1506,11 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                             if (idx >= 0 && idx < labels.length) {
                                               return Text(
                                                 labels[idx],
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontFamily: 'Poppins',
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.w600,
-                                                  color: Color(0xFF64748B),
+                                                  color: KausapColors.textMuted(context),
                                                 ),
                                               );
                                             }
@@ -1511,8 +1526,8 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                                       ? FontWeight.w700
                                                       : FontWeight.w500,
                                                   color: idx == (DateTime.now().weekday - 1)
-                                                      ? AppColors.primary
-                                                      : const Color(0xFF64748B),
+                                                      ? KausapColors.accent(context)
+                                                      : KausapColors.textMuted(context),
                                                 ),
                                               );
                                             }
@@ -1528,7 +1543,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                       spots: _isMonthlyView ? monthlySpots : weeklySpots,
                                       isCurved: true,
                                       curveSmoothness: 0.25,
-                                      color: AppColors.primary,
+                                      color: KausapColors.accent(context),
                                       barWidth: 3.5,
                                       isStrokeCapRound: true,
                                       dotData: FlDotData(
@@ -1536,9 +1551,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                         getDotPainter: (spot, percent, barData, index) {
                                           return FlDotCirclePainter(
                                             radius: 4.5,
-                                            color: Colors.white,
+                                            color: KausapColors.cardBg(context),
                                             strokeWidth: 3,
-                                            strokeColor: AppColors.primary,
+                                            strokeColor: KausapColors.accent(context),
                                           );
                                         },
                                       ),
@@ -1546,8 +1561,8 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                         show: true,
                                         gradient: LinearGradient(
                                           colors: [
-                                            AppColors.primary.withAlpha(50),
-                                            AppColors.primary.withAlpha(2),
+                                            KausapColors.accent(context).withAlpha(50),
+                                            KausapColors.accent(context).withAlpha(2),
                                           ],
                                           begin: Alignment.topCenter,
                                           end: Alignment.bottomCenter,
@@ -1568,9 +1583,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: KausapColors.subtleBg(context),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: KausapColors.border(context)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1589,7 +1604,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                 style: TextStyle(
                                   fontSize: mood != null ? 13 : 11,
                                   fontWeight: FontWeight.bold,
-                                  color: mood != null ? Colors.black : const Color(0xFF94A3B8),
+                                  color: mood != null ? KausapColors.textPrimary(context) : KausapColors.textMuted(context),
                                 ),
                               ),
                               const SizedBox(height: 1),
@@ -1609,7 +1624,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                   fontFamily: 'Inter',
                                   fontSize: 9.5,
                                   fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-                                  color: isToday ? AppColors.primary : const Color(0xFF64748B),
+                                  color: isToday ? KausapColors.accent(context) : KausapColors.textMuted(context),
                                 ),
                               ),
                             ],
@@ -1628,9 +1643,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: KausapColors.cardBg(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: KausapColors.border(context)),
               boxShadow: const [
                 BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4)),
               ],
@@ -1638,17 +1653,17 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.pie_chart_rounded, color: AppColors.primary, size: 20),
-                    SizedBox(width: 8),
+                    Icon(Icons.pie_chart_rounded, color: KausapColors.accent(context), size: 20),
+                    const SizedBox(width: 8),
                     Text(
                       "Emotion Breakdown",
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
                         fontSize: 14.5,
-                        color: Color(0xFF0F172A),
+                        color: KausapColors.textPrimary(context),
                       ),
                     ),
                   ],
@@ -1668,7 +1683,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                               ? "$label · $totalEmotions data point${totalEmotions == 1 ? '' : 's'}"
                               : "$label · no tags recorded yet";
                         }(),
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1676,7 +1691,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                     Container(
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: KausapColors.subtleBg(context),
                         borderRadius: BorderRadius.circular(7),
                       ),
                       child: Row(
@@ -1695,9 +1710,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: KausapColors.subtleBg(context),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: KausapColors.border(context)),
                     ),
                     child: Row(
                       children: [
@@ -1705,7 +1720,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withAlpha(15),
+                            color: KausapColors.accent(context).withAlpha(20),
                             shape: BoxShape.circle,
                           ),
                           child: const Center(child: Text("🏷️", style: TextStyle(fontSize: 18))),
@@ -1718,7 +1733,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                                 : (_breakdownTimeframe == 'monthly'
                                     ? 'No factor tags recorded this month. Log your mood to start your monthly breakdown!'
                                     : 'No factor tags recorded yet. Select what influences your day when checking in on the Home tab to see your visual breakdown here!'),
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.4),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context), height: 1.4),
                           ),
                         ),
                       ],
@@ -1759,9 +1774,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: KausapColors.cardBg(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: KausapColors.border(context)),
               boxShadow: const [
                 BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4)),
               ],
@@ -1769,25 +1784,25 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.local_offer_outlined, color: AppColors.primary, size: 20),
-                    SizedBox(width: 8),
+                    Icon(Icons.local_offer_outlined, color: KausapColors.accent(context), size: 20),
+                    const SizedBox(width: 8),
                     Text(
                       "Top Influencing Factors",
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
                         fontSize: 14.5,
-                        color: Color(0xFF0F172A),
+                        color: KausapColors.textPrimary(context),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   "Key life and academic contexts linked to your check-ins:",
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                 ),
                 const SizedBox(height: 14),
                 if (triggerCounts.isNotEmpty)
@@ -1817,18 +1832,18 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: KausapColors.subtleBg(context),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: KausapColors.border(context)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Text("🏷️", style: TextStyle(fontSize: 18)),
-                        SizedBox(width: 10),
+                        const Text("🏷️", style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             "No mood factors tagged yet. Select what influences your day when checking in on the Home tab, or tap any recent check-in below to tag it!",
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.35),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context), height: 1.35),
                           ),
                         ),
                       ],
@@ -1844,7 +1859,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           : (_breakdownTimeframe == 'monthly'
                               ? 'Showing this month\'s factors (${_getFilteredEntries('monthly').length} check-ins)'
                               : 'Showing all-time factors (${_moodEntries.length} check-ins)'),
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF94A3B8)),
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: KausapColors.textMuted(context)),
                     ),
                   ),
               ],
@@ -1939,9 +1954,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: KausapColors.cardBg(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: KausapColors.border(context)),
               boxShadow: const [
                 BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4)),
               ],
@@ -1952,40 +1967,40 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.history_rounded, color: AppColors.primary, size: 20),
-                        SizedBox(width: 8),
+                        Icon(Icons.history_rounded, color: KausapColors.accent(context), size: 20),
+                        const SizedBox(width: 8),
                         Text(
                           "Recent Check-ins",
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w700,
                             fontSize: 14.5,
-                            color: Color(0xFF0F172A),
+                            color: KausapColors.textPrimary(context),
                           ),
                         ),
                       ],
                     ),
                     Text(
                       "${_moodEntries.length} logs (tap to view)",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: KausapColors.textMuted(context),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 if (_moodEntries.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Center(
                       child: Text(
                         "No check-in history yet. Log your feeling today!",
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                       ),
                     ),
                   )
@@ -1998,11 +2013,10 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
 
           // ── 7. 24/7 Crisis Support ─────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: KausapColors.cardBg(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: KausapColors.border(context)),
             ),
             child: InkWell(
               onTap: () {
@@ -2015,35 +2029,35 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 );
               },
               borderRadius: BorderRadius.circular(16),
-              child: const Padding(
-                padding: EdgeInsets.all(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.support_agent_rounded, color: Color(0xFFDC2626), size: 18),
-                        SizedBox(width: 8),
+                        const Icon(Icons.support_agent_rounded, color: Color(0xFFDC2626), size: 18),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             "24/7 Crisis Support & Hotlines",
-                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: KausapColors.textPrimary(context)),
                           ),
                         ),
-                        Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 18),
+                        Icon(Icons.chevron_right_rounded, color: KausapColors.textMuted(context), size: 18),
                       ],
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
                       "Tap to access full directory of campus guidance & national emergency lines:",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                     ),
-                    SizedBox(height: 8),
-                    Text("• FSUU Guidance: (085) 342-1830", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
-                    SizedBox(height: 4),
-                    Text("• NCMH Toll-Free: 1553 / 0917-899-8727", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
-                    SizedBox(height: 4),
-                    Text("• Hopeline PH: 0917-558-4673", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                    const SizedBox(height: 8),
+                    const Text("• FSUU Guidance: (085) 342-1830", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                    const SizedBox(height: 4),
+                    const Text("• NCMH Toll-Free: 1553 / 0917-899-8727", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
+                    const SizedBox(height: 4),
+                    const Text("• Hopeline PH: 0917-558-4673", style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
                   ],
                 ),
               ),
@@ -2109,27 +2123,27 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
+            color: KausapColors.subtleBg(context),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: KausapColors.border(context)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 e.key,
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w600, color: KausapColors.textPrimary(context)),
               ),
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withAlpha(20),
+                  color: KausapColors.accent(context).withAlpha(20),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   "${e.value}",
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.bold, color: KausapColors.accent(context)),
                 ),
               ),
             ],
@@ -2367,17 +2381,17 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
+            color: KausapColors.subtleBg(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: KausapColors.border(context)),
           ),
           child: Row(
             children: [
               Container(
                 width: 36,
                 height: 36,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: KausapColors.cardBg(context),
                   shape: BoxShape.circle,
                 ),
                 child: Center(child: Text(emoji, style: const TextStyle(fontSize: 18))),
@@ -2392,25 +2406,25 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                       children: [
                         Text(
                           moodName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
-                            color: Color(0xFF0F172A),
+                            color: KausapColors.textPrimary(context),
                           ),
                         ),
                         Row(
                           children: [
                             Text(
                               formattedDate,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 10.5,
-                                color: Color(0xFF94A3B8),
+                                color: KausapColors.textMuted(context),
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFFCBD5E1)),
+                            Icon(Icons.chevron_right_rounded, size: 14, color: KausapColors.textMuted(context)),
                           ],
                         ),
                       ],
@@ -2423,16 +2437,16 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withAlpha(15),
+                              color: KausapColors.accent(context).withAlpha(15),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               f,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
-                                color: AppColors.primary,
+                                color: KausapColors.accent(context),
                               ),
                             ),
                           );
@@ -2475,9 +2489,9 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
           child: Column(
@@ -2490,7 +2504,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -2515,7 +2529,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                           moodName,
                           style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 17, color: moodColor),
                         ),
-                        Text(formattedDate, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
+                        Text(formattedDate, style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
                       ],
                     ),
                   ),
@@ -2523,7 +2537,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
               ),
               const SizedBox(height: 16),
               if (feelings.isNotEmpty) ...[
-                const Text('Logged Feelings & Context:', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF0F172A))),
+                Text('Logged Feelings & Context:', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: KausapColors.textPrimary(context))),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
@@ -2544,19 +2558,19 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                 const SizedBox(height: 14),
               ],
               if (note != null && note.trim().isNotEmpty) ...[
-                const Text('Personal Reflection Note:', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF0F172A))),
+                Text('Personal Reflection Note:', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: KausapColors.textPrimary(context))),
                 const SizedBox(height: 6),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: KausapColors.subtleBg(context),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: KausapColors.border(context)),
                   ),
                   child: Text(
                     note,
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF334155), height: 1.4),
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textPrimary(context), height: 1.4),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -2572,22 +2586,22 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withAlpha(12),
+                    color: KausapColors.accent(context).withAlpha(15),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.primary.withAlpha(40)),
+                    border: Border.all(color: KausapColors.accent(context).withAlpha(45)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.local_offer_outlined, size: 15, color: AppColors.primary),
+                      Icon(Icons.local_offer_outlined, size: 15, color: KausapColors.accent(context)),
                       const SizedBox(width: 6),
                       Text(
                         feelings.isNotEmpty ? 'Edit Influencing Factors 🏷️' : '+ Tag Influencing Factors 🏷️',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                          color: KausapColors.accent(context),
                         ),
                       ),
                     ],
@@ -2626,7 +2640,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                       icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
                       label: const Text('Talk to AI 💬', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: KausapColors.accent(context),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -2755,7 +2769,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context), fontWeight: FontWeight.w500),
             ),
           ),
           Text(pct, style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
@@ -2785,7 +2799,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
+          color: isActive ? KausapColors.cardBg(context) : Colors.transparent,
           borderRadius: BorderRadius.circular(5),
           boxShadow: isActive
               ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 1))]
@@ -2797,7 +2811,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             fontFamily: 'Poppins',
             fontSize: 10,
             fontWeight: FontWeight.w600,
-            color: isActive ? AppColors.primary : const Color(0xFF94A3B8),
+            color: isActive ? KausapColors.accent(context) : KausapColors.textMuted(context),
           ),
         ),
       ),

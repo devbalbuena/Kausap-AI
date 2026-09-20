@@ -276,8 +276,8 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('🕐 Recently Read',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+        Text('🕐 Recently Read',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: KausapColors.textPrimary(context))),
         const SizedBox(height: 10),
         SizedBox(
           height: 90,
@@ -303,7 +303,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       Icon(a.categoryIcon, size: 16, color: a.themeColor),
                       const SizedBox(height: 4),
                       Text(a.title,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: KausapColors.textPrimary(context)),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                     ],
                   ),
@@ -321,7 +321,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
     final filtered = _filteredArticles;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -340,7 +340,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: KausapColors.cardBg(context),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -350,7 +350,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF191C21)),
+                        child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: KausapColors.textPrimary(context)),
                       ),
                     )
                   else
@@ -358,17 +358,20 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0284C7), Color(0xFF0077B6), Color(0xFF06B6D4)],
+                        gradient: LinearGradient(
+                          colors: [
+                            KausapColors.accent(context),
+                            KausapColors.accent(context).withAlpha(190),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(9),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
-                            color: Color(0x330284C7),
+                            color: KausapColors.accent(context).withAlpha(50),
                             blurRadius: 8,
-                            offset: Offset(0, 2),
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -377,7 +380,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       ),
                     ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -387,7 +390,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                             fontFamily: 'Poppins',
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                            color: KausapColors.textPrimary(context),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -396,7 +399,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 11.5,
-                            color: Color(0xFF64748B),
+                            color: KausapColors.textMuted(context),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -404,12 +407,12 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     ),
                   ),
                   if (_isLoading)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
                       child: SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: KausapColors.accent(context)),
                       ),
                     ),
                   // Bookmarks action button with badge
@@ -425,10 +428,10 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       height: 34,
                       margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
-                        color: _selectedCategoryIndex == 1 ? const Color(0xFFFEF3C7) : Colors.white,
+                        color: _selectedCategoryIndex == 1 ? const Color(0xFFFEF3C7) : KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: _selectedCategoryIndex == 1 ? const Color(0xFFF59E0B) : const Color(0x33C0C9C2),
+                          color: _selectedCategoryIndex == 1 ? const Color(0xFFF59E0B) : KausapColors.border(context),
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -444,7 +447,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                           Icon(
                             _selectedCategoryIndex == 1 ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
                             size: 19,
-                            color: _selectedCategoryIndex == 1 ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                            color: _selectedCategoryIndex == 1 ? const Color(0xFFD97706) : KausapColors.textMuted(context),
                           ),
                           if (_bookmarkedIds.isNotEmpty)
                             Positioned(
@@ -471,7 +474,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       final avatarUrl = user['avatar_url'] as String?;
                       final avatar = CircleAvatar(
                         radius: 16,
-                        backgroundColor: AppColors.primary.withAlpha(30),
+                        backgroundColor: KausapColors.accent(context).withAlpha(30),
                         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
                             ? NetworkImage(avatarUrl)
                             : null,
@@ -479,7 +482,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                             ? Text(
                                 initial,
                                 style: AppTextStyles.label.copyWith(
-                                    color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 11),
+                                    color: KausapColors.accent(context), fontWeight: FontWeight.w700, fontSize: 11),
                               )
                             : null,
                       );
@@ -503,13 +506,13 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 14,
-                                  backgroundColor: AppColors.primary.withAlpha(20),
+                                  backgroundColor: KausapColors.accent(context).withAlpha(20),
                                   backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty && !avatarUrl.startsWith('data:'))
                                       ? NetworkImage(avatarUrl)
                                       : null,
                                   child: (avatarUrl == null || avatarUrl.isEmpty || avatarUrl.startsWith('data:'))
                                       ? Text(initial,
-                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary))
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: KausapColors.accent(context)))
                                       : null,
                                 ),
                                 const SizedBox(width: 10),
@@ -518,7 +521,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(name, style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 13)),
-                                    const Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                                    Text('View Profile & Settings', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context))),
                                   ],
                                 ),
                               ],
@@ -538,9 +541,9 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: KausapColors.cardBg(context),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0x1AC0C9C2)),
+                  border: Border.all(color: KausapColors.border(context)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.03),
@@ -552,16 +555,16 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                 child: Row(
                   children: [
                     const SizedBox(width: 12),
-                    const Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
+                    Icon(Icons.search_rounded, color: KausapColors.textMuted(context), size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
                         controller: _searchController,
                         onChanged: (val) => setState(() => _searchQuery = val),
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 13),
-                        decoration: const InputDecoration(
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textPrimary(context)),
+                        decoration: InputDecoration(
                           hintText: 'Search articles & mental wellness guides...',
-                          hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.textSecondary),
+                          hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textMuted(context)),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
@@ -574,9 +577,9 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                           _searchController.clear();
                           setState(() => _searchQuery = '');
                         },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 10),
-                          child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Icon(Icons.close_rounded, size: 18, color: KausapColors.textMuted(context)),
                         ),
                       ),
                   ],
@@ -610,18 +613,18 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? (isBookmarkChip ? const Color(0xFFD97706) : AppColors.primary)
-                              : Colors.white,
+                              ? (isBookmarkChip ? const Color(0xFFD97706) : KausapColors.accent(context))
+                              : KausapColors.cardBg(context),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isSelected
-                                ? (isBookmarkChip ? const Color(0xFFD97706) : AppColors.primary)
-                                : const Color(0x33C0C9C2),
+                                ? (isBookmarkChip ? const Color(0xFFD97706) : KausapColors.accent(context))
+                                : KausapColors.border(context),
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: (isBookmarkChip ? const Color(0xFFD97706) : AppColors.primary)
+                                    color: (isBookmarkChip ? const Color(0xFFD97706) : KausapColors.accent(context))
                                         .withValues(alpha: 0.3),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
@@ -638,7 +641,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                                 fontFamily: 'Inter',
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: isSelected ? Colors.white : const Color(0xFF4B5563),
+                                color: isSelected ? Colors.white : KausapColors.textMuted(context),
                               ),
                             ),
                             if (isBookmarkChip && _bookmarkedIds.isNotEmpty) ...[
@@ -668,14 +671,13 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                 },
               ),
             ),
-
             const SizedBox(height: 8),
 
             // Articles List with Featured Hero + Recently Read
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _fetchLiveArticles,
-                color: AppColors.primary,
+                color: KausapColors.accent(context),
                 child: filtered.isEmpty
                     ? ListView(
                         children: [
@@ -695,7 +697,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                                     _selectedCategoryIndex == 1
                                         ? 'No saved articles yet'
                                         : 'No articles found',
-                                    style: AppTextStyles.heading2.copyWith(fontSize: 16),
+                                    style: AppTextStyles.heading2.copyWith(fontSize: 16, color: KausapColors.textPrimary(context)),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
@@ -704,7 +706,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                                         : 'Try a different keyword or category.',
                                     textAlign: TextAlign.center,
                                     style: AppTextStyles.body.copyWith(
-                                      color: AppColors.textSecondary,
+                                      color: KausapColors.textMuted(context),
                                       fontSize: 13,
                                       height: 1.4,
                                     ),
@@ -719,7 +721,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                                       icon: const Icon(Icons.explore_rounded, size: 16),
                                       label: const Text('Explore Articles', style: TextStyle(fontWeight: FontWeight.w600)),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
+                                        backgroundColor: KausapColors.accent(context),
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -771,7 +773,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
       onTap: () => _openArticle(article),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: KausapColors.cardBg(context),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
@@ -780,7 +782,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
               offset: const Offset(0, 3),
             ),
           ],
-          border: Border.all(color: const Color(0x1AC0C9C2)),
+          border: Border.all(color: KausapColors.border(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -910,7 +912,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     style: AppTextStyles.heading2.copyWith(
                       fontSize: 15.5,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1F2937),
+                      color: KausapColors.textPrimary(context),
                       height: 1.3,
                     ),
                     maxLines: 2,
@@ -921,14 +923,14 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     article.subtitle,
                     style: AppTextStyles.body.copyWith(
                       fontSize: 12.5,
-                      color: AppColors.textSecondary,
+                      color: KausapColors.textMuted(context),
                       height: 1.35,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12),
-                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  Divider(height: 1, color: KausapColors.border(context)),
                   const SizedBox(height: 10),
 
                   // Author & Read action
@@ -953,11 +955,11 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                           const SizedBox(width: 6),
                           Text(
                             article.author,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF4B5563),
+                              color: KausapColors.textMuted(context),
                             ),
                           ),
                         ],
@@ -970,11 +972,11 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                               fontFamily: 'Inter',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
+                              color: KausapColors.accent(context),
                             ),
                           ),
                           const SizedBox(width: 2),
-                          const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
+                          Icon(Icons.arrow_forward_rounded, size: 14, color: KausapColors.accent(context)),
                         ],
                       ),
                     ],

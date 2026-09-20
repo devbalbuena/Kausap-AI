@@ -69,6 +69,86 @@ class AppColors {
   static const Color activityIcon = Color(0xFFE7FEEE);  // barbell icon bg
 }
 
+/// Context-aware color utility — reads from the active MaterialApp theme.
+/// Use this in widgets instead of hardcoded hex values so dark mode and
+/// accent colour palette changes propagate automatically.
+class KausapColors {
+  /// Whether the app is currently in Dark Mode
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  /// Whether the user has chosen a custom accent color (not the default Ocean Calm blue)
+  static bool isCustomAccent(BuildContext context) =>
+      Theme.of(context).colorScheme.primary.toARGB32() != const Color(0xFF0077B6).toARGB32();
+
+  /// Card / sheet background (white in light, slate-dark in dark)
+  static Color cardBg(BuildContext context) =>
+      Theme.of(context).colorScheme.surface;
+
+  /// Scaffold / page background
+  static Color scaffoldBg(BuildContext context) =>
+      Theme.of(context).scaffoldBackgroundColor;
+
+  /// Primary text colour (dark in light mode, near-white in dark mode)
+  static Color textPrimary(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface;
+
+  /// Secondary / muted text colour
+  static Color textMuted(BuildContext context) =>
+      isDark(context) ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+  /// Very subtle muted text (hints, captions)
+  static Color textHint(BuildContext context) =>
+      isDark(context) ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+
+  /// Border / divider colour (light gray in light, slate-dark in dark)
+  static Color border(BuildContext context) =>
+      isDark(context) ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
+  /// Subtle container / nested chip background
+  static Color subtleBg(BuildContext context) =>
+      isDark(context) ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+
+  /// The user's chosen accent colour (Ocean Calm, Emerald Forest, etc.)
+  static Color accent(BuildContext context) =>
+      Theme.of(context).colorScheme.primary;
+
+  /// Very subtle accent tint — for icon container backgrounds
+  static Color accentSubtle(BuildContext context) =>
+      Theme.of(context).colorScheme.primary.withAlpha(isDark(context) ? 35 : 20);
+
+  /// Slightly stronger accent tint — for selected/active item backgrounds
+  static Color accentLight(BuildContext context) =>
+      Theme.of(context).colorScheme.primary.withAlpha(isDark(context) ? 50 : 30);
+
+  /// Subtle shadow colour based on accent
+  static Color accentShadow(BuildContext context) =>
+      Theme.of(context).colorScheme.primary.withAlpha(isDark(context) ? 25 : 18);
+
+  /// Input / form field fill colour
+  static Color inputFill(BuildContext context) =>
+      isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF);
+
+  /// Semantic success green (always green — used for streaks, completed quests)
+  static const Color success = Color(0xFF16A34A);
+  static const Color successSubtle = Color(0xFFDCFCE7);
+
+  /// Semantic warning amber (always amber — used for status badges)
+  static const Color warning = Color(0xFFD97706);
+  static const Color warningSubtle = Color(0xFFFEF3C7);
+
+  /// Semantic danger red (always red — SOS banner, error states)
+  static const Color danger = Color(0xFFEF4444);
+  static const Color dangerSubtle = Color(0xFFFEE2E2);
+
+  // ── Semantic mood colours — kept as-is, they are meaningful not decorative ─
+  static const Color moodRough = Color(0xFFEF4444);
+  static const Color moodLow   = Color(0xFFF97316);
+  static const Color moodOkay  = Color(0xFFF59E0B);
+  static const Color moodGood  = Color(0xFF10B981);
+  static const Color moodGreat = Color(0xFF06B6D4);
+}
+
 class AppTextStyles {
   static TextStyle heading1 = GoogleFonts.inter(
     fontSize: 26,
@@ -208,23 +288,25 @@ class AppTheme {
         textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
           // Ensure we override specific styles for dark mode if needed
         ),
-        scaffoldBackgroundColor: const Color(0xFF121212),
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
         colorScheme: ColorScheme.dark(
           primary: accentColor,
-          surface: const Color(0xFF1E1E1E),
+          surface: const Color(0xFF1E293B),
+          onSurface: const Color(0xFFF8FAFC),
           error: AppColors.error,
         ),
+
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFF2C2C2C),
+          fillColor: const Color(0xFF1E293B),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFF4A4A4A)),
+            borderSide: const BorderSide(color: Color(0xFF334155)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFF4A4A4A)),
+            borderSide: const BorderSide(color: Color(0xFF334155)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -238,14 +320,14 @@ class AppTheme {
             borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.inputBorderError, width: 1.5),
           ),
-          hintStyle: AppTextStyles.hint.copyWith(color: const Color(0xFF9CA3AF)),
-          labelStyle: AppTextStyles.label.copyWith(color: const Color(0xFFE5E7EB)),
+          hintStyle: AppTextStyles.hint.copyWith(color: const Color(0xFF94A3B8)),
+          labelStyle: AppTextStyles.label.copyWith(color: const Color(0xFFF8FAFC)),
           errorStyle: AppTextStyles.errorText,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: accentColor,
-            foregroundColor: const Color(0xFF121212),
+            foregroundColor: Colors.white,
             disabledBackgroundColor: const Color(0xFF334155),
             disabledForegroundColor: const Color(0xFF64748B),
             minimumSize: const Size(double.infinity, 48),
@@ -255,21 +337,21 @@ class AppTheme {
           ),
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF121212),
+          backgroundColor: Color(0xFF0F172A),
           foregroundColor: Colors.white,
           elevation: 0,
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: const Color(0xFF1E293B),
           selectedItemColor: accentColor,
-          unselectedItemColor: const Color(0xFF9CA3AF),
+          unselectedItemColor: const Color(0xFF94A3B8),
         ),
         cardTheme: CardThemeData(
-          color: const Color(0xFF1E1E1E),
+          color: const Color(0xFF1E293B),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
         ),
-        dividerColor: const Color(0xFF333333),
+        dividerColor: const Color(0xFF334155),
       );
 
   /// High contrast theme — maximum legibility for low vision users.

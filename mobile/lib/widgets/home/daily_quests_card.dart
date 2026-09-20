@@ -30,10 +30,10 @@ class DailyQuestsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withAlpha(15),
+            color: KausapColors.accentShadow(context),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),

@@ -31,10 +31,10 @@ class HomeStreakCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withAlpha(15),
+            color: KausapColors.accentShadow(context),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -66,9 +66,9 @@ class HomeStreakCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
+                  color: KausapColors.warningSubtle,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFFEDD5)),
+                  border: Border.all(color: KausapColors.warning.withAlpha(60)),
                 ),
                 child: Text(
                   rankBadge,
@@ -76,7 +76,7 @@ class HomeStreakCard extends StatelessWidget {
                     fontFamily: 'Poppins',
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFFEA580C),
+                    color: KausapColors.warning,
                   ),
                 ),
               ),
@@ -104,8 +104,11 @@ class HomeStreakCard extends StatelessWidget {
                 child: Container(
                   height: 10,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+                    gradient: LinearGradient(
+                      colors: [
+                        KausapColors.accent(context),
+                        KausapColors.accent(context).withAlpha(180),
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(99),
                   ),
