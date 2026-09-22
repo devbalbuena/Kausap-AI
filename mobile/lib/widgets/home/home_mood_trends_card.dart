@@ -78,9 +78,9 @@ class HomeMoodTrendsCard extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Mood Trends', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+                      Text('Mood Trends', style: AppTextStyles.heading2.copyWith(fontSize: 16, color: KausapColors.textPrimary(context))),
                       const SizedBox(height: 2),
-                      Text('Your Week at a Glance', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                      Text('Your Week at a Glance', style: AppTextStyles.caption.copyWith(color: KausapColors.textMuted(context))),
                     ],
                   ),
                 ],
@@ -126,7 +126,7 @@ class HomeMoodTrendsCard extends StatelessWidget {
                 final isFuture = i > todayIdx;
 
                 final barHeight = mood != null ? ((mood / 5.0) * 65).clamp(14.0, 65.0) : 0.0;
-                final color = mood != null ? getMoodColor(mood) : AppColors.primary;
+                final color = mood != null ? getMoodColor(mood) : KausapColors.accent(context);
                 final latestEmoji = (latestEmojis != null && latestEmojis!.length > i && latestEmojis![i] != null)
                     ? latestEmojis![i]!
                     : (mood != null ? getMoodEmoji(mood) : null);
@@ -157,7 +157,7 @@ class HomeMoodTrendsCard extends StatelessWidget {
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
                                           decoration: BoxDecoration(
-                                            color: AppColors.primary,
+                                            color: KausapColors.accent(context),
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
@@ -178,8 +178,8 @@ class HomeMoodTrendsCard extends StatelessWidget {
                                       child: Container(
                                         width: 5,
                                         height: 5,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.primary,
+                                        decoration: BoxDecoration(
+                                          color: KausapColors.accent(context),
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -194,11 +194,11 @@ class HomeMoodTrendsCard extends StatelessWidget {
                             alignment: Alignment.bottomCenter,
                             decoration: BoxDecoration(
                               color: isToday
-                                  ? AppColors.primary.withAlpha(20)
-                                  : Colors.black.withAlpha(8),
+                                  ? KausapColors.accentSubtle(context)
+                                  : (KausapColors.isDark(context) ? const Color(0xFF0F172A) : Colors.black.withAlpha(8)),
                               borderRadius: BorderRadius.circular(10),
                               border: isToday
-                                  ? Border.all(color: AppColors.primary.withAlpha(80), width: 1.2)
+                                  ? Border.all(color: KausapColors.accent(context).withAlpha(120), width: 1.2)
                                   : null,
                             ),
                             child: mood != null
@@ -232,8 +232,8 @@ class HomeMoodTrendsCard extends StatelessWidget {
                                     margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: isFuture
-                                          ? Colors.black.withAlpha(12)
-                                          : (isToday ? AppColors.primary.withAlpha(60) : Colors.black.withAlpha(25)),
+                                          ? (KausapColors.isDark(context) ? const Color(0xFF334155).withAlpha(80) : Colors.black.withAlpha(12))
+                                          : (isToday ? KausapColors.accent(context).withAlpha(80) : (KausapColors.isDark(context) ? const Color(0xFF334155) : Colors.black.withAlpha(25))),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
@@ -249,8 +249,8 @@ class HomeMoodTrendsCard extends StatelessWidget {
                             fontSize: 11,
                             fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
                             color: isToday
-                                ? AppColors.primary
-                                : (isFuture ? AppColors.textSecondary.withAlpha(100) : AppColors.textSecondary),
+                                ? KausapColors.accent(context)
+                                : (isFuture ? KausapColors.textHint(context) : KausapColors.textMuted(context)),
                           ),
                         ),
                       ],
@@ -266,15 +266,16 @@ class HomeMoodTrendsCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(70),
+              color: KausapColors.subtleBg(context),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: KausapColors.border(context)),
             ),
             child: Row(
               children: [
                 Icon(
                   totalLogsThisWeek > 0 ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
                   size: 16,
-                  color: totalLogsThisWeek > 0 ? const Color(0xFF10B981) : AppColors.primary,
+                  color: totalLogsThisWeek > 0 ? const Color(0xFF10B981) : KausapColors.accent(context),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -284,14 +285,14 @@ class HomeMoodTrendsCard extends StatelessWidget {
                         : 'No logs yet this week. Tap "How are you feeling today?" to start!',
                     style: AppTextStyles.caption.copyWith(
                       fontSize: 11.5,
-                      color: AppColors.textPrimary,
+                      color: KausapColors.textPrimary(context),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
                 GestureDetector(
                   onTap: onInsightsTap,
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
@@ -300,11 +301,11 @@ class HomeMoodTrendsCard extends StatelessWidget {
                           fontFamily: 'Inter',
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                          color: KausapColors.accent(context),
                         ),
                       ),
-                      SizedBox(width: 2),
-                      Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.primary),
+                      const SizedBox(width: 2),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 10, color: KausapColors.accent(context)),
                     ],
                   ),
                 ),

@@ -47,16 +47,16 @@ class DailyQuestsCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.checklist_rounded, color: AppColors.primary, size: 20),
+                  Icon(Icons.checklist_rounded, color: KausapColors.accent(context), size: 20),
                   const SizedBox(width: 6),
-                  Text('Daily Quests', style: AppTextStyles.heading2),
+                  Text('Daily Quests', style: AppTextStyles.heading2.copyWith(color: KausapColors.textPrimary(context))),
                 ],
               ),
               Text(
                 '$completedCount/$totalQuests completed',
                 style: TextStyle(
                   fontFamily: 'Poppins',
-                  color: allDone ? const Color(0xFF16A34A) : AppColors.primary,
+                  color: allDone ? const Color(0xFF16A34A) : KausapColors.accent(context),
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -68,8 +68,8 @@ class DailyQuestsCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: AppColors.streakTrack,
-              color: allDone ? const Color(0xFF16A34A) : AppColors.primary,
+              backgroundColor: KausapColors.trackBg(context),
+              color: allDone ? const Color(0xFF16A34A) : KausapColors.accent(context),
               minHeight: 8,
             ),
           ),
@@ -81,14 +81,16 @@ class DailyQuestsCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEFCE8),
+                color: KausapColors.isDark(context) ? const Color(0xFF854D0E).withAlpha(45) : const Color(0xFFFEFCE8),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFEF08A)),
+                border: Border.all(
+                  color: KausapColors.isDark(context) ? const Color(0xFF854D0E).withAlpha(90) : const Color(0xFFFEF08A),
+                ),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Text('🌟', style: TextStyle(fontSize: 16)),
-                  SizedBox(width: 8),
+                  const Text('🌟', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'All 3 Quests Complete! Outstanding job nurturing your mind today! 🎉',
@@ -96,7 +98,7 @@ class DailyQuestsCard extends StatelessWidget {
                         fontFamily: 'Poppins',
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF854D0E),
+                        color: KausapColors.isDark(context) ? const Color(0xFFFDE047) : const Color(0xFF854D0E),
                       ),
                     ),
                   ),
@@ -138,7 +140,7 @@ class DailyQuestsCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isCompleted ? const Color(0xFF16A34A) : AppColors.divider,
+                            color: isCompleted ? const Color(0xFF16A34A) : KausapColors.border(context),
                             width: 2,
                           ),
                           color: isCompleted ? const Color(0xFF16A34A) : Colors.transparent,
@@ -155,7 +157,7 @@ class DailyQuestsCard extends StatelessWidget {
                             fontFamily: 'Inter',
                             fontSize: 13.5,
                             fontWeight: isCompleted ? FontWeight.w600 : FontWeight.w400,
-                            color: isCompleted ? const Color(0xFF16A34A) : AppColors.textPrimary,
+                            color: isCompleted ? const Color(0xFF16A34A) : KausapColors.textPrimary(context),
                             decoration: isCompleted ? TextDecoration.lineThrough : null,
                             decorationColor: const Color(0xFF16A34A),
                           ),
@@ -164,7 +166,7 @@ class DailyQuestsCard extends StatelessWidget {
                       Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 12,
-                        color: isCompleted ? const Color(0xFF16A34A) : AppColors.divider,
+                        color: isCompleted ? const Color(0xFF16A34A) : KausapColors.textHint(context),
                       ),
                     ],
                   ),

@@ -93,6 +93,10 @@ class KausapColors {
   static Color textPrimary(BuildContext context) =>
       Theme.of(context).colorScheme.onSurface;
 
+  /// Secondary text colour (slate-700 in light mode, slate-300 in dark mode)
+  static Color textSecondary(BuildContext context) =>
+      isDark(context) ? const Color(0xFFCBD5E1) : const Color(0xFF334155);
+
   /// Secondary / muted text colour
   static Color textMuted(BuildContext context) =>
       isDark(context) ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
@@ -129,17 +133,52 @@ class KausapColors {
   static Color inputFill(BuildContext context) =>
       isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF);
 
+  /// Returns a rich 2-color gradient for the mascot / hero elements based on the active theme accent
+  static List<Color> mascotGradient(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final primaryValue = primary.toARGB32();
+
+    // Ocean Calm
+    if (primaryValue == const Color(0xFF0077B6).toARGB32()) {
+      return const [Color(0xFF0077B6), Color(0xFF00B4D8)];
+    }
+    // Emerald Forest
+    if (primaryValue == const Color(0xFF059669).toARGB32()) {
+      return const [Color(0xFF059669), Color(0xFF34D399)];
+    }
+    // Lavender Mist
+    if (primaryValue == const Color(0xFF7C3AED).toARGB32()) {
+      return const [Color(0xFF7C3AED), Color(0xFFA78BFA)];
+    }
+    // Sunset Glow
+    if (primaryValue == const Color(0xFFEA580C).toARGB32()) {
+      return const [Color(0xFFEA580C), Color(0xFFFB923C)];
+    }
+    // Golden Amber
+    if (primaryValue == const Color(0xFFD97706).toARGB32()) {
+      return const [Color(0xFFD97706), Color(0xFFFBBF24)];
+    }
+    return [primary, primary.withAlpha(200)];
+  }
+
+  /// Track background for progress bars and chart empty slots
+  static Color trackBg(BuildContext context) =>
+      isDark(context) ? const Color(0xFF334155) : const Color(0xFFECEDF5);
+
   /// Semantic success green (always green — used for streaks, completed quests)
   static const Color success = Color(0xFF16A34A);
-  static const Color successSubtle = Color(0xFFDCFCE7);
+  static Color successSubtle(BuildContext context) =>
+      isDark(context) ? const Color(0xFF16A34A).withAlpha(45) : const Color(0xFFDCFCE7);
 
   /// Semantic warning amber (always amber — used for status badges)
   static const Color warning = Color(0xFFD97706);
-  static const Color warningSubtle = Color(0xFFFEF3C7);
+  static Color warningSubtle(BuildContext context) =>
+      isDark(context) ? const Color(0xFFD97706).withAlpha(45) : const Color(0xFFFEF3C7);
 
   /// Semantic danger red (always red — SOS banner, error states)
   static const Color danger = Color(0xFFEF4444);
-  static const Color dangerSubtle = Color(0xFFFEE2E2);
+  static Color dangerSubtle(BuildContext context) =>
+      isDark(context) ? const Color(0xFFEF4444).withAlpha(45) : const Color(0xFFFEE2E2);
 
   // ── Semantic mood colours — kept as-is, they are meaningful not decorative ─
   static const Color moodRough = Color(0xFFEF4444);

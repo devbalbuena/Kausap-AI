@@ -454,34 +454,34 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     final wordCount = _getWordCount();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
         title: Text(
           _isEditing ? 'Edit Journal' : 'Daily Journal',
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           if (!_isEditing) ...[
             IconButton(
-              icon: const Icon(Icons.delete_sweep_outlined, color: Color(0xFF64748B), size: 22),
+              icon: Icon(Icons.delete_sweep_outlined, color: KausapColors.textMuted(context), size: 22),
               tooltip: 'Clear Draft',
               onPressed: _clearDraft,
             ),
           ],
           IconButton(
-            icon: const Icon(Icons.history_rounded, color: AppColors.primary, size: 24),
+            icon: Icon(Icons.history_rounded, color: KausapColors.accent(context), size: 24),
             tooltip: 'View Past Journals',
             onPressed: () async {
               _stopSpeechRecognition();
@@ -507,9 +507,9 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: KausapColors.cardBg(context),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: KausapColors.border(context)),
                   boxShadow: [
                     BoxShadow(color: Colors.black.withAlpha(4), blurRadius: 6, offset: const Offset(0, 2)),
                   ],
@@ -519,7 +519,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                     Container(
                       padding: const EdgeInsets.all(7),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
+                        color: KausapColors.warningSubtle(context),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.calendar_today_rounded, color: Color(0xFFD97706), size: 16),
@@ -531,21 +531,21 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                         children: [
                           Text(
                             _isEditing ? "EDITING ENTRY" : "NEW ENTRY • TODAY",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w700,
                               fontSize: 10,
                               letterSpacing: 0.5,
-                              color: Color(0xFF64748B),
+                              color: KausapColors.textMuted(context),
                             ),
                           ),
                           Text(
                             dateDisplay,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
-                              color: Color(0xFF1E293B),
+                              color: KausapColors.textPrimary(context),
                             ),
                           ),
                           if (_todayEntryCount > 0 && !_isEditing) ...[
@@ -757,10 +757,10 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: KausapColors.cardBg(context),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: _isListening ? const Color(0xFFEF4444) : const Color(0xFFE2E8F0),
+                      color: _isListening ? const Color(0xFFEF4444) : KausapColors.border(context),
                       width: _isListening ? 2 : 1,
                     ),
                     boxShadow: [
@@ -774,10 +774,10 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                         maxLines: null,
                         expands: true,
                         textAlignVertical: TextAlignVertical.top,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 14.5,
-                          color: Color(0xFF0F172A),
+                          color: KausapColors.textPrimary(context),
                           height: 1.55,
                         ),
                         decoration: InputDecoration(
@@ -787,7 +787,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                           hintStyle: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
-                            color: Colors.grey.shade400,
+                            color: KausapColors.textHint(context),
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 60),
@@ -807,11 +807,11 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                               duration: const Duration(milliseconds: 300),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: _isListening ? const Color(0xFFEF4444) : AppColors.primary,
+                                color: _isListening ? const Color(0xFFEF4444) : KausapColors.accent(context),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (_isListening ? const Color(0xFFEF4444) : AppColors.primary).withAlpha(80),
+                                    color: (_isListening ? const Color(0xFFEF4444) : KausapColors.accent(context)).withAlpha(80),
                                     blurRadius: 10,
                                     offset: const Offset(0, 3),
                                   ),
@@ -840,7 +840,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : _saveJournal,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: KausapColors.accent(context),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),

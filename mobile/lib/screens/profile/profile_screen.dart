@@ -400,7 +400,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFFCA5A5)),
-                    backgroundColor: Colors.white,
+                    backgroundColor: KausapColors.cardBg(context),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -429,12 +429,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(8),
+            color: KausapColors.accentShadow(context),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -636,11 +636,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(width: 4),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
-                    color: Color(0xFF0F172A),
+                    color: KausapColors.textPrimary(context),
                   ),
                 ),
               ],
@@ -648,11 +648,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF64748B),
+                color: KausapColors.textMuted(context),
               ),
             ),
           ],
@@ -665,12 +665,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSectionContainer({required String title, required List<Widget> children}) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(6),
+            color: Colors.black.withAlpha(KausapColors.isDark(context) ? 20 : 6),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -684,11 +684,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.only(top: 4, bottom: 8, left: 6),
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF64748B),
+                color: KausapColors.textMuted(context),
                 letterSpacing: 0.6,
               ),
             ),
@@ -730,28 +730,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0F172A),
+                      color: KausapColors.textPrimary(context),
                     ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 1),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11.5,
-                        color: Color(0xFF64748B),
+                        color: KausapColors.textMuted(context),
                       ),
                     ),
                   ],
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
+            Icon(Icons.chevron_right_rounded, size: 20, color: KausapColors.textHint(context)),
           ],
         ),
       ),
@@ -759,6 +759,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildDivider() {
-    return const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9));
+    return Divider(height: 1, indent: 56, color: KausapColors.border(context));
   }
 }

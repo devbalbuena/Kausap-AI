@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
 
 class HomeCompanionAvatar extends StatefulWidget {
@@ -108,26 +109,9 @@ class _HomeCompanionAvatarState extends State<HomeCompanionAvatar> with TickerPr
     widget.onAffirmation?.call(affirmation);
   }
 
-  List<Color> _getAuraGradient() {
-    switch (widget.todayMood) {
-      case 5:
-        return const [Color(0xFF06B6D4), Color(0xFF38BDF8)]; // Great (Cyan)
-      case 4:
-        return const [Color(0xFF0284C7), Color(0xFF60A5FA)]; // Good (Sky)
-      case 3:
-        return const [Color(0xFF10B981), Color(0xFF34D399)]; // Okay (Mint)
-      case 2:
-        return const [Color(0xFFF59E0B), Color(0xFFFBBF24)]; // Low (Amber)
-      case 1:
-        return const [Color(0xFFF43F5E), Color(0xFFFB7185)]; // Rough (Rose)
-      default:
-        return const [Color(0xFF0284C7), Color(0xFF38BDF8)]; // Default (Ocean Sky)
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final gradient = _getAuraGradient();
+    final gradient = KausapColors.mascotGradient(context);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,

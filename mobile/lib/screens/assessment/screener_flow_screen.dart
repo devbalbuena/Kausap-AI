@@ -31,7 +31,6 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
 
   late final List<String> _questions;
   late final String _title;
-  late final String _subtitle;
 
   @override
   void initState() {
@@ -39,7 +38,6 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
     final type = widget.screenerType.toLowerCase();
     if (type.contains('phq')) {
       _title = 'Mood & Energy Check-In (PHQ-9)';
-      _subtitle = 'Reflect on your mood, sleep, focus, and energy levels over the last 2 weeks.';
       _questions = [
         'Little interest or pleasure in doing things you usually enjoy?',
         'Feeling down, depressed, or hopeless about things?',
@@ -53,7 +51,6 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
       ];
     } else if (type.contains('gad')) {
       _title = 'Stress & Peace of Mind Check-In (GAD-7)';
-      _subtitle = 'Check your daily worry, nervousness, and tension levels to find balance.';
       _questions = [
         'Feeling nervous, anxious, or constantly on edge?',
         'Not being able to stop, calm down, or control worrying thoughts?',
@@ -65,7 +62,6 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
       ];
     } else {
       _title = 'Campus Burnout & Fatigue Check-In';
-      _subtitle = 'Assess thesis pressure, deadline fatigue, and academic overwhelm.';
       _questions = [
         'Feeling emotionally drained and exhausted by your academic workload?',
         'Feeling tired or lacking enthusiasm in the morning when facing classes or study?',
@@ -261,9 +257,9 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
           child: Column(
@@ -276,7 +272,7 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: KausapColors.border(context),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -298,11 +294,11 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                       children: [
                         Text(
                           'Reflection Complete ✨',
-                          style: AppTextStyles.heading2.copyWith(fontSize: 16, color: const Color(0xFF0F172A)),
+                          style: AppTextStyles.heading2.copyWith(fontSize: 16, color: KausapColors.textPrimary(context)),
                         ),
                         Text(
                           title,
-                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -337,9 +333,9 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                             severity,
                             style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: color),
                           ),
-                          const Text(
+                          Text(
                             'Personal self-assessment score',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context)),
                           ),
                         ],
                       ),
@@ -354,13 +350,13 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: KausapColors.subtleBg(context),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: KausapColors.border(context)),
                 ),
                 child: Text(
                   progressNote,
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF334155), height: 1.35),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w500, color: KausapColors.textSecondary(context), height: 1.35),
                 ),
               ),
               const SizedBox(height: 12),
@@ -370,25 +366,38 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEEF2FF),
+                  color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF334155) : const Color(0xFFC7D2FE),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Text('💡 ', style: TextStyle(fontSize: 14)),
+                        const Text('💡 ', style: TextStyle(fontSize: 14)),
                         Text(
                           'What this means for you',
-                          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFF3730A3)),
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFA5B4FC) : const Color(0xFF3730A3),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Text(
                       empatheticInsight,
-                      style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF312E81), height: 1.4),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFCBD5E1) : const Color(0xFF312E81),
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
@@ -410,8 +419,9 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                       icon: const Icon(Icons.self_improvement_rounded, size: 16),
                       label: const Text('Calm Now 🌿', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
+                        foregroundColor: KausapColors.textPrimary(context),
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        side: BorderSide(color: KausapColors.border(context)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -429,7 +439,7 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                       icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
                       label: const Text('Talk to AI 💬', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -446,9 +456,9 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                     Navigator.pop(ctx);
                     Navigator.pop(context, true);
                   },
-                  child: const Text(
+                  child: Text(
                     'Done & Save to History',
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: KausapColors.textMuted(context)),
                   ),
                 ),
               ),
@@ -464,7 +474,7 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
     final progress = (_currentQuestionIndex + 1) / _questions.length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -479,13 +489,14 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         shape: BoxShape.circle,
+                        border: Border.all(color: KausapColors.border(context)),
                         boxShadow: [
                           BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 6, offset: const Offset(0, 2)),
                         ],
                       ),
-                      child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF191C21)),
+                      child: Icon(Icons.close_rounded, size: 18, color: KausapColors.textPrimary(context)),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -495,17 +506,31 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                       children: [
                         Text(
                           _title,
-                          style: AppTextStyles.heading2.copyWith(fontSize: 15),
+                          style: AppTextStyles.heading2.copyWith(fontSize: 15, color: KausapColors.textPrimary(context)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          _subtitle,
-                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          'Question ${_currentQuestionIndex + 1} of ${_questions.length}',
+                          style: AppTextStyles.caption.copyWith(color: KausapColors.textMuted(context), fontSize: 11),
                         ),
                       ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: KausapColors.accentSubtle(context),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${(progress * 100).toInt()}%',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        color: KausapColors.accent(context),
+                      ),
                     ),
                   ),
                 ],
@@ -513,52 +538,29 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
             ),
 
             // Progress Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Question ${_currentQuestionIndex + 1} of ${_questions.length}',
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                      ),
-                      Text('${(progress * 100).round()}%', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textSecondary)),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 6,
-                      backgroundColor: const Color(0xFFE5E7EB),
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                    ),
-                  ),
-                ],
-              ),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: KausapColors.trackBg(context),
+              valueColor: AlwaysStoppedAnimation<Color>(KausapColors.accent(context)),
+              minHeight: 3,
             ),
+            const SizedBox(height: 24),
 
-            const SizedBox(height: 16),
-
-            // Question Card
+            // Question Card & Options
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Over the last 2 weeks, how often have you felt:',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 12.5),
+                      style: AppTextStyles.caption.copyWith(color: KausapColors.textMuted(context), fontSize: 12.5),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       _questions[_currentQuestionIndex],
-                      style: AppTextStyles.heading2.copyWith(fontSize: 17, height: 1.35),
+                      style: AppTextStyles.heading2.copyWith(fontSize: 17, height: 1.35, color: KausapColors.textPrimary(context)),
                     ),
                     const SizedBox(height: 24),
 
@@ -572,10 +574,10 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary.withAlpha(20) : Colors.white,
+                            color: isSelected ? KausapColors.accentSubtle(context) : KausapColors.cardBg(context),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: isSelected ? AppColors.primary : const Color(0x1AC0C9C2),
+                              color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                               width: isSelected ? 2 : 1,
                             ),
                             boxShadow: [
@@ -588,7 +590,7 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                               fontFamily: 'Inter',
                               fontSize: 13.5,
                               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                              color: isSelected ? AppColors.primary : const Color(0xFF1F2937),
+                              color: isSelected ? KausapColors.accent(context) : KausapColors.textPrimary(context),
                             ),
                           ),
                         ),

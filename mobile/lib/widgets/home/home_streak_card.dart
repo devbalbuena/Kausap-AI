@@ -55,7 +55,7 @@ class HomeStreakCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         streak == 0 ? 'Start your streak today!' : '$streak Day Streak',
-                        style: AppTextStyles.heading2,
+                        style: AppTextStyles.heading2.copyWith(color: KausapColors.textPrimary(context)),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -66,7 +66,7 @@ class HomeStreakCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: KausapColors.warningSubtle,
+                  color: KausapColors.warningSubtle(context),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: KausapColors.warning.withAlpha(60)),
                 ),
@@ -87,7 +87,7 @@ class HomeStreakCard extends StatelessWidget {
             streak == 0
                 ? 'Check in daily to build your mental wellness momentum'
                 : '$clampedStreak of $goal days towards your monthly milestone',
-            style: AppTextStyles.subheading.copyWith(fontSize: 12),
+            style: AppTextStyles.subheading.copyWith(fontSize: 12, color: KausapColors.textMuted(context)),
           ),
           const SizedBox(height: 12),
           Stack(
@@ -95,7 +95,7 @@ class HomeStreakCard extends StatelessWidget {
               Container(
                 height: 10,
                 decoration: BoxDecoration(
-                  color: AppColors.streakTrack,
+                  color: KausapColors.trackBg(context),
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),

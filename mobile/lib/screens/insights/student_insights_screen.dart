@@ -2078,9 +2078,15 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: bgGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: KausapColors.isDark(context) ? KausapColors.cardBg(context) : null,
+        gradient: KausapColors.isDark(context)
+            ? null
+            : LinearGradient(colors: bgGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accentColor.withAlpha(40)),
+        border: Border.all(
+          color: KausapColors.isDark(context) ? accentColor.withAlpha(90) : accentColor.withAlpha(40),
+          width: KausapColors.isDark(context) ? 1.2 : 1.0,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -2107,7 +2113,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
               fontFamily: 'Inter',
               fontSize: 10.5,
               fontWeight: FontWeight.w500,
-              color: accentColor.withAlpha(190),
+              color: KausapColors.isDark(context) ? KausapColors.textMuted(context) : accentColor.withAlpha(190),
             ),
           ),
         ],

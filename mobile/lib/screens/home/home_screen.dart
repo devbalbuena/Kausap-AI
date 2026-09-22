@@ -1257,7 +1257,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: hasLogged ? KausapColors.successSubtle : KausapColors.border(context),
+                  color: hasLogged ? KausapColors.successSubtle(context) : KausapColors.border(context),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1333,7 +1333,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isAck ? KausapColors.successSubtle : KausapColors.accentSubtle(context),
+        color: isAck ? KausapColors.successSubtle(context) : KausapColors.accentSubtle(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isAck ? KausapColors.success.withAlpha(80) : KausapColors.accent(context).withAlpha(80),
@@ -1355,7 +1355,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isAck ? KausapColors.successSubtle : KausapColors.accentLight(context),
+                  color: isAck ? KausapColors.successSubtle(context) : KausapColors.accentLight(context),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1625,12 +1625,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        color: KausapColors.cardBg(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        border: Border(top: BorderSide(color: KausapColors.border(context), width: 1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(30),
-            blurRadius: 5.5,
+            color: Colors.black.withAlpha(KausapColors.isDark(context) ? 40 : 15),
+            blurRadius: 8,
             offset: const Offset(0, -2),
           ),
         ],

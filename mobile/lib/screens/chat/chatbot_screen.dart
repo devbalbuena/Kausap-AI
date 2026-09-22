@@ -1290,29 +1290,24 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: _currentAvatar.isMascot
-                    ? (_mascotEmotion == MascotEmotion.comforting
-                        ? const [Color(0xFFF3E8FF), Color(0xFFFCE7F3)]
-                        : (_mascotEmotion == MascotEmotion.joyful || _mascotEmotion == MascotEmotion.celebrating
-                            ? const [Color(0xFFFEF3C7), Color(0xFFD1FAE5)]
-                            : const [Color(0xFFE0F2FE), Color(0xFFEDE9FE)]))
-                    : const [Color(0xFFE0F2FE), Color(0xFFEDE9FE)],
+                colors: KausapColors.isDark(context)
+                    ? [const Color(0xFF1E293B), const Color(0xFF1E293B)]
+                    : [
+                        KausapColors.accent(context).withAlpha(30),
+                        KausapColors.accent(context).withAlpha(12),
+                      ],
               ),
               borderRadius: BorderRadius.circular(28),
               border: Border.all(
-                color: _currentAvatar.isMascot
-                    ? (_mascotEmotion == MascotEmotion.comforting
-                        ? const Color(0xFFE9D5FF)
-                        : (_mascotEmotion == MascotEmotion.joyful || _mascotEmotion == MascotEmotion.celebrating
-                            ? const Color(0xFFFDE68A)
-                            : const Color(0xFFBAE6FD)))
-                    : const Color(0xFFBAE6FD),
+                color: KausapColors.isDark(context)
+                    ? const Color(0xFF334155)
+                    : KausapColors.accent(context).withAlpha(60),
               ),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x120077B6),
+                  color: KausapColors.accentShadow(context),
                   blurRadius: 22,
-                  offset: Offset(0, 8),
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -1387,7 +1382,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   style: AppTextStyles.heading2.copyWith(
                     fontSize: isSpacious ? 20 : 18,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
+                    color: KausapColors.textPrimary(context),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -1399,7 +1394,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: isSpacious ? 14 : 13,
-                      color: const Color(0xFF475569),
+                      color: KausapColors.textMuted(context),
                       height: 1.45,
                     ),
                     textAlign: TextAlign.center,
@@ -1413,25 +1408,25 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(220),
+                        color: KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFBAE6FD)),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x0A000000), blurRadius: 6, offset: Offset(0, 2)),
+                        border: Border.all(color: KausapColors.accent(context).withAlpha(100)),
+                        boxShadow: [
+                          BoxShadow(color: KausapColors.accentShadow(context), blurRadius: 6, offset: const Offset(0, 2)),
                         ],
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.bolt_rounded, size: 16, color: Color(0xFF0284C7)),
-                          SizedBox(width: 6),
+                          Icon(Icons.bolt_rounded, size: 16, color: KausapColors.accent(context)),
+                          const SizedBox(width: 6),
                           Text(
                             'Show Conversation Prompts 💡',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF0284C7),
+                              color: KausapColors.accent(context),
                             ),
                           ),
                         ],
@@ -2703,39 +2698,12 @@ class _ChatCompanionAvatarState extends State<_ChatCompanionAvatar> with TickerP
   }
 
   List<Color> _getGradientColors() {
-    if (widget.isTyping || widget.emotion == MascotEmotion.thinking) {
-      return const [Color(0xFF06B6D4), Color(0xFF8B5CF6)]; // Cyan to Violet
-    }
-    switch (widget.emotion) {
-      case MascotEmotion.comforting:
-        return const [Color(0xFF6366F1), Color(0xFFEC4899)]; // Lavender to Rose
-      case MascotEmotion.joyful:
-        return const [Color(0xFFF59E0B), Color(0xFF10B981)]; // Golden Amber to Emerald
-      case MascotEmotion.celebrating:
-        return const [Color(0xFFFFB703), Color(0xFFFB8500)]; // Radiant Amber-Gold to Sunset
-      case MascotEmotion.thinking:
-        return const [Color(0xFF06B6D4), Color(0xFF8B5CF6)];
-      case MascotEmotion.neutral:
-        return const [Color(0xFF0077B6), Color(0xFF00B4D8)]; // Ocean Blue
-    }
+    return KausapColors.mascotGradient(context);
   }
 
   Color _getShadowColor() {
-    if (widget.isTyping || widget.emotion == MascotEmotion.thinking) {
-      return const Color(0x668B5CF6);
-    }
-    switch (widget.emotion) {
-      case MascotEmotion.comforting:
-        return const Color(0x55EC4899);
-      case MascotEmotion.joyful:
-        return const Color(0x5510B981);
-      case MascotEmotion.celebrating:
-        return const Color(0x66FB8500);
-      case MascotEmotion.thinking:
-        return const Color(0x668B5CF6);
-      case MascotEmotion.neutral:
-        return const Color(0x330077B6);
-    }
+    final accent = KausapColors.accent(context);
+    return accent.withAlpha(widget.isTyping || widget.emotion == MascotEmotion.celebrating ? 110 : 50);
   }
 
   @override
