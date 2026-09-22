@@ -234,12 +234,17 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
       }
     }
 
+    final borderColor = isAck
+        ? const Color(0xFFBBF7D0) // green border for confirmed
+        : const Color(0xFF0284C7).withAlpha(120); // blue border for pending
+    final headerBg = isAck ? const Color(0xFFF0FDF4) : const Color(0xFFE0F2FE);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isAck ? const Color(0xFFE2E8F0) : const Color(0xFF0284C7).withAlpha(120),
+          color: borderColor,
           width: isAck ? 1 : 1.5,
         ),
         boxShadow: const [
@@ -253,7 +258,7 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
-              color: isAck ? const Color(0xFFF1F5F9) : const Color(0xFFE0F2FE),
+              color: headerBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
             ),
             child: Row(
@@ -261,12 +266,12 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isAck ? const Color(0xFFE2E8F0) : const Color(0xFF0284C7),
+                    color: isAck ? const Color(0xFF16A34A) : const Color(0xFF0284C7),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    Icons.account_balance_rounded,
-                    color: isAck ? const Color(0xFF475569) : Colors.white,
+                    isAck ? Icons.verified_rounded : Icons.account_balance_rounded,
+                    color: Colors.white,
                     size: 18,
                   ),
                 ),
@@ -281,7 +286,7 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
                           fontFamily: 'Poppins',
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: isAck ? const Color(0xFF64748B) : const Color(0xFF0369A1),
+                          color: isAck ? const Color(0xFF15803D) : const Color(0xFF0369A1),
                           letterSpacing: 0.3,
                         ),
                       ),
@@ -301,21 +306,21 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
+                      color: const Color(0xFF16A34A),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 14),
+                        Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
                         SizedBox(width: 4),
                         Text(
-                          'Confirmed',
+                          'Visit Confirmed',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF16A34A),
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -462,25 +467,47 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
                 if (isAck)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0FDF4),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFBBF7D0)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 18),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'You confirmed this visit. The Guidance Counselor is expecting you at the office!',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF15803D),
-                            ),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF16A34A),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Visit Confirmed ✓',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'You have confirmed this visit. The counselor is expecting you at the Guidance Center.',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11.5,
+                                  color: Color(0xFF166534),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -512,6 +539,8 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
       ),
     );
   }
+
+
 
   Widget _buildInfoRow(IconData icon, String label, String value, Color iconColor) {
     return Row(

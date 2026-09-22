@@ -715,16 +715,66 @@ def resolve_flagged_message(
     session: Annotated[Session, Depends(get_session)],
     payload: Optional[Dict[str, Any]] = None,
 ):
-    """Mark a specific flagged message incident as resolved and record clinical note in AuditLog."""
+    """Mark a specific flagged message incident as resolved and record clinical note in AuditLog.
+    
+    Also soft-deletes any linked guidance_notice notifications for the student so the
+    call-slip disappears from the student's dashboard and email page after resolution.
+    """
+    target_student_id: Optional[uuid.UUID] = None
+
+    # 1. Clear the risk flag on the original chat message (if applicable)
     try:
         msg_uuid = uuid.UUID(message_id)
         msg = session.get(ChatMessage, msg_uuid)
         if msg:
             msg.risk_flag = False
             session.add(msg)
+            # Resolve the student user for notification cleanup
+            chat_sess = session.get(ChatSession, msg.session_id)
+            if chat_sess:
+                target_student_id = chat_sess.user_id
     except Exception:
         pass
-    
+
+    # 2. For distress-pattern or synthetic IDs, try to find student from the
+    #    most recent issue_guidance_notice audit log for this flag
+    if target_student_id is None:
+        notice_audit = session.exec(
+            select(AuditLog)
+            .where(
+                AuditLog.action == "issue_guidance_notice",
+                AuditLog.target_id == message_id,
+            )
+            .order_by(AuditLog.created_at.desc())
+        ).first()
+        if notice_audit and notice_audit.detail:
+            try:
+                slip = json.loads(notice_audit.detail) if notice_audit.detail.startswith("{") else {}
+                student_email_from_slip = slip.get("student_email") or slip.get("user_email")
+                if student_email_from_slip:
+                    student_obj = session.exec(
+                        select(User).where(User.email == student_email_from_slip)
+                    ).first()
+                    if student_obj:
+                        target_student_id = student_obj.id
+            except Exception:
+                pass
+
+    # 3. Soft-delete all active guidance_notice notifications for this student
+    #    so the call-slip disappears from the student's dashboard
+    if target_student_id is not None:
+        student_notices = session.exec(
+            select(Notification).where(
+                Notification.user_id == target_student_id,
+                Notification.type == NotificationType.guidance_notice,
+                Notification.is_deleted == False,  # noqa: E712
+            )
+        ).all()
+        for sn in student_notices:
+            sn.is_deleted = True
+            session.add(sn)
+
+    # 4. Record clinical resolution in AuditLog
     note = (payload or {}).get("resolution_note") or f"Crisis triage intake completed & resolved by {admin.email}."
     audit = AuditLog(
         admin_id=admin.id,

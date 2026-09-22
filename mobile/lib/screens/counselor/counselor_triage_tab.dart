@@ -209,8 +209,12 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
           if (inActionMap.containsKey(idStr)) {
             map['status'] = 'in_action';
             map['call_slip'] = inActionMap[idStr]!['call_slip'] ?? map['call_slip'];
-            map['is_acknowledged'] = inActionMap[idStr]!['is_acknowledged'] ?? map['is_acknowledged'];
+            // Take the truest value: if server says acknowledged (student confirmed), respect that
+            final localAck = inActionMap[idStr]!['is_acknowledged'] == true;
+            final serverAck = map['is_acknowledged'] == true;
+            map['is_acknowledged'] = localAck || serverAck;
           }
+
 
           seenIds.add(idStr);
           combined.add(map);

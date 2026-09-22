@@ -131,10 +131,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final res = await ApiClient().get('/notifications/guidance-notices', silent: true);
       if (res is List && res.isNotEmpty && mounted) {
         final list = res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        // Only count and show notices that are NOT yet acknowledged (need action)
         final unack = list.where((n) => n['is_acknowledged'] != true).toList();
         setState(() {
           _guidanceNoticesCount = unack.length;
-          _activeGuidanceNotice = list.first;
+          // Show the banner only for the first unacknowledged notice (needs action)
+          _activeGuidanceNotice = unack.isNotEmpty ? unack.first : null;
         });
       } else if (mounted) {
         setState(() {
