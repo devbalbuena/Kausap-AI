@@ -345,9 +345,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     margin: const EdgeInsets.only(bottom: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
+                      color: KausapColors.isDark(context)
+                          ? const Color(0xFF2D1515)
+                          : const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFECACA)),
+                      border: Border.all(
+                        color: KausapColors.isDark(context)
+                            ? const Color(0xFF7F1D1D)
+                            : const Color(0xFFFECACA),
+                      ),
                     ),
                     child: _buildListItem(
                       icon: Icons.health_and_safety_rounded,

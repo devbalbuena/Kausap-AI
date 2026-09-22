@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/haptic_service.dart';
 
 class ThemeProvider extends ChangeNotifier {
@@ -20,11 +21,7 @@ class ThemeProvider extends ChangeNotifier {
   bool _dyslexiaSpacing = false;
 
   ThemeProvider() {
-    _loadTheme();
-    _loadTextScale();
-    _loadHighContrast();
-    _loadAccentColor();
-    _loadAccessibilityPrefs();
+    _loadPreferences();
   }
 
   ThemeMode get themeMode => _themeMode;
@@ -36,70 +33,82 @@ class ThemeProvider extends ChangeNotifier {
   bool get hapticsEnabled => _hapticsEnabled != false;
   bool get dyslexiaSpacing => _dyslexiaSpacing == true;
 
-  // ── Load ──────────────────────────────────────────────────────────────────
+  // ── Load All Preferences with Dual-Storage Resilience ─────────────────────
 
-  Future<void> _loadTheme() async {
-    const storage = FlutterSecureStorage();
-    final savedTheme = await storage.read(key: _themeKey);
-    if (savedTheme != null) {
-      if (savedTheme == 'dark') {
-        _themeMode = ThemeMode.dark;
-      } else if (savedTheme == 'light') {
-        _themeMode = ThemeMode.light;
-      } else {
-        _themeMode = ThemeMode.system;
+  Future<void> _loadPreferences() async {
+    // 1. First try SharedPreferences (instant synchronous memory cache on all platforms)
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final savedTheme = prefs.getString(_themeKey);
+      if (savedTheme != null) {
+        if (savedTheme == 'dark') {
+          _themeMode = ThemeMode.dark;
+        } else if (savedTheme == 'light') {
+          _themeMode = ThemeMode.light;
+        } else {
+          _themeMode = ThemeMode.system;
+        }
       }
+
+      final savedAccent = prefs.getInt(_accentColorKey);
+      if (savedAccent != null) {
+        _accentColor = Color(savedAccent);
+      }
+
+      final savedScale = prefs.getDouble(_textScaleKey);
+      if (savedScale != null) {
+        _textScaleFactor = savedScale.clamp(0.8, 1.6);
+      }
+
+      final savedContrast = prefs.getBool(_highContrastKey);
+      if (savedContrast != null) {
+        _highContrast = savedContrast;
+      }
+
+      final savedMotion = prefs.getBool(_reduceMotionKey);
+      if (savedMotion != null) {
+        _reduceMotion = savedMotion;
+      }
+
+      final savedHaptics = prefs.getBool(_hapticsKey);
+      if (savedHaptics != null) {
+        _hapticsEnabled = savedHaptics;
+        HapticService.enabled = _hapticsEnabled;
+      }
+
+      final savedDyslexia = prefs.getBool(_dyslexiaSpacingKey);
+      if (savedDyslexia != null) {
+        _dyslexiaSpacing = savedDyslexia;
+      }
+
       notifyListeners();
-    }
-  }
+    } catch (_) {}
 
-  Future<void> _loadTextScale() async {
-    const storage = FlutterSecureStorage();
-    final saved = await storage.read(key: _textScaleKey);
-    if (saved != null) {
-      final parsed = double.tryParse(saved);
-      if (parsed != null) {
-        _textScaleFactor = parsed.clamp(0.8, 1.6);
-        notifyListeners();
+    // 2. Secondary check on FlutterSecureStorage (for backwards compatibility)
+    try {
+      const storage = FlutterSecureStorage();
+      final secTheme = await storage.read(key: _themeKey);
+      if (secTheme != null) {
+        if (secTheme == 'dark') {
+          _themeMode = ThemeMode.dark;
+        } else if (secTheme == 'light') {
+          _themeMode = ThemeMode.light;
+        } else {
+          _themeMode = ThemeMode.system;
+        }
       }
-    }
-  }
 
-  Future<void> _loadHighContrast() async {
-    const storage = FlutterSecureStorage();
-    final saved = await storage.read(key: _highContrastKey);
-    if (saved == 'true') {
-      _highContrast = true;
+      final secAccent = await storage.read(key: _accentColorKey);
+      if (secAccent != null) {
+        final val = int.tryParse(secAccent);
+        if (val != null) {
+          _accentColor = Color(val);
+        }
+      }
+
       notifyListeners();
-    }
-  }
-
-  Future<void> _loadAccentColor() async {
-    const storage = FlutterSecureStorage();
-    final saved = await storage.read(key: _accentColorKey);
-    if (saved != null) {
-      final val = int.tryParse(saved);
-      if (val != null) {
-        _accentColor = Color(val);
-        notifyListeners();
-      }
-    }
-  }
-
-  Future<void> _loadAccessibilityPrefs() async {
-    const storage = FlutterSecureStorage();
-    final motion = await storage.read(key: _reduceMotionKey);
-    final haptics = await storage.read(key: _hapticsKey);
-    final dyslexia = await storage.read(key: _dyslexiaSpacingKey);
-
-    if (motion == 'true') _reduceMotion = true;
-    if (haptics != null) {
-      _hapticsEnabled = haptics == 'true';
-      HapticService.enabled = _hapticsEnabled;
-    }
-    if (dyslexia == 'true') _dyslexiaSpacing = true;
-
-    notifyListeners();
+    } catch (_) {}
   }
 
   // ── Setters ───────────────────────────────────────────────────────────────
@@ -107,14 +116,13 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     notifyListeners();
-    const storage = FlutterSecureStorage();
-    if (mode == ThemeMode.dark) {
-      await storage.write(key: _themeKey, value: 'dark');
-    } else if (mode == ThemeMode.light) {
-      await storage.write(key: _themeKey, value: 'light');
-    } else {
-      await storage.write(key: _themeKey, value: 'system');
-    }
+    final modeStr = mode == ThemeMode.dark ? 'dark' : (mode == ThemeMode.light ? 'light' : 'system');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_themeKey, modeStr);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _themeKey, value: modeStr);
+    } catch (_) {}
   }
 
   Future<void> toggleTheme() async {
@@ -128,43 +136,67 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> setTextScaleFactor(double value) async {
     _textScaleFactor = value.clamp(0.8, 1.6);
     notifyListeners();
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _textScaleKey, value: _textScaleFactor.toString());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_textScaleKey, _textScaleFactor);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _textScaleKey, value: _textScaleFactor.toString());
+    } catch (_) {}
   }
 
   Future<void> setHighContrast(bool value) async {
     _highContrast = value;
     notifyListeners();
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _highContrastKey, value: value.toString());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_highContrastKey, value);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _highContrastKey, value: value.toString());
+    } catch (_) {}
   }
 
   Future<void> setAccentColor(Color color) async {
     _accentColor = color;
     notifyListeners();
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _accentColorKey, value: color.toARGB32().toString());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_accentColorKey, color.toARGB32());
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _accentColorKey, value: color.toARGB32().toString());
+    } catch (_) {}
   }
 
   Future<void> setReduceMotion(bool value) async {
     _reduceMotion = value;
     notifyListeners();
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _reduceMotionKey, value: value.toString());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_reduceMotionKey, value);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _reduceMotionKey, value: value.toString());
+    } catch (_) {}
   }
 
   Future<void> setHapticsEnabled(bool value) async {
     _hapticsEnabled = value;
     HapticService.enabled = value;
     notifyListeners();
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _hapticsKey, value: value.toString());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_hapticsKey, value);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _hapticsKey, value: value.toString());
+    } catch (_) {}
   }
 
   Future<void> setDyslexiaSpacing(bool value) async {
     _dyslexiaSpacing = value;
     notifyListeners();
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _dyslexiaSpacingKey, value: value.toString());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_dyslexiaSpacingKey, value);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _dyslexiaSpacingKey, value: value.toString());
+    } catch (_) {}
   }
 }

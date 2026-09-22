@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../theme/app_theme.dart';
+import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
@@ -203,9 +205,12 @@ class _DeactivatedAccountScreenState extends State<DeactivatedAccountScreen> {
   Widget build(BuildContext context) {
     final user = widget.userProfile ?? context.watch<AuthProvider>().currentUser;
     final userName = user?['full_name'] ?? (user?['first_name'] != null ? '${user?['first_name']} ${user?['last_name'] ?? ''}' : 'Student');
+    final accentColor = context.watch<ThemeProvider>().accentColor;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+    return Theme(
+      data: AppTheme.getTheme(accentColor),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -470,6 +475,7 @@ class _DeactivatedAccountScreenState extends State<DeactivatedAccountScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

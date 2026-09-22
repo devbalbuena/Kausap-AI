@@ -964,7 +964,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         if (_showMenu) setState(() => _showMenu = false);
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF0F2FF),
+        backgroundColor: KausapColors.scaffoldBg(context),
         body: SafeArea(
           child: Stack(
             children: [
@@ -1839,9 +1839,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
+        color: KausapColors.isDark(context) ? const Color(0xFF2D1515) : const Color(0xFFFEF2F2),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFCA5A5)),
+        border: Border.all(
+          color: KausapColors.isDark(context) ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.red.withAlpha(15),
@@ -1854,16 +1856,16 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 20),
-              SizedBox(width: 8),
+            children: [
+              const Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 20),
+              const SizedBox(width: 8),
               Text(
                 'Philippine Crisis Hotlines (24/7)',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
-                  color: Color(0xFF991B1B),
+                  color: KausapColors.isDark(context) ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
                 ),
               ),
             ],
@@ -1885,20 +1887,22 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFECACA)),
+        border: Border.all(
+          color: KausapColors.isDark(context) ? const Color(0xFF475569) : const Color(0xFFFECACA),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF7F1D1D),
+              color: KausapColors.isDark(context) ? const Color(0xFFF1F5F9) : const Color(0xFF7F1D1D),
             ),
           ),
           Text(
@@ -2034,15 +2038,16 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: KausapColors.cardBg(context),
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(2),
                 topRight: Radius.circular(16),
                 bottomLeft: Radius.circular(16),
                 bottomRight: Radius.circular(16),
               ),
-              boxShadow: [
+              border: Border.all(color: KausapColors.border(context)),
+              boxShadow: const [
                 BoxShadow(
                   color: Color(0x0D000000),
                   blurRadius: 1,
@@ -2074,7 +2079,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   Widget _buildInputArea(bool isEmpty) {
     return Container(
-      color: const Color(0xFFF0F2FF),
+      color: KausapColors.scaffoldBg(context),
       child: Column(
         children: [
           if (!isEmpty) ...[
@@ -2095,9 +2100,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0xFFBAE6FD)),
+                        border: Border.all(color: KausapColors.border(context)),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x08000000),
@@ -2108,11 +2113,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       ),
                       child: Text(
                         _quickChips[i],
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0284C7),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -2174,10 +2179,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: KausapColors.cardBg(context),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                    color: const Color(0xFFC1C7D3).withAlpha(100)),
+                border: Border.all(color: KausapColors.border(context)),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x0D000000),
@@ -2206,12 +2210,12 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       textInputAction: TextInputAction.send,
                       onSubmitted: _sendMessage,
                       style: AppTextStyles.body.copyWith(
-                          fontSize: 14, color: const Color(0xFF191C21)),
+                          fontSize: 14, color: KausapColors.textPrimary(context)),
                       decoration: InputDecoration(
                         hintText: _isRecordingVoice ? 'Listening to your voice...' : 'Start conversation...',
                         hintStyle: AppTextStyles.body.copyWith(
                           fontSize: 14,
-                          color: _isRecordingVoice ? const Color(0xFFDC2626) : const Color(0xFF9BA4B4),
+                          color: _isRecordingVoice ? const Color(0xFFDC2626) : KausapColors.textMuted(context),
                         ),
                         border: InputBorder.none,
                         contentPadding:
@@ -2287,8 +2291,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         child: Container(
           width: 235,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: KausapColors.cardBg(context),
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: KausapColors.border(context)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2296,8 +2301,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               _MenuItem(
                 icon: Icons.add_comment_rounded,
                 label: 'New Chat',
-                iconColor: AppColors.primary,
-                labelColor: AppColors.primary,
+                iconColor: Theme.of(context).colorScheme.primary,
+                labelColor: Theme.of(context).colorScheme.primary,
                 onTap: _startNewChat,
               ),
               _MenuDivider(),
@@ -2430,9 +2435,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: KausapColors.border(context)),
         ),
         child: SafeArea(
           child: Column(
@@ -2444,13 +2450,13 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
+                      color: KausapColors.isDark(context) ? const Color(0xFF2D1515) : const Color(0xFFFEE2E2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.support_agent_rounded, color: Color(0xFFDC2626), size: 24),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2460,7 +2466,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                             fontFamily: 'Poppins',
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                            color: KausapColors.textPrimary(context),
                           ),
                         ),
                         Text(
@@ -2468,7 +2474,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
-                            color: Color(0xFF64748B),
+                            color: KausapColors.textMuted(context),
                           ),
                         ),
                       ],
@@ -2491,12 +2497,12 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    backgroundColor: const Color(0xFFF1F5F9),
+                    backgroundColor: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Close',
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: KausapColors.textSecondary(context)),
                   ),
                 ),
               ),
@@ -2525,8 +2531,9 @@ class _HeaderIconBtn extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(220),
+          color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : Colors.white.withAlpha(220),
           shape: BoxShape.circle,
+          border: Border.all(color: KausapColors.border(context)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha(18),
@@ -2535,7 +2542,7 @@ class _HeaderIconBtn extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, color: iconColor ?? AppColors.primary, size: 18),
+        child: Icon(icon, color: iconColor ?? Theme.of(context).colorScheme.primary, size: 18),
       ),
     );
   }
@@ -2567,7 +2574,7 @@ class _MenuItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: iconColor ?? AppColors.textPrimary),
+            Icon(icon, size: 18, color: iconColor ?? KausapColors.textPrimary(context)),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -2575,7 +2582,7 @@ class _MenuItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,
-                  color: labelColor ?? AppColors.textPrimary,
+                  color: labelColor ?? KausapColors.textPrimary(context),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -2595,7 +2602,7 @@ class _MenuItem extends StatelessWidget {
 class _MenuDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Divider(height: 1, color: Color(0xFFF0F2FF));
+    return Divider(height: 1, color: KausapColors.border(context));
   }
 }
 

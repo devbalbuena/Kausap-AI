@@ -19,7 +19,12 @@ class HomeSuggestedActivity extends StatelessWidget {
       children: [
         Text(
           'Suggested Activity',
-          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 16),
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: KausapColors.textPrimary(context),
+          ),
         ),
         const SizedBox(height: 10),
         Container(
@@ -45,7 +50,9 @@ class HomeSuggestedActivity extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: AppColors.activityIcon,
+                      color: KausapColors.isDark(context)
+                          ? const Color(0xFF519C6B).withAlpha(40)
+                          : AppColors.activityIcon,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -61,12 +68,17 @@ class HomeSuggestedActivity extends StatelessWidget {
                       children: [
                         Text(
                           '🧘 "5-Minute Breathing Exercise"',
-                          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                          style: AppTextStyles.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: KausapColors.textPrimary(context),
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Based on your recent anxiety',
-                          style: AppTextStyles.caption,
+                          style: AppTextStyles.caption.copyWith(
+                            color: KausapColors.textMuted(context),
+                          ),
                         ),
                       ],
                     ),
@@ -77,7 +89,7 @@ class HomeSuggestedActivity extends StatelessWidget {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentGreen,
-                  foregroundColor: Theme.of(context).colorScheme.surface,
+                  foregroundColor: Colors.white,
                   textStyle: AppTextStyles.button,
                 ),
                 onPressed: () async {

@@ -1133,7 +1133,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             ],
           ),
           const SizedBox(height: 10),
-          Text(description, style: const TextStyle(fontSize: 12, height: 1.4, color: Color(0xFF64748B))),
+          Text(description, style: TextStyle(fontSize: 12, height: 1.4, color: KausapColors.textSecondary(context))),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/theme_provider.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../utils/app_validators.dart';
 import '../auth/login_screen.dart';
@@ -90,8 +92,11 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    final accentColor = context.watch<ThemeProvider>().accentColor;
+    return Theme(
+      data: AppTheme.getTheme(accentColor),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -332,7 +337,8 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

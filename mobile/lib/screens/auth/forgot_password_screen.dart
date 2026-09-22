@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/theme_provider.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
@@ -52,8 +53,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    final accentColor = context.watch<ThemeProvider>().accentColor;
+    return Theme(
+      data: AppTheme.getTheme(accentColor),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -151,6 +155,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

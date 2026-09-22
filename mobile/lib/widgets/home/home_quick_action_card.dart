@@ -59,10 +59,22 @@ class HomeQuickActionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: KausapColors.textPrimary(context),
+                      ),
                     ),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: AppTextStyles.caption),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: KausapColors.textMuted(context),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -107,8 +119,10 @@ class HomeQuoteCard extends StatelessWidget {
           Expanded(
             child: Text(
               'It is better to conquer yourself than to win a thousand battles',
-              style: AppTextStyles.body.copyWith(
-                color: KausapColors.textMuted(context),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: KausapColors.textSecondary(context),
                 fontStyle: FontStyle.italic,
                 height: 1.5,
               ),
