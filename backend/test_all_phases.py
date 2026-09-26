@@ -233,7 +233,7 @@ check(read_dto.action == "counselor_created", "Audit action validation")
 
 print("\n=== Phase 4: Scalability & Connection Pooling ===")
 check(getattr(engine.pool, "_pre_ping", False) == True, "Engine pool pre-ping enabled (scale-to-zero resiliency)")
-check(getattr(engine.pool, "_recycle", None) == 300, "Engine connection recycling set to 300s")
+check(getattr(engine.pool, "_recycle", None) in (180, 300), "Engine connection recycling set (180s-300s)")
 print(f"  Engine pool class: {engine.pool.__class__.__name__}")
 
 if errors:

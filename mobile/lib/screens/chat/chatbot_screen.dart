@@ -145,6 +145,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   // Phase 3: Draft message persistence key
   static const String _draftKey = 'chatbot_input_draft';
+  // Phase 4: Safety timeout — if AI hasn't replied in 30s, show a friendly message
+  // rather than leaving the typing indicator spinning indefinitely.
+  static const Duration _kAiResponseTimeout = Duration(seconds: 30);
+  Timer? _sendTimeoutTimer;
+
   MascotEmotion _mascotEmotion = MascotEmotion.neutral;
 
   // Voice recording & TTS states
@@ -466,6 +471,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     AmbientAudioService.instance.removeListener(_onAmbientAudioChanged);
     // Phase 3: Cancel connectivity stream to prevent setState after dispose
     _connectivitySub?.cancel();
+    // Phase 4: Cancel any pending AI response safety timeout
+    _sendTimeoutTimer?.cancel();
     _inputController.dispose();
     _scrollController.dispose();
     _dotController.dispose();
@@ -664,6 +671,23 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     });
     _scrollToBottom();
 
+    // ── Phase 4: 30-second AI response safety timer ───────────────────────────
+    // Prevents the typing indicator from spinning indefinitely on congested networks.
+    _sendTimeoutTimer?.cancel();
+    _sendTimeoutTimer = Timer(_kAiResponseTimeout, () {
+      if (!mounted || !_isTyping) return;
+      setState(() {
+        _isSending = false;
+        _isTyping = false;
+        _mascotEmotion = MascotEmotion.neutral;
+        _messages.add(const _ChatMessage(
+          role: 'assistant',
+          content: 'Pasensya na, medyo nag-iistay ang aking sagot. 💫\n\nMaaaring busy ang server ngayon. Subukan mo ulit mag-send ng iyong mensahe mamaya!',
+        ));
+      });
+      _scrollToBottom();
+    });
+
     // Check crisis detection locally first
     final bool isCrisis = _checkIsCrisis(trimmed);
     // Track the index of the user message for retry marking
@@ -761,15 +785,25 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         _isTyping = false;
         _mascotEmotion = resolvedEmotion;
       });
+      _sendTimeoutTimer?.cancel(); // ── Phase 4: AI responded — cancel safety timer
       _saveSessionToHistory();
       _scrollToBottom();
     } catch (e) {
-      // ── Determine if it's a network error vs a server error ──────────────
+      _sendTimeoutTimer?.cancel(); // ── Phase 4: cancel safety timer on any error
+
+      // ── Determine the exact error type ──────────────────────────────────────
       final errorStr = e.toString().toLowerCase();
-      final bool isNetworkError = errorStr.contains('socketexception') ||
+      // TimeoutException from the 30s http timeout or from our safety timer
+      final bool isNetworkError = e is TimeoutException ||
+          errorStr.contains('socketexception') ||
           errorStr.contains('connection') ||
           errorStr.contains('timeout') ||
           errorStr.contains('failed host lookup');
+
+      // ── Phase 4: Handle 429 Rate Limit as a friendly AI bubble ──────────────
+      // The backend sends the student's Tagalog pacing message in the detail field.
+      // Surface it directly so the student gets a clear, empathetic explanation.
+      final bool isRateLimit = e is ApiException && e.statusCode == 429;
 
       if (!mounted) return;
 
@@ -787,7 +821,25 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         return; // Don't show fallback — user will tap to retry
       }
 
-      // Non-network error: use the empathetic offline fallback
+      if (isRateLimit) {
+        // Show the server's own friendly Tagalog pacing message as an AI reply
+        final serverMsg = e.message;
+        setState(() {
+          _isSending = false;
+          _isTyping = false;
+          _mascotEmotion = MascotEmotion.comforting;
+          _messages.add(_ChatMessage(
+            role: 'assistant',
+            content: serverMsg.isNotEmpty
+                ? serverMsg
+                : 'Pahinga muna tayo nang sandali. 📖💙\n\nNakapagbahagi ka na ng maraming saloobin ngayong oras na ito. Subukan nating mag-relax ng 10–15 minuto at magbalik!',
+          ));
+        });
+        _scrollToBottom();
+        return;
+      }
+
+      // Non-network, non-rate-limit error: use the empathetic offline fallback
       final fallbackResponse = _generateEmpatheticFallback(
         trimmed,
         isCrisis: isCrisis,

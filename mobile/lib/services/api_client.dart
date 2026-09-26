@@ -1,9 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import 'token_storage.dart';
 import 'retry_service.dart';
+
+/// Hard timeout for every HTTP request.
+/// Chosen to be longer than Gemini's max retry window (~12s) but short enough
+/// to give meaningful feedback on slow campus Wi-Fi during 45-student mass testing.
+const Duration _kRequestTimeout = Duration(seconds: 30);
 
 class ApiException implements Exception {
   final int statusCode;
@@ -54,8 +60,9 @@ class ApiClient {
 
   bool _shouldRetry(Exception e) {
     if (e is SocketException || e is http.ClientException) return true;
+    if (e is TimeoutException) return true; // Hard 30s timeout — retry on slow network
     if (e is ApiException) {
-      // Retry on server errors or timeouts
+      // Retry on server errors or timeouts, but NOT on 429 (rate limit) or 4xx client errors
       return e.statusCode >= 500 || e.statusCode == 408;
     }
     return false;
@@ -96,7 +103,7 @@ class ApiClient {
     
     final response = await _executeWithRetry(() async {
       final headers = await _getHeaders();
-      return http.get(uri, headers: headers);
+      return http.get(uri, headers: headers).timeout(_kRequestTimeout);
     }, silent: silent);
 
     _handleResponse(response);
@@ -114,7 +121,7 @@ class ApiClient {
         uri,
         headers: headers,
         body: body != null ? jsonEncode(body) : null,
-      );
+      ).timeout(_kRequestTimeout);
     }, silent: silent);
 
     _handleResponse(response);
@@ -132,7 +139,7 @@ class ApiClient {
         uri,
         headers: headers,
         body: body != null ? jsonEncode(body) : null,
-      );
+      ).timeout(_kRequestTimeout);
     }, silent: silent);
 
     _handleResponse(response);
@@ -150,7 +157,7 @@ class ApiClient {
         uri,
         headers: headers,
         body: body != null ? jsonEncode(body) : null,
-      );
+      ).timeout(_kRequestTimeout);
     }, silent: silent);
 
     _handleResponse(response);
@@ -164,7 +171,7 @@ class ApiClient {
     
     final response = await _executeWithRetry(() async {
       final headers = await _getHeaders();
-      return http.delete(uri, headers: headers);
+      return http.delete(uri, headers: headers).timeout(_kRequestTimeout);
     }, silent: silent);
 
     _handleResponse(response);
