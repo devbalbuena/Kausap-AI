@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
 
@@ -20,27 +21,22 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
   String _selectedTimeFormat = '12h'; // 12h default
   bool _isLoading = true;
 
-  final List<Map<String, String>> _languages = [
+  final List<Map<String, dynamic>> _languages = [
     {
       'code': 'en',
       'name': 'English',
       'nativeName': 'English',
       'flag': '🇺🇸',
       'subtitle': 'Default Global English',
-    },
-    {
-      'code': 'taglish',
-      'name': 'Taglish (Conversational)',
-      'nativeName': 'Filipino + English',
-      'flag': '🇵🇭',
-      'subtitle': 'Recommended for student AI chats',
+      'available': true,
     },
     {
       'code': 'tl',
-      'name': 'Tagalog',
-      'nativeName': 'Filipino',
+      'name': 'Filipino',
+      'nativeName': 'Filipino (Tagalog)',
       'flag': '🇵🇭',
-      'subtitle': 'Formal Tagalog',
+      'subtitle': 'Pambansang Wika • Tagalog',
+      'available': true,
     },
     {
       'code': 'es',
@@ -48,6 +44,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
       'nativeName': 'Español',
       'flag': '🇪🇸',
       'subtitle': 'Castilian & Latin American',
+      'available': false,
+      'badge': 'Soon',
     },
     {
       'code': 'ja',
@@ -55,6 +53,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
       'nativeName': '日本語',
       'flag': '🇯🇵',
       'subtitle': 'Standard Japanese',
+      'available': false,
+      'badge': 'Soon',
     },
     {
       'code': 'ko',
@@ -62,6 +62,8 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
       'nativeName': '한국어',
       'flag': '🇰🇷',
       'subtitle': 'Standard Korean',
+      'available': false,
+      'badge': 'Soon',
     },
   ];
 
@@ -89,29 +91,72 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    const storage = FlutterSecureStorage();
-    final savedLang = await storage.read(key: _languageKey);
-    final savedRegion = await storage.read(key: _regionKey);
-    final savedTime = await storage.read(key: _timeFormatKey);
+    String? lang;
+    String? region;
+    String? time;
+
+    // 1. First check SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      lang = prefs.getString(_languageKey);
+      region = prefs.getString(_regionKey);
+      time = prefs.getString(_timeFormatKey);
+    } catch (_) {}
+
+    // 2. Fallback to FlutterSecureStorage
+    if (lang == null || region == null || time == null) {
+      try {
+        const storage = FlutterSecureStorage();
+        lang ??= await storage.read(key: _languageKey);
+        region ??= await storage.read(key: _regionKey);
+        time ??= await storage.read(key: _timeFormatKey);
+      } catch (_) {}
+    }
 
     if (mounted) {
       setState(() {
-        _selectedLanguageCode = savedLang ?? 'en';
-        _selectedRegionCode = savedRegion ?? 'ph';
-        _selectedTimeFormat = savedTime ?? '12h';
+        _selectedLanguageCode = (lang == 'tl' || lang == 'en') ? lang! : 'en';
+        _selectedRegionCode = region ?? 'ph';
+        _selectedTimeFormat = time ?? '12h';
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _setLanguage(String code) async {
+  Future<void> _setLanguage(Map<String, dynamic> lang) async {
+    final bool isAvailable = lang['available'] == true;
+    if (!isAvailable) {
+      HapticService.lightTap();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${lang['name']} language support is coming soon! We are currently focused on English and Filipino.'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final code = lang['code'] as String;
     HapticService.selectionChanged();
     setState(() => _selectedLanguageCode = code);
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _languageKey, value: code);
+
+    // Dual-Storage Persistence
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_languageKey, code);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _languageKey, value: code);
+    } catch (_) {}
+
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Language preference saved.')),
+        SnackBar(
+          content: Text('Language set to ${lang['name']}. Auto-saved to your device.'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: KausapColors.accent(context),
+        ),
       );
     }
   }
@@ -119,11 +164,22 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
   Future<void> _setRegion(String code) async {
     HapticService.selectionChanged();
     setState(() => _selectedRegionCode = code);
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _regionKey, value: code);
+
+    // Dual-Storage Persistence
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_regionKey, code);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _regionKey, value: code);
+    } catch (_) {}
+
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Region & Emergency directory updated.')),
+        const SnackBar(
+          content: Text('Regional hotlines directory updated.'),
+          duration: Duration(seconds: 2),
+        ),
       );
     }
   }
@@ -131,8 +187,14 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
   Future<void> _setTimeFormat(String format) async {
     HapticService.selectionChanged();
     setState(() => _selectedTimeFormat = format);
-    const storage = FlutterSecureStorage();
-    await storage.write(key: _timeFormatKey, value: format);
+
+    // Dual-Storage Persistence
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_timeFormatKey, format);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: _timeFormatKey, value: format);
+    } catch (_) {}
   }
 
   @override
@@ -161,7 +223,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: accent))
           : Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 440),
@@ -182,7 +244,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Choose your preferred language, conversational AI style, and emergency hotline region.',
+                              'Choose your preferred language for conversations, and set your emergency crisis region.',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 12.5,
@@ -210,19 +272,23 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                         children: _languages.asMap().entries.map((entry) {
                           final i = entry.key;
                           final lang = entry.value;
-                          final isSelected = _selectedLanguageCode == lang['code'];
-                          final isTaglish = lang['code'] == 'taglish';
+                          final isAvailable = lang['available'] == true;
+                          final isSelected = _selectedLanguageCode == lang['code'] && isAvailable;
+                          final badge = lang['badge'] as String?;
 
                           return Column(
                             children: [
                               InkWell(
-                                onTap: () => _setLanguage(lang['code']!),
+                                onTap: () => _setLanguage(lang),
                                 borderRadius: BorderRadius.circular(16),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   child: Row(
                                     children: [
-                                      Text(lang['flag']!, style: const TextStyle(fontSize: 24)),
+                                      Opacity(
+                                        opacity: isAvailable ? 1.0 : 0.6,
+                                        child: Text(lang['flag'] as String, style: const TextStyle(fontSize: 24)),
+                                      ),
                                       const SizedBox(width: 14),
                                       Expanded(
                                         child: Column(
@@ -231,29 +297,36 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                             Row(
                                               children: [
                                                 Text(
-                                                  lang['nativeName']!,
+                                                  lang['nativeName'] as String,
                                                   style: TextStyle(
                                                     fontFamily: 'Poppins',
                                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                                                     fontSize: 14,
-                                                    color: isSelected ? accent : KausapColors.textPrimary(context),
+                                                    color: isSelected
+                                                        ? accent
+                                                        : (isAvailable
+                                                            ? KausapColors.textPrimary(context)
+                                                            : KausapColors.textMuted(context)),
                                                   ),
                                                 ),
-                                                if (isTaglish) ...[
+                                                if (badge != null) ...[
                                                   const SizedBox(width: 8),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: const Color(0xFFFEF3C7),
+                                                      color: isDark ? Colors.white.withAlpha(15) : const Color(0xFFF1F5F9),
                                                       borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(
+                                                        color: isDark ? Colors.white.withAlpha(25) : const Color(0xFFE2E8F0),
+                                                      ),
                                                     ),
-                                                    child: const Text(
-                                                      'Popular 🇵🇭',
+                                                    child: Text(
+                                                      badge,
                                                       style: TextStyle(
                                                         fontFamily: 'Poppins',
                                                         fontSize: 9.5,
                                                         fontWeight: FontWeight.w700,
-                                                        color: Color(0xFF92400E),
+                                                        color: KausapColors.textMuted(context),
                                                       ),
                                                     ),
                                                   ),
@@ -276,6 +349,12 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                           Icons.check_circle_rounded,
                                           color: accent,
                                           size: 22,
+                                        )
+                                      else if (!isAvailable)
+                                        Icon(
+                                          Icons.lock_outline_rounded,
+                                          color: KausapColors.textMuted(context).withAlpha(120),
+                                          size: 18,
                                         ),
                                     ],
                                   ),
