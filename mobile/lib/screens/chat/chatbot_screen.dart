@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/chat/counselor_sharing_dialog.dart';
 import '../../utils/app_routes.dart';
@@ -63,6 +64,8 @@ class _ChatMessage {
     'content': content,
     'imagePath': imagePath,
     'isCrisis': isCrisis,
+    // Persist isFailed so retry UI survives screen navigation / session resume
+    'isFailed': isFailed,
   };
 
   factory _ChatMessage.fromJson(Map<String, dynamic> json) => _ChatMessage(
@@ -70,6 +73,7 @@ class _ChatMessage {
     content: json['content'] as String? ?? '',
     imagePath: json['imagePath'] as String?,
     isCrisis: json['isCrisis'] as bool? ?? false,
+    isFailed: json['isFailed'] as bool? ?? false,
   );
 }
 
@@ -134,7 +138,13 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   bool _isTyping = false;
   bool _isSending = false; // Prevents duplicate sends while AI is responding
   bool _showMenu = false;
-  bool _isOffline = false; // True when the last request failed due to no connectivity
+  bool _isOffline = false; // True when device has no connectivity
+
+  // Phase 3: Real-time connectivity stream subscription
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+
+  // Phase 3: Draft message persistence key
+  static const String _draftKey = 'chatbot_input_draft';
   MascotEmotion _mascotEmotion = MascotEmotion.neutral;
 
   // Voice recording & TTS states
@@ -200,6 +210,30 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       duration: const Duration(milliseconds: 900),
     )..repeat();
     _dotAnimation = Tween<double>(begin: 0, end: 1).animate(_dotController);
+
+    // ── Phase 3: Draft restore ──────────────────────────────────────────────
+    // Restore any unsent draft text the student typed before losing connection
+    _storage.read(key: _draftKey).then((draft) {
+      if (draft != null && draft.isNotEmpty && mounted) {
+        _inputController.text = draft;
+        _inputController.selection = TextSelection.collapsed(offset: draft.length);
+      }
+    });
+    // Save draft to secure storage on every keystroke
+    _inputController.addListener(() {
+      _storage.write(key: _draftKey, value: _inputController.text);
+    });
+
+    // ── Phase 3: Real-time connectivity stream ──────────────────────────────
+    // Shows/hides the offline banner instantly as network status changes,
+    // without waiting for the next send attempt.
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      final hasNet = results.any((r) => r != ConnectivityResult.none);
+      if (mounted) {
+        setState(() => _isOffline = !hasNet);
+      }
+    });
+
     _loadSavedAvatar().then((_) async {
       // 1. Pre-fill initial message from article discussion button if present
       if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty && mounted) {
@@ -430,6 +464,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     VoiceAudioService().stopSpeaking();
     VoiceAudioService().stopListening();
     AmbientAudioService.instance.removeListener(_onAmbientAudioChanged);
+    // Phase 3: Cancel connectivity stream to prevent setState after dispose
+    _connectivitySub?.cancel();
     _inputController.dispose();
     _scrollController.dispose();
     _dotController.dispose();
@@ -607,24 +643,17 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     if (_isSending) return; // 🔒 Block duplicate sends while AI is responding
 
     // ── Connectivity pre-check ────────────────────────────────────────────────
+    // The real-time stream keeps _isOffline up-to-date, but we do a live DNS
+    // probe here to confirm actual internet access (not just link-layer connectivity).
     final connected = await _hasConnectivity();
     if (!connected) {
-      if (mounted) {
-        setState(() => _isOffline = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              '📶 No internet connection. Please check your Wi-Fi or mobile data.',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: Color(0xFFDC2626),
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
+      if (mounted) setState(() => _isOffline = true);
+      // Banner is already visible — no SnackBar needed (avoids double feedback)
       return;
     }
 
+    // Clear the persisted draft as the message is now being sent
+    _storage.delete(key: _draftKey);
     _inputController.clear();
     setState(() {
       _isSending = true;
