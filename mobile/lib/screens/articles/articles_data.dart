@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ArticleModel {
   final String id;
@@ -503,33 +504,31 @@ class ArticleCoverImage extends StatelessWidget {
         imageWidget = fallback;
       }
     } else {
-      imageWidget = Image.network(
-        effectiveUrl,
+      imageWidget = CachedNetworkImage(
+        imageUrl: effectiveUrl,
         width: width ?? double.infinity,
         height: height,
         fit: fit,
-        errorBuilder: (_, _, _) => fallback,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            width: width ?? double.infinity,
-            height: height,
-            color: themeColor.withAlpha(25),
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: themeColor,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                      : null,
-                ),
+        memCacheWidth: width != null ? (width! * 2).round().clamp(200, 800) : 600,
+        memCacheHeight: (height * 2).round().clamp(200, 800),
+        maxWidthDiskCache: 800,
+        maxHeightDiskCache: 800,
+        placeholder: (context, url) => Container(
+          width: width ?? double.infinity,
+          height: height,
+          color: themeColor.withAlpha(25),
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: themeColor,
               ),
             ),
-          );
-        },
+          ),
+        ),
+        errorWidget: (_, _, _) => fallback,
       );
     }
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/api_client.dart';
@@ -324,10 +325,14 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, _, _) => Icon(a.categoryIcon, color: a.themeColor, size: 28),
                                 )
-                              : Image.network(
-                                  a.imageUrl!,
+                              : CachedNetworkImage(
+                                  imageUrl: a.imageUrl!,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => Icon(a.categoryIcon, color: a.themeColor, size: 28),
+                                  memCacheWidth: 200,
+                                  memCacheHeight: 200,
+                                  maxWidthDiskCache: 300,
+                                  maxHeightDiskCache: 300,
+                                  errorWidget: (_, _, _) => Icon(a.categoryIcon, color: a.themeColor, size: 28),
                                 ),
                         )
                       : Icon(a.categoryIcon, color: a.themeColor, size: 28),
@@ -1031,7 +1036,15 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
                   borderRadius: BorderRadius.circular(16),
                   child: _imageUrl!.startsWith('data:image')
                       ? Image.memory(base64Decode(_imageUrl!.split(',').last), fit: BoxFit.cover)
-                      : Image.network(_imageUrl!, fit: BoxFit.cover),
+                      : CachedNetworkImage(
+                          imageUrl: _imageUrl!,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 600,
+                          memCacheHeight: 400,
+                          maxWidthDiskCache: 600,
+                          maxHeightDiskCache: 400,
+                          errorWidget: (_, _, _) => Icon(categoryIcon, size: 60, color: Colors.white.withAlpha(200)),
+                        ),
                 )
               : Center(child: Icon(categoryIcon, size: 60, color: Colors.white.withAlpha(200))),
         ),
@@ -1159,7 +1172,15 @@ class _ArticleEditorSheetState extends State<_ArticleEditorSheet> {
                       children: [
                         _imageUrl!.startsWith('data:image')
                             ? Image.memory(base64Decode(_imageUrl!.split(',').last), fit: BoxFit.cover)
-                            : Image.network(_imageUrl!, fit: BoxFit.cover),
+                            : CachedNetworkImage(
+                                imageUrl: _imageUrl!,
+                                fit: BoxFit.cover,
+                                memCacheWidth: 600,
+                                memCacheHeight: 400,
+                                maxWidthDiskCache: 600,
+                                maxHeightDiskCache: 400,
+                                errorWidget: (_, _, _) => const Icon(Icons.broken_image_rounded, size: 40, color: Colors.white54),
+                              ),
                         Positioned(
                           bottom: 8,
                           right: 8,

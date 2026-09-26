@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../services/notification_service.dart';
 import '../../utils/haptic_service.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/skeleton_widgets.dart';
 import '../journal/daily_journal_screen.dart';
 import '../insights/student_insights_screen.dart';
 
@@ -295,7 +296,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           constraints: const BoxConstraints(maxWidth: 420),
           child: SafeArea(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const SkeletonSessionList(count: 5)
                 : _notifications.isEmpty
                     ? _buildEmptyState()
                     : RefreshIndicator(

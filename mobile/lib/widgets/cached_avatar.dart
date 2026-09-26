@@ -84,6 +84,10 @@ class CachedAvatar extends StatelessWidget {
         width: size,
         height: size,
         fit: fit,
+        memCacheWidth: (size * 2).round().clamp(80, 400),
+        memCacheHeight: (size * 2).round().clamp(80, 400),
+        maxWidthDiskCache: 400,
+        maxHeightDiskCache: 400,
         placeholder: (context, url) => _buildShimmer(size),
         errorWidget: (context, url, error) => _buildFallback(size, bg, fg, initial),
       ),
@@ -150,5 +154,9 @@ ImageProvider getAvatarImageProvider(String? url) {
       return FileImage(file);
     }
   }
-  return CachedNetworkImageProvider(url);
+  return CachedNetworkImageProvider(
+    url,
+    maxWidth: 400,
+    maxHeight: 400,
+  );
 }
