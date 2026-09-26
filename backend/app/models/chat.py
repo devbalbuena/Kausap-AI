@@ -10,8 +10,8 @@ class ChatSessionBase(SQLModel):
 
 class ChatSession(ChatSessionBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="user.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     
     # Relationship to messages
     messages: List["ChatMessage"] = Relationship(back_populates="session")
@@ -20,13 +20,13 @@ class ChatSession(ChatSessionBase, table=True):
 class ChatMessageBase(SQLModel):
     role: str = Field(index=True) # "user" or "assistant"
     content: str
-    risk_flag: bool = Field(default=False)
+    risk_flag: bool = Field(default=False, index=True)
 
 
 class ChatMessage(ChatMessageBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    session_id: uuid.UUID = Field(foreign_key="chatsession.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    session_id: uuid.UUID = Field(foreign_key="chatsession.id", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     
     # Relationship back to session
     session: ChatSession = Relationship(back_populates="messages")

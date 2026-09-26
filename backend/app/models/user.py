@@ -67,7 +67,7 @@ class User(SQLModel, table=True):
     # For counselors/staff — guidance department title
     department_title: Optional[str] = Field(default=None)
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
 
     @property
     def full_name(self) -> str:

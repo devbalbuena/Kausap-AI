@@ -12,9 +12,11 @@ def print_res(name, res):
         print(res.text)
 
 # 1. Successful Client (Student) Registration
+import time
+email_unique = f"test_student_{int(time.time())}@example.com"
 client_payload = {
     "role": "client",
-    "email": "test_student_2026@example.com",
+    "email": email_unique,
     "password": "password123",
     "first_name": "Maria",
     "last_name": "Santos",

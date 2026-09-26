@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.models.user import User, UserRole
 from app.schemas.user import RegisterRequest, UserRead, UserUpdate
-from app.schemas.auth import Token, LoginRequest, ForgotPasswordRequest, VerifyCodeRequest, ResetPasswordRequest
+from app.schemas.auth import Token, RegisterResponse, LoginRequest, ForgotPasswordRequest, VerifyCodeRequest, ResetPasswordRequest
 import random
 import string
 import uuid
@@ -24,11 +24,12 @@ class AppealRequest(BaseModel):
     appeal_message: str
 
 
-@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, session: Annotated[Session, Depends(get_session)]):
     """
     Register a new user (student/client) account.
     - Admin self-registration is rejected.
+    - Returns JWT access token and user profile in 1 shot (eliminates duplicate login roundtrip).
     """
     if payload.role == UserRole.admin:
         raise HTTPException(
@@ -64,7 +65,10 @@ def register(payload: RegisterRequest, session: Annotated[Session, Depends(get_s
     session.add(user)
     session.commit()
     session.refresh(user)
-    return user
+
+    role_str = user.role.value if hasattr(user.role, "value") else str(user.role)
+    token = create_access_token(data={"sub": str(user.id), "role": role_str})
+    return RegisterResponse(access_token=token, token_type="bearer", user=UserRead.model_validate(user))
 
 
 @router.post("/login", response_model=Token)

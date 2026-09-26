@@ -84,9 +84,31 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.register(payload);
-      // Auto-login after successful registration
-      await login(payload['email'], payload['password']);
+      final res = await _authService.register(payload);
+      if (res.containsKey('access_token')) {
+        if (res.containsKey('user') && res['user'] is Map) {
+          final user = Map<String, dynamic>.from(res['user'] as Map);
+          final avatarOverride = await _storage.read(key: 'user_avatar_override');
+          if (avatarOverride != null && avatarOverride.isNotEmpty) {
+            user['avatar_url'] = avatarOverride;
+          }
+          _currentUser = user;
+          _isAuthenticated = true;
+          await _storage.write(key: 'cached_user_profile', value: jsonEncode(user));
+        } else {
+          final user = await _authService.getCurrentUser();
+          final avatarOverride = await _storage.read(key: 'user_avatar_override');
+          if (avatarOverride != null && avatarOverride.isNotEmpty) {
+            user['avatar_url'] = avatarOverride;
+          }
+          _currentUser = user;
+          _isAuthenticated = true;
+          await _storage.write(key: 'cached_user_profile', value: jsonEncode(user));
+        }
+      } else {
+        // Fallback for older backend versions
+        await login(payload['email'], payload['password']);
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

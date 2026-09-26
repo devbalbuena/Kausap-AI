@@ -11,7 +11,11 @@ class AuthService {
       ApiConfig.register,
       body: payload,
     );
-    return response as Map<String, dynamic>;
+    final data = response as Map<String, dynamic>;
+    if (data.containsKey('access_token')) {
+      await _tokenStorage.saveToken(data['access_token']);
+    }
+    return data;
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
