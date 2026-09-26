@@ -236,15 +236,17 @@ async def post_message(
 
     else:
         # ── Rate Limiting Check (Token & Pacing Protection) ───────────────────
+        # Use COUNT(*) instead of fetching full rows — much cheaper under concurrent load
+        from sqlalchemy import func
         one_hour_ago = datetime.utcnow() - timedelta(hours=1)
-        recent_msgs = db.exec(
-            select(ChatMessage)
+        recent_msg_count: int = db.exec(
+            select(func.count()).select_from(ChatMessage)
             .where(ChatMessage.session_id == chat_session.id)
             .where(ChatMessage.role == "user")
             .where(ChatMessage.created_at >= one_hour_ago)
-        ).all()
+        ).one()
 
-        if len(recent_msgs) > settings.RATE_LIMIT_MESSAGES_PER_HOUR:
+        if recent_msg_count > settings.RATE_LIMIT_MESSAGES_PER_HOUR:
             student_name = current_user.first_name or current_user.full_name or "kaibigan"
             ai_reply_content = (
                 f"Pahinga muna tayo nang sandali, {student_name}. 💙\n\n"
@@ -319,7 +321,7 @@ async def post_message(
                     )
                     ai_risk_flag = False
 
-                    # Record Token Telemetry for Admin
+                    # Stage token telemetry (committed together with the AI reply below)
                     try:
                         cost = calculate_cost_usd(prompt_tokens, completion_tokens)
                         token_entry = TokenUsageLog(
@@ -332,7 +334,7 @@ async def post_message(
                             estimated_cost_usd=cost,
                         )
                         db.add(token_entry)
-                        db.commit()
+                        # NOTE: No commit here — merged into the final commit below
                     except Exception:
                         pass
                 except Exception as e:
@@ -355,7 +357,7 @@ async def post_message(
         chat_session.topic = target_topic
         db.add(chat_session)
 
-    # ── Save Assistant reply to DB ─────────────────────────────────────────────
+    # ── Save Assistant reply to DB (single commit includes token log + reply) ───
     ai_msg = ChatMessage(
         session_id=chat_session.id,
         role="assistant",

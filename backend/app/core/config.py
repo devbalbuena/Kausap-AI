@@ -3,6 +3,11 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     DATABASE_URL: str
+    # Optional: Neon PgBouncer pooled endpoint (e.g. ep-xxx-pooler.ap-southeast-1.aws.neon.tech).
+    # If set, all runtime queries use the pooler for lower connection overhead.
+    # DDL migrations always use DATABASE_URL (direct endpoint) regardless of this setting.
+    DATABASE_POOL_URL: str = ""
+
     SECRET_KEY: str = "changeme-replace-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
@@ -21,8 +26,10 @@ class Settings(BaseSettings):
     BREVO_SENDER_NAME: str = "Kausap AI"
 
     # Token protection & rate limits
-    RATE_LIMIT_MESSAGES_PER_HOUR: int = 30
-    DEFAULT_MAX_TOKENS: int = 1200
+    # Phase 1 tuning: 450 tokens keeps replies concise (~2-3s latency vs ~7s at 1200).
+    # 50 msg/hour gives each student generous room during the 45-student mass test.
+    RATE_LIMIT_MESSAGES_PER_HOUR: int = 50
+    DEFAULT_MAX_TOKENS: int = 450
 
     class Config:
         env_file = ".env"

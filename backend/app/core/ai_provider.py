@@ -3,9 +3,16 @@ ai_provider.py
 --------------
 Dual-Provider LLM abstraction layer for Kausap AI (Gemini 2.5 Flash + OpenAI Fallback).
 Guarantees high availability, low latency, and robust token usage tracking for student mental health.
+
+Phase 1 Hardening (Mass-Testing Ready):
+- Exponential backoff retry (up to 3 attempts) for Gemini 429 / 503 errors
+- Per-attempt jitter (0–0.5s) to prevent thundering herd from 45 concurrent students
+- Reduced DEFAULT_MAX_TOKENS (see config.py) to keep latency under 4s per turn
 """
 
+import asyncio
 import logging
+import random
 from typing import List, Dict, Tuple, Optional
 import httpx
 from openai import AsyncOpenAI
@@ -21,6 +28,12 @@ _openai_client: Optional[AsyncOpenAI] = (
 # Preferred default models
 GEMINI_MODEL = "gemini-2.5-flash"
 OPENAI_MODEL = "gpt-4o-mini"
+
+# ── Retry configuration ────────────────────────────────────────────────────────
+_GEMINI_MAX_RETRIES = 3          # Total attempts (1 initial + 2 retries)
+_GEMINI_RETRYABLE_CODES = {429, 503}  # Rate-limited or overloaded
+_GEMINI_BACKOFF_BASE = 1.0       # Seconds: 1s → 2s → 4s
+_GEMINI_JITTER_MAX = 0.5         # Max random jitter per attempt
 
 
 def calculate_cost_usd(prompt_tokens: int, completion_tokens: int, model: str = GEMINI_MODEL) -> float:
@@ -42,7 +55,13 @@ async def _call_gemini(
     temperature: float = 0.7,
     max_tokens: int = 600,
 ) -> Tuple[str, int, int, int]:
-    """Call Google Gemini 2.5 REST API."""
+    """
+    Call Google Gemini 2.5 REST API with exponential backoff retry.
+
+    Retries up to _GEMINI_MAX_RETRIES times on HTTP 429 (rate limit) or 503
+    (server overload) using: delay = base * 2^attempt + random jitter.
+    All other error codes raise immediately and are handled by the caller.
+    """
     if not settings.GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY is not configured")
 
@@ -78,26 +97,63 @@ async def _call_gemini(
             "parts": [{"text": system_text}]
         }
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent?key={settings.GEMINI_API_KEY}"
+    )
 
-    async with httpx.AsyncClient(timeout=25.0) as client:
-        res = await client.post(url, json=payload)
-        if res.status_code != 200:
+    last_error: Exception = RuntimeError("Gemini: no attempts made")
+
+    for attempt in range(_GEMINI_MAX_RETRIES):
+        try:
+            async with httpx.AsyncClient(timeout=25.0) as client:
+                res = await client.post(url, json=payload)
+
+            if res.status_code == 200:
+                data = res.json()
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    raise RuntimeError("Gemini returned empty candidates")
+
+                text = (
+                    candidates[0]
+                    .get("content", {})
+                    .get("parts", [{}])[0]
+                    .get("text", "")
+                )
+                usage = data.get("usageMetadata", {})
+                prompt_tokens = usage.get("promptTokenCount", 0)
+                completion_tokens = usage.get("candidatesTokenCount", 0)
+                total_tokens = usage.get(
+                    "totalTokenCount", prompt_tokens + completion_tokens
+                )
+                return text, prompt_tokens, completion_tokens, total_tokens
+
+            if res.status_code in _GEMINI_RETRYABLE_CODES:
+                # Back off and retry
+                delay = (_GEMINI_BACKOFF_BASE * (2 ** attempt)) + random.uniform(0, _GEMINI_JITTER_MAX)
+                logger.warning(
+                    f"Gemini {model} returned {res.status_code} on attempt "
+                    f"{attempt + 1}/{_GEMINI_MAX_RETRIES}. Retrying in {delay:.2f}s…"
+                )
+                last_error = RuntimeError(f"Gemini API returned status {res.status_code}")
+                await asyncio.sleep(delay)
+                continue
+
+            # Non-retryable error — raise immediately
             logger.warning(f"Gemini API error {res.status_code} on {model}: {res.text[:200]}")
             raise RuntimeError(f"Gemini API returned status {res.status_code}")
 
-        data = res.json()
-        candidates = data.get("candidates", [])
-        if not candidates:
-            raise RuntimeError("Gemini returned empty candidates")
+        except (httpx.TimeoutException, httpx.ConnectError) as exc:
+            delay = (_GEMINI_BACKOFF_BASE * (2 ** attempt)) + random.uniform(0, _GEMINI_JITTER_MAX)
+            logger.warning(
+                f"Gemini {model} network error on attempt {attempt + 1}/{_GEMINI_MAX_RETRIES}: "
+                f"{exc}. Retrying in {delay:.2f}s…"
+            )
+            last_error = exc
+            await asyncio.sleep(delay)
 
-        text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-        usage = data.get("usageMetadata", {})
-        prompt_tokens = usage.get("promptTokenCount", 0)
-        completion_tokens = usage.get("candidatesTokenCount", 0)
-        total_tokens = usage.get("totalTokenCount", prompt_tokens + completion_tokens)
-
-        return text, prompt_tokens, completion_tokens, total_tokens
+    raise last_error
 
 
 async def _call_openai(

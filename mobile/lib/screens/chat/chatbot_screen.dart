@@ -37,6 +37,8 @@ class _ChatMessage {
   final String? imagePath;
   final Uint8List? imageBytes;
   final bool isCrisis;
+  /// True when the send request failed — shows a retry prompt on the bubble.
+  final bool isFailed;
 
   const _ChatMessage({
     required this.role,
@@ -44,7 +46,17 @@ class _ChatMessage {
     this.imagePath,
     this.imageBytes,
     this.isCrisis = false,
+    this.isFailed = false,
   });
+
+  _ChatMessage copyWith({bool? isFailed}) => _ChatMessage(
+    role: role,
+    content: content,
+    imagePath: imagePath,
+    imageBytes: imageBytes,
+    isCrisis: isCrisis,
+    isFailed: isFailed ?? this.isFailed,
+  );
 
   Map<String, dynamic> toJson() => {
     'role': role,
@@ -122,6 +134,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   bool _isTyping = false;
   bool _isSending = false; // Prevents duplicate sends while AI is responding
   bool _showMenu = false;
+  bool _isOffline = false; // True when the last request failed due to no connectivity
   MascotEmotion _mascotEmotion = MascotEmotion.neutral;
 
   // Voice recording & TTS states
@@ -577,14 +590,45 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     );
   }
 
+  /// Checks if the device appears to have internet by making a quick DNS lookup.
+  Future<bool> _hasConnectivity() async {
+    try {
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 4));
+      return result.isNotEmpty && result.first.rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _sendMessage(String text, {String? imagePath, Uint8List? imageBytes}) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty && imagePath == null && imageBytes == null) return;
     if (_isSending) return; // 🔒 Block duplicate sends while AI is responding
 
+    // ── Connectivity pre-check ────────────────────────────────────────────────
+    final connected = await _hasConnectivity();
+    if (!connected) {
+      if (mounted) {
+        setState(() => _isOffline = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '📶 No internet connection. Please check your Wi-Fi or mobile data.',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: Color(0xFFDC2626),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
     _inputController.clear();
     setState(() {
       _isSending = true;
+      _isOffline = false;
       _messages.add(_ChatMessage(role: 'user', content: trimmed, imagePath: imagePath, imageBytes: imageBytes));
       _isTyping = true;
       _mascotEmotion = MascotEmotion.thinking;
@@ -593,6 +637,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
     // Check crisis detection locally first
     final bool isCrisis = _checkIsCrisis(trimmed);
+    // Track the index of the user message for retry marking
+    final int userMsgIndex = _messages.length - 1;
 
     try {
       final sessionId = await _ensureSession();
@@ -681,14 +727,38 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       if (!mounted) return;
       setState(() {
         _isSending = false;
+        _isOffline = false;
         _messages.add(_ChatMessage(role: 'assistant', content: aiContent, isCrisis: isCrisis));
         _isTyping = false;
         _mascotEmotion = resolvedEmotion;
       });
       _saveSessionToHistory();
       _scrollToBottom();
-    } catch (_) {
-      // Dynamic Cognitive Fallback Engine
+    } catch (e) {
+      // ── Determine if it's a network error vs a server error ──────────────
+      final errorStr = e.toString().toLowerCase();
+      final bool isNetworkError = errorStr.contains('socketexception') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('timeout') ||
+          errorStr.contains('failed host lookup');
+
+      if (!mounted) return;
+
+      if (isNetworkError) {
+        // Mark the user message as failed and show offline state
+        setState(() {
+          _isSending = false;
+          _isOffline = true;
+          _isTyping = false;
+          if (userMsgIndex < _messages.length) {
+            _messages[userMsgIndex] = _messages[userMsgIndex].copyWith(isFailed: true);
+          }
+          _mascotEmotion = MascotEmotion.neutral;
+        });
+        return; // Don't show fallback — user will tap to retry
+      }
+
+      // Non-network error: use the empathetic offline fallback
       final fallbackResponse = _generateEmpatheticFallback(
         trimmed,
         isCrisis: isCrisis,
@@ -696,9 +766,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       );
       final resolvedEmotion = _detectMascotEmotion(trimmed, fallbackResponse);
 
-      if (!mounted) return;
       setState(() {
         _isSending = false;
+        _isOffline = false;
         _messages.add(_ChatMessage(
           role: 'assistant',
           content: fallbackResponse,
@@ -971,6 +1041,35 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               Column(
                 children: [
                   _buildHeader(),
+                  // ── Offline Banner ──────────────────────────────────────────
+                  if (_isOffline)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: const Color(0xFFDC2626),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'No internet connection — tap the failed message to retry',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => setState(() => _isOffline = false),
+                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                          ),
+                        ],
+                      ),
+                    ),
                   Expanded(
                     child: isEmpty ? _buildWelcomeView() : _buildChatView(),
                   ),
@@ -1924,67 +2023,116 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       padding: const EdgeInsets.only(bottom: 12),
       child: Align(
         alignment: Alignment.centerRight,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 260),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: KausapColors.accent(context),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(2),
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0D000000),
-                blurRadius: 1,
-                offset: Offset(0, 1),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Opacity(
+              opacity: msg.isFailed ? 0.65 : 1.0,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 260),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: msg.isFailed
+                      ? const Color(0xFFEF4444)
+                      : KausapColors.accent(context),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(2),
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0D000000),
+                      blurRadius: 1,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (msg.imageBytes != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.memory(
+                            msg.imageBytes!,
+                            fit: BoxFit.cover,
+                            width: 200,
+                            height: 140,
+                          ),
+                        ),
+                      )
+                    else if (msg.imagePath != null && !kIsWeb)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(
+                            File(msg.imagePath!),
+                            fit: BoxFit.cover,
+                            width: 200,
+                            height: 140,
+                          ),
+                        ),
+                      ),
+                    if (msg.content.isNotEmpty)
+                      Text(
+                        msg.content,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          color: Colors.white,
+                          height: 1.43,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (msg.imageBytes != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.memory(
-                      msg.imageBytes!,
-                      fit: BoxFit.cover,
-                      width: 200,
-                      height: 140,
-                    ),
+            ),
+            // ── Tap-to-Retry label shown only on failed messages ────────────
+            if (msg.isFailed)
+              GestureDetector(
+                onTap: () {
+                  if (msg.content.isNotEmpty) {
+                    // Remove failed message and resend
+                    setState(() {
+                      _messages.remove(msg);
+                      _isOffline = false;
+                    });
+                    _sendMessage(msg.content, imagePath: msg.imagePath);
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
-                )
-              else if (msg.imagePath != null && !kIsWeb)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.file(
-                      File(msg.imagePath!),
-                      fit: BoxFit.cover,
-                      width: 200,
-                      height: 140,
-                    ),
-                  ),
-                ),
-              if (msg.content.isNotEmpty)
-                Text(
-                  msg.content,
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    color: Colors.white,
-                    height: 1.43,
-                    fontWeight: FontWeight.w400,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh_rounded, size: 12, color: Color(0xFFDC2626)),
+                      SizedBox(width: 4),
+                      Text(
+                        '⚠️ Failed — Tap to retry',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFDC2626),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
