@@ -86,7 +86,12 @@ class ArticleRead(BaseModel):
 class ReactionPayload(BaseModel):
     emoji: str
 
-def _format_article_read(article: Article, user_id: Optional[str] = None, db: Optional[Session] = None) -> ArticleRead:
+def _format_article_read(
+    article: Article,
+    user_id: Optional[str] = None,
+    db: Optional[Session] = None,
+    user_reaction: Optional[str] = None,
+) -> ArticleRead:
     try:
         content = json.loads(article.content_json)
     except Exception:
@@ -97,8 +102,7 @@ def _format_article_read(article: Article, user_id: Optional[str] = None, db: Op
     except Exception:
         reaction_counts = {}
 
-    user_reaction = None
-    if user_id and db:
+    if user_reaction is None and user_id and db:
         user_rx = db.exec(
             select(ArticleReaction).where(
                 ArticleReaction.article_id == article.id,
@@ -136,7 +140,7 @@ def list_published_articles(
     category: Optional[str] = None,
     current_user: Annotated[Optional[User], Depends(get_current_user_optional)] = None,
 ):
-    """List all published psychoeducation articles."""
+    """List all published psychoeducation articles (batch-loads user reactions)."""
     query = select(Article).where(Article.is_published == True)
     if category and category.lower() != "all":
         query = query.where(Article.category == category)
@@ -144,7 +148,24 @@ def list_published_articles(
     articles = session.exec(query).all()
 
     user_id = str(current_user.id) if current_user else None
-    return [_format_article_read(a, user_id=user_id, db=session) for a in articles]
+    user_reactions_map: Dict[str, str] = {}
+    if user_id and articles:
+        article_ids = [a.id for a in articles]
+        rx_records = session.exec(
+            select(ArticleReaction).where(
+                ArticleReaction.user_id == user_id,
+                ArticleReaction.article_id.in_(article_ids)
+            )
+        ).all()
+        user_reactions_map = {rx.article_id: rx.emoji for rx in rx_records}
+
+    return [
+        _format_article_read(
+            a,
+            user_reaction=user_reactions_map.get(a.id),
+        )
+        for a in articles
+    ]
 
 @router.get("/{article_id}", response_model=ArticleRead)
 def get_article(

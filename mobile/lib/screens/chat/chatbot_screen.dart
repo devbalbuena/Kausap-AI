@@ -1759,7 +1759,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _messages.length && _isTyping) {
-          return _buildTypingIndicator();
+          return RepaintBoundary(child: _buildTypingIndicator());
         }
         final msg = _messages[index];
         return msg.role == 'user'

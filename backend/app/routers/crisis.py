@@ -79,8 +79,15 @@ DEFAULT_HOTLINES = [
 ]
 
 
+_hotlines_seeded: bool = False
+
+
 def seed_default_hotlines_if_empty(session: Session) -> None:
     """Seed initial FSUU & National hotlines if the table is currently empty."""
+    global _hotlines_seeded
+    if _hotlines_seeded:
+        return
+
     statement = select(EmergencyHotline).limit(1)
     existing = session.exec(statement).first()
     if not existing:
@@ -88,6 +95,7 @@ def seed_default_hotlines_if_empty(session: Session) -> None:
             hotline = EmergencyHotline(**item)
             session.add(hotline)
         session.commit()
+    _hotlines_seeded = True
 
 
 @router.get("/hotlines", response_model=List[HotlineRead])

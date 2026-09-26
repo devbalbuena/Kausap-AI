@@ -2,6 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 try:
     import sentry_sdk
     _sentry_available = True
@@ -50,6 +51,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip Compression — reduce network bandwidth by up to 80% on slow Wi-Fi
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 @app.get("/", tags=["Health"])

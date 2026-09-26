@@ -39,6 +39,10 @@ void main() {
     return true; // Mark as handled to prevent app crash
   };
 
+  // 4. Bound GPU image cache to 50MB / 100 images to prevent OOM on budget devices
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 * 1024 * 1024; // 50 MB
+  PaintingBinding.instance.imageCache.maximumSize = 100;
+
   runApp(
     MultiProvider(
       providers: [

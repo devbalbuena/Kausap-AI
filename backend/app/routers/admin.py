@@ -80,22 +80,41 @@ def list_users(
     query = query.order_by(User.created_at.desc()).offset(offset).limit(limit)
     
     users = session.exec(query).all()
+    user_ids = [u.id for u in users]
+    
+    mood_counts: Dict[Any, int] = {}
+    chat_counts: Dict[Any, int] = {}
+    flag_counts: Dict[Any, int] = {}
+
+    if user_ids:
+        # Aggregated mood counts
+        mood_res = session.exec(
+            select(MoodEntry.user_id, func.count(MoodEntry.id))
+            .where(MoodEntry.user_id.in_(user_ids))
+            .group_by(MoodEntry.user_id)
+        ).all()
+        mood_counts = {uid: count for uid, count in mood_res}
+
+        # Aggregated chat session counts
+        chat_res = session.exec(
+            select(ChatSession.user_id, func.count(ChatSession.id))
+            .where(ChatSession.user_id.in_(user_ids))
+            .group_by(ChatSession.user_id)
+        ).all()
+        chat_counts = {uid: count for uid, count in chat_res}
+
+        # Aggregated flagged message counts
+        flag_res = session.exec(
+            select(ChatSession.user_id, func.count(ChatMessage.id))
+            .join(ChatMessage, ChatMessage.session_id == ChatSession.id)
+            .where(ChatSession.user_id.in_(user_ids))
+            .where(ChatMessage.risk_flag == True)
+            .group_by(ChatSession.user_id)
+        ).all()
+        flag_counts = {uid: count for uid, count in flag_res}
     
     summaries = []
     for u in users:
-        # Count moods
-        mood_count = session.exec(select(func.count()).select_from(MoodEntry).where(MoodEntry.user_id == u.id)).one()
-        # Count chat sessions
-        chat_count = session.exec(select(func.count()).select_from(ChatSession).where(ChatSession.user_id == u.id)).one()
-        # Count flagged messages
-        flag_count = session.exec(
-            select(func.count())
-            .select_from(ChatMessage)
-            .join(ChatSession, ChatMessage.session_id == ChatSession.id)
-            .where(ChatSession.user_id == u.id)
-            .where(ChatMessage.risk_flag == True)
-        ).one()
-        
         summaries.append(
             UserSummary(
                 id=u.id,
@@ -110,9 +129,9 @@ def list_users(
                 reactivation_appeal=u.reactivation_appeal,
                 reactivation_appeal_at=u.reactivation_appeal_at,
                 created_at=u.created_at,
-                mood_entries_count=mood_count,
-                chat_sessions_count=chat_count,
-                flagged_messages_count=flag_count,
+                mood_entries_count=mood_counts.get(u.id, 0),
+                chat_sessions_count=chat_counts.get(u.id, 0),
+                flagged_messages_count=flag_counts.get(u.id, 0),
                 phone_number=u.phone_number,
                 birthday=str(u.birthday) if u.birthday else None,
                 gender=u.gender.value if u.gender else None,
