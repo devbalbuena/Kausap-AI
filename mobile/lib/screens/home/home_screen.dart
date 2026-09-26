@@ -1479,8 +1479,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       onWriteJournalTap: () async {
                         final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
                         if (res == true) {
-                          _fetchQuests();
-                          _fetchStreak();
+                          _fetchMoodAndQuestsData();
                         }
                       },
                       onMindfulnessTap: () => setState(() => _navIndex = 1),
@@ -1495,8 +1494,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       onTap: () async {
                         final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
                         if (res == true) {
-                          _fetchQuests();
-                          _fetchStreak();
+                          _fetchMoodAndQuestsData();
                         }
                       },
                     ),
@@ -1532,8 +1530,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     const SizedBox(height: 16),
                     HomeSuggestedActivity(
                       onActivityCompleted: () {
-                        _fetchQuests();
-                        _fetchStreak();
+                        _fetchMoodAndQuestsData();
                       },
                     ),
                     const SizedBox(height: 16),
@@ -1615,9 +1612,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           if (i == 3) _insightsRefreshKey++;
                         });
                         if (i == 0) {
-                          _fetchQuests();
-                          _fetchStreak();
-                          _fetchMoodTrends();
+                          _loadDashboardData();
                         }
                       }
                     },
@@ -1662,8 +1657,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _buildHomeTab(), // 0 – Home
       ActivityScreen(
         onActivityCompleted: () {
-          _fetchQuests();
-          _fetchStreak();
+          _fetchMoodAndQuestsData();
         },
       ), // 1 – Activity
       ChatbotScreen(
