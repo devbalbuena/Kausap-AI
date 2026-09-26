@@ -6,4 +6,5 @@ from app.models.article import Article
 from app.models.audit_log import AuditLog
 from app.models.token_log import TokenUsageLog
 from app.models.hotline import EmergencyHotline
+from app.models.journal import JournalEntry
 
