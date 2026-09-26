@@ -36,6 +36,16 @@ class UserCreate(BaseModel):
             raise ValueError("Cannot self-register as admin or counselor — these accounts must be provisioned by the university administrator.")
         return v
 
+    @field_validator("birthday")
+    @classmethod
+    def must_be_at_least_18(cls, v: date) -> date:
+        today = date.today()
+        # Calculate age accurately taking leap years into account
+        age = today.year - v.year - ((today.month, today.day) < (v.month, v.day))
+        if age < 18:
+            raise ValueError("You must be at least 18 years of age to register for Kausap AI.")
+        return v
+
 
 class UserRead(BaseModel):
     id: uuid.UUID

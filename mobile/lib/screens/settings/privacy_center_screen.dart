@@ -43,21 +43,21 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Privacy Controls & Shield',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -69,13 +69,14 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             children: [
               // Hero card
-              _buildHeroCard(),
+              _buildHeroCard(context),
               const SizedBox(height: 20),
 
               // Encryption pillars
-              _sectionLabel('HOW WE SAFEGUARD YOUR WELLNESS DATA'),
+              _sectionLabel(context, 'HOW WE SAFEGUARD YOUR WELLNESS DATA'),
               const SizedBox(height: 10),
               _buildEncryptionPillar(
+                context: context,
                 icon: Icons.lock_rounded,
                 color: const Color(0xFF2563EB),
                 title: 'AES-256 Encrypted Chats & Reflections',
@@ -83,6 +84,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               ),
               const SizedBox(height: 10),
               _buildEncryptionPillar(
+                context: context,
                 icon: Icons.storage_rounded,
                 color: const Color(0xFF059669),
                 title: 'Encrypted Database at Rest',
@@ -90,6 +92,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               ),
               const SizedBox(height: 10),
               _buildEncryptionPillar(
+                context: context,
                 icon: Icons.verified_user_rounded,
                 color: const Color(0xFF7C3AED),
                 title: 'HIPAA-Aligned Privacy',
@@ -97,6 +100,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               ),
               const SizedBox(height: 10),
               _buildEncryptionPillar(
+                context: context,
                 icon: Icons.public_rounded,
                 color: const Color(0xFFD97706),
                 title: 'Data Ownership & Rights',
@@ -105,25 +109,25 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               const SizedBox(height: 24),
 
               // Privacy controls
-              _sectionLabel('ACTIVE PRIVACY CONTROLS'),
+              _sectionLabel(context, 'ACTIVE PRIVACY CONTROLS'),
               const SizedBox(height: 10),
-              _buildPrivacyControlCard(),
+              _buildPrivacyControlCard(context),
               const SizedBox(height: 24),
 
               // Data summary
-              _sectionLabel('DATA WE STORE & ENCRYPT'),
+              _sectionLabel(context, 'DATA WE STORE & ENCRYPT'),
               const SizedBox(height: 10),
-              _buildDataSummaryCard(),
+              _buildDataSummaryCard(context),
               const SizedBox(height: 24),
 
               // Quick Actions
-              _sectionLabel('DATA & LEGAL ACTIONS'),
+              _sectionLabel(context, 'DATA & LEGAL ACTIONS'),
               const SizedBox(height: 10),
               _buildQuickActionsCard(context),
               const SizedBox(height: 20),
 
               // Contact
-              _buildContactCard(),
+              _buildContactCard(context),
             ],
           ),
         ),
@@ -131,18 +135,23 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
     );
   }
 
-  Widget _buildHeroCard() {
+  Widget _buildHeroCard(BuildContext context) {
+    final isDark = KausapColors.isDark(context);
+    final accent = KausapColors.accent(context);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+              : [accent.withAlpha(230), accent],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Color(0x200F172A), blurRadius: 16, offset: Offset(0, 6)),
+        boxShadow: [
+          BoxShadow(color: isDark ? const Color(0x20000000) : accent.withAlpha(40), blurRadius: 16, offset: const Offset(0, 6)),
         ],
       ),
       child: Row(
@@ -151,7 +160,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(25),
+              color: Colors.white.withAlpha(35),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(Icons.shield_rounded, color: Colors.white, size: 28),
@@ -176,7 +185,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
-                    color: Color(0xFF94A3B8),
+                    color: Color(0xFFE2E8F0),
                     height: 1.4,
                   ),
                 ),
@@ -189,18 +198,20 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
   }
 
   Widget _buildEncryptionPillar({
+    required BuildContext context,
     required IconData icon,
     required Color color,
     required String title,
     required String description,
   }) {
+    final isDark = KausapColors.isDark(context);
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +220,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withAlpha(20),
+              color: color.withAlpha(25),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -221,20 +232,20 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w600,
                     fontSize: 13.5,
-                    color: Color(0xFF0F172A),
+                    color: KausapColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
-                    color: Color(0xFF64748B),
+                    color: KausapColors.textMuted(context),
                     height: 1.4,
                   ),
                 ),
@@ -246,19 +257,21 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
     );
   }
 
-  Widget _buildPrivacyControlCard() {
+  Widget _buildPrivacyControlCard(BuildContext context) {
     final bool shareChatEnabled = context.watch<AuthProvider>().currentUser?['share_chat_with_counselor'] == true;
+    final isDark = KausapColors.isDark(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
           _buildControlTile(
+            context: context,
             icon: Icons.lock_person_rounded,
             color: const Color(0xFF0284C7),
             label: 'Share AI Chats with Counselors',
@@ -272,8 +285,9 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               });
             },
           ),
-          const Divider(height: 1, indent: 68),
+          Divider(height: 1, indent: 68, color: KausapColors.border(context)),
           _buildControlTile(
+            context: context,
             icon: Icons.blur_on_rounded,
             color: const Color(0xFF7C3AED),
             label: 'Privacy Screen',
@@ -285,8 +299,9 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               if (mounted) setState(() => _privacyScreenEnabled = v);
             },
           ),
-          const Divider(height: 1, indent: 68),
+          Divider(height: 1, indent: 68, color: KausapColors.border(context)),
           _buildControlTile(
+            context: context,
             icon: Icons.shield_outlined,
             color: const Color(0xFFEF4444),
             label: 'Quick Escape Button',
@@ -298,8 +313,9 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               if (mounted) setState(() => _quickEscapeEnabled = v);
             },
           ),
-          const Divider(height: 1, indent: 68),
+          Divider(height: 1, indent: 68, color: KausapColors.border(context)),
           _buildControlTile(
+            context: context,
             icon: Icons.bar_chart_rounded,
             color: const Color(0xFF2563EB),
             label: 'Anonymous Usage Analytics',
@@ -310,8 +326,9 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
               setState(() => _analyticsEnabled = v);
             },
           ),
-          const Divider(height: 1, indent: 68),
+          Divider(height: 1, indent: 68, color: KausapColors.border(context)),
           _buildControlTile(
+            context: context,
             icon: Icons.notifications_active_outlined,
             color: const Color(0xFF16A34A),
             label: 'App & Feature Updates',
@@ -328,6 +345,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
   }
 
   Widget _buildControlTile({
+    required BuildContext context,
     required IconData icon,
     required Color color,
     required String label,
@@ -343,7 +361,7 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withAlpha(20),
+              color: color.withAlpha(25),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -353,14 +371,15 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
-                Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
+                Text(label, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+                Text(subtitle, style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
               ],
             ),
           ),
           Switch.adaptive(
             value: value,
-            activeTrackColor: AppColors.primaryLight,
+            activeTrackColor: KausapColors.accentLight(context),
+            activeThumbColor: KausapColors.accent(context),
             onChanged: onChanged,
           ),
         ],
@@ -368,7 +387,10 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
     );
   }
 
-  Widget _buildDataSummaryCard() {
+  Widget _buildDataSummaryCard(BuildContext context) {
+    final isDark = KausapColors.isDark(context);
+    final accent = KausapColors.accent(context);
+
     final items = [
       ('Student Profile Info', 'Name, student email, avatar', Icons.person_outline_rounded),
       ('Mood & Feeling Entries', 'Daily emotional check-ins & feeling logs', Icons.favorite_border_rounded),
@@ -380,10 +402,10 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: items.asMap().entries.map((entry) {
@@ -395,30 +417,30 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                 child: Row(
                   children: [
-                    Icon(item.$3, color: AppColors.primary, size: 20),
+                    Icon(item.$3, color: accent, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(item.$1, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
-                          Text(item.$2, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
+                          Text(item.$1, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+                          Text(item.$2, style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
+                        color: isDark ? const Color(0xFF14532D).withAlpha(120) : const Color(0xFFDCFCE7),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text('Encrypted', style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF15803D))),
+                      child: Text('Encrypted', style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF15803D))),
                     ),
                   ],
                 ),
               ),
               if (i < items.length - 1)
-                const Divider(height: 1, indent: 46),
+                Divider(height: 1, indent: 46, color: KausapColors.border(context)),
             ],
           );
         }).toList(),
@@ -427,12 +449,13 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
   }
 
   Widget _buildQuickActionsCard(BuildContext context) {
+    final isDark = KausapColors.isDark(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
@@ -440,25 +463,25 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
             leading: Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(color: const Color(0xFF0284C7).withAlpha(20), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: const Color(0xFF0284C7).withAlpha(25), borderRadius: BorderRadius.circular(10)),
               child: const Icon(Icons.download_rounded, color: Color(0xFF0284C7), size: 18),
             ),
-            title: const Text('Download My Wellness Data', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
-            subtitle: const Text('Export a copy of your records to JSON', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
-            trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
+            title: Text('Download My Wellness Data', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+            subtitle: Text('Export a copy of your records to JSON', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
+            trailing: Icon(Icons.chevron_right_rounded, color: KausapColors.textMuted(context)),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadDataScreen())),
           ),
-          const Divider(height: 1, indent: 64),
+          Divider(height: 1, indent: 64, color: KausapColors.border(context)),
           ListTile(
             leading: Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(color: const Color(0xFF7C3AED).withAlpha(20), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: const Color(0xFF7C3AED).withAlpha(25), borderRadius: BorderRadius.circular(10)),
               child: const Icon(Icons.gavel_rounded, color: Color(0xFF7C3AED), size: 18),
             ),
-            title: const Text('Terms & Legal Policies', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
-            subtitle: const Text('Read full Terms of Service & Clinical Disclaimers', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
-            trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
+            title: Text('Terms & Legal Policies', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+            subtitle: Text('Read full Terms of Service & Clinical Disclaimers', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
+            trailing: Icon(Icons.chevron_right_rounded, color: KausapColors.textMuted(context)),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyScreen())),
           ),
         ],
@@ -466,25 +489,26 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
     );
   }
 
-  Widget _buildContactCard() {
+  Widget _buildContactCard(BuildContext context) {
+    final isDark = KausapColors.isDark(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: isDark ? const Color(0xFF14532D).withAlpha(40) : const Color(0xFFF0FDF4),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
+        border: Border.all(color: isDark ? const Color(0xFF15803D).withAlpha(80) : const Color(0xFFBBF7D0)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.shield_outlined, color: Color(0xFF16A34A), size: 22),
-          SizedBox(width: 12),
+          const Icon(Icons.shield_outlined, color: Color(0xFF16A34A), size: 22),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Privacy Inquiries & Student Rights', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF166534))),
-                SizedBox(height: 2),
-                Text('Contact our data protection team at privacy@kausap.ai', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF15803D))),
+                Text('Privacy Inquiries & Student Rights', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: isDark ? const Color(0xFF86EFAC) : const Color(0xFF166534))),
+                const SizedBox(height: 2),
+                Text('Contact our data protection team at privacy@kausap.ai', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF15803D))),
               ],
             ),
           ),
@@ -493,16 +517,17 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
     );
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(BuildContext context, String label) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'Poppins',
         fontWeight: FontWeight.w700,
         fontSize: 11,
         letterSpacing: 0.8,
-        color: Color(0xFF64748B),
+        color: KausapColors.textMuted(context),
       ),
     );
   }
 }
+

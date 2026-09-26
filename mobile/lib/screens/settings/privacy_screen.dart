@@ -31,6 +31,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: KausapColors.cardBg(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
@@ -42,14 +43,14 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
             ),
           ],
         ),
-        content: const Text(
+        content: Text(
           'This action is irreversible. All your personal information, mood logs, journal entries, screener history, and AI conversations will be permanently deleted.',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF475569), height: 1.5),
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textSecondary(context), height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+            child: Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: KausapColors.textMuted(context), fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -91,32 +92,34 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = KausapColors.accent(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Privacy & Legal Terms',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: const Color(0xFF64748B),
+          labelColor: accentColor,
+          unselectedLabelColor: KausapColors.textMuted(context),
           labelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13),
           unselectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500, fontSize: 13),
-          indicatorColor: AppColors.primary,
+          indicatorColor: accentColor,
           indicatorWeight: 3,
           tabs: const [
             Tab(text: 'Terms'),
@@ -150,14 +153,14 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
           icon: Icons.gavel_rounded,
           color: const Color(0xFF0284C7),
           title: "Student Terms of Service",
-          subtitle: "Last Updated: August 2026 • Version 2.4",
+          subtitle: "Last Updated: September 2026 • Version 2.5",
         ),
         const SizedBox(height: 16),
 
         _buildLegalCard(
           title: "1. Agreement & Purpose",
           content:
-              "Welcome to Kausap AI. By accessing or using our mobile application and services, you agree to comply with and be bound by these Terms of Service. Kausap AI is designed to provide AI-powered conversational emotional support, mood tracking, daily journaling, and mental wellness tools for students.",
+              "Welcome to Kausap AI. By accessing or using our mobile application and services, you agree to comply with and be bound by these Terms of Service. Kausap AI is designed to provide AI-powered conversational emotional support, mood tracking, daily journaling, and mental wellness tools for university students.",
         ),
         const SizedBox(height: 12),
 
@@ -173,9 +176,9 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
         const SizedBox(height: 12),
 
         _buildLegalCard(
-          title: "3. User Eligibility & Student Accounts",
+          title: "3. User Eligibility & Student Accounts (18+ Minimum Age)",
           content:
-              "You must be at least 13 years of age to use Kausap AI. You agree to provide accurate registration information and maintain the security of your login credentials. You are responsible for all activities occurring under your account.",
+              "You must be at least 18 years of age to register for and use Kausap AI. By creating an account, you affirm that you are 18 years of age or older, agree to provide accurate registration information, and maintain the security of your login credentials. You are responsible for all activities occurring under your account.",
         ),
         const SizedBox(height: 12),
 
@@ -212,7 +215,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
           title: "1. Information We Collect",
           content:
               "We collect only the information necessary to provide supportive wellness features:\n\n"
-              "• Account Information: Name, email address, student/occupation status.\n"
+              "• Account Information: Name, email address, student/occupation status, and birthdate.\n"
               "• Mood & Wellness Logs: Daily mood levels, feeling tags, journal reflections, and clinical screener scores (PHQ-9 & GAD-7).\n"
               "• Chat Interactions: Messages shared with Kausap AI to generate empathetic context.",
         ),
@@ -247,6 +250,8 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
 
   // ── Tab 3: Rights & Safety ─────────────────────────────────────────────────
   Widget _buildRightsTab() {
+    final isDark = KausapColors.isDark(context);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
@@ -272,30 +277,35 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFFFEF2F2),
+            color: isDark ? const Color(0xFF2D1515) : const Color(0xFFFEF2F2),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFECACA)),
+            border: Border.all(color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Row(
+            children: [
+              const Row(
                 children: [
                   Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 20),
                   SizedBox(width: 8),
                   Text(
                     "24/7 Crisis Hotline Directory",
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF991B1B)),
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFFEF4444)),
                   ),
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 "If you are ever in severe emotional distress or require urgent human help, please contact:\n"
                 "• NCMH Toll-Free (24/7): 1553 / 0917-899-8727\n"
                 "• Hopeline Philippines: 0917-558-4673\n"
                 "• National Emergency: 911",
-                style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, height: 1.5, color: Color(0xFF7F1D1D)),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  height: 1.5,
+                  color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF7F1D1D),
+                ),
               ),
             ],
           ),
@@ -306,10 +316,16 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: KausapColors.cardBg(context),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFCA5A5)),
-            boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4))],
+            border: Border.all(color: const Color(0xFFEF4444).withAlpha(isDark ? 80 : 120)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 30 : 10),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,9 +341,9 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
                 ],
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Permanently delete your account and all stored mental health records. This action cannot be reversed.',
-                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context), height: 1.4),
               ),
               const SizedBox(height: 14),
               SizedBox(
@@ -358,13 +374,21 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
     required String title,
     required String subtitle,
   }) {
+    final isDark = KausapColors.isDark(context);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 3))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 25 : 8),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -372,7 +396,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: color.withAlpha(25),
+              color: color.withAlpha(isDark ? 40 : 25),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -384,12 +408,21 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14.5, color: Color(0xFF0F172A)),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14.5,
+                    color: KausapColors.textPrimary(context),
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11.5,
+                    color: KausapColors.textMuted(context),
+                  ),
                 ),
               ],
             ),
@@ -404,13 +437,38 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
     required String content,
     bool isAlert = false,
   }) {
+    final isDark = KausapColors.isDark(context);
+
+    Color bg;
+    Color borderColor;
+    Color titleColor;
+    Color textColor;
+
+    if (isAlert) {
+      bg = isDark ? const Color(0xFF2E2009) : const Color(0xFFFFFBEB);
+      borderColor = isDark ? const Color(0xFF92400E) : const Color(0xFFFDE68A);
+      titleColor = isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E);
+      textColor = isDark ? const Color(0xFFFDE68A) : const Color(0xFF78350F);
+    } else {
+      bg = KausapColors.cardBg(context);
+      borderColor = KausapColors.border(context);
+      titleColor = KausapColors.textPrimary(context);
+      textColor = KausapColors.textSecondary(context);
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isAlert ? const Color(0xFFFFFBEB) : Colors.white,
+        color: bg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isAlert ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(isDark ? 20 : 6),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,7 +479,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w700,
               fontSize: 13.5,
-              color: isAlert ? const Color(0xFF92400E) : const Color(0xFF0F172A),
+              color: titleColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -431,7 +489,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
               fontFamily: 'Inter',
               fontSize: 12.5,
               height: 1.5,
-              color: isAlert ? const Color(0xFF78350F) : const Color(0xFF334155),
+              color: textColor,
             ),
           ),
         ],

@@ -137,22 +137,25 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = KausapColors.isDark(context);
+    final accent = KausapColors.accent(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Language & Region',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -169,21 +172,21 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: isDark ? accent.withAlpha(25) : const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(color: isDark ? accent.withAlpha(50) : const Color(0xFFBFDBFE)),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.language_rounded, color: Color(0xFF2563EB), size: 26),
-                          SizedBox(width: 12),
+                          Icon(Icons.language_rounded, color: isDark ? accent : const Color(0xFF2563EB), size: 26),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Choose your preferred language, conversational AI style, and emergency hotline region.',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 12.5,
-                                color: Color(0xFF1E3A8A),
+                                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E3A8A),
                                 height: 1.4,
                               ),
                             ),
@@ -194,14 +197,14 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                     const SizedBox(height: 24),
 
                     // ── 1. App & AI Conversation Language ────────────────────
-                    _sectionLabel('APP & AI CONVERSATION LANGUAGE'),
+                    _sectionLabel(context, 'APP & AI CONVERSATION LANGUAGE'),
                     const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+                        border: Border.all(color: KausapColors.border(context)),
+                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
                       ),
                       child: Column(
                         children: _languages.asMap().entries.map((entry) {
@@ -233,7 +236,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                                     fontFamily: 'Poppins',
                                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                                                     fontSize: 14,
-                                                    color: isSelected ? AppColors.primary : const Color(0xFF0F172A),
+                                                    color: isSelected ? accent : KausapColors.textPrimary(context),
                                                   ),
                                                 ),
                                                 if (isTaglish) ...[
@@ -259,19 +262,19 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                             ),
                                             Text(
                                               '${lang['name']} • ${lang['subtitle']}',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontFamily: 'Inter',
                                                 fontSize: 11.5,
-                                                color: Color(0xFF64748B),
+                                                color: KausapColors.textMuted(context),
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
                                       if (isSelected)
-                                        const Icon(
+                                        Icon(
                                           Icons.check_circle_rounded,
-                                          color: AppColors.primary,
+                                          color: accent,
                                           size: 22,
                                         ),
                                     ],
@@ -279,7 +282,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                 ),
                               ),
                               if (i < _languages.length - 1)
-                                const Divider(height: 1, indent: 54, color: Color(0x12000000)),
+                                Divider(height: 1, indent: 54, color: KausapColors.border(context)),
                             ],
                           );
                         }).toList(),
@@ -289,23 +292,23 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                     const SizedBox(height: 24),
 
                     // ── 2. Regional Crisis Directory ─────────────────────────
-                    _sectionLabel('REGIONAL EMERGENCY & HOTLINES'),
+                    _sectionLabel(context, 'REGIONAL EMERGENCY & HOTLINES'),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Configures crisis hotlines displayed in emergency assistance and SOS menus.',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
-                        color: Color(0xFF64748B),
+                        color: KausapColors.textMuted(context),
                       ),
                     ),
                     const SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+                        border: Border.all(color: KausapColors.border(context)),
+                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
                       ),
                       child: Column(
                         children: _regions.asMap().entries.map((entry) {
@@ -334,7 +337,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                                 fontFamily: 'Poppins',
                                                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                                                 fontSize: 14,
-                                                color: isSelected ? AppColors.primary : const Color(0xFF0F172A),
+                                                color: isSelected ? accent : KausapColors.textPrimary(context),
                                               ),
                                             ),
                                             Text(
@@ -350,9 +353,9 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                         ),
                                       ),
                                       if (isSelected)
-                                        const Icon(
+                                        Icon(
                                           Icons.check_circle_rounded,
-                                          color: AppColors.primary,
+                                          color: accent,
                                           size: 22,
                                         ),
                                     ],
@@ -360,7 +363,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                                 ),
                               ),
                               if (i < _regions.length - 1)
-                                const Divider(height: 1, indent: 54, color: Color(0x12000000)),
+                                Divider(height: 1, indent: 54, color: KausapColors.border(context)),
                             ],
                           );
                         }).toList(),
@@ -370,20 +373,21 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                     const SizedBox(height: 24),
 
                     // ── 3. Time Display Format ───────────────────────────────
-                    _sectionLabel('TIME DISPLAY FORMAT'),
+                    _sectionLabel(context, 'TIME DISPLAY FORMAT'),
                     const SizedBox(height: 10),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+                        border: Border.all(color: KausapColors.border(context)),
+                        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
                       ),
                       child: Row(
                         children: [
                           Expanded(
                             child: _buildTimeFormatButton(
+                              context: context,
                               label: '12-Hour',
                               example: '8:30 PM',
                               isSelected: _selectedTimeFormat == '12h',
@@ -393,6 +397,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildTimeFormatButton(
+                              context: context,
                               label: '24-Hour',
                               example: '20:30',
                               isSelected: _selectedTimeFormat == '24h',
@@ -410,21 +415,24 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
   }
 
   Widget _buildTimeFormatButton({
+    required BuildContext context,
     required String label,
     required String example,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final accent = KausapColors.accent(context);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withAlpha(15) : const Color(0xFFF1F5F9),
+          color: isSelected ? accent.withAlpha(25) : KausapColors.subtleBg(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+            color: isSelected ? accent : KausapColors.border(context),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -436,7 +444,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                 fontFamily: 'Poppins',
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 fontSize: 13,
-                color: isSelected ? AppColors.primary : const Color(0xFF0F172A),
+                color: isSelected ? accent : KausapColors.textPrimary(context),
               ),
             ),
             const SizedBox(height: 2),
@@ -445,7 +453,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 11.5,
-                color: isSelected ? AppColors.primary : const Color(0xFF64748B),
+                color: isSelected ? accent : KausapColors.textMuted(context),
               ),
             ),
           ],
@@ -454,19 +462,20 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
     );
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w700,
           fontSize: 11,
           letterSpacing: 0.7,
-          color: Color(0xFF64748B),
+          color: KausapColors.textMuted(context),
         ),
       ),
     );
   }
 }
+

@@ -195,21 +195,21 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: _step == _ExportStep.preparing ? null : () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Download My Data',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -228,6 +228,8 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
   }
 
   Widget _buildSelectStep() {
+    final accent = KausapColors.accent(context);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
@@ -235,13 +237,19 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+            gradient: LinearGradient(
+              colors: [accent, KausapColors.accentLight(context)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [BoxShadow(color: Color(0x180284C7), blurRadius: 12, offset: Offset(0, 4))],
+            boxShadow: [
+              BoxShadow(
+                color: accent.withAlpha(50),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: const Row(
             children: [
@@ -263,7 +271,16 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
         const SizedBox(height: 24),
 
         // Selection
-        const Text('SELECT CATEGORIES TO INCLUDE', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 0.8, color: Color(0xFF64748B))),
+        Text(
+          'SELECT CATEGORIES TO INCLUDE',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+            letterSpacing: 0.8,
+            color: KausapColors.textMuted(context),
+          ),
+        ),
         const SizedBox(height: 12),
         _buildCheckCard(
           icon: Icons.person_rounded,
@@ -327,17 +344,17 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
             icon: const Icon(Icons.download_rounded, size: 20, color: Colors.white),
             label: const Text('Generate Export File', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15, color: Colors.white)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: accent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
             ),
           ),
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Data is packaged locally on your device for strict confidentiality.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF94A3B8)),
+          style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context)),
         ),
       ],
     );
@@ -353,10 +370,16 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: value ? color.withAlpha(80) : const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+        border: Border.all(color: value ? color.withAlpha(120) : KausapColors.border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: KausapColors.isDark(context) ? Colors.transparent : const Color(0x04000000),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: CheckboxListTile(
         value: value,
@@ -367,18 +390,35 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: color.withAlpha(20),
+            color: color.withAlpha(25),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color, size: 20),
         ),
-        title: Text(title, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
-        subtitle: Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+            fontSize: 13.5,
+            color: KausapColors.textPrimary(context),
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 11.5,
+            color: KausapColors.textMuted(context),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildPreparingStep() {
+    final accent = KausapColors.accent(context);
+
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -388,42 +428,56 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(20),
+              color: KausapColors.accentSubtle(context),
               shape: BoxShape.circle,
             ),
-            child: const Center(
+            child: Center(
               child: SizedBox(
                 width: 44,
                 height: 44,
-                child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
+                child: CircularProgressIndicator(strokeWidth: 3, color: accent),
               ),
             ),
           ),
           const SizedBox(height: 24),
           Text(
             'Preparing Your Data',
-            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF0F172A)),
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: KausapColors.textPrimary(context),
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             _progressLabel,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B)),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13,
+              color: KausapColors.textMuted(context),
+            ),
           ),
           const SizedBox(height: 24),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: _progress,
-              backgroundColor: const Color(0xFFE2E8F0),
-              color: AppColors.primary,
+              backgroundColor: KausapColors.border(context),
+              color: accent,
               minHeight: 8,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             '${(_progress * 100).toInt()}%',
-            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary),
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: accent,
+            ),
           ),
         ],
       ),
@@ -431,6 +485,8 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
   }
 
   Widget _buildReadyStep() {
+    final accent = KausapColors.accent(context);
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -446,32 +502,47 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
             child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 48),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Export File Ready!',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 19, color: Color(0xFF0F172A)),
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+              fontSize: 19,
+              color: KausapColors.textPrimary(context),
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Your complete mental health data archive has been created successfully.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13,
+              color: KausapColors.textMuted(context),
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: KausapColors.cardBg(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: KausapColors.border(context)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.insert_drive_file_rounded, color: Color(0xFF64748B), size: 24),
+                Icon(Icons.insert_drive_file_rounded, color: KausapColors.textMuted(context), size: 24),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     _exportedFilePath?.split('/').last ?? 'kausap_wellness_export.json',
-                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF1E293B)),
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: KausapColors.textPrimary(context),
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -485,7 +556,7 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
             child: ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: accent,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),

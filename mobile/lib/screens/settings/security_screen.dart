@@ -48,6 +48,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
     final options = ['Immediately', '1 Minute', '5 Minutes', '15 Minutes'];
     final selected = await showModalBottomSheet<String>(
       context: context,
+      backgroundColor: KausapColors.cardBg(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -59,23 +60,24 @@ class _SecurityScreenState extends State<SecurityScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Text(
                     'Auto-Lock Timeout',
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF0F172A)),
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16, color: KausapColors.textPrimary(ctx)),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   child: Text(
                     'Lock the app automatically after inactivity to keep your journals confidential.',
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(ctx)),
                   ),
                 ),
                 const SizedBox(height: 12),
                 ...options.map((opt) {
                   final isSelected = opt == _autoLockTimeout;
+                  final accent = KausapColors.accent(ctx);
                   return ListTile(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     title: Text(
@@ -83,11 +85,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? AppColors.primary : const Color(0xFF1E293B),
+                        color: isSelected ? accent : KausapColors.textPrimary(ctx),
                         fontSize: 14,
                       ),
                     ),
-                    trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: AppColors.primary) : null,
+                    trailing: isSelected ? Icon(Icons.check_circle_rounded, color: accent) : null,
                     onTap: () => Navigator.pop(ctx, opt),
                   );
                 }),
@@ -109,16 +111,17 @@ class _SecurityScreenState extends State<SecurityScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Deactivate Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-        content: const Text(
+        backgroundColor: KausapColors.cardBg(ctx),
+        title: Text('Deactivate Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: KausapColors.textPrimary(ctx))),
+        content: Text(
           'Are you sure you want to deactivate your account? You will be logged out and your account will be suspended. Contact support to reactivate.',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textMuted(ctx)),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(ctx))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -154,16 +157,17 @@ class _SecurityScreenState extends State<SecurityScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Account Permanently', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-        content: const Text(
+        backgroundColor: KausapColors.cardBg(ctx),
+        title: Text('Delete Account Permanently', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: KausapColors.textPrimary(ctx))),
+        content: Text(
           'Are you sure you want to permanently delete your account? This action cannot be undone. All your mood history, journal reflections, and clinical screener assessments will be permanently erased.',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textMuted(ctx)),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(ctx))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -202,21 +206,21 @@ class _SecurityScreenState extends State<SecurityScreen> {
     if (_appLockEnabled) activeProtections++;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Security & App Lock',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -228,14 +232,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             children: [
               // ── Security Health Status Banner ──────────────────────────────
-              _buildSecurityStatusCard(activeProtections),
+              _buildSecurityStatusCard(context, activeProtections),
               const SizedBox(height: 20),
 
               // ── Account Security ───────────────────────────────────────────
-              _sectionLabel('ACCOUNT CREDENTIALS'),
+              _sectionLabel(context, 'ACCOUNT CREDENTIALS'),
               const SizedBox(height: 8),
-              _card([
+              _card(context, [
                 _buildNavRow(
+                  context: context,
                   icon: Icons.key_rounded,
                   iconColor: const Color(0xFF0284C7),
                   label: 'Change Password',
@@ -245,8 +250,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     Navigator.push(context, slideRoute(const ChangePasswordScreen()));
                   },
                 ),
-                _divider(),
+                _divider(context),
                 _buildToggleRow(
+                  context: context,
                   icon: Icons.shield_outlined,
                   iconColor: const Color(0xFF16A34A),
                   label: 'Two-Factor Authentication (2FA)',
@@ -269,10 +275,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
               const SizedBox(height: 20),
 
               // ── App Lock & Journal Protection ──────────────────────────────
-              _sectionLabel('APP LOCK & JOURNAL PRIVACY'),
+              _sectionLabel(context, 'APP LOCK & JOURNAL PRIVACY'),
               const SizedBox(height: 8),
-              _card([
+              _card(context, [
                 _buildToggleRow(
+                  context: context,
                   icon: Icons.lock_outline_rounded,
                   iconColor: const Color(0xFF7C3AED),
                   label: 'App Lock (4-Digit PIN)',
@@ -299,16 +306,18 @@ class _SecurityScreenState extends State<SecurityScreen> {
                   },
                 ),
                 if (_appLockEnabled) ...[
-                  _divider(),
+                  _divider(context),
                   _buildNavRow(
+                    context: context,
                     icon: Icons.timer_outlined,
                     iconColor: const Color(0xFFEA580C),
                     label: 'Auto-Lock Inactivity Timeout',
                     subtitle: 'Locks automatically: $_autoLockTimeout',
                     onTap: _selectAutoLockTimeout,
                   ),
-                  _divider(),
+                  _divider(context),
                   _buildToggleRow(
+                    context: context,
                     icon: Icons.fingerprint_rounded,
                     iconColor: const Color(0xFFE11D48),
                     label: 'Biometric Unlock',
@@ -320,8 +329,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       if (mounted) setState(() => _biometricsEnabled = v);
                     },
                   ),
-                  _divider(),
+                  _divider(context),
                   _buildNavRow(
+                    context: context,
                     icon: Icons.password_rounded,
                     iconColor: const Color(0xFF64748B),
                     label: 'Change App Lock PIN',
@@ -340,10 +350,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
               const SizedBox(height: 20),
 
               // ── Logged-in Devices ──────────────────────────────────────────
-              _sectionLabel('AUTHORIZED DEVICES'),
+              _sectionLabel(context, 'AUTHORIZED DEVICES'),
               const SizedBox(height: 8),
-              _card([
+              _card(context, [
                 _buildNavRow(
+                  context: context,
                   icon: Icons.devices_rounded,
                   iconColor: const Color(0xFF0284C7),
                   label: 'Logged-in Devices',
@@ -358,10 +369,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
               const SizedBox(height: 20),
 
               // ── Danger Zone / Account Suspension & Deletion ────────────────
-              _sectionLabel('DANGER ZONE & ACCOUNT ACTIONS'),
+              _sectionLabel(context, 'DANGER ZONE & ACCOUNT ACTIONS'),
               const SizedBox(height: 8),
-              _card([
+              _card(context, [
                 _buildNavRow(
+                  context: context,
                   icon: Icons.person_off_outlined,
                   iconColor: const Color(0xFFEA580C),
                   label: 'Deactivate Account',
@@ -371,8 +383,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     _showDeactivateDialog();
                   },
                 ),
-                _divider(),
+                _divider(context),
                 _buildNavRow(
+                  context: context,
                   icon: Icons.delete_forever_rounded,
                   iconColor: const Color(0xFFDC2626),
                   label: 'Delete Account Permanently',
@@ -392,20 +405,23 @@ class _SecurityScreenState extends State<SecurityScreen> {
     );
   }
 
-  Widget _buildSecurityStatusCard(int activeCount) {
+  Widget _buildSecurityStatusCard(BuildContext context, int activeCount) {
     final isMax = activeCount >= 3;
+    final isDark = KausapColors.isDark(context);
+    final accent = KausapColors.accent(context);
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isMax
               ? const [Color(0xFF15803D), Color(0xFF166534)]
-              : const [Color(0xFF0F172A), Color(0xFF1E293B)],
+              : (isDark ? const [Color(0xFF1E293B), Color(0xFF0F172A)] : [accent.withAlpha(220), accent]),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [BoxShadow(color: Color(0x180F172A), blurRadius: 14, offset: Offset(0, 4))],
+        boxShadow: [BoxShadow(color: isDark ? const Color(0x18000000) : accent.withAlpha(35), blurRadius: 14, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
@@ -413,7 +429,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(25),
+              color: Colors.white.withAlpha(30),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(isMax ? Icons.verified_user_rounded : Icons.shield_rounded, color: Colors.white, size: 26),
@@ -449,35 +465,37 @@ class _SecurityScreenState extends State<SecurityScreen> {
     );
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w700,
           fontSize: 11,
           letterSpacing: 0.7,
-          color: Color(0xFF64748B),
+          color: KausapColors.textMuted(context),
         ),
       ),
     );
   }
 
-  Widget _card(List<Widget> children) {
+  Widget _card(BuildContext context, List<Widget> children) {
+    final isDark = KausapColors.isDark(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(children: children),
     );
   }
 
   Widget _buildNavRow({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String label,
@@ -494,7 +512,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
             Container(
               width: 38,
               height: 38,
-              decoration: BoxDecoration(color: iconColor.withAlpha(20), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: iconColor.withAlpha(25), borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: iconColor, size: 20),
             ),
             const SizedBox(width: 12),
@@ -502,12 +520,12 @@ class _SecurityScreenState extends State<SecurityScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
-                  Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
+                  Text(label, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+                  Text(subtitle, style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
+            Icon(Icons.chevron_right_rounded, size: 20, color: KausapColors.textMuted(context)),
           ],
         ),
       ),
@@ -515,6 +533,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
   }
 
   Widget _buildToggleRow({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String label,
@@ -529,7 +548,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           Container(
             width: 38,
             height: 38,
-            decoration: BoxDecoration(color: iconColor.withAlpha(20), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: iconColor.withAlpha(25), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 12),
@@ -537,14 +556,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
-                Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
+                Text(label, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+                Text(subtitle, style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
               ],
             ),
           ),
           Switch.adaptive(
             value: value == true,
-            activeTrackColor: AppColors.primaryLight,
+            activeTrackColor: KausapColors.accentLight(context),
+            activeThumbColor: KausapColors.accent(context),
             onChanged: onChanged,
           ),
         ],
@@ -552,7 +572,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
     );
   }
 
-  Widget _divider() {
-    return const Divider(height: 1, indent: 64, color: Color(0x12000000));
+  Widget _divider(BuildContext context) {
+    return Divider(height: 1, indent: 64, color: KausapColors.border(context));
   }
 }
+

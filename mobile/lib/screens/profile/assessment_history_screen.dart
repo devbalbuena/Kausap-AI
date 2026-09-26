@@ -70,9 +70,9 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -83,17 +83,29 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: KausapColors.border(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            Text('Select Self-Assessment', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+            Text(
+              'Select Self-Assessment',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: KausapColors.textPrimary(context),
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
               'Clinically-backed screening tools to monitor your mental wellness trends.',
-              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 13),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: KausapColors.textMuted(context),
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -144,14 +156,16 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isDark = KausapColors.isDark(context);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: color.withAlpha(isDark ? 30 : 20),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: color.withAlpha(isDark ? 80 : 50)),
         ),
         child: Row(
           children: [
@@ -165,13 +179,28 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w700, fontSize: 14)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: KausapColors.textPrimary(context),
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: KausapColors.textMuted(context),
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textSecondary),
+            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: KausapColors.textHint(context)),
           ],
         ),
       ),
@@ -188,8 +217,11 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -204,24 +236,33 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         shape: BoxShape.circle,
+                        border: Border.all(color: KausapColors.border(context)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
+                            color: Colors.black.withAlpha(isDark ? 30 : 10),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF191C21)),
+                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: KausapColors.textPrimary(context)),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text('Assessment History', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+                  Text(
+                    'Assessment History',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: KausapColors.textPrimary(context),
+                    ),
+                  ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 24),
+                    icon: Icon(Icons.add_circle_outline_rounded, color: accentColor, size: 24),
                     onPressed: _showSelectAssessmentSheet,
                   ),
                 ],
@@ -230,7 +271,7 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
 
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator(color: accentColor))
                   : _history.isEmpty
                       ? Center(
                           child: Padding(
@@ -242,21 +283,31 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                                   width: 80,
                                   height: 80,
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withAlpha(20),
+                                    color: KausapColors.accentSubtle(context),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.assignment_outlined, size: 40, color: AppColors.primary),
+                                  child: Icon(Icons.assignment_outlined, size: 40, color: accentColor),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
                                   'No Assessments Yet',
-                                  style: AppTextStyles.heading2.copyWith(fontSize: 18),
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                    color: KausapColors.textPrimary(context),
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Self-assessments like PHQ-9 and GAD-7 help you and your therapist understand your emotional trends over time.',
                                   textAlign: TextAlign.center,
-                                  style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 13, height: 1.45),
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    color: KausapColors.textMuted(context),
+                                    fontSize: 13,
+                                    height: 1.45,
+                                  ),
                                 ),
                                 const SizedBox(height: 24),
                                 ElevatedButton.icon(
@@ -264,7 +315,7 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                                   icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
                                   label: const Text('Take Self-Assessment'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
+                                    backgroundColor: accentColor,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -286,12 +337,12 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                             return Container(
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: KausapColors.cardBg(context),
                                 borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: const Color(0x1AC0C9C2)),
+                                border: Border.all(color: KausapColors.border(context)),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
+                                    color: Colors.black.withAlpha(isDark ? 25 : 8),
                                     blurRadius: 8,
                                     offset: const Offset(0, 3),
                                   ),
@@ -306,13 +357,18 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                                       Expanded(
                                         child: Text(
                                           item['testName'] as String? ?? 'Clinical Screener',
-                                          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w700, fontSize: 15),
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 15,
+                                            color: KausapColors.textPrimary(context),
+                                          ),
                                         ),
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: color.withValues(alpha: 0.15),
+                                          color: color.withAlpha(isDark ? 40 : 25),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
@@ -342,10 +398,10 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                                       const Spacer(),
                                       Text(
                                         item['date'] as String? ?? '',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'Inter',
                                           fontSize: 11,
-                                          color: AppColors.textSecondary,
+                                          color: KausapColors.textMuted(context),
                                         ),
                                       ),
                                     ],
@@ -357,12 +413,18 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                                       width: double.infinity,
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF9FAFB),
+                                        color: KausapColors.subtleBg(context),
                                         borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: KausapColors.border(context)),
                                       ),
                                       child: Text(
                                         item['interpretation'] as String,
-                                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF4B5563), height: 1.4),
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12,
+                                          color: KausapColors.textSecondary(context),
+                                          height: 1.4,
+                                        ),
                                       ),
                                     ),
                                   ],

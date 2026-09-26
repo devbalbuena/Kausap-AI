@@ -55,11 +55,12 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
 
   Future<void> _pickBirthday() async {
     final now = DateTime.now();
+    final maxAllowedDate = DateTime(now.year - 18, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(now.year - 18, now.month, now.day),
+      initialDate: DateTime(now.year - 20, now.month, now.day),
       firstDate: DateTime(1920),
-      lastDate: DateTime(now.year - 10),
+      lastDate: maxAllowedDate,
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(primary: AppColors.primary),
@@ -209,9 +210,7 @@ class _ClientSignupStep1ScreenState extends State<ClientSignupStep1Screen> {
                                 _pickBirthday();
                                 _mascotKey.currentState?.triggerMoodBoost(isTyping: true);
                               },
-                              validator: (v) => (v == null || v.isEmpty)
-                                  ? 'Birthday is required'
-                                  : null,
+                              validator: AppValidators.birthday,
                             ),
                             const SizedBox(height: 16),
 

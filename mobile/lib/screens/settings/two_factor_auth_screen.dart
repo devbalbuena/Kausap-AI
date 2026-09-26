@@ -83,7 +83,7 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -91,18 +91,18 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
                 onPressed: () => setState(() => _step--),
-                color: Theme.of(context).colorScheme.onSurface,
+                color: KausapColors.textPrimary(context),
               )
             : IconButton(
                 icon: const Icon(Icons.close_rounded, size: 22),
                 onPressed: () => Navigator.pop(context),
-                color: Theme.of(context).colorScheme.onSurface,
+                color: KausapColors.textPrimary(context),
               ),
         title: Text(
           'Two-Factor Authentication',
           style: AppTextStyles.heading2.copyWith(
             fontSize: 17,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -136,6 +136,9 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
   }
 
   Widget _buildIntroStep() {
+    final accent = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
+
     return SingleChildScrollView(
       key: const ValueKey(0),
       padding: const EdgeInsets.all(24),
@@ -149,13 +152,17 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
               height: 100,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primary.withAlpha(200), AppColors.primaryLight],
+                  colors: [accent.withAlpha(220), KausapColors.accentLight(context)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(color: AppColors.primary.withAlpha(60), blurRadius: 24, offset: const Offset(0, 8)),
+                  BoxShadow(
+                    color: accent.withAlpha(isDark ? 80 : 50),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
                 ],
               ),
               child: const Icon(Icons.shield_rounded, color: Colors.white, size: 48),
@@ -164,13 +171,20 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
           const SizedBox(height: 28),
           Text(
             'Secure Your Account',
-            style: AppTextStyles.heading1.copyWith(fontSize: 22),
+            style: AppTextStyles.heading1.copyWith(
+              fontSize: 22,
+              color: KausapColors.textPrimary(context),
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Two-Factor Authentication adds an extra layer of security. Each time you log in, you\'ll need a 6-digit code from your authenticator app.',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.6),
+            style: TextStyle(
+              fontSize: 14,
+              color: KausapColors.textMuted(context),
+              height: 1.6,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
@@ -186,7 +200,7 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
             child: ElevatedButton(
               onPressed: () => setState(() => _step = 1),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: accent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
@@ -203,32 +217,52 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
   }
 
   Widget _buildQrStep() {
+    final accent = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
+
     return SingleChildScrollView(
       key: const ValueKey(1),
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           const SizedBox(height: 8),
-          Text('Step 1: Scan QR Code', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+          Text(
+            'Step 1: Scan QR Code',
+            style: AppTextStyles.heading2.copyWith(
+              fontSize: 18,
+              color: KausapColors.textPrimary(context),
+            ),
+          ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Open your authenticator app and scan the QR code below.',
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            style: TextStyle(
+              fontSize: 13,
+              color: KausapColors.textMuted(context),
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 28),
 
-          // Mock QR Code visual
+          // Mock QR Code visual (kept crisp white for optical scanning)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 6))],
+              boxShadow: [
+                BoxShadow(
+                  color: isDark ? Colors.black.withAlpha(80) : const Color(0x14000000),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+              border: Border.all(
+                color: isDark ? Colors.white.withAlpha(40) : Colors.black.withAlpha(15),
+              ),
             ),
             child: Column(
               children: [
-                // QR grid mock
                 SizedBox(
                   width: 180,
                   height: 180,
@@ -237,7 +271,7 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
                 const SizedBox(height: 12),
                 const Text(
                   'Can\'t scan? Enter code manually',
-                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
               ],
             ),
@@ -249,33 +283,40 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(12),
+              color: KausapColors.accentSubtle(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withAlpha(40)),
+              border: Border.all(color: accent.withAlpha(50)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.key_rounded, color: AppColors.primary, size: 18),
+                Icon(Icons.key_rounded, color: accent, size: 18),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Secret Key', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      Text(
+                        'Secret Key',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: KausapColors.textMuted(context),
+                        ),
+                      ),
                       Text(
                         _mockSecret,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'monospace',
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
                           letterSpacing: 2,
+                          color: KausapColors.textPrimary(context),
                         ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.copy_rounded, size: 18, color: AppColors.primary),
+                  icon: Icon(Icons.copy_rounded, size: 18, color: accent),
                   onPressed: () {
                     Clipboard.setData(const ClipboardData(text: _mockSecret));
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -294,7 +335,7 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
             child: ElevatedButton(
               onPressed: () => setState(() => _step = 2),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: accent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
@@ -311,17 +352,28 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
   }
 
   Widget _buildVerifyStep() {
+    final accent = KausapColors.accent(context);
+
     return SingleChildScrollView(
       key: const ValueKey(2),
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           const SizedBox(height: 8),
-          Text('Step 2: Verify Code', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+          Text(
+            'Step 2: Verify Code',
+            style: AppTextStyles.heading2.copyWith(
+              fontSize: 18,
+              color: KausapColors.textPrimary(context),
+            ),
+          ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Enter the 6-digit code shown in your authenticator app to confirm setup.',
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            style: TextStyle(
+              fontSize: 13,
+              color: KausapColors.textMuted(context),
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 36),
@@ -330,18 +382,19 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(6, (i) {
+              final isFilled = _codeControllers[i].text.isNotEmpty;
               return Container(
                 width: 46,
                 height: 54,
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(80),
+                  color: KausapColors.cardBg(context),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _codeControllers[i].text.isNotEmpty
-                        ? AppColors.primary
-                        : Theme.of(context).dividerColor,
-                    width: _codeControllers[i].text.isNotEmpty ? 2 : 1,
+                    color: isFilled
+                        ? accent
+                        : KausapColors.border(context),
+                    width: isFilled ? 2 : 1,
                   ),
                 ),
                 child: TextField(
@@ -351,7 +404,11 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
                   textAlign: TextAlign.center,
                   maxLength: 1,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: KausapColors.textPrimary(context),
+                  ),
                   decoration: const InputDecoration(
                     counterText: '',
                     border: InputBorder.none,
@@ -374,7 +431,7 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
             child: ElevatedButton(
               onPressed: _isVerifying ? null : _verifyCode,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: accent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
@@ -399,7 +456,10 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
               }
               setState(() {});
             },
-            child: const Text('Clear code', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              'Clear code',
+              style: TextStyle(color: KausapColors.textMuted(context)),
+            ),
           ),
         ],
       ),
@@ -430,11 +490,21 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
               ),
             ),
             const SizedBox(height: 28),
-            Text('2FA Activated!', style: AppTextStyles.heading1.copyWith(fontSize: 24)),
+            Text(
+              '2FA Activated!',
+              style: AppTextStyles.heading1.copyWith(
+                fontSize: 24,
+                color: KausapColors.textPrimary(context),
+              ),
+            ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Two-Factor Authentication is now active on your account. You\'ll need your authenticator app each time you log in.',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.6),
+              style: TextStyle(
+                fontSize: 14,
+                color: KausapColors.textMuted(context),
+                height: 1.6,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
@@ -462,6 +532,7 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
   }
 
   Widget _buildInfoRow(IconData icon, String text) {
+    final accent = KausapColors.accent(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -469,16 +540,23 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen>
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: AppColors.primary.withAlpha(15),
+            color: KausapColors.accentSubtle(context),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 18),
+          child: Icon(icon, color: accent, size: 18),
         ),
         const SizedBox(width: 14),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4)),
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: KausapColors.textMuted(context),
+                height: 1.4,
+              ),
+            ),
           ),
         ),
       ],

@@ -103,13 +103,53 @@ class AppValidators {
     return null;
   }
 
-  // ── URL ───────────────────────────────────────────────────────────────────
-  static String? url(String? value) {
-    if (value == null || value.trim().isEmpty) return null; // optional
-    final uri = Uri.tryParse(value.trim());
-    if (uri == null || !uri.hasScheme) {
-      return 'Enter a valid URL (e.g. https://example.com).';
+  // ── Birthday & Age ────────────────────────────────────────────────────────
+  static String? birthday(String? value, {int minAge = 18}) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Birthday is required.';
     }
+    final trimmed = value.trim();
+    DateTime? parsed;
+
+    // Handle mm/dd/yyyy format
+    final slashParts = trimmed.split('/');
+    if (slashParts.length == 3) {
+      final m = int.tryParse(slashParts[0]);
+      final d = int.tryParse(slashParts[1]);
+      final y = int.tryParse(slashParts[2]);
+      if (m != null && d != null && y != null) {
+        parsed = DateTime(y, m, d);
+      }
+    }
+
+    // Handle yyyy-mm-dd format
+    if (parsed == null) {
+      final dashParts = trimmed.split('-');
+      if (dashParts.length == 3) {
+        final y = int.tryParse(dashParts[0]);
+        final m = int.tryParse(dashParts[1]);
+        final d = int.tryParse(dashParts[2]);
+        if (y != null && m != null && d != null) {
+          parsed = DateTime(y, m, d);
+        }
+      }
+    }
+
+    if (parsed == null) {
+      return 'Enter a valid date.';
+    }
+
+    final now = DateTime.now();
+    int age = now.year - parsed.year;
+    if (now.month < parsed.month || (now.month == parsed.month && now.day < parsed.day)) {
+      age--;
+    }
+
+    if (age < minAge) {
+      return 'You must be at least $minAge years old to use Kausap AI.';
+    }
+
     return null;
   }
 }
+

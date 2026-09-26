@@ -126,19 +126,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(
+        backgroundColor: KausapColors.cardBg(context),
+        title: Text(
           'Log Out',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            color: KausapColors.textPrimary(context),
+          ),
         ),
-        content: const Text(
+        content: Text(
           'Are you sure you want to log out? Your journal entries, mood logs, and clinical assessments remain safe and encrypted.',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF475569)),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 13,
+            color: KausapColors.textSecondary(context),
+            height: 1.5,
+          ),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: KausapColors.textMuted(context),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -177,8 +193,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final role = user?['role'] ?? 'Student';
     final avatarUrl = user?['avatar_url'] ?? '';
 
+    final isDark = KausapColors.isDark(context);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
         title: Text(
           'Profile',
@@ -327,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.gavel_rounded,
                     iconColor: const Color(0xFF64748B),
                     title: 'Terms & Legal Policies',
-                    subtitle: 'Student privacy & campus ethical policies',
+                    subtitle: 'Student privacy & 18+ university policies',
                     onTap: () {
                       HapticService.lightTap();
                       Navigator.push(context, slideRoute(const PrivacyScreen()));
@@ -345,12 +363,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     margin: const EdgeInsets.only(bottom: 6),
                     decoration: BoxDecoration(
-                      color: KausapColors.isDark(context)
+                      color: isDark
                           ? const Color(0xFF2D1515)
                           : const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: KausapColors.isDark(context)
+                        color: isDark
                             ? const Color(0xFF7F1D1D)
                             : const Color(0xFFFECACA),
                       ),
@@ -377,7 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildDivider(),
                   _buildListItem(
                     icon: Icons.info_outline_rounded,
-                    iconColor: const Color(0xFF475569),
+                    iconColor: const Color(0xFF64748B),
                     title: 'About Kausap AI',
                     subtitle: 'FSUU Campus Wellness Shield • v1.0.0',
                     onTap: () {
@@ -405,7 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                    side: BorderSide(color: const Color(0xFFEF4444).withAlpha(isDark ? 90 : 130)),
                     backgroundColor: KausapColors.cardBg(context),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -431,6 +449,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final roleLabel = role.toString().toLowerCase() == 'counselor'
         ? 'Guidance Counselor'
         : (role.toString().toLowerCase() == 'admin' ? 'Super Admin' : 'Student');
+
+    final accentColor = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -471,9 +492,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4.5),
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: accentColor,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: KausapColors.cardBg(context), width: 2),
                         ),
                         child: const Icon(
                           Icons.camera_alt_rounded,
@@ -493,20 +514,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     Text(
                       fullName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
                         fontSize: 17,
-                        color: Color(0xFF0F172A),
+                        color: KausapColors.textPrimary(context),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       email,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12.5,
-                        color: Color(0xFF64748B),
+                        color: KausapColors.textMuted(context),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -514,21 +535,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(20),
+                        color: KausapColors.accentSubtle(context),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.school_rounded, size: 12, color: AppColors.primary),
+                          Icon(Icons.school_rounded, size: 12, color: accentColor),
                           const SizedBox(width: 4),
                           Text(
                             '$roleLabel • FSUU',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
+                              color: accentColor,
                             ),
                           ),
                         ],
@@ -540,7 +561,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          Divider(height: 1, color: KausapColors.border(context)),
           const SizedBox(height: 14),
 
           // ── Quick Stats Row ──────────────────────────────────────────────
@@ -558,7 +579,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   });
                 },
               ),
-              Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+              Container(width: 1, height: 28, color: KausapColors.border(context)),
               _buildQuickStatItem(
                 emoji: '🌿',
                 value: '$_totalMoodLogs',
@@ -570,7 +591,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   });
                 },
               ),
-              Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+              Container(width: 1, height: 28, color: KausapColors.border(context)),
               _buildQuickStatItem(
                 emoji: '📋',
                 value: '$_screenersCount',
@@ -600,19 +621,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }
                 });
               },
-              icon: const Icon(Icons.edit_note_rounded, size: 17, color: AppColors.primary),
-              label: const Text(
+              icon: Icon(Icons.edit_note_rounded, size: 17, color: accentColor),
+              label: Text(
                 'Edit Profile Details',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+                  color: accentColor,
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.primary.withAlpha(90)),
-                backgroundColor: AppColors.primary.withAlpha(10),
+                side: BorderSide(color: accentColor.withAlpha(isDark ? 90 : 120)),
+                backgroundColor: KausapColors.accentSubtle(context),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
@@ -669,6 +690,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── Section Container ──────────────────────────────────────────────────────
   Widget _buildSectionContainer({required String title, required List<Widget> children}) {
+    final isDark = KausapColors.isDark(context);
+
     return Container(
       decoration: BoxDecoration(
         color: KausapColors.cardBg(context),
@@ -676,7 +699,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(KausapColors.isDark(context) ? 20 : 6),
+            color: Colors.black.withAlpha(isDark ? 20 : 6),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -713,6 +736,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? subtitle,
     required VoidCallback onTap,
   }) {
+    final isDark = KausapColors.isDark(context);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -724,7 +749,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: iconColor.withAlpha(25),
+                color: iconColor.withAlpha(isDark ? 35 : 25),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, size: 20, color: iconColor),

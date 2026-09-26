@@ -148,64 +148,108 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         'title': 'Self-Discovery',
         'description': 'Completed a clinical self-assessment.',
         'icon': Icons.psychology_rounded,
-        'color': const Color(0xFF6366F1),
+        'color': Colors.indigo,
         'current': _assessmentCount.clamp(0, 1),
         'target': 1,
         'unlocked': _assessmentCount >= 1,
-        'tip': 'Take a PHQ-9 or GAD-7 screener in Assessment History.',
+        'tip': 'Take a PHQ-9 or GAD-7 screener to unlock.',
       },
       {
         'id': '6',
-        'title': 'Wellness Champion',
-        'description': 'Completed 5 check-ins and 2 mindfulness exercises.',
-        'icon': Icons.emoji_events_rounded,
-        'color': const Color(0xFF10B981),
-        'current': (_totalCheckins >= 5 && _mindfulnessCount >= 2) ? 1 : 0,
-        'target': 1,
-        'unlocked': _totalCheckins >= 5 && _mindfulnessCount >= 2,
-        'tip': 'Regularly balance daily check-ins and mindfulness practice.',
+        'title': '14-Day Champion',
+        'description': 'Maintained a 14-day check-in streak.',
+        'icon': Icons.military_tech_rounded,
+        'color': Colors.purple,
+        'current': _streak.clamp(0, 14),
+        'target': 14,
+        'unlocked': _streak >= 14,
+        'tip': 'Consistency builds lasting emotional resilience.',
+      },
+      {
+        'id': '7',
+        'title': 'Zen Master',
+        'description': 'Completed 10 mindfulness activities.',
+        'icon': Icons.spa_rounded,
+        'color': Colors.lightGreen,
+        'current': _mindfulnessCount.clamp(0, 10),
+        'target': 10,
+        'unlocked': _mindfulnessCount >= 10,
+        'tip': 'Explore breathing and grounding techniques.',
+      },
+      {
+        'id': '8',
+        'title': 'Wellness Devotee',
+        'description': 'Logged 30 total daily check-ins.',
+        'icon': Icons.diamond_rounded,
+        'color': Colors.cyan,
+        'current': _totalCheckins.clamp(0, 30),
+        'target': 30,
+        'unlocked': _totalCheckins >= 30,
+        'tip': 'Every check-in deepens your self-awareness.',
       },
     ];
   }
 
   void _showBadgeDetail(Map<String, dynamic> badge) {
     final bool isUnlocked = badge['unlocked'] as bool;
+    final color = badge['color'] as Color;
+    final current = badge['current'] as int;
+    final target = badge['target'] as int;
+
     if (isUnlocked) {
       showDialog(
         context: context,
-        builder: (_) => BadgeUnlockedDialog(
+        builder: (ctx) => BadgeUnlockedDialog(
           title: badge['title'] as String,
           description: badge['description'] as String,
           icon: badge['icon'] as IconData,
-          color: badge['color'] as Color,
+          color: color,
         ),
       );
     } else {
-      final current = badge['current'] as int;
-      final target = badge['target'] as int;
-      final color = badge['color'] as Color;
-
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
+          backgroundColor: KausapColors.cardBg(context),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
-              Icon(Icons.lock_rounded, color: AppColors.textSecondary, size: 22),
-              const SizedBox(width: 8),
-              Text(badge['title'] as String, style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(30),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(badge['icon'] as IconData, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  badge['title'] as String,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: KausapColors.textPrimary(context),
+                  ),
+                ),
+              ),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(badge['description'] as String, style: AppTextStyles.body.copyWith(fontSize: 13)),
+              Text(
+                badge['description'] as String,
+                style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textSecondary(context)),
+              ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Progress', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
+                  Text('Progress', style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: KausapColors.textMuted(context))),
                   Text('$current / $target', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, color: color)),
                 ],
               ),
@@ -215,7 +259,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                 child: LinearProgressIndicator(
                   value: target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0,
                   minHeight: 6,
-                  backgroundColor: const Color(0xFFE5E7EB),
+                  backgroundColor: KausapColors.border(context),
                   valueColor: AlwaysStoppedAnimation<Color>(color),
                 ),
               ),
@@ -223,9 +267,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
+                  color: KausapColors.subtleBg(context),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0x1AC0C9C2)),
+                  border: Border.all(color: KausapColors.border(context)),
                 ),
                 child: Row(
                   children: [
@@ -233,7 +277,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                     Expanded(
                       child: Text(
                         badge['tip'] as String,
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF4B5563)),
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context)),
                       ),
                     ),
                   ],
@@ -244,7 +288,14 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Got it'),
+              child: Text(
+                'Got it',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  color: KausapColors.accent(context),
+                ),
+              ),
             ),
           ],
         ),
@@ -258,8 +309,12 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final unlockedCount = badges.where((b) => b['unlocked'] as bool).length;
     final totalCount = badges.length;
 
+    final accentColor = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
+    final heroGradient = KausapColors.mascotGradient(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -274,20 +329,29 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         shape: BoxShape.circle,
+                        border: Border.all(color: KausapColors.border(context)),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withAlpha(isDark ? 30 : 10), blurRadius: 6, offset: const Offset(0, 2)),
                         ],
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF191C21)),
+                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: KausapColors.textPrimary(context)),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text('Achievements & Badges', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+                  Text(
+                    'Achievements & Badges',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: KausapColors.textPrimary(context),
+                    ),
+                  ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+                    icon: Icon(Icons.refresh_rounded, color: accentColor),
                     onPressed: () {
                       setState(() => _isLoading = true);
                       _loadUserProgress();
@@ -299,7 +363,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator(color: accentColor))
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                       children: [
@@ -307,16 +371,16 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0077B6), Color(0xFF0096C7)],
+                            gradient: LinearGradient(
+                              colors: heroGradient,
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF0077B6).withValues(alpha: 0.25),
-                                blurRadius: 12,
+                                color: accentColor.withAlpha(isDark ? 40 : 60),
+                                blurRadius: 14,
                                 offset: const Offset(0, 4),
                               ),
                             ],
@@ -327,7 +391,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                 width: 56,
                                 height: 56,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
+                                  color: Colors.white.withAlpha(40),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Center(
@@ -356,7 +420,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                       style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontSize: 12,
-                                        color: Colors.white.withValues(alpha: 0.9),
+                                        color: Colors.white.withAlpha(220),
                                       ),
                                     ),
                                   ],
@@ -392,16 +456,16 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: isUnlocked ? Colors.white : const Color(0xFFF9FAFB),
+                                  color: isUnlocked ? KausapColors.cardBg(context) : KausapColors.subtleBg(context),
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
-                                    color: isUnlocked ? color.withAlpha(80) : const Color(0x1AC0C9C2),
+                                    color: isUnlocked ? color.withAlpha(isDark ? 100 : 80) : KausapColors.border(context),
                                     width: isUnlocked ? 1.5 : 1,
                                   ),
                                   boxShadow: isUnlocked
                                       ? [
                                           BoxShadow(
-                                            color: color.withAlpha(25),
+                                            color: color.withAlpha(isDark ? 30 : 25),
                                             blurRadius: 8,
                                             offset: const Offset(0, 3),
                                           ),
@@ -415,12 +479,12 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                       width: 52,
                                       height: 52,
                                       decoration: BoxDecoration(
-                                        color: isUnlocked ? color.withAlpha(35) : const Color(0xFFE5E7EB),
+                                        color: isUnlocked ? color.withAlpha(isDark ? 45 : 35) : KausapColors.border(context),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
                                         isUnlocked ? (badge['icon'] as IconData) : Icons.lock_rounded,
-                                        color: isUnlocked ? color : const Color(0xFF9CA3AF),
+                                        color: isUnlocked ? color : KausapColors.textHint(context),
                                         size: 26,
                                       ),
                                     ),
@@ -432,17 +496,17 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w700,
                                         fontSize: 13,
-                                        color: isUnlocked ? const Color(0xFF1F2937) : const Color(0xFF9CA3AF),
+                                        color: isUnlocked ? KausapColors.textPrimary(context) : KausapColors.textHint(context),
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       badge['description'] as String,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontSize: 10.5,
-                                        color: AppColors.textSecondary,
+                                        color: KausapColors.textMuted(context),
                                         height: 1.3,
                                       ),
                                       maxLines: 2,
@@ -455,25 +519,25 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                         child: LinearProgressIndicator(
                                           value: progress,
                                           minHeight: 4,
-                                          backgroundColor: const Color(0xFFE5E7EB),
+                                          backgroundColor: KausapColors.border(context),
                                           valueColor: AlwaysStoppedAnimation<Color>(color),
                                         ),
                                       ),
                                       const SizedBox(height: 3),
                                       Text(
                                         '$current/$target',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'Inter',
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.w600,
-                                          color: AppColors.textSecondary,
+                                          color: KausapColors.textMuted(context),
                                         ),
                                       ),
                                     ] else
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: color.withAlpha(25),
+                                          color: color.withAlpha(isDark ? 40 : 25),
                                           borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Text(

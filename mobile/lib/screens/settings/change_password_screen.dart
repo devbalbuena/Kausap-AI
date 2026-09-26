@@ -140,21 +140,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = KausapColors.accent(context);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
+          icon: Icon(Icons.arrow_back_ios_rounded, size: 20, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
-          color: Theme.of(context).colorScheme.onSurface,
         ),
         title: Text(
           'Change Password',
-          style: AppTextStyles.heading2.copyWith(
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -170,18 +173,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withAlpha(15),
+                  color: accent.withAlpha(20),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.primary.withAlpha(40)),
+                  border: Border.all(color: accent.withAlpha(45)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
+                    Icon(Icons.info_outline_rounded, color: accent, size: 20),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Choose a strong password with uppercase letters, numbers, and symbols.',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: KausapColors.textMuted(context), fontFamily: 'Inter'),
                       ),
                     ),
                   ],
@@ -195,9 +198,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 const SizedBox(height: 16),
               ],
 
-              _buildLabel('Current Password'),
+              _buildLabel(context, 'Current Password'),
               const SizedBox(height: 8),
               _buildTextField(
+                context: context,
                 controller: _currentPasswordCtrl,
                 hint: 'Enter current password',
                 isVisible: _currentVisible,
@@ -205,9 +209,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 20),
 
-              _buildLabel('New Password'),
+              _buildLabel(context, 'New Password'),
               const SizedBox(height: 8),
               _buildTextField(
+                context: context,
                 controller: _newPasswordCtrl,
                 hint: 'Enter new password',
                 isVisible: _newVisible,
@@ -228,7 +233,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                               height: 6,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
-                                color: i < _strengthScore ? _strengthColor : const Color(0xFFE2E8F0),
+                                color: i < _strengthScore ? _strengthColor : KausapColors.border(context),
                               ),
                             ),
                           );
@@ -251,16 +256,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                _buildRequirementRow('At least 8 characters', _newPasswordCtrl.text.length >= 8),
-                _buildRequirementRow('Contains uppercase letter', _newPasswordCtrl.text.contains(RegExp(r'[A-Z]'))),
-                _buildRequirementRow('Contains number', _newPasswordCtrl.text.contains(RegExp(r'[0-9]'))),
-                _buildRequirementRow('Contains special character', _newPasswordCtrl.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'))),
+                _buildRequirementRow(context, 'At least 8 characters', _newPasswordCtrl.text.length >= 8),
+                _buildRequirementRow(context, 'Contains uppercase letter', _newPasswordCtrl.text.contains(RegExp(r'[A-Z]'))),
+                _buildRequirementRow(context, 'Contains number', _newPasswordCtrl.text.contains(RegExp(r'[0-9]'))),
+                _buildRequirementRow(context, 'Contains special character', _newPasswordCtrl.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'))),
                 const SizedBox(height: 12),
               ],
 
-              _buildLabel('Confirm New Password'),
+              _buildLabel(context, 'Confirm New Password'),
               const SizedBox(height: 8),
               _buildTextField(
+                context: context,
                 controller: _confirmPasswordCtrl,
                 hint: 'Re-enter new password',
                 isVisible: _confirmVisible,
@@ -275,7 +281,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _strengthScore >= 3 ? AppColors.primary : AppColors.primary.withAlpha(150),
+                    backgroundColor: _strengthScore >= 3 ? accent : accent.withAlpha(150),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
@@ -303,52 +309,54 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  Widget _buildLabel(String label) {
+  Widget _buildLabel(BuildContext context, String label) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'Poppins',
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
+        color: KausapColors.textPrimary(context),
       ),
     );
   }
 
   Widget _buildTextField({
+    required BuildContext context,
     required TextEditingController controller,
     required String hint,
     required bool isVisible,
     required VoidCallback onToggle,
   }) {
+    final accent = KausapColors.accent(context);
     return TextField(
       controller: controller,
       obscureText: !isVisible,
-      style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+      style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: KausapColors.textPrimary(context)),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        hintStyle: TextStyle(color: KausapColors.textMuted(context), fontSize: 14),
         suffixIcon: IconButton(
           icon: Icon(isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-              size: 20, color: AppColors.textSecondary),
+              size: 20, color: KausapColors.textMuted(context)),
           onPressed: onToggle,
         ),
         filled: true,
-        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(80),
-        border: OutlineInputBorder(
+        fillColor: KausapColors.cardBg(context),
+        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: KausapColors.border(context)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(color: accent, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
 
-  Widget _buildRequirementRow(String text, bool met) {
+  Widget _buildRequirementRow(BuildContext context, String text, bool met) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -356,14 +364,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           Icon(
             met ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
             size: 14,
-            color: met ? const Color(0xFF22C55E) : AppColors.textSecondary,
+            color: met ? const Color(0xFF22C55E) : KausapColors.textMuted(context),
           ),
           const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
               fontSize: 11,
-              color: met ? const Color(0xFF22C55E) : AppColors.textSecondary,
+              fontFamily: 'Inter',
+              color: met ? const Color(0xFF22C55E) : KausapColors.textMuted(context),
             ),
           ),
         ],
@@ -371,3 +380,4 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 }
+

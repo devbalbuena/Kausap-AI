@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
 
 class AppearanceSettingsScreen extends StatelessWidget {
@@ -47,12 +48,12 @@ class AppearanceSettingsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -61,7 +62,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -73,20 +74,20 @@ class AppearanceSettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             children: [
               // ── 1. Live Interactive Preview Card ───────────────────────────
-              _buildLivePreviewCard(currentAccent, isDark),
+              _buildLivePreviewCard(context, currentAccent, isDark),
               const SizedBox(height: 24),
 
               // ── 2. Theme Mode Selection ────────────────────────────────────
-              _sectionLabel('THEME MODE', isDark),
+              _sectionLabel(context, 'THEME MODE'),
               const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: _buildThemeModeCard(
+                      context: context,
                       icon: Icons.light_mode_rounded,
                       label: 'Light',
                       isSelected: currentThemeMode == ThemeMode.light,
-                      isDarkScreen: isDark,
                       accentColor: currentAccent,
                       onTap: () {
                         HapticService.mediumTap();
@@ -97,10 +98,10 @@ class AppearanceSettingsScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _buildThemeModeCard(
+                      context: context,
                       icon: Icons.dark_mode_rounded,
                       label: 'Dark',
                       isSelected: currentThemeMode == ThemeMode.dark,
-                      isDarkScreen: isDark,
                       accentColor: currentAccent,
                       onTap: () {
                         HapticService.mediumTap();
@@ -111,10 +112,10 @@ class AppearanceSettingsScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _buildThemeModeCard(
+                      context: context,
                       icon: Icons.smartphone_rounded,
                       label: 'System',
                       isSelected: currentThemeMode == ThemeMode.system,
-                      isDarkScreen: isDark,
                       accentColor: currentAccent,
                       onTap: () {
                         HapticService.mediumTap();
@@ -127,14 +128,14 @@ class AppearanceSettingsScreen extends StatelessWidget {
               const SizedBox(height: 28),
 
               // ── 3. Therapeutic Wellness Color Palettes ─────────────────────
-              _sectionLabel('WELLNESS ACCENT PALETTES', isDark),
+              _sectionLabel(context, 'WELLNESS ACCENT PALETTES'),
               const SizedBox(height: 4),
               Text(
                 'Personalize the primary highlight color of buttons, mood rings, and icons.',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  color: KausapColors.textMuted(context),
                 ),
               ),
               const SizedBox(height: 12),
@@ -156,15 +157,15 @@ class AppearanceSettingsScreen extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        color: KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isSelected ? color : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                          color: isSelected ? color : KausapColors.border(context),
                           width: isSelected ? 2 : 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: isSelected ? color.withAlpha(25) : const Color(0x04000000),
+                            color: isSelected ? color.withAlpha(25) : Colors.black.withAlpha(isDark ? 0 : 8),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -201,7 +202,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                                     fontFamily: 'Poppins',
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                                     fontSize: 14,
-                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    color: KausapColors.textPrimary(context),
                                   ),
                                 ),
                                 Text(
@@ -209,7 +210,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 11.5,
-                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                    color: KausapColors.textMuted(context),
                                   ),
                                 ),
                               ],
@@ -219,7 +220,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: color.withAlpha(20),
+                                color: color.withAlpha(30),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -245,14 +246,14 @@ class AppearanceSettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLivePreviewCard(Color accentColor, bool isDark) {
+  Widget _buildLivePreviewCard(BuildContext context, Color accentColor, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 12, offset: Offset(0, 4))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 10 : 8), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +276,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  color: KausapColors.textPrimary(context),
                 ),
               ),
             ],
@@ -286,9 +287,9 @@ class AppearanceSettingsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+              color: KausapColors.subtleBg(context),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              border: Border.all(color: KausapColors.border(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,13 +303,13 @@ class AppearanceSettingsScreen extends StatelessWidget {
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w600,
                         fontSize: 12.5,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        color: KausapColors.textPrimary(context),
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: accentColor.withAlpha(20),
+                        color: accentColor.withAlpha(25),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -350,13 +351,14 @@ class AppearanceSettingsScreen extends StatelessWidget {
   }
 
   Widget _buildThemeModeCard({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required bool isSelected,
-    required bool isDarkScreen,
     required Color accentColor,
     required VoidCallback onTap,
   }) {
+    final isDark = KausapColors.isDark(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -364,11 +366,11 @@ class AppearanceSettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: isSelected
-              ? accentColor.withAlpha(isDarkScreen ? 40 : 15)
-              : (isDarkScreen ? const Color(0xFF1E293B) : Colors.white),
+              ? accentColor.withAlpha(isDark ? 40 : 18)
+              : KausapColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? accentColor : (isDarkScreen ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            color: isSelected ? accentColor : KausapColors.border(context),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -377,7 +379,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
             Icon(
               icon,
               size: 24,
-              color: isSelected ? accentColor : (isDarkScreen ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+              color: isSelected ? accentColor : KausapColors.textMuted(context),
             ),
             const SizedBox(height: 8),
             Text(
@@ -386,7 +388,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                 fontFamily: 'Poppins',
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 fontSize: 13,
-                color: isSelected ? accentColor : (isDarkScreen ? Colors.white : const Color(0xFF0F172A)),
+                color: isSelected ? accentColor : KausapColors.textPrimary(context),
               ),
             ),
           ],
@@ -395,7 +397,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionLabel(String label, bool isDark) {
+  Widget _sectionLabel(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
@@ -405,9 +407,10 @@ class AppearanceSettingsScreen extends StatelessWidget {
           fontWeight: FontWeight.w700,
           fontSize: 11,
           letterSpacing: 0.7,
-          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+          color: KausapColors.textMuted(context),
         ),
       ),
     );
   }
 }
+

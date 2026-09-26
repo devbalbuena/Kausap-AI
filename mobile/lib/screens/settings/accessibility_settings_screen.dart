@@ -17,22 +17,25 @@ class AccessibilitySettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = KausapColors.isDark(context);
+    final accent = KausapColors.accent(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Accessibility & Comfort',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -55,21 +58,21 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
+                      color: isDark ? const Color(0xFF14532D).withAlpha(40) : const Color(0xFFF0FDF4),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                      border: Border.all(color: isDark ? const Color(0xFF15803D).withAlpha(80) : const Color(0xFFBBF7D0)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.accessibility_new_rounded, color: Color(0xFF16A34A), size: 26),
-                        SizedBox(width: 12),
+                        const Icon(Icons.accessibility_new_rounded, color: Color(0xFF16A34A), size: 26),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'Personalize your sensory, reading, and visual comfort settings for a calming experience.',
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 12.5,
-                              color: Color(0xFF166534),
+                              color: isDark ? const Color(0xFF86EFAC) : const Color(0xFF166534),
                               height: 1.4,
                             ),
                           ),
@@ -80,15 +83,15 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // ── 1. Visual & Reading Comfort ────────────────────────────
-                  _sectionLabel('VISUAL & READING COMFORT'),
+                  _sectionLabel(context, 'VISUAL & READING COMFORT'),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: KausapColors.cardBg(context),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+                      border: Border.all(color: KausapColors.border(context)),
+                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,9 +101,9 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
+                            color: KausapColors.subtleBg(context),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            border: Border.all(color: KausapColors.border(context)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,7 +114,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                                   fontFamily: 'Poppins',
                                   fontSize: 15 * scale,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF0F172A),
+                                  color: KausapColors.textPrimary(context),
                                   letterSpacing: dyslexia ? 1.0 : 0.0,
                                 ),
                               ),
@@ -121,7 +124,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 12.5 * scale,
-                                  color: const Color(0xFF475569),
+                                  color: KausapColors.textMuted(context),
                                   height: dyslexia ? 1.8 : 1.4,
                                   letterSpacing: dyslexia ? 0.6 : 0.0,
                                 ),
@@ -134,22 +137,22 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                         // Slider Row
                         Row(
                           children: [
-                            const Text('A', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                            Text('A', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: KausapColors.textMuted(context), fontWeight: FontWeight.w600)),
                             Expanded(
                               child: Slider(
                                 value: scale,
                                 min: 0.8,
                                 max: 1.6,
                                 divisions: 8,
-                                activeColor: AppColors.primary,
-                                inactiveColor: const Color(0xFFE2E8F0),
+                                activeColor: accent,
+                                inactiveColor: KausapColors.border(context),
                                 onChanged: (val) {
                                   HapticService.selectionChanged();
                                   themeProvider.setTextScaleFactor(val);
                                 },
                               ),
                             ),
-                            const Text('A', style: TextStyle(fontFamily: 'Poppins', fontSize: 20, color: Color(0xFF0F172A), fontWeight: FontWeight.w700)),
+                            Text('A', style: TextStyle(fontFamily: 'Poppins', fontSize: 20, color: KausapColors.textPrimary(context), fontWeight: FontWeight.w700)),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -160,16 +163,16 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withAlpha(15),
+                                color: accent.withAlpha(25),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 _scaleLabel(scale),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,
-                                  color: AppColors.primary,
+                                  color: accent,
                                 ),
                               ),
                             ),
@@ -178,8 +181,8 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                                 HapticService.mediumTap();
                                 themeProvider.setTextScaleFactor(1.0);
                               },
-                              icon: const Icon(Icons.refresh_rounded, size: 16),
-                              label: const Text('Reset', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+                              icon: Icon(Icons.refresh_rounded, size: 16, color: accent),
+                              label: Text('Reset', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: accent)),
                             ),
                           ],
                         ),
@@ -190,8 +193,9 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Display toggles card
-                  _card([
+                  _card(context, [
                     _buildToggleRow(
+                      context: context,
                       icon: Icons.contrast_rounded,
                       iconColor: const Color(0xFF0F172A),
                       label: 'High Contrast Mode',
@@ -202,8 +206,9 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                         themeProvider.setHighContrast(v);
                       },
                     ),
-                    _divider(),
+                    _divider(context),
                     _buildToggleRow(
+                      context: context,
                       icon: Icons.format_line_spacing_rounded,
                       iconColor: const Color(0xFF0284C7),
                       label: 'Enhanced Reading Spacing',
@@ -219,10 +224,11 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // ── 2. Sensory & Calming Motion ───────────────────────────
-                  _sectionLabel('SENSORY & CALMING MOTION'),
+                  _sectionLabel(context, 'SENSORY & CALMING MOTION'),
                   const SizedBox(height: 8),
-                  _card([
+                  _card(context, [
                     _buildToggleRow(
+                      context: context,
                       icon: Icons.animation_rounded,
                       iconColor: const Color(0xFF7C3AED),
                       label: 'Reduce Motion',
@@ -238,10 +244,11 @@ class AccessibilitySettingsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // ── 3. Tactile & Haptics ──────────────────────────────────
-                  _sectionLabel('TACTILE & HAPTICS'),
+                  _sectionLabel(context, 'TACTILE & HAPTICS'),
                   const SizedBox(height: 8),
-                  _card([
+                  _card(context, [
                     _buildToggleRow(
+                      context: context,
                       icon: Icons.vibration_rounded,
                       iconColor: const Color(0xFFEA580C),
                       label: 'Haptic Feedback',
@@ -262,35 +269,37 @@ class AccessibilitySettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w700,
           fontSize: 11,
           letterSpacing: 0.7,
-          color: Color(0xFF64748B),
+          color: KausapColors.textMuted(context),
         ),
       ),
     );
   }
 
-  Widget _card(List<Widget> children) {
+  Widget _card(BuildContext context, List<Widget> children) {
+    final isDark = KausapColors.isDark(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(children: children),
     );
   }
 
   Widget _buildToggleRow({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String label,
@@ -305,7 +314,7 @@ class AccessibilitySettingsScreen extends StatelessWidget {
           Container(
             width: 38,
             height: 38,
-            decoration: BoxDecoration(color: iconColor.withAlpha(20), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: iconColor.withAlpha(25), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 12),
@@ -313,14 +322,15 @@ class AccessibilitySettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: Color(0xFF0F172A))),
-                Text(subtitle, style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B))),
+                Text(label, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+                Text(subtitle, style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
               ],
             ),
           ),
           Switch.adaptive(
             value: value == true,
-            activeTrackColor: AppColors.primaryLight,
+            activeTrackColor: KausapColors.accentLight(context),
+            activeThumbColor: KausapColors.accent(context),
             onChanged: onChanged,
           ),
         ],
@@ -328,7 +338,8 @@ class AccessibilitySettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _divider() {
-    return const Divider(height: 1, indent: 64, color: Color(0x12000000));
+  Widget _divider(BuildContext context) {
+    return Divider(height: 1, indent: 64, color: KausapColors.border(context));
   }
 }
+

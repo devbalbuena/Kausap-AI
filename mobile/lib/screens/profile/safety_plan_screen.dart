@@ -85,25 +85,39 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
 
   void _showAddWarningSignDialog() {
     final controller = TextEditingController();
+    final accentColor = KausapColors.accent(context);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Warning Sign', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+        backgroundColor: KausapColors.cardBg(context),
+        title: Text(
+          'Add Warning Sign',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: KausapColors.textPrimary(context),
+          ),
+        ),
         content: TextField(
           controller: controller,
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textPrimary(context)),
           decoration: InputDecoration(
             hintText: 'e.g., Withdrawing from group chats',
-            hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 13),
+            hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textHint(context)),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+            fillColor: KausapColors.inputFill(context),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accentColor, width: 1.5)),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(context))),
           ),
           ElevatedButton(
             onPressed: () {
@@ -116,7 +130,7 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: accentColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -129,25 +143,39 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
 
   void _showAddCopingStrategyDialog() {
     final controller = TextEditingController();
+    final accentColor = KausapColors.accent(context);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Coping Strategy', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+        backgroundColor: KausapColors.cardBg(context),
+        title: Text(
+          'Add Coping Strategy',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: KausapColors.textPrimary(context),
+          ),
+        ),
         content: TextField(
           controller: controller,
+          style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textPrimary(context)),
           decoration: InputDecoration(
             hintText: 'e.g., Taking a 10-minute walk around campus',
-            hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 13),
+            hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textHint(context)),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+            fillColor: KausapColors.inputFill(context),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accentColor, width: 1.5)),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(context))),
           ),
           ElevatedButton(
             onPressed: () {
@@ -160,7 +188,7 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: accentColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -175,45 +203,70 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
     final nameCtrl = TextEditingController();
     final roleCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
+    final accentColor = KausapColors.accent(context);
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Trusted Contact', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+        backgroundColor: KausapColors.cardBg(context),
+        title: Text(
+          'Add Trusted Contact',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: KausapColors.textPrimary(context),
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameCtrl,
+              style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textPrimary(context)),
               decoration: InputDecoration(
                 labelText: 'Contact Name',
+                labelStyle: TextStyle(color: KausapColors.textMuted(context)),
                 hintText: 'e.g., Mama / Guidance Counselor',
+                hintStyle: TextStyle(color: KausapColors.textHint(context)),
                 filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                fillColor: KausapColors.inputFill(context),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accentColor, width: 1.5)),
               ),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: roleCtrl,
+              style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textPrimary(context)),
               decoration: InputDecoration(
                 labelText: 'Relationship / Role',
+                labelStyle: TextStyle(color: KausapColors.textMuted(context)),
                 hintText: 'e.g., Sister, Best Friend',
+                hintStyle: TextStyle(color: KausapColors.textHint(context)),
                 filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                fillColor: KausapColors.inputFill(context),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accentColor, width: 1.5)),
               ),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: phoneCtrl,
               keyboardType: TextInputType.phone,
+              style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textPrimary(context)),
               decoration: InputDecoration(
                 labelText: 'Phone Number / Social',
+                labelStyle: TextStyle(color: KausapColors.textMuted(context)),
                 hintText: 'e.g., 0917-123-4567',
+                hintStyle: TextStyle(color: KausapColors.textHint(context)),
                 filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                fillColor: KausapColors.inputFill(context),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: KausapColors.border(context))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: accentColor, width: 1.5)),
               ),
             ),
           ],
@@ -221,7 +274,7 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(context))),
           ),
           ElevatedButton(
             onPressed: () {
@@ -238,7 +291,7 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: accentColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -251,28 +304,31 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Safety Plan & Support',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 17,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: accentColor))
           : Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 440),
@@ -285,28 +341,28 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.primary.withAlpha(20),
-                            const Color(0xFF0284C7).withAlpha(12),
+                            accentColor.withAlpha(isDark ? 35 : 20),
+                            const Color(0xFF0284C7).withAlpha(isDark ? 25 : 12),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.primary.withAlpha(40)),
+                        border: Border.all(color: accentColor.withAlpha(isDark ? 60 : 40)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             width: 44,
                             height: 44,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
+                            decoration: BoxDecoration(
+                              color: KausapColors.cardBg(context),
                               shape: BoxShape.circle,
                             ),
                             child: const Center(child: Text('🛡️', style: TextStyle(fontSize: 22))),
                           ),
                           const SizedBox(width: 14),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -316,16 +372,16 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w700,
                                     fontSize: 14,
-                                    color: Color(0xFF0F172A),
+                                    color: KausapColors.textPrimary(context),
                                   ),
                                 ),
-                                SizedBox(height: 2),
+                                const SizedBox(height: 2),
                                 Text(
                                   'Your confidential grounding roadmap and trusted contacts to help you during difficult times.',
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 11.5,
-                                    color: Color(0xFF475569),
+                                    color: KausapColors.textMuted(context),
                                     height: 1.35,
                                   ),
                                 ),
@@ -387,9 +443,9 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: KausapColors.subtleBg(context),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            border: Border.all(color: KausapColors.border(context)),
                           ),
                           child: Row(
                             children: [
@@ -397,10 +453,10 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withAlpha(20),
+                                  color: accentColor.withAlpha(isDark ? 40 : 20),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Center(child: Icon(Icons.person_rounded, size: 18, color: AppColors.primary)),
+                                child: Center(child: Icon(Icons.person_rounded, size: 18, color: accentColor)),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -409,26 +465,26 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                                   children: [
                                     Text(
                                       contact['name'] ?? '',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Poppins',
                                         fontWeight: FontWeight.w600,
                                         fontSize: 12.5,
-                                        color: Color(0xFF0F172A),
+                                        color: KausapColors.textPrimary(context),
                                       ),
                                     ),
                                     Text(
                                       '${contact['role']} • ${contact['phone']}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontSize: 11,
-                                        color: Color(0xFF64748B),
+                                        color: KausapColors.textMuted(context),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF94A3B8)),
+                                icon: Icon(Icons.close_rounded, size: 16, color: KausapColors.textHint(context)),
                                 onPressed: () {
                                   setState(() => _trustedContacts.remove(contact));
                                   _saveSafetyPlan();
@@ -445,12 +501,12 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFFECACA)),
+                        border: Border.all(color: const Color(0xFFEF4444).withAlpha(isDark ? 80 : 120)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.red.withAlpha(10),
+                            color: Colors.red.withAlpha(isDark ? 25 : 10),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
@@ -464,7 +520,7 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                               Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF2F2),
+                                  color: isDark ? const Color(0xFF2D1515) : const Color(0xFFFEF2F2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(Icons.health_and_safety_rounded, color: Color(0xFFDC2626), size: 18),
@@ -477,16 +533,16 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13.5,
-                                    color: Color(0xFF991B1B),
+                                    color: Color(0xFFEF4444),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          const Text(
+                          Text(
                             'If you are in distress or need immediate help, professional counselors are available 24/7.',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF475569)),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context)),
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
@@ -530,15 +586,18 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
     required VoidCallback onAdd,
     required List<Widget> children,
   }) {
+    final accentColor = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(6),
+            color: Colors.black.withAlpha(isDark ? 20 : 6),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -552,7 +611,7 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: iconColor.withAlpha(25),
+                  color: iconColor.withAlpha(isDark ? 35 : 25),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: iconColor, size: 18),
@@ -564,26 +623,26 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
                         fontSize: 13.5,
-                        color: Color(0xFF0F172A),
+                        color: KausapColors.textPrimary(context),
                       ),
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11,
-                        color: Color(0xFF64748B),
+                        color: KausapColors.textMuted(context),
                       ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 22),
+                icon: Icon(Icons.add_circle_outline_rounded, color: accentColor, size: 22),
                 onPressed: onAdd,
                 tooltip: 'Add item',
               ),
@@ -593,7 +652,10 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
           if (children.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text('No items added yet. Tap "+" to add.', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Colors.grey.shade400, fontStyle: FontStyle.italic)),
+              child: Text(
+                'No items added yet. Tap "+" to add.',
+                style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textHint(context), fontStyle: FontStyle.italic),
+              ),
             )
           else
             ...children,
@@ -603,34 +665,36 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
   }
 
   Widget _buildRemovableItem({required String text, required VoidCallback onDelete}) {
+    final accentColor = KausapColors.accent(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: KausapColors.subtleBg(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: KausapColors.border(context)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline_rounded, size: 15, color: AppColors.primary),
+          Icon(Icons.check_circle_outline_rounded, size: 15, color: accentColor),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12,
-                color: Color(0xFF334155),
+                color: KausapColors.textSecondary(context),
               ),
             ),
           ),
           InkWell(
             onTap: onDelete,
             borderRadius: BorderRadius.circular(12),
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(Icons.close_rounded, size: 14, color: Color(0xFF94A3B8)),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.close_rounded, size: 14, color: KausapColors.textHint(context)),
             ),
           ),
         ],

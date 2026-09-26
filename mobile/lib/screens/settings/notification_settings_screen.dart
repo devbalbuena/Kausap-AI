@@ -125,6 +125,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       hour: int.tryParse(parts[0]) ?? (isStart ? 22 : 7),
       minute: int.tryParse(parts[1]) ?? 0,
     );
+    final accent = KausapColors.accent(context);
 
     final picked = await showTimePicker(
       context: context,
@@ -132,8 +133,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
+            colorScheme: ColorScheme.light(
+              primary: accent,
               onPrimary: Colors.white,
             ),
           ),
@@ -172,6 +173,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       hour: int.tryParse(parts[0]) ?? 8,
       minute: int.tryParse(parts[1]) ?? 0,
     );
+    final accent = KausapColors.accent(context);
 
     final picked = await showTimePicker(
       context: context,
@@ -179,8 +181,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
+            colorScheme: ColorScheme.light(
+              primary: accent,
               onPrimary: Colors.white,
             ),
           ),
@@ -257,9 +259,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final user = context.watch<AuthProvider>().currentUser;
     final role = (user?['role'] ?? 'client').toString().toLowerCase();
     final bool isAdmin = role == 'admin' || role == 'superadmin';
+    final isDark = KausapColors.isDark(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
@@ -277,17 +280,18 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: KausapColors.cardBg(context),
                             shape: BoxShape.circle,
+                            border: Border.all(color: KausapColors.border(context)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withAlpha(15),
+                                color: Colors.black.withAlpha(isDark ? 0 : 15),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF191C21)),
+                          child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: KausapColors.textPrimary(context)),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -296,12 +300,17 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                         children: [
                           Text(
                             isAdmin ? 'System & Alert Notifications' : 'Notifications',
-                            style: AppTextStyles.heading2.copyWith(fontSize: 17),
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 17,
+                              color: KausapColors.textPrimary(context),
+                            ),
                           ),
                           if (isAdmin)
-                            const Text(
+                            Text(
                               'Master governance & cloud incident alerts',
-                              style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context)),
                             ),
                         ],
                       ),
@@ -317,9 +326,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                           children: [
                             if (isAdmin) ...[
                               // ── 1. CRISIS & DISTRESS ESCALATIONS ───────────
-                              _buildSectionLabel('CRISIS & DISTRESS ESCALATIONS'),
-                              _buildSettingsCard([
+                              _buildSectionLabel(context, 'CRISIS & DISTRESS ESCALATIONS'),
+                              _buildSettingsCard(context, [
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.warning_amber_rounded,
                                   iconColor: const Color(0xFFDC2626),
                                   label: 'Crisis Distress Flags',
@@ -330,8 +340,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     setState(() => _crisisDistressAlerts = v);
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.emergency_rounded,
                                   iconColor: const Color(0xFFE11D48),
                                   label: 'High-Risk Self-Harm Triggers',
@@ -346,9 +357,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                               const SizedBox(height: 20),
 
                               // ── 2. AI & CLOUD TELEMETRY ALERTS ─────────────
-                              _buildSectionLabel('AI & CLOUD TELEMETRY ALERTS'),
-                              _buildSettingsCard([
+                              _buildSectionLabel(context, 'AI & CLOUD TELEMETRY ALERTS'),
+                              _buildSettingsCard(context, [
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.toll_rounded,
                                   iconColor: const Color(0xFF0284C7),
                                   label: 'AI Monthly Budget Alerts',
@@ -359,8 +371,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     setState(() => _aiBudgetCapAlerts = v);
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.cloud_sync_rounded,
                                   iconColor: const Color(0xFF16A34A),
                                   label: 'Neon Cloud Latency & Health',
@@ -375,9 +388,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                               const SizedBox(height: 20),
 
                               // ── 3. WORKFORCE & GOVERNANCE ──────────────────
-                              _buildSectionLabel('WORKFORCE & SECURITY GOVERNANCE'),
-                              _buildSettingsCard([
+                              _buildSectionLabel(context, 'WORKFORCE & SECURITY GOVERNANCE'),
+                              _buildSettingsCard(context, [
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.badge_outlined,
                                   iconColor: const Color(0xFF7C3AED),
                                   label: 'Staff Provisioning & Verification',
@@ -388,8 +402,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     setState(() => _staffProvisionAlerts = v);
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.mark_email_unread_outlined,
                                   iconColor: const Color(0xFFD97706),
                                   label: 'Student Reactivation Appeals',
@@ -404,9 +419,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                               const SizedBox(height: 20),
 
                               // ── 4. AUDIO & HAPTIC PREFERENCES ───────────────
-                              _buildSectionLabel('CONSOLE AUDIO & HAPTIC PREFERENCES'),
-                              _buildSettingsCard([
+                              _buildSectionLabel(context, 'CONSOLE AUDIO & HAPTIC PREFERENCES'),
+                              _buildSettingsCard(context, [
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.volume_up_outlined,
                                   iconColor: const Color(0xFF2563EB),
                                   label: 'Console Entry Audio Chime',
@@ -418,8 +434,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     if (v) AmbientAudioService.playNotificationChimeIfAllowed();
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.vibration_rounded,
                                   iconColor: const Color(0xFF475569),
                                   label: 'Haptic Feedback',
@@ -434,9 +451,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                               const SizedBox(height: 20),
                             ] else ...[
                               // ── Client / Student Permissions & Wellness ─────
-                              _buildSectionLabel('APP PERMISSIONS'),
-                              _buildSettingsCard([
+                              _buildSectionLabel(context, 'APP PERMISSIONS'),
+                              _buildSettingsCard(context, [
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.notifications_outlined,
                                   iconColor: const Color(0xFF6366F1),
                                   label: 'Push Notifications',
@@ -449,8 +467,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     await NotificationService().getUnreadCount();
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.mic_outlined,
                                   iconColor: const Color(0xFF0077B6),
                                   label: 'Microphone Access',
@@ -462,8 +481,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     setState(() => _microphoneAccess = v);
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.photo_library_outlined,
                                   iconColor: const Color(0xFF2E9E6B),
                                   label: 'Photo Library',
@@ -475,8 +495,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     setState(() => _photoLibrary = v);
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.camera_alt_outlined,
                                   iconColor: const Color(0xFFE07B39),
                                   label: 'Camera',
@@ -492,17 +513,19 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                               const SizedBox(height: 24),
 
                               // ─────────────────────────────────────────────────
-                              // 💖 MOOD CHECK-IN SCHEDULE (NEW)
+                              // 💖 MOOD CHECK-IN SCHEDULE
                               // ─────────────────────────────────────────────────
-                              _buildSectionLabel('MOOD CHECK-IN SCHEDULE'),
+                              _buildSectionLabel(context, 'MOOD CHECK-IN SCHEDULE'),
                               _buildInfoBanner(
+                                context: context,
                                 icon: Icons.info_outline_rounded,
                                 text: 'Choose when you want Kausap AI to gently remind you to log your mood. You can enable multiple check-ins throughout the day.',
                               ),
                               const SizedBox(height: 10),
-                              _buildSettingsCard([
+                              _buildSettingsCard(context, [
                                 // Morning Slot
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.wb_sunny_outlined,
                                   iconColor: const Color(0xFFF59E0B),
                                   label: 'Morning Check-in',
@@ -515,18 +538,20 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   },
                                 ),
                                 if (_morningCheckin) ...[
-                                  _buildDivider(),
+                                  _buildDivider(context),
                                   _buildSlotTimePickerRow(
+                                    context: context,
                                     emoji: '🌅',
                                     label: 'Morning Time',
                                     timeStr: _morningCheckinTime,
                                     onTap: () => _selectSlotTime(context, 'morning'),
                                   ),
                                 ],
-                                _buildDivider(),
+                                _buildDivider(context),
 
                                 // Afternoon Slot
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.wb_cloudy_outlined,
                                   iconColor: const Color(0xFF0284C7),
                                   label: 'Afternoon Check-in',
@@ -539,18 +564,20 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   },
                                 ),
                                 if (_afternoonCheckin) ...[
-                                  _buildDivider(),
+                                  _buildDivider(context),
                                   _buildSlotTimePickerRow(
+                                    context: context,
                                     emoji: '☀️',
                                     label: 'Afternoon Time',
                                     timeStr: _afternoonCheckinTime,
                                     onTap: () => _selectSlotTime(context, 'afternoon'),
                                   ),
                                 ],
-                                _buildDivider(),
+                                _buildDivider(context),
 
                                 // Evening Slot
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.nights_stay_outlined,
                                   iconColor: const Color(0xFF7C3AED),
                                   label: 'Evening Reflection',
@@ -563,8 +590,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   },
                                 ),
                                 if (_eveningCheckin) ...[
-                                  _buildDivider(),
+                                  _buildDivider(context),
                                   _buildSlotTimePickerRow(
+                                    context: context,
                                     emoji: '🌙',
                                     label: 'Evening Time',
                                     timeStr: _eveningCheckinTime,
@@ -575,16 +603,18 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                               const SizedBox(height: 24),
 
                               // ─────────────────────────────────────────────────
-                              // 📬 NOTIFICATION DELIVERY CHANNELS (NEW)
+                              // 📬 NOTIFICATION DELIVERY CHANNELS
                               // ─────────────────────────────────────────────────
-                              _buildSectionLabel('NOTIFICATION DELIVERY CHANNELS'),
+                              _buildSectionLabel(context, 'NOTIFICATION DELIVERY CHANNELS'),
                               _buildInfoBanner(
+                                context: context,
                                 icon: Icons.send_rounded,
                                 text: 'Choose how Kausap AI sends you mood reminders and wellness nudges.',
                               ),
                               const SizedBox(height: 10),
-                              _buildSettingsCard([
+                              _buildSettingsCard(context, [
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.smartphone_rounded,
                                   iconColor: const Color(0xFF6366F1),
                                   label: 'Mobile & Browser Push',
@@ -596,8 +626,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     setState(() => _channelPush = v);
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.mark_email_read_outlined,
                                   iconColor: const Color(0xFF059669),
                                   label: 'Email Notifications',
@@ -611,7 +642,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                   },
                                 ),
                                 if (_channelEmail) ...[
-                                  _buildDivider(),
+                                  _buildDivider(context),
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
                                     child: Row(
@@ -621,12 +652,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              const Text(
+                                              Text(
                                                 'Email reminders will be sent to your registered email address.',
                                                 style: TextStyle(
                                                   fontFamily: 'Inter',
                                                   fontSize: 11.5,
-                                                  color: Color(0xFF6B7280),
+                                                  color: KausapColors.textMuted(context),
                                                 ),
                                               ),
                                               const SizedBox(height: 8),
@@ -675,8 +706,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     ),
                                   ),
                                 ],
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.notifications_active_outlined,
                                   iconColor: const Color(0xFFE11D48),
                                   label: 'In-App Notification Bell',
@@ -695,9 +727,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                               // ─────────────────────────────────────────────────
                               // 🔔 OTHER WELLNESS NOTIFICATIONS
                               // ─────────────────────────────────────────────────
-                              _buildSectionLabel('WELLNESS NOTIFICATIONS'),
-                              _buildSettingsCard([
+                              _buildSectionLabel(context, 'WELLNESS NOTIFICATIONS'),
+                              _buildSettingsCard(context, [
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.spa_outlined,
                                   iconColor: const Color(0xFF2E9E6B),
                                   label: 'Mindfulness & Reflection',
@@ -710,8 +743,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                     await NotificationService().getUnreadCount();
                                   },
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildToggleRow(
+                                  context: context,
                                   icon: Icons.local_fire_department_outlined,
                                   iconColor: const Color(0xFFF59E0B),
                                   label: 'Streak & Milestones',
@@ -729,9 +763,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                             ],
 
                             // ── Quiet Hours (Do Not Disturb) ─────────────────
-                            _buildSectionLabel(isAdmin ? 'QUIET HOURS (CRITICAL CRISIS ALERTS REMAIN ACTIVE)' : 'QUIET HOURS (DO NOT DISTURB)'),
-                            _buildSettingsCard([
+                            _buildSectionLabel(context, isAdmin ? 'QUIET HOURS (CRITICAL CRISIS ALERTS REMAIN ACTIVE)' : 'QUIET HOURS (DO NOT DISTURB)'),
+                            _buildSettingsCard(context, [
                               _buildToggleRow(
+                                context: context,
                                 icon: Icons.do_not_disturb_on_rounded,
                                 iconColor: const Color(0xFF6B7280),
                                 label: 'Quiet Hours',
@@ -747,14 +782,16 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                 },
                               ),
                               if (_quietHoursEnabled) ...[
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildTimePickerRow(
+                                  context: context,
                                   label: 'From (Start Time)',
                                   timeStr: _quietHoursStart,
                                   onTap: () => _selectTime(context, true),
                                 ),
-                                _buildDivider(),
+                                _buildDivider(context),
                                 _buildTimePickerRow(
+                                  context: context,
                                   label: 'To (End Time)',
                                   timeStr: _quietHoursEnd,
                                   onTap: () => _selectTime(context, false),
@@ -772,41 +809,43 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildSectionLabel(String label) {
+  Widget _buildSectionLabel(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Inter',
           fontWeight: FontWeight.w700,
           fontSize: 11,
           letterSpacing: 0.6,
-          color: Color(0xFF6B7280),
+          color: KausapColors.textMuted(context),
         ),
       ),
     );
   }
 
-  Widget _buildInfoBanner({required IconData icon, required String text}) {
+  Widget _buildInfoBanner({required BuildContext context, required IconData icon, required String text}) {
+    final isDark = KausapColors.isDark(context);
+    final accent = KausapColors.accent(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFEDE9FE),
+        color: isDark ? accent.withAlpha(25) : accent.withAlpha(15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDDD6FE)),
+        border: Border.all(color: accent.withAlpha(isDark ? 50 : 35)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF7C3AED)),
+          Icon(icon, size: 16, color: accent),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 11.5,
-                color: Color(0xFF4C1D95),
+                color: isDark ? const Color(0xFFE2E8F0) : KausapColors.textPrimary(context),
                 height: 1.4,
               ),
             ),
@@ -816,14 +855,16 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildSettingsCard(List<Widget> children) {
+  Widget _buildSettingsCard(BuildContext context, List<Widget> children) {
+    final isDark = KausapColors.isDark(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(8),
+            color: Colors.black.withAlpha(isDark ? 0 : 8),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -834,6 +875,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   }
 
   Widget _buildToggleRow({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String label,
@@ -861,20 +903,20 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
-                    color: Color(0xFF1F2937),
+                    color: KausapColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11.5,
-                    color: Color(0xFF6B7280),
+                    color: KausapColors.textMuted(context),
                   ),
                 ),
               ],
@@ -883,26 +925,29 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeTrackColor: AppColors.primaryLight,
+            activeTrackColor: KausapColors.accentLight(context),
+            activeThumbColor: KausapColors.accent(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDivider() {
+  Widget _buildDivider(BuildContext context) {
     return Container(
       height: 1,
-      color: const Color(0x12000000),
+      color: KausapColors.border(context),
       margin: const EdgeInsets.symmetric(horizontal: 16),
     );
   }
 
   Widget _buildTimePickerRow({
+    required BuildContext context,
     required String label,
     required String timeStr,
     required VoidCallback onTap,
   }) {
+    final accent = KausapColors.accent(context);
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -913,27 +958,28 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
-                  color: Color(0xFF1F2937),
+                  color: KausapColors.textPrimary(context),
                 ),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                color: KausapColors.subtleBg(context),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: KausapColors.border(context)),
               ),
               child: Text(
                 _formatTime(timeStr),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
-                  color: AppColors.primary,
+                  color: accent,
                 ),
               ),
             ),
@@ -944,11 +990,13 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   }
 
   Widget _buildSlotTimePickerRow({
+    required BuildContext context,
     required String emoji,
     required String label,
     required String timeStr,
     required VoidCallback onTap,
   }) {
+    final accent = KausapColors.accent(context);
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -961,11 +1009,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w500,
                   fontSize: 13.5,
-                  color: Color(0xFF374151),
+                  color: KausapColors.textPrimary(context),
                 ),
               ),
             ),
@@ -974,24 +1022,24 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEDE9FE),
+                  color: accent.withAlpha(20),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFDDD6FE)),
+                  border: Border.all(color: accent.withAlpha(40)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       _formatTime(timeStr),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
-                        color: Color(0xFF7C3AED),
+                        color: accent,
                       ),
                     ),
                     const SizedBox(width: 5),
-                    const Icon(Icons.edit_outlined, size: 12, color: Color(0xFF7C3AED)),
+                    Icon(Icons.edit_outlined, size: 12, color: accent),
                   ],
                 ),
               ),
@@ -1002,3 +1050,4 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 }
+

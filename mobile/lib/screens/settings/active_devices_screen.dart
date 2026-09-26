@@ -112,7 +112,7 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
       case 'browser':
         return const Color(0xFF8B5CF6);
       default:
-        return AppColors.primary;
+        return KausapColors.accent(context);
     }
   }
 
@@ -120,19 +120,25 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: KausapColors.cardBg(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        title: Text(
           'Remove Device',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: KausapColors.textPrimary(context),
+          ),
         ),
         content: Text(
           'Remove "${device['device']}" from your active sessions? This will log it out immediately.',
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: KausapColors.textMuted(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(context))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -170,19 +176,25 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: KausapColors.cardBg(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        title: Text(
           'Log Out All Other Devices',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: KausapColors.textPrimary(context),
+          ),
         ),
         content: Text(
           'This will immediately log out ${otherDevices.length} other device${otherDevices.length > 1 ? 's' : ''}. Your current device will remain logged in.',
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: KausapColors.textMuted(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(context))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -210,21 +222,23 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = KausapColors.accent(context);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
           onPressed: () => Navigator.pop(context),
-          color: Theme.of(context).colorScheme.onSurface,
+          color: KausapColors.textPrimary(context),
         ),
         title: Text(
           'Active Devices',
           style: AppTextStyles.heading2.copyWith(
             fontSize: 18,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -232,13 +246,14 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded, size: 20),
             onPressed: _loadDevices,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: KausapColors.textPrimary(context),
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: accent))
           : RefreshIndicator(
+              color: accent,
               onRefresh: _loadDevices,
               child: ListView(
                 padding: const EdgeInsets.all(20),
@@ -247,18 +262,21 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withAlpha(15),
+                      color: KausapColors.accentSubtle(context),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.primary.withAlpha(40)),
+                      border: Border.all(color: accent.withAlpha(40)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
+                        Icon(Icons.info_outline_rounded, color: accent, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'These are devices currently logged in to your account. Remove any you don\'t recognize.',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: KausapColors.textMuted(context),
+                            ),
                           ),
                         ),
                       ],
@@ -268,12 +286,12 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
 
                   Text(
                     '${_devices.length} ACTIVE SESSION${_devices.length != 1 ? 'S' : ''}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.8,
-                      color: AppColors.textSecondary,
+                      color: KausapColors.textMuted(context),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -313,14 +331,23 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
   Widget _buildDeviceCard(Map<String, dynamic> device) {
     final isCurrent = device['is_current'] as bool;
     final deviceColor = _deviceColor(device['type']);
+    final accent = KausapColors.accent(context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: isCurrent ? Border.all(color: AppColors.primary.withAlpha(60), width: 1.5) : null,
-        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 4))],
+        border: isCurrent
+            ? Border.all(color: accent, width: 1.5)
+            : Border.all(color: KausapColors.border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: KausapColors.isDark(context) ? Colors.transparent : const Color(0x0A000000),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -345,10 +372,11 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
                       Expanded(
                         child: Text(
                           device['device'],
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
+                            color: KausapColors.textPrimary(context),
                           ),
                         ),
                       ),
@@ -356,12 +384,16 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withAlpha(20),
+                            color: KausapColors.accentSubtle(context),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
+                          child: Text(
                             'This device',
-                            style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: accent,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                     ],
@@ -369,12 +401,12 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textSecondary),
+                      Icon(Icons.location_on_outlined, size: 12, color: KausapColors.textMuted(context)),
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(
                           device['location'],
-                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          style: TextStyle(fontSize: 11, color: KausapColors.textMuted(context)),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -383,11 +415,11 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      const Icon(Icons.access_time_rounded, size: 12, color: AppColors.textSecondary),
+                      Icon(Icons.access_time_rounded, size: 12, color: KausapColors.textMuted(context)),
                       const SizedBox(width: 3),
                       Text(
                         'Last active ${_formatLastActive(device['last_active'] as DateTime)}',
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 11, color: KausapColors.textMuted(context)),
                       ),
                     ],
                   ),

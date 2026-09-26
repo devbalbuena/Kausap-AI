@@ -12,17 +12,25 @@ class AboutScreen extends StatelessWidget {
 
   void _showFeedbackDialog(BuildContext context) {
     final controller = TextEditingController();
+    final accent = KausapColors.accent(context);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: KausapColors.cardBg(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.rate_review_rounded, color: AppColors.primary, size: 22),
-            SizedBox(width: 10),
+            Icon(Icons.rate_review_rounded, color: accent, size: 22),
+            const SizedBox(width: 10),
             Text(
               'Send App Feedback',
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: KausapColors.textPrimary(context),
+              ),
             ),
           ],
         ),
@@ -30,26 +38,35 @@ class AboutScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'How can we make Kausap AI better for you? Your feedback is anonymous and helps us improve student wellness.',
-              style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF64748B)),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: KausapColors.textMuted(context),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               maxLines: 4,
+              style: TextStyle(color: KausapColors.textPrimary(context), fontSize: 13),
               decoration: InputDecoration(
                 hintText: 'Share your thoughts, suggestions, or report an issue...',
-                hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                 filled: true,
-                fillColor: const Color(0xFFF8FAFC),
+                fillColor: KausapColors.subtleBg(context),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  borderSide: BorderSide(color: KausapColors.border(context)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: KausapColors.border(context)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  borderSide: BorderSide(color: accent, width: 1.5),
                 ),
               ),
             ),
@@ -58,7 +75,7 @@ class AboutScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+            child: Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: KausapColors.textMuted(context))),
           ),
           ElevatedButton(
             onPressed: () {
@@ -72,7 +89,7 @@ class AboutScreen extends StatelessWidget {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: accent,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
@@ -85,22 +102,24 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = KausapColors.accent(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'About Kausap AI',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -119,40 +138,40 @@ class AboutScreen extends StatelessWidget {
                       width: 88,
                       height: 88,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0284C7), Color(0xFF0077B6)],
+                        gradient: LinearGradient(
+                          colors: [accent, KausapColors.accentLight(context)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
-                            color: Color(0x280284C7),
+                            color: accent.withAlpha(60),
                             blurRadius: 16,
-                            offset: Offset(0, 6),
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
                       child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 48),
                     ),
                     const SizedBox(height: 14),
-                    const Text(
+                    Text(
                       'Kausap AI',
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
                         fontSize: 22,
-                        color: Color(0xFF0F172A),
+                        color: KausapColors.textPrimary(context),
                       ),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
+                    Text(
                       'Student Mental Health Companion',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF64748B),
+                        color: KausapColors.textMuted(context),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -186,31 +205,35 @@ class AboutScreen extends StatelessWidget {
               const SizedBox(height: 28),
 
               // ── 1. About Kausap AI ─────────────────────────────────────────
-              _sectionLabel('ABOUT KAUSAP AI'),
+              _sectionLabel(context, 'ABOUT KAUSAP AI'),
               const SizedBox(height: 8),
-              _card([
+              _card(context, [
                 _buildInfoRow(
+                  context: context,
                   icon: Icons.info_outline_rounded,
-                  iconColor: const Color(0xFF0284C7),
+                  iconColor: accent,
                   label: 'What is Kausap AI?',
                   value: 'A Filipino-first mental health companion offering safe AI emotional support, daily mood tracking, and self-care tools.',
                 ),
-                _divider(),
+                _divider(context),
                 _buildInfoRow(
+                  context: context,
                   icon: Icons.school_rounded,
                   iconColor: const Color(0xFF16A34A),
                   label: 'Campus Initiative',
                   value: 'Caraga State University (CSU) Student Mental Wellness Project',
                 ),
-                _divider(),
+                _divider(context),
                 _buildInfoRow(
+                  context: context,
                   icon: Icons.assignment_turned_in_outlined,
                   iconColor: const Color(0xFF7C3AED),
                   label: 'Clinical Instruments',
                   value: 'Standardized PHQ-9 (Depression) & GAD-7 (Anxiety) licensed assessments',
                 ),
-                _divider(),
+                _divider(context),
                 _buildInfoRow(
+                  context: context,
                   icon: Icons.language_rounded,
                   iconColor: const Color(0xFFEA580C),
                   label: 'Language Support',
@@ -221,24 +244,27 @@ class AboutScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               // ── 2. Security & AI Architecture ──────────────────────────────
-              _sectionLabel('SECURITY & AI ARCHITECTURE'),
+              _sectionLabel(context, 'SECURITY & AI ARCHITECTURE'),
               const SizedBox(height: 8),
-              _card([
+              _card(context, [
                 _buildInfoRow(
+                  context: context,
                   icon: Icons.lock_outline_rounded,
                   iconColor: const Color(0xFF16A34A),
                   label: 'Data Encryption',
                   value: 'Confidential encrypted storage for all mood entries, journals & screeners',
                 ),
-                _divider(),
+                _divider(context),
                 _buildInfoRow(
+                  context: context,
                   icon: Icons.smart_toy_outlined,
-                  iconColor: const Color(0xFF0284C7),
+                  iconColor: accent,
                   label: 'AI Model',
                   value: 'Google Gemini AI with mental wellness crisis guardrails',
                 ),
-                _divider(),
+                _divider(context),
                 _buildInfoRow(
+                  context: context,
                   icon: Icons.devices_rounded,
                   iconColor: const Color(0xFF64748B),
                   label: 'Platform Architecture',
@@ -249,12 +275,13 @@ class AboutScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               // ── 3. Legal & Privacy Policies ────────────────────────────────
-              _sectionLabel('LEGAL & PRIVACY POLICIES'),
+              _sectionLabel(context, 'LEGAL & PRIVACY POLICIES'),
               const SizedBox(height: 8),
-              _card([
+              _card(context, [
                 _buildNavRow(
+                  context: context,
                   icon: Icons.article_outlined,
-                  iconColor: const Color(0xFF0284C7),
+                  iconColor: accent,
                   label: 'Terms of Service',
                   subtitle: 'User agreement, account rules & fair usage',
                   onTap: () {
@@ -262,8 +289,9 @@ class AboutScreen extends StatelessWidget {
                     Navigator.push(context, slideRoute(const PrivacyScreen()));
                   },
                 ),
-                _divider(),
+                _divider(context),
                 _buildNavRow(
+                  context: context,
                   icon: Icons.shield_outlined,
                   iconColor: const Color(0xFF16A34A),
                   label: 'Privacy Policy',
@@ -273,8 +301,9 @@ class AboutScreen extends StatelessWidget {
                     Navigator.push(context, slideRoute(const PrivacyScreen()));
                   },
                 ),
-                _divider(),
+                _divider(context),
                 _buildNavRow(
+                  context: context,
                   icon: Icons.gavel_rounded,
                   iconColor: const Color(0xFF7C3AED),
                   label: 'Clinical & Safety Disclaimers',
@@ -293,12 +322,18 @@ class AboutScreen extends StatelessWidget {
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: () => _showFeedbackDialog(context),
-                  icon: const Icon(Icons.feedback_outlined, size: 18),
-                  label: const Text(
+                  icon: Icon(Icons.feedback_outlined, size: 18, color: accent),
+                  label: Text(
                     'Send App Feedback / Suggestions',
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: accent,
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: accent),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
@@ -307,13 +342,13 @@ class AboutScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Footer
-              const Center(
+              Center(
                 child: Text(
                   '© 2026 Kausap AI. All rights reserved.',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11.5,
-                    color: Color(0xFF94A3B8),
+                    color: KausapColors.textMuted(context),
                   ),
                 ),
               ),
@@ -324,35 +359,42 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w700,
           fontSize: 11,
           letterSpacing: 0.7,
-          color: Color(0xFF64748B),
+          color: KausapColors.textMuted(context),
         ),
       ),
     );
   }
 
-  Widget _card(List<Widget> children) {
+  Widget _card(BuildContext context, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 8, offset: Offset(0, 2))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: KausapColors.isDark(context) ? Colors.transparent : const Color(0x04000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(children: children),
     );
   }
 
   Widget _buildInfoRow({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String label,
@@ -379,20 +421,20 @@ class AboutScreen extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    color: Color(0xFF0F172A),
+                    color: KausapColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11.5,
-                    color: Color(0xFF64748B),
+                    color: KausapColors.textMuted(context),
                     height: 1.4,
                   ),
                 ),
@@ -405,6 +447,7 @@ class AboutScreen extends StatelessWidget {
   }
 
   Widget _buildNavRow({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String label,
@@ -434,32 +477,32 @@ class AboutScreen extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
-                      color: Color(0xFF0F172A),
+                      color: KausapColors.textPrimary(context),
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 11.5,
-                      color: Color(0xFF64748B),
+                      color: KausapColors.textMuted(context),
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF94A3B8)),
+            Icon(Icons.chevron_right_rounded, size: 20, color: KausapColors.textMuted(context)),
           ],
         ),
       ),
     );
   }
 
-  Widget _divider() {
-    return const Divider(height: 1, indent: 60, color: Color(0x12000000));
+  Widget _divider(BuildContext context) {
+    return Divider(height: 1, indent: 60, color: KausapColors.border(context));
   }
 }

@@ -9,22 +9,24 @@ class HelpFaqScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = KausapColors.accent(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Help & FAQ',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -39,13 +41,19 @@ class HelpFaqScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0284C7), Color(0xFF0077B6)],
+                  gradient: LinearGradient(
+                    colors: [accent, KausapColors.accentLight(context)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: const [BoxShadow(color: Color(0x140284C7), blurRadius: 12, offset: Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withAlpha(50),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: const Row(
                   children: [
@@ -81,14 +89,14 @@ class HelpFaqScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              const Text(
+              Text(
                 'FREQUENTLY ASKED QUESTIONS',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w700,
                   fontSize: 11,
                   letterSpacing: 0.7,
-                  color: Color(0xFF64748B),
+                  color: KausapColors.textMuted(context),
                 ),
               ),
               const SizedBox(height: 12),
@@ -129,9 +137,13 @@ class HelpFaqScreen extends StatelessWidget {
                       onPressed: () {
                         Navigator.push(context, slideRoute(const PrivacyCenterScreen()));
                       },
-                      icon: const Icon(Icons.shield_outlined, size: 16),
-                      label: const Text('Privacy Shield', style: TextStyle(fontFamily: 'Poppins', fontSize: 12)),
+                      icon: Icon(Icons.shield_outlined, size: 16, color: accent),
+                      label: Text(
+                        'Privacy Shield',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: accent),
+                      ),
                       style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: accent),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -143,9 +155,13 @@ class HelpFaqScreen extends StatelessWidget {
                       onPressed: () {
                         Navigator.push(context, slideRoute(const DownloadDataScreen()));
                       },
-                      icon: const Icon(Icons.download_rounded, size: 16),
-                      label: const Text('Export Data', style: TextStyle(fontFamily: 'Poppins', fontSize: 12)),
+                      icon: Icon(Icons.download_rounded, size: 16, color: accent),
+                      label: Text(
+                        'Export Data',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: accent),
+                      ),
                       style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: accent),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -162,37 +178,45 @@ class HelpFaqScreen extends StatelessWidget {
   }
 
   Widget _buildFaqItem(BuildContext context, String question, String answer) {
+    final accent = KausapColors.accent(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+        border: Border.all(color: KausapColors.border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: KausapColors.isDark(context) ? Colors.transparent : const Color(0x04000000),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          iconColor: AppColors.primary,
-          collapsedIconColor: const Color(0xFF64748B),
+          iconColor: accent,
+          collapsedIconColor: KausapColors.textMuted(context),
           title: Text(
             question,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w600,
               fontSize: 13.5,
-              color: Color(0xFF0F172A),
+              color: KausapColors.textPrimary(context),
             ),
           ),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
             Text(
               answer,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12.5,
                 height: 1.5,
-                color: Color(0xFF475569),
+                color: KausapColors.textMuted(context),
               ),
             ),
           ],

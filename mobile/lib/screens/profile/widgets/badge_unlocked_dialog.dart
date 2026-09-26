@@ -39,6 +39,9 @@ class _BadgeUnlockedDialogState extends State<BadgeUnlockedDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       elevation: 0,
@@ -51,10 +54,15 @@ class _BadgeUnlockedDialogState extends State<BadgeUnlockedDialog> {
             padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
             margin: const EdgeInsets.only(top: 40),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: KausapColors.cardBg(context),
               borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 10)),
+              border: Border.all(color: KausapColors.border(context)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 50 : 25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 10),
+                ),
               ],
             ),
             child: Column(
@@ -62,18 +70,33 @@ class _BadgeUnlockedDialogState extends State<BadgeUnlockedDialog> {
               children: [
                 Text(
                   'Badge Unlocked!',
-                  style: AppTextStyles.heading2.copyWith(color: AppColors.primary),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: accentColor,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   widget.title,
-                  style: AppTextStyles.heading1,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    color: KausapColors.textPrimary(context),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   widget.description,
-                  style: AppTextStyles.subheading,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: KausapColors.textMuted(context),
+                    height: 1.4,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -83,9 +106,12 @@ class _BadgeUnlockedDialogState extends State<BadgeUnlockedDialog> {
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: const Text('Awesome!', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                    child: const Text('Awesome!', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                   ),
                 ),
               ],
@@ -97,11 +123,15 @@ class _BadgeUnlockedDialogState extends State<BadgeUnlockedDialog> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: widget.color.withAlpha(40),
+                color: widget.color.withAlpha(isDark ? 50 : 40),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+                border: Border.all(color: KausapColors.cardBg(context), width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withAlpha(30),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               child: Icon(widget.icon, color: widget.color, size: 40),
@@ -130,7 +160,6 @@ class _BadgeUnlockedDialogState extends State<BadgeUnlockedDialog> {
 
   /// A custom Path to paint stars.
   Path drawStar(Size size) {
-    // Method to convert degree to radians
     double degToRad(double deg) => deg * (pi / 180.0);
 
     const numberOfPoints = 5;

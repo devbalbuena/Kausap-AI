@@ -147,8 +147,11 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
 
   @override
   Widget build(BuildContext context) {
+    final accent = KausapColors.accent(context);
+    final isDark = KausapColors.isDark(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -158,7 +161,11 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 24),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: KausapColors.textPrimary(context),
+                    size: 24,
+                  ),
                   onPressed: () => Navigator.pop(context, false),
                 ),
               ),
@@ -173,32 +180,32 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withAlpha(30),
+                      color: KausapColors.accentSubtle(context),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.primary.withAlpha(80), width: 1.5),
+                      border: Border.all(color: accent.withAlpha(80), width: 1.5),
                     ),
-                    child: const Icon(Icons.lock_rounded, color: AppColors.primary, size: 36),
+                    child: Icon(Icons.lock_rounded, color: accent, size: 36),
                   ),
                   const SizedBox(height: 24),
 
                   // Title & Subtitle
                   Text(
                     _title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: KausapColors.textPrimary(context),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     _subtitle,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 14,
-                      color: Colors.white60,
+                      color: KausapColors.textMuted(context),
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -226,9 +233,9 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
                           height: 18,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: filled ? AppColors.primary : Colors.transparent,
+                            color: filled ? accent : Colors.transparent,
                             border: Border.all(
-                              color: filled ? AppColors.primary : Colors.white38,
+                              color: filled ? accent : (isDark ? Colors.white38 : const Color(0xFFCBD5E1)),
                               width: 2,
                             ),
                           ),
@@ -253,7 +260,7 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
                         style: const TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
-                          color: Color(0xFFFF8A80),
+                          color: Color(0xFFEF4444),
                         ),
                       ),
                     ),
@@ -283,9 +290,9 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
                           child: Container(
                             height: 64,
                             color: Colors.transparent,
-                            child: const Icon(
+                            child: Icon(
                               Icons.backspace_outlined,
-                              color: Colors.white70,
+                              color: KausapColors.textMuted(context),
                               size: 24,
                             ),
                           ),
@@ -315,17 +322,20 @@ class _AppLockSetupScreenState extends State<AppLockSetupScreen>
         height: 64,
         margin: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E3A5F),
+          color: KausapColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: KausapColors.border(context),
+          ),
         ),
         child: Center(
           child: Text(
             digit,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 22,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: KausapColors.textPrimary(context),
             ),
           ),
         ),

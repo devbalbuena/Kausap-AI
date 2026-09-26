@@ -19,16 +19,27 @@ class AccountSettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Deactivate Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-        content: const Text(
+        backgroundColor: KausapColors.cardBg(ctx),
+        title: Text(
+          'Deactivate Account',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            color: KausapColors.textPrimary(ctx),
+          ),
+        ),
+        content: Text(
           'Are you sure you want to deactivate your account? You will be logged out and your account will be suspended. Contact support to reactivate.',
-          style: TextStyle(fontFamily: 'Poppins'),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            color: KausapColors.textMuted(ctx),
+          ),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(ctx))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -70,16 +81,27 @@ class AccountSettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Account', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-        content: const Text(
+        backgroundColor: KausapColors.cardBg(ctx),
+        title: Text(
+          'Delete Account',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w700,
+            color: KausapColors.textPrimary(ctx),
+          ),
+        ),
+        content: Text(
           'Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be erased.',
-          style: TextStyle(fontFamily: 'Poppins'),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            color: KausapColors.textMuted(ctx),
+          ),
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: KausapColors.textMuted(ctx))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -119,8 +141,11 @@ class AccountSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = KausapColors.isDark(context);
+    final accent = KausapColors.accent(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -138,23 +163,29 @@ class AccountSettingsScreen extends StatelessWidget {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: KausapColors.cardBg(context),
                             shape: BoxShape.circle,
+                            border: Border.all(color: KausapColors.border(context)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
+                                color: Colors.black.withAlpha(isDark ? 0 : 15),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF191C21)),
+                          child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: KausapColors.textPrimary(context)),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Text(
                         'Account Settings',
-                        style: AppTextStyles.heading2.copyWith(fontSize: 18),
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                          color: KausapColors.textPrimary(context),
+                        ),
                       ),
                     ],
                   ),
@@ -179,11 +210,12 @@ class AccountSettingsScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: KausapColors.cardBg(context),
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: KausapColors.border(context)),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
+                                  color: Colors.black.withAlpha(isDark ? 0 : 10),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -193,7 +225,7 @@ class AccountSettingsScreen extends StatelessWidget {
                               children: [
                                 CircleAvatar(
                                   radius: 32,
-                                  backgroundColor: AppColors.primary.withAlpha(30),
+                                  backgroundColor: accent.withAlpha(25),
                                   backgroundImage: (avatarUrl != null &&
                                           avatarUrl.isNotEmpty &&
                                           !avatarUrl.startsWith('data:'))
@@ -204,10 +236,10 @@ class AccountSettingsScreen extends StatelessWidget {
                                           avatarUrl.startsWith('data:'))
                                       ? Text(
                                           initial,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 24,
                                             fontWeight: FontWeight.w700,
-                                            color: AppColors.primary,
+                                            color: accent,
                                           ),
                                         )
                                       : null,
@@ -219,13 +251,19 @@ class AccountSettingsScreen extends StatelessWidget {
                                     children: [
                                       Text(
                                         '$firstName $lastName'.trim(),
-                                        style: AppTextStyles.heading2.copyWith(fontSize: 17),
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 17,
+                                          color: KausapColors.textPrimary(context),
+                                        ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         email,
-                                        style: AppTextStyles.body.copyWith(
-                                          color: AppColors.textSecondary,
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          color: KausapColors.textMuted(context),
                                           fontSize: 13,
                                         ),
                                       ),
@@ -233,16 +271,16 @@ class AccountSettingsScreen extends StatelessWidget {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: AppColors.primary.withAlpha(25),
+                                          color: accent.withAlpha(25),
                                           borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Text(
                                           role,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontFamily: 'Inter',
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
-                                            color: AppColors.primary,
+                                            color: accent,
                                           ),
                                         ),
                                       ),
@@ -256,12 +294,14 @@ class AccountSettingsScreen extends StatelessWidget {
                           const SizedBox(height: 20),
 
                           // Personal Info Section
-                          _buildSectionTitle('Personal Information'),
-                          _buildCard([
+                          _buildSectionTitle(context, 'Personal Information'),
+                          _buildCard(context, [
                             _buildTile(
+                              context: context,
                               icon: Icons.person_outline_rounded,
                               title: 'Edit Profile',
                               subtitle: 'Update name, avatar, and personal details',
+                              iconColor: accent,
                               onTap: () => Navigator.of(context).push(slideRoute(const EditProfileScreen())),
                             ),
                           ]),
@@ -269,19 +309,23 @@ class AccountSettingsScreen extends StatelessWidget {
                           const SizedBox(height: 20),
 
                           // Security & Login Section
-                          _buildSectionTitle('Security & Authentication'),
-                          _buildCard([
+                          _buildSectionTitle(context, 'Security & Authentication'),
+                          _buildCard(context, [
                             _buildTile(
+                              context: context,
                               icon: Icons.lock_outline_rounded,
                               title: 'Change Password',
                               subtitle: 'Update your account password',
+                              iconColor: accent,
                               onTap: () => Navigator.of(context).push(slideRoute(const ChangePasswordScreen())),
                             ),
-                            const Divider(height: 1, indent: 56),
+                            Divider(height: 1, indent: 56, color: KausapColors.border(context)),
                             _buildTile(
+                              context: context,
                               icon: Icons.security_rounded,
                               title: 'Two-Factor Authentication',
                               subtitle: 'Add an extra layer of security',
+                              iconColor: accent,
                               onTap: () => Navigator.of(context).push(slideRoute(const TwoFactorAuthScreen())),
                             ),
                           ]),
@@ -289,26 +333,32 @@ class AccountSettingsScreen extends StatelessWidget {
                           const SizedBox(height: 20),
 
                           // Preferences Section
-                          _buildSectionTitle('Preferences & Privacy'),
-                          _buildCard([
+                          _buildSectionTitle(context, 'Preferences & Privacy'),
+                          _buildCard(context, [
                             _buildTile(
+                              context: context,
                               icon: Icons.notifications_outlined,
                               title: 'Notification Settings',
                               subtitle: 'Manage push and session reminders',
+                              iconColor: accent,
                               onTap: () => Navigator.of(context).push(slideRoute(const NotificationSettingsScreen())),
                             ),
-                            const Divider(height: 1, indent: 56),
+                            Divider(height: 1, indent: 56, color: KausapColors.border(context)),
                             _buildTile(
+                              context: context,
                               icon: Icons.privacy_tip_outlined,
                               title: 'Privacy & Data Protection',
                               subtitle: 'Control data sharing and visibility',
+                              iconColor: accent,
                               onTap: () => Navigator.of(context).push(slideRoute(const PrivacyScreen())),
                             ),
-                            const Divider(height: 1, indent: 56),
+                            Divider(height: 1, indent: 56, color: KausapColors.border(context)),
                             _buildTile(
+                              context: context,
                               icon: Icons.help_outline_rounded,
                               title: 'Help & FAQ',
                               subtitle: 'Learn more about Kausap AI',
+                              iconColor: accent,
                               onTap: () => Navigator.of(context).push(slideRoute(const HelpFaqScreen())),
                             ),
                           ]),
@@ -316,9 +366,10 @@ class AccountSettingsScreen extends StatelessWidget {
                           const SizedBox(height: 20),
 
                           // Danger Zone Section
-                          _buildSectionTitle('Account Management', isDanger: true),
-                          _buildCard([
+                          _buildSectionTitle(context, 'Account Management', isDanger: true),
+                          _buildCard(context, [
                             _buildTile(
+                              context: context,
                               icon: Icons.pause_circle_outline_rounded,
                               title: 'Deactivate Account',
                               subtitle: 'Temporarily disable your account',
@@ -326,8 +377,9 @@ class AccountSettingsScreen extends StatelessWidget {
                               titleColor: AppColors.error,
                               onTap: () => _showDeactivateDialog(context),
                             ),
-                            const Divider(height: 1, indent: 56),
+                            Divider(height: 1, indent: 56, color: KausapColors.border(context)),
                             _buildTile(
+                              context: context,
                               icon: Icons.delete_forever_rounded,
                               title: 'Delete Account Permanently',
                               subtitle: 'Erase all personal data and conversation history',
@@ -349,7 +401,7 @@ class AccountSettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title, {bool isDanger = false}) {
+  Widget _buildSectionTitle(BuildContext context, String title, {bool isDanger = false}) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
@@ -358,21 +410,23 @@ class AccountSettingsScreen extends StatelessWidget {
           fontFamily: 'Inter',
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: isDanger ? AppColors.error : AppColors.textSecondary,
+          color: isDanger ? AppColors.error : KausapColors.textMuted(context),
           letterSpacing: 0.2,
         ),
       ),
     );
   }
 
-  Widget _buildCard(List<Widget> children) {
+  Widget _buildCard(BuildContext context, List<Widget> children) {
+    final isDark = KausapColors.isDark(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: KausapColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withAlpha(isDark ? 0 : 10),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -383,41 +437,48 @@ class AccountSettingsScreen extends StatelessWidget {
   }
 
   Widget _buildTile({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-    Color iconColor = AppColors.primary,
-    Color titleColor = const Color(0xFF191C21),
+    Color? iconColor,
+    Color? titleColor,
   }) {
+    final effectiveIconColor = iconColor ?? KausapColors.accent(context);
+    final effectiveTitleColor = titleColor ?? KausapColors.textPrimary(context);
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: iconColor.withValues(alpha: 0.1),
+          color: effectiveIconColor.withAlpha(25),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: iconColor, size: 20),
+        child: Icon(icon, color: effectiveIconColor, size: 20),
       ),
       title: Text(
         title,
-        style: AppTextStyles.body.copyWith(
+        style: TextStyle(
+          fontFamily: 'Poppins',
           fontWeight: FontWeight.w600,
-          color: titleColor,
+          color: effectiveTitleColor,
           fontSize: 14,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: AppTextStyles.caption.copyWith(
-          color: AppColors.textSecondary,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          color: KausapColors.textMuted(context),
           fontSize: 12,
         ),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textSecondary),
+      trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: KausapColors.textMuted(context)),
       onTap: onTap,
     );
   }
 }
+
