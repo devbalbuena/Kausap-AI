@@ -81,6 +81,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _totalLogsThisWeek = 0;
   List<ArticleModel> _homeArticles = ArticlesData.all;
 
+  // Phase 3: Dashboard caching & deduplicated data loading
+  DateTime? _lastDashboardFetch;
+  static const Duration _dashboardCacheTtl = Duration(seconds: 45);
+
   final NotificationService _notificationService = NotificationService();
   late AnimationController _bellAnimController;
   late Animation<double> _bellRotationAnim;
@@ -115,15 +119,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       TweenSequenceItem(tween: Tween<double>(begin: 0.90, end: 1.0).chain(CurveTween(curve: Curves.easeOut)), weight: 30),
     ]).animate(_bellAnimController);
 
-    _fetchQuickEscapePref();
-    _fetchUnreadCount();
-    _fetchGuidanceNotices();
-    _fetchStreak();
-    _fetchQuests();
-    _fetchMoodTrends();
-    _fetchHomeArticles();
-    // Show mood popup after first frame if mood not yet logged today
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMoodPopup());
+    _loadDashboardData();
+  }
+
+  /// Phase 3: Consolidated, deduplicated parallel dashboard loader
+  Future<void> _loadDashboardData({bool forceRefresh = false}) async {
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _lastDashboardFetch != null &&
+        now.difference(_lastDashboardFetch!) < _dashboardCacheTtl) {
+      return; // Use fresh cached dashboard state
+    }
+    _lastDashboardFetch = now;
+
+    await Future.wait([
+      _fetchMoodAndQuestsData(),
+      _fetchUnreadCount(),
+      _fetchGuidanceNotices(),
+      _fetchHomeArticles(),
+      _fetchQuickEscapePref(),
+    ]);
+
+    // Prompt mood check-in popup after first frame if not yet checked in
+    if (mounted && _todayMoodLevel == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMoodPopup());
+    }
   }
 
   Future<void> _fetchGuidanceNotices() async {
@@ -241,13 +261,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         curve: Curves.easeOut,
       );
     }
-    // Re-fetch data
-    _fetchQuickEscapePref();
-    _fetchUnreadCount();
-    _fetchStreak();
-    _fetchQuests();
-    _fetchMoodTrends();
-    _fetchHomeArticles();
+    // Re-fetch data in 1 deduplicated parallel pass
+    _loadDashboardData(forceRefresh: true);
     // Silently sync any queued offline moods
     OfflineMoodQueue().syncPendingMoods();
   }
@@ -329,9 +344,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             duration: const Duration(seconds: 3),
           ),
         );
-        _fetchStreak();
-        _fetchQuests();
-        _fetchMoodTrends();
+        _fetchMoodAndQuestsData();
 
         if (level <= 3) {
           _openCaringSupportSheet(level);
@@ -364,9 +377,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             duration: const Duration(seconds: 3),
           ),
         );
-        _fetchStreak();
-        _fetchQuests();
-        _fetchMoodTrends();
+        _fetchMoodAndQuestsData();
 
         // Prompt caring support for rough/low/okay moods, or celebration for good/great moods
         if (level <= 3) {
@@ -396,9 +407,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             duration: const Duration(seconds: 3),
           ),
         );
-        _fetchStreak();
-        _fetchQuests();
-        _fetchMoodTrends();
+        _fetchMoodAndQuestsData();
 
         if (level <= 3) {
           _openCaringSupportSheet(level);
@@ -425,8 +434,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Navigator.of(ctx).pop();
           final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
           if (res == true) {
-            _fetchQuests();
-            _fetchStreak();
+            _fetchMoodAndQuestsData();
           }
         },
         onOpenMindfulness: () {
@@ -453,8 +461,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Navigator.of(ctx).pop();
           final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
           if (res == true) {
-            _fetchQuests();
-            _fetchStreak();
+            _fetchMoodAndQuestsData();
           }
         },
         onTalkToAi: () {
@@ -480,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   /// Show a friendly mood check-in pop-up on app start if not yet logged today.
   Future<void> _maybeShowMoodPopup() async {
-    if (!mounted) return;
+    if (!mounted || _todayMoodLevel != null) return;
     // Check if already logged offline today
     final offlineMood = await OfflineMoodQueue().getTodayOfflineMood();
     if (offlineMood != null) {
@@ -492,119 +499,173 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
       return;
     }
-
-    try {
-      final now = DateTime.now();
-      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
-      if (moodData is List) {
-        final todayEntries = moodData.where((e) {
-          final dt = _parseDateLocal(e['created_at']);
-          return dt != null &&
-              dt.year == now.year &&
-              dt.month == now.month &&
-              dt.day == now.day;
-        }).toList();
-
-        if (todayEntries.isNotEmpty) {
-          if (mounted) {
-            setState(() {
-              _todayMoodLevel = (todayEntries.first['mood_level'] as num?)?.toInt();
-              _dailyQuests[0]['completed'] = true;
-            });
-          }
-          return; // Already logged — skip popup
-        }
-      }
-    } catch (_) {
-      return; // On error, don't bother the user
-    }
-    if (!mounted) return;
+    if (!mounted || _todayMoodLevel != null) return;
     await _openMoodPickerSheet();
   }
 
-  Future<void> _fetchQuests() async {
+  /// Phase 3: Single-pass mood, streak, trends, and daily quests computation
+  Future<void> _fetchMoodAndQuestsData() async {
+    List<dynamic> moodData = [];
+    int? todayLevel;
     bool moodCompleted = false;
     bool journalCompleted = false;
     bool mindfulnessCompleted = false;
-    int? todayLevel;
 
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+    final storage = const FlutterSecureStorage();
+
+    // 1. Single Fetch of Mood Data
     try {
-      final now = DateTime.now();
-      final todayStr = DateFormat('yyyy-MM-dd').format(now);
-
-      // 1. Check mood from API with timezone-accurate local date comparison
-      try {
-        final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
-        if (moodData is List) {
-          final todayEntries = moodData.where((e) {
-            final dt = _parseDateLocal(e['created_at']);
-            return dt != null &&
-                dt.year == now.year &&
-                dt.month == now.month &&
-                dt.day == now.day;
-          }).toList();
-
-          if (todayEntries.isNotEmpty) {
-            moodCompleted = true;
-            todayLevel = (todayEntries.first['mood_level'] as num?)?.toInt();
-          }
-        }
-      } catch (_) {}
-
-      // 1b. Check local offline mood queue if not detected from API
-      if (!moodCompleted) {
-        final offlineToday = await OfflineMoodQueue().getTodayOfflineMood();
-        if (offlineToday != null) {
-          moodCompleted = true;
-          todayLevel = offlineToday;
-        }
+      final res = await ApiClient().get(ApiConfig.mood, silent: true);
+      if (res is List) {
+        moodData = res;
       }
+    } catch (_) {}
 
-      // 2. Check journal — local storage first (written on every save), then API
-      final storage = const FlutterSecureStorage();
+    // Check today's mood from API entries
+    if (moodData.isNotEmpty) {
+      final todayEntries = moodData.where((e) {
+        final dt = _parseDateLocal(e['created_at']);
+        return dt != null &&
+            dt.year == now.year &&
+            dt.month == now.month &&
+            dt.day == now.day;
+      }).toList();
+
+      if (todayEntries.isNotEmpty) {
+        moodCompleted = true;
+        todayLevel = (todayEntries.first['mood_level'] as num?)?.toInt();
+      }
+    }
+
+    // 1b. Check local offline mood queue if not detected from API
+    if (!moodCompleted) {
+      final offlineToday = await OfflineMoodQueue().getTodayOfflineMood();
+      if (offlineToday != null) {
+        moodCompleted = true;
+        todayLevel = offlineToday;
+      }
+    }
+
+    // 2. Compute Streak locally from moodData
+    final Set<String> daysWithMood = {};
+    for (final entry in moodData) {
+      final dt = _parseDateLocal(entry['created_at']);
+      if (dt != null) {
+        daysWithMood.add(DateFormat('yyyy-MM-dd').format(dt));
+      }
+    }
+    if (todayLevel != null) {
+      daysWithMood.add(todayStr);
+    }
+
+    int streak = 0;
+    for (int i = 0; i < 365; i++) {
+      final checkDay = now.subtract(Duration(days: i));
+      final dayStr = DateFormat('yyyy-MM-dd').format(checkDay);
+      if (daysWithMood.contains(dayStr)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    // 3. Compute Weekly Mood Trends locally from moodData
+    final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+    final List<double?> weeklyMoods = List.filled(7, null);
+    final List<String?> weeklyLatestEmojis = List.filled(7, null);
+    final List<int> weeklyLogCounts = List.filled(7, 0);
+    double totalSum = 0;
+    int loggedDays = 0;
+
+    for (int i = 0; i < 7; i++) {
+      final targetDate = monday.add(Duration(days: i));
+      final dayEntries = moodData.where((e) {
+        final dt = _parseDateLocal(e['created_at']);
+        return dt != null &&
+            dt.year == targetDate.year &&
+            dt.month == targetDate.month &&
+            dt.day == targetDate.day;
+      }).toList();
+
+      if (dayEntries.isNotEmpty) {
+        double daySum = 0;
+        for (final entry in dayEntries) {
+          final level = (entry['mood_level'] as num?)?.toDouble() ?? 3.0;
+          daySum += level;
+        }
+        final avgLevel = (daySum / dayEntries.length).clamp(1.0, 5.0);
+        weeklyMoods[i] = avgLevel;
+        weeklyLogCounts[i] = dayEntries.length;
+
+        final latestLevel = (dayEntries.first['mood_level'] as num?)?.toInt() ?? avgLevel.round();
+        weeklyLatestEmojis[i] = _getEmojiOnly(latestLevel);
+
+        totalSum += avgLevel;
+        loggedDays++;
+      }
+    }
+
+    // Merge today's mood if logged locally/offline
+    if (todayLevel != null) {
+      final todayIdx = now.weekday - 1;
+      if (weeklyMoods[todayIdx] == null) {
+        weeklyMoods[todayIdx] = todayLevel.toDouble();
+        weeklyLatestEmojis[todayIdx] = _getEmojiOnly(todayLevel);
+        weeklyLogCounts[todayIdx] = 1;
+        totalSum += todayLevel.toDouble();
+        loggedDays++;
+      } else {
+        weeklyLatestEmojis[todayIdx] = _getEmojiOnly(todayLevel);
+      }
+    }
+
+    // 4. Check Journal Quest (Local first, API fallback)
+    try {
       final savedJournal = await storage.read(key: 'journal_$todayStr');
       if (savedJournal != null && savedJournal.trim().isNotEmpty) {
         journalCompleted = true;
       } else {
-        // Backend returns List[JournalRead], NOT a single Map — check the list length
-        try {
-          final jToday = await ApiClient().get(ApiConfig.journalToday, silent: true);
-          if (jToday is List && jToday.isNotEmpty) {
-            journalCompleted = true;
-            // Cache the first entry content locally so future refreshes are instant
-            final firstContent = jToday.first['content']?.toString() ?? '';
-            if (firstContent.trim().isNotEmpty) {
-              await storage.write(key: 'journal_$todayStr', value: firstContent);
-            }
-          } else if (jToday is Map &&
-              jToday['content'] != null &&
-              jToday['content'].toString().trim().isNotEmpty) {
-            // Fallback: old single-object shape (future-proof)
-            journalCompleted = true;
+        final jToday = await ApiClient().get(ApiConfig.journalToday, silent: true);
+        if (jToday is List && jToday.isNotEmpty) {
+          journalCompleted = true;
+          final firstContent = jToday.first['content']?.toString() ?? '';
+          if (firstContent.trim().isNotEmpty) {
+            await storage.write(key: 'journal_$todayStr', value: firstContent);
           }
-        } catch (_) {}
+        } else if (jToday is Map &&
+            jToday['content'] != null &&
+            jToday['content'].toString().trim().isNotEmpty) {
+          journalCompleted = true;
+        }
       }
+    } catch (_) {}
 
-      // 3. Check mindfulness — read from FlutterSecureStorage first, then SharedPreferences fallback
-      //    (SharedPreferences survives Chrome hard refresh; SecureStorage may lose web encryption key)
+    // 5. Check Mindfulness Quest
+    try {
       final savedMindfulness = await storage.read(key: 'mindfulness_$todayStr');
       if (savedMindfulness == 'completed') {
         mindfulnessCompleted = true;
       } else {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          if (prefs.getString('mindfulness_$todayStr') == 'completed') {
-            mindfulnessCompleted = true;
-          }
-        } catch (_) {}
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.getString('mindfulness_$todayStr') == 'completed') {
+          mindfulnessCompleted = true;
+        }
       }
     } catch (_) {}
 
+    // 6. Single atomic setState
     if (mounted) {
       setState(() {
-        // Only update mood level if the API actually returned one this call;
-        // otherwise preserve the existing value so it isn't reset to null on refresh.
         if (todayLevel != null) _todayMoodLevel = todayLevel;
+        _streak = streak;
+        _goal = 30;
+        _weeklyMoods = weeklyMoods;
+        _weeklyLatestEmojis = weeklyLatestEmojis;
+        _weeklyLogCounts = weeklyLogCounts;
+        _totalLogsThisWeek = loggedDays;
+        _weeklyAverage = loggedDays > 0 ? (totalSum / loggedDays) : null;
         _dailyQuests[0]['completed'] = moodCompleted || _todayMoodLevel != null;
         _dailyQuests[1]['completed'] = journalCompleted;
         _dailyQuests[2]['completed'] = mindfulnessCompleted;
@@ -621,113 +682,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     } catch (_) {
       return null;
     }
-  }
-
-  Future<void> _fetchStreak() async {
-    try {
-      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
-      if (moodData is! List || !mounted) return;
-
-      final Set<String> daysWithMood = {};
-      for (final entry in moodData) {
-        final dt = _parseDateLocal(entry['created_at']);
-        if (dt != null) {
-          daysWithMood.add(DateFormat('yyyy-MM-dd').format(dt));
-        }
-      }
-      if (_todayMoodLevel != null) {
-        daysWithMood.add(DateFormat('yyyy-MM-dd').format(DateTime.now()));
-      }
-
-      int streak = 0;
-      final today = DateTime.now();
-      for (int i = 0; i < 365; i++) {
-        final checkDay = today.subtract(Duration(days: i));
-        final dayStr = DateFormat('yyyy-MM-dd').format(checkDay);
-        if (daysWithMood.contains(dayStr)) {
-          streak++;
-        } else {
-          break;
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _streak = streak;
-          _goal = 30; // 30-day wellness goal
-        });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _fetchMoodTrends() async {
-    try {
-      final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
-      if (moodData is! List || !mounted) return;
-
-      final now = DateTime.now();
-      final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
-
-      final List<double?> weeklyMoods = List.filled(7, null);
-      final List<String?> weeklyLatestEmojis = List.filled(7, null);
-      final List<int> weeklyLogCounts = List.filled(7, 0);
-      double totalSum = 0;
-      int loggedDays = 0;
-
-      for (int i = 0; i < 7; i++) {
-        final targetDate = monday.add(Duration(days: i));
-
-        final dayEntries = moodData.where((e) {
-          final dt = _parseDateLocal(e['created_at']);
-          return dt != null &&
-              dt.year == targetDate.year &&
-              dt.month == targetDate.month &&
-              dt.day == targetDate.day;
-        }).toList();
-
-        if (dayEntries.isNotEmpty) {
-          double daySum = 0;
-          for (final entry in dayEntries) {
-            final level = (entry['mood_level'] as num?)?.toDouble() ?? 3.0;
-            daySum += level;
-          }
-          final avgLevel = (daySum / dayEntries.length).clamp(1.0, 5.0);
-          weeklyMoods[i] = avgLevel;
-          weeklyLogCounts[i] = dayEntries.length;
-
-          // Day's latest mood emoji: first entry in sorted descending list
-          final latestLevel = (dayEntries.first['mood_level'] as num?)?.toInt() ?? avgLevel.round();
-          weeklyLatestEmojis[i] = _getEmojiOnly(latestLevel);
-
-          totalSum += avgLevel;
-          loggedDays++;
-        }
-      }
-
-      // If user checked in today but it's not yet in the server response, merge it
-      if (_todayMoodLevel != null) {
-        final todayIdx = DateTime.now().weekday - 1;
-        if (weeklyMoods[todayIdx] == null) {
-          weeklyMoods[todayIdx] = _todayMoodLevel!.toDouble();
-          weeklyLatestEmojis[todayIdx] = _getEmojiOnly(_todayMoodLevel!);
-          weeklyLogCounts[todayIdx] = 1;
-          totalSum += _todayMoodLevel!.toDouble();
-          loggedDays++;
-        } else {
-          weeklyLatestEmojis[todayIdx] = _getEmojiOnly(_todayMoodLevel!);
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _weeklyMoods = weeklyMoods;
-          _weeklyLatestEmojis = weeklyLatestEmojis;
-          _weeklyLogCounts = weeklyLogCounts;
-          _totalLogsThisWeek = loggedDays;
-          _weeklyAverage = loggedDays > 0 ? (totalSum / loggedDays) : null;
-        });
-      }
-    } catch (_) {}
   }
 
   Future<void> _fetchUnreadCount() async {
