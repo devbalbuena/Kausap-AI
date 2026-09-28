@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
-import '../../providers/theme_provider.dart';
 import '../../widgets/auth_widgets.dart';
 import 'client_signup_step3_screen.dart';
 
@@ -81,9 +79,8 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = context.watch<ThemeProvider>().accentColor;
     return Theme(
-      data: AppTheme.getTheme(accentColor),
+      data: AppTheme.defaultTheme,
       child: Scaffold(
         backgroundColor: AppColors.background,
       body: SafeArea(

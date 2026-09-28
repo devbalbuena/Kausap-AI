@@ -20,6 +20,7 @@ import '../../services/ambient_audio_service.dart';
 import '../../widgets/branded_refresh_indicator.dart';
 
 import '../../widgets/home/home_companion_avatar.dart';
+import '../../widgets/home/human_companion_mascot.dart';
 import '../../widgets/home/home_support_modals.dart';
 import '../../widgets/home/mood_influence_sheet.dart';
 import '../../widgets/home/daily_quests_card.dart';
@@ -1055,10 +1056,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              HomeCompanionAvatar(
-                todayMood: _todayMoodLevel,
+              HumanCompanionMascot(
+                mood: _todayMoodLevel,
                 firstName: _firstName,
                 onAffirmation: _onCompanionAffirmation,
+                size: 74,
               ),
               const SizedBox(width: 14),
               Expanded(

@@ -270,6 +270,9 @@ class AppTextStyles {
 }
 
 class AppTheme {
+  /// Default static brand theme used for pre-auth flows (Sign In, Register, etc.)
+  static ThemeData get defaultTheme => getTheme(AppColors.primary);
+
   static ThemeData getTheme(Color accentColor) => ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.interTextTheme(),

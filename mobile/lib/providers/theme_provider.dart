@@ -12,18 +12,23 @@ class ThemeProvider extends ChangeNotifier {
   static const String _hapticsKey = 'haptics_enabled';
   static const String _dyslexiaSpacingKey = 'dyslexia_spacing';
 
-  ThemeMode _themeMode = ThemeMode.light; // Default to light for first-time users
+  static const Color defaultAccentColor = Color(0xFF0077B6); // Ocean Calm Blue
+
+  String? _currentUserId;
+
+  ThemeMode _themeMode = ThemeMode.light; // Default to light for public/fresh states
   double _textScaleFactor = 1.0; // range: 0.8 to 1.6
   bool _highContrast = false;
-  Color _accentColor = const Color(0xFF0077B6); // Default Blue
+  Color _accentColor = defaultAccentColor;
   bool _reduceMotion = false;
   bool _hapticsEnabled = true;
   bool _dyslexiaSpacing = false;
 
   ThemeProvider() {
-    _loadPreferences();
+    // Initial state is clean default; user-specific settings load when user logs in.
   }
 
+  String? get currentUserId => _currentUserId;
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
   double get textScaleFactor => _textScaleFactor;
@@ -33,14 +38,31 @@ class ThemeProvider extends ChangeNotifier {
   bool get hapticsEnabled => _hapticsEnabled != false;
   bool get dyslexiaSpacing => _dyslexiaSpacing == true;
 
-  // ── Load All Preferences with Dual-Storage Resilience ─────────────────────
+  String _userKey(String baseKey) {
+    if (_currentUserId != null && _currentUserId!.trim().isNotEmpty) {
+      return '${baseKey}_${_currentUserId!.trim()}';
+    }
+    return baseKey;
+  }
 
-  Future<void> _loadPreferences() async {
-    // 1. First try SharedPreferences (instant synchronous memory cache on all platforms)
+  // ── Load User-Specific Preferences ────────────────────────────────────────
+
+  Future<void> loadUserPreferences(String? userId) async {
+    final cleanId = userId?.trim();
+    _currentUserId = cleanId;
+
+    if (cleanId == null || cleanId.isEmpty) {
+      resetToDefaults();
+      return;
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      
-      final savedTheme = prefs.getString(_themeKey);
+      const storage = FlutterSecureStorage();
+
+      // 1. Theme Mode
+      final savedTheme = prefs.getString(_userKey(_themeKey)) ??
+          await storage.read(key: _userKey(_themeKey));
       if (savedTheme != null) {
         if (savedTheme == 'dark') {
           _themeMode = ThemeMode.dark;
@@ -49,69 +71,65 @@ class ThemeProvider extends ChangeNotifier {
         } else {
           _themeMode = ThemeMode.system;
         }
+      } else {
+        _themeMode = ThemeMode.light;
       }
 
-      final savedAccent = prefs.getInt(_accentColorKey);
-      if (savedAccent != null) {
-        _accentColor = Color(savedAccent);
+      // 2. Accent Color
+      final savedAccentInt = prefs.getInt(_userKey(_accentColorKey));
+      if (savedAccentInt != null) {
+        _accentColor = Color(savedAccentInt);
+      } else {
+        final secAccent = await storage.read(key: _userKey(_accentColorKey));
+        if (secAccent != null) {
+          final val = int.tryParse(secAccent);
+          _accentColor = val != null ? Color(val) : defaultAccentColor;
+        } else {
+          _accentColor = defaultAccentColor;
+        }
       }
 
-      final savedScale = prefs.getDouble(_textScaleKey);
+      // 3. Text Scale
+      final savedScale = prefs.getDouble(_userKey(_textScaleKey));
       if (savedScale != null) {
         _textScaleFactor = savedScale.clamp(0.8, 1.6);
+      } else {
+        _textScaleFactor = 1.0;
       }
 
-      final savedContrast = prefs.getBool(_highContrastKey);
-      if (savedContrast != null) {
-        _highContrast = savedContrast;
-      }
+      // 4. High Contrast
+      _highContrast = prefs.getBool(_userKey(_highContrastKey)) ?? false;
 
-      final savedMotion = prefs.getBool(_reduceMotionKey);
-      if (savedMotion != null) {
-        _reduceMotion = savedMotion;
-      }
+      // 5. Reduce Motion
+      _reduceMotion = prefs.getBool(_userKey(_reduceMotionKey)) ?? false;
 
-      final savedHaptics = prefs.getBool(_hapticsKey);
-      if (savedHaptics != null) {
-        _hapticsEnabled = savedHaptics;
-        HapticService.enabled = _hapticsEnabled;
-      }
+      // 6. Haptics
+      _hapticsEnabled = prefs.getBool(_userKey(_hapticsKey)) ?? true;
+      HapticService.enabled = _hapticsEnabled;
 
-      final savedDyslexia = prefs.getBool(_dyslexiaSpacingKey);
-      if (savedDyslexia != null) {
-        _dyslexiaSpacing = savedDyslexia;
-      }
-
-      notifyListeners();
-    } catch (_) {}
-
-    // 2. Secondary check on FlutterSecureStorage (for backwards compatibility)
-    try {
-      const storage = FlutterSecureStorage();
-      final secTheme = await storage.read(key: _themeKey);
-      if (secTheme != null) {
-        if (secTheme == 'dark') {
-          _themeMode = ThemeMode.dark;
-        } else if (secTheme == 'light') {
-          _themeMode = ThemeMode.light;
-        } else {
-          _themeMode = ThemeMode.system;
-        }
-      }
-
-      final secAccent = await storage.read(key: _accentColorKey);
-      if (secAccent != null) {
-        final val = int.tryParse(secAccent);
-        if (val != null) {
-          _accentColor = Color(val);
-        }
-      }
+      // 7. Dyslexia Spacing
+      _dyslexiaSpacing = prefs.getBool(_userKey(_dyslexiaSpacingKey)) ?? false;
 
       notifyListeners();
     } catch (_) {}
   }
 
-  // ── Setters ───────────────────────────────────────────────────────────────
+  // ── Reset to Global Default (Used on logout & pre-auth screens) ───────────
+
+  void resetToDefaults() {
+    _currentUserId = null;
+    _themeMode = ThemeMode.light;
+    _accentColor = defaultAccentColor;
+    _textScaleFactor = 1.0;
+    _highContrast = false;
+    _reduceMotion = false;
+    _hapticsEnabled = true;
+    _dyslexiaSpacing = false;
+    HapticService.enabled = true;
+    notifyListeners();
+  }
+
+  // ── Setters (Persisted with user-scoped storage keys) ─────────────────────
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
@@ -119,9 +137,9 @@ class ThemeProvider extends ChangeNotifier {
     final modeStr = mode == ThemeMode.dark ? 'dark' : (mode == ThemeMode.light ? 'light' : 'system');
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_themeKey, modeStr);
+      await prefs.setString(_userKey(_themeKey), modeStr);
       const storage = FlutterSecureStorage();
-      await storage.write(key: _themeKey, value: modeStr);
+      await storage.write(key: _userKey(_themeKey), value: modeStr);
     } catch (_) {}
   }
 
@@ -138,9 +156,9 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble(_textScaleKey, _textScaleFactor);
+      await prefs.setDouble(_userKey(_textScaleKey), _textScaleFactor);
       const storage = FlutterSecureStorage();
-      await storage.write(key: _textScaleKey, value: _textScaleFactor.toString());
+      await storage.write(key: _userKey(_textScaleKey), value: _textScaleFactor.toString());
     } catch (_) {}
   }
 
@@ -149,9 +167,9 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_highContrastKey, value);
+      await prefs.setBool(_userKey(_highContrastKey), value);
       const storage = FlutterSecureStorage();
-      await storage.write(key: _highContrastKey, value: value.toString());
+      await storage.write(key: _userKey(_highContrastKey), value: value.toString());
     } catch (_) {}
   }
 
@@ -160,9 +178,9 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_accentColorKey, color.toARGB32());
+      await prefs.setInt(_userKey(_accentColorKey), color.toARGB32());
       const storage = FlutterSecureStorage();
-      await storage.write(key: _accentColorKey, value: color.toARGB32().toString());
+      await storage.write(key: _userKey(_accentColorKey), value: color.toARGB32().toString());
     } catch (_) {}
   }
 
@@ -171,9 +189,9 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_reduceMotionKey, value);
+      await prefs.setBool(_userKey(_reduceMotionKey), value);
       const storage = FlutterSecureStorage();
-      await storage.write(key: _reduceMotionKey, value: value.toString());
+      await storage.write(key: _userKey(_reduceMotionKey), value: value.toString());
     } catch (_) {}
   }
 
@@ -183,9 +201,9 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_hapticsKey, value);
+      await prefs.setBool(_userKey(_hapticsKey), value);
       const storage = FlutterSecureStorage();
-      await storage.write(key: _hapticsKey, value: value.toString());
+      await storage.write(key: _userKey(_hapticsKey), value: value.toString());
     } catch (_) {}
   }
 
@@ -194,9 +212,9 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_dyslexiaSpacingKey, value);
+      await prefs.setBool(_userKey(_dyslexiaSpacingKey), value);
       const storage = FlutterSecureStorage();
-      await storage.write(key: _dyslexiaSpacingKey, value: value.toString());
+      await storage.write(key: _userKey(_dyslexiaSpacingKey), value: value.toString());
     } catch (_) {}
   }
 }

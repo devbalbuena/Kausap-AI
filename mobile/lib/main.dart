@@ -98,14 +98,23 @@ class KausapApp extends StatelessWidget {
 
 /// Handles startup logic:
 /// - Shows a splash while checking stored token / auth state
-/// - Routes to Home if already logged in
-/// - Routes to Role Selection if not
-class _AppStartup extends StatelessWidget {
+/// - Synchronizes user-specific theme preferences
+/// - Routes to Home / Admin / Counselor if logged in
+/// - Routes to Login if not
+class _AppStartup extends StatefulWidget {
   const _AppStartup();
+
+  @override
+  State<_AppStartup> createState() => _AppStartupState();
+}
+
+class _AppStartupState extends State<_AppStartup> {
+  String? _lastSyncedUserId;
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final theme = context.read<ThemeProvider>();
 
     if (auth.isLoading) {
       // Show proper animated splash while auth checks token
@@ -114,6 +123,17 @@ class _AppStartup extends StatelessWidget {
 
     if (auth.isAuthenticated && auth.currentUser != null) {
       final user = auth.currentUser!;
+      final userId = user['id']?.toString() ?? user['email']?.toString() ?? '';
+
+      if (_lastSyncedUserId != userId) {
+        _lastSyncedUserId = userId;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            theme.loadUserPreferences(userId);
+          }
+        });
+      }
+
       if (user['is_active'] == false) {
         return DeactivatedAccountScreen(userProfile: user);
       }
@@ -127,6 +147,16 @@ class _AppStartup extends StatelessWidget {
       }
       // Wrap with PIN lock — only blocks if user has set a PIN
       return PinLockScreen(child: home);
+    }
+
+    // Unauthenticated state: reset theme to clean default
+    if (_lastSyncedUserId != null) {
+      _lastSyncedUserId = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          theme.resetToDefaults();
+        }
+      });
     }
 
     return const LoginScreen();

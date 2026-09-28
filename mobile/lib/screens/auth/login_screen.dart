@@ -5,7 +5,6 @@ import '../../utils/app_routes.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/theme_provider.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
 import '../../widgets/accessible_error_widget.dart';
@@ -198,9 +197,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = context.watch<ThemeProvider>().accentColor;
     return Theme(
-      data: AppTheme.getTheme(accentColor),
+      data: AppTheme.defaultTheme,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
