@@ -381,35 +381,40 @@ class _DownloadDataScreenState extends State<DownloadDataScreen> with TickerProv
           ),
         ],
       ),
-      child: CheckboxListTile(
-        value: value,
-        onChanged: (v) => onChanged(v ?? false),
-        activeColor: color,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        secondary: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: color.withAlpha(25),
-            borderRadius: BorderRadius.circular(10),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: CheckboxListTile(
+          value: value,
+          onChanged: (v) => onChanged(v ?? false),
+          activeColor: color,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          secondary: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
           ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w600,
-            fontSize: 13.5,
-            color: KausapColors.textPrimary(context),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+              fontSize: 13.5,
+              color: KausapColors.textPrimary(context),
+            ),
           ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 11.5,
-            color: KausapColors.textMuted(context),
+          subtitle: Text(
+            subtitle,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.5,
+              color: KausapColors.textMuted(context),
+            ),
           ),
         ),
       ),

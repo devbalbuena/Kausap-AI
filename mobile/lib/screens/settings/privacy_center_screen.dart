@@ -457,34 +457,39 @@ class _PrivacyCenterScreenState extends State<PrivacyCenterScreen> {
         border: Border.all(color: KausapColors.border(context)),
         boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? 0 : 8), blurRadius: 8, offset: const Offset(0, 2))],
       ),
-      child: Column(
-        children: [
-          ListTile(
-            leading: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(color: const Color(0xFF0284C7).withAlpha(25), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.download_rounded, color: Color(0xFF0284C7), size: 18),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            ListTile(
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: const Color(0xFF0284C7).withAlpha(25), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.download_rounded, color: Color(0xFF0284C7), size: 18),
+              ),
+              title: Text('Download My Wellness Data', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+              subtitle: Text('Export a copy of your records to JSON', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
+              trailing: Icon(Icons.chevron_right_rounded, color: KausapColors.textMuted(context)),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadDataScreen())),
             ),
-            title: Text('Download My Wellness Data', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
-            subtitle: Text('Export a copy of your records to JSON', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
-            trailing: Icon(Icons.chevron_right_rounded, color: KausapColors.textMuted(context)),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadDataScreen())),
-          ),
-          Divider(height: 1, indent: 64, color: KausapColors.border(context)),
-          ListTile(
-            leading: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(color: const Color(0xFF7C3AED).withAlpha(25), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.gavel_rounded, color: Color(0xFF7C3AED), size: 18),
+            Divider(height: 1, indent: 64, color: KausapColors.border(context)),
+            ListTile(
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: const Color(0xFF7C3AED).withAlpha(25), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.gavel_rounded, color: Color(0xFF7C3AED), size: 18),
+              ),
+              title: Text('Terms & Legal Policies', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
+              subtitle: Text('Read full Terms of Service & Clinical Disclaimers', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
+              trailing: Icon(Icons.chevron_right_rounded, color: KausapColors.textMuted(context)),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyScreen())),
             ),
-            title: Text('Terms & Legal Policies', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13.5, color: KausapColors.textPrimary(context))),
-            subtitle: Text('Read full Terms of Service & Clinical Disclaimers', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: KausapColors.textMuted(context))),
-            trailing: Icon(Icons.chevron_right_rounded, color: KausapColors.textMuted(context)),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyScreen())),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

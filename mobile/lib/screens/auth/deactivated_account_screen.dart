@@ -398,65 +398,70 @@ class _DeactivatedAccountScreenState extends State<DeactivatedAccountScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'University Guidance Office Contacts',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                    ),
-                    const SizedBox(height: 12),
-                    ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.email_outlined, size: 18, color: Color(0xFF0284C7)),
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'University Guidance Office Contacts',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                       ),
-                      title: const Text('guidance@csu.edu.ph', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
-                      subtitle: const Text('Official Counseling Office Email', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
-                      onTap: _launchEmail,
-                    ),
-                    const Divider(height: 16),
-                    ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.phone_in_talk_rounded, size: 18, color: Color(0xFF16A34A)),
-                      ),
-                      title: const Text('(085) 341-2786', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
-                      subtitle: const Text('Guidance Hotline (Mon-Fri 8am-5pm)', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
-                      onTap: _launchPhone,
-                    ),
-                    const Divider(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
+                      const SizedBox(height: 12),
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.location_on_outlined, size: 18, color: Color(0xFF64748B)),
+                          decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)),
+                          child: const Icon(Icons.email_outlined, size: 18, color: Color(0xFF0284C7)),
                         ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Office Location', style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
-                              SizedBox(height: 2),
-                              Text('2nd Floor, Admin Bldg, CSU Main Campus, Ampayon, Butuan City',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.35)),
-                            ],
+                        title: const Text('guidance@csu.edu.ph', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                        subtitle: const Text('Official Counseling Office Email', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
+                        onTap: _launchEmail,
+                      ),
+                      const Divider(height: 16),
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(8)),
+                          child: const Icon(Icons.phone_in_talk_rounded, size: 18, color: Color(0xFF16A34A)),
+                        ),
+                        title: const Text('(085) 341-2786', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                        subtitle: const Text('Guidance Hotline (Mon-Fri 8am-5pm)', style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B))),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
+                        onTap: _launchPhone,
+                      ),
+                      const Divider(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
+                            child: const Icon(Icons.location_on_outlined, size: 18, color: Color(0xFF64748B)),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Office Location', style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                                SizedBox(height: 2),
+                                Text('2nd Floor, Admin Bldg, CSU Main Campus, Ampayon, Butuan City',
+                                    style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.35)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

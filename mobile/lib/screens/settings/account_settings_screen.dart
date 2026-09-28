@@ -432,7 +432,12 @@ class AccountSettingsScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(children: children),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: children),
+      ),
     );
   }
 
