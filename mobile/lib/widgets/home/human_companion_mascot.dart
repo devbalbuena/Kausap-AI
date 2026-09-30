@@ -208,7 +208,7 @@ class _HumanCompanionMascotState extends State<HumanCompanionMascot>
   int _affirmationIdx = 0;
 
   static const String _defaultAssetPath =
-      'assets/images/kausap/human_companion/brain_buddy.png';
+      'assets/images/kausap/human_companion/kiko.png';
 
   @override
   void initState() {
