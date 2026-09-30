@@ -255,21 +255,21 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
     final currentConfig = _buildConfig();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: KausapColors.cardBg(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.close_rounded, color: KausapColors.textPrimary(context)),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           widget.editAvatar != null ? 'Edit Custom Companion' : 'Custom Avatar Studio',
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Poppins',
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF0F172A),
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -283,15 +283,23 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
               margin: const EdgeInsets.fromLTRB(20, 12, 20, 10),
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFE0F2FE), Color(0xFFEDE9FE)],
+                gradient: LinearGradient(
+                  colors: KausapColors.isDark(context)
+                      ? [
+                          KausapColors.cardBg(context),
+                          KausapColors.accent(context).withAlpha(30),
+                        ]
+                      : [
+                          KausapColors.accent(context).withAlpha(30),
+                          const Color(0xFFEDE9FE),
+                        ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFBAE6FD)),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x0E0077B6), blurRadius: 16, offset: Offset(0, 4)),
+                border: Border.all(color: KausapColors.accent(context).withAlpha(80)),
+                boxShadow: [
+                  BoxShadow(color: KausapColors.accentShadow(context), blurRadius: 16, offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
@@ -303,20 +311,20 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                   const SizedBox(height: 10),
                   Text(
                     _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : 'Your Companion',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
-                      color: Color(0xFF0F172A),
+                      color: KausapColors.textPrimary(context),
                     ),
                   ),
                   Text(
                     '$_selectedRelationship • ${_dialects.firstWhere((d) => d['id'] == _selectedDialect)['title']}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w600,
                       fontSize: 11.5,
-                      color: Color(0xFF0284C7),
+                      color: KausapColors.accent(context),
                     ),
                   ),
                 ],
@@ -328,7 +336,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -353,9 +361,9 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
             // ── Bottom Action Bar ────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+              decoration: BoxDecoration(
+                color: KausapColors.cardBg(context),
+                border: Border(top: BorderSide(color: KausapColors.border(context))),
               ),
               child: Row(
                 children: [
@@ -368,11 +376,11 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        side: BorderSide(color: KausapColors.border(context)),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Back',
-                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: KausapColors.textSecondary(context)),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -388,7 +396,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: KausapColors.accent(context),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -424,10 +432,10 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected ? KausapColors.cardBg(context) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             boxShadow: isSelected
-                ? const [BoxShadow(color: Color(0x10000000), blurRadius: 4, offset: Offset(0, 2))]
+                ? [BoxShadow(color: Colors.black.withAlpha(KausapColors.isDark(context) ? 40 : 10), blurRadius: 4, offset: const Offset(0, 2))]
                 : null,
           ),
           child: Text(
@@ -437,7 +445,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
               fontFamily: 'Poppins',
               fontSize: 11.5,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected ? AppColors.primary : const Color(0xFF64748B),
+              color: isSelected ? KausapColors.accent(context) : KausapColors.textSecondary(context),
             ),
           ),
         ),
@@ -454,7 +462,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
         Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: const Color(0xFFEEF2FF),
+            color: KausapColors.accent(context).withAlpha(KausapColors.isDark(context) ? 40 : 20),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -465,7 +473,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: !_isMascotMode ? AppColors.primary : Colors.transparent,
+                      color: !_isMascotMode ? KausapColors.accent(context) : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -475,7 +483,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
-                        color: !_isMascotMode ? Colors.white : const Color(0xFF4F46E5),
+                        color: !_isMascotMode ? Colors.white : KausapColors.accent(context),
                       ),
                     ),
                   ),
@@ -487,7 +495,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: _isMascotMode ? AppColors.primary : Colors.transparent,
+                      color: _isMascotMode ? KausapColors.accent(context) : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -497,7 +505,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                         fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
-                        color: _isMascotMode ? Colors.white : const Color(0xFF4F46E5),
+                        color: _isMascotMode ? Colors.white : KausapColors.accent(context),
                       ),
                     ),
                   ),
@@ -582,12 +590,21 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
         TextField(
           controller: _nameController,
           onChanged: (_) => setState(() {}),
+          style: TextStyle(fontFamily: 'Inter', color: KausapColors.textPrimary(context)),
           decoration: InputDecoration(
             hintText: 'e.g., Bestie Sam, Ate Kim, Kuya Dan, Tita Joy',
-            prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.primary),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            hintStyle: TextStyle(color: KausapColors.textMuted(context)),
+            prefixIcon: Icon(Icons.badge_outlined, color: KausapColors.accent(context)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: KausapColors.border(context)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: KausapColors.border(context)),
+            ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: KausapColors.cardBg(context),
           ),
         ),
         const SizedBox(height: 16),
@@ -614,10 +631,12 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFEEF2FF) : Colors.white,
+                color: isSelected
+                    ? KausapColors.accent(context).withAlpha(KausapColors.isDark(context) ? 45 : 20)
+                    : KausapColors.cardBg(context),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                  color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                   width: isSelected ? 2 : 1,
                 ),
               ),
@@ -636,16 +655,16 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w700,
                             fontSize: 13.5,
-                            color: isSelected ? AppColors.primary : const Color(0xFF0F172A),
+                            color: isSelected ? KausapColors.accent(context) : KausapColors.textPrimary(context),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           rel['desc']!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 11.5,
-                            color: Color(0xFF64748B),
+                            color: KausapColors.textSecondary(context),
                             height: 1.35,
                           ),
                         ),
@@ -662,12 +681,21 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
         _buildSectionTitle('What should your companion call you?'),
         TextField(
           controller: _callSignController,
+          style: TextStyle(fontFamily: 'Inter', color: KausapColors.textPrimary(context)),
           decoration: InputDecoration(
             hintText: 'e.g., Beshie, Bunso, Partner, Bro, or your first name',
-            prefixIcon: const Icon(Icons.waving_hand_outlined, color: AppColors.primary),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            hintStyle: TextStyle(color: KausapColors.textMuted(context)),
+            prefixIcon: Icon(Icons.waving_hand_outlined, color: KausapColors.accent(context)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: KausapColors.border(context)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: KausapColors.border(context)),
+            ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: KausapColors.cardBg(context),
           ),
         ),
       ],
@@ -691,10 +719,12 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFEEF2FF) : Colors.white,
+                color: isSelected
+                    ? KausapColors.accent(context).withAlpha(KausapColors.isDark(context) ? 45 : 20)
+                    : KausapColors.cardBg(context),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                  color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                   width: isSelected ? 2 : 1,
                 ),
               ),
@@ -702,7 +732,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                 children: [
                   Icon(
                     isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                    color: isSelected ? AppColors.primary : const Color(0xFF94A3B8),
+                    color: isSelected ? KausapColors.accent(context) : KausapColors.textMuted(context),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -715,15 +745,15 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
-                            color: isSelected ? AppColors.primary : const Color(0xFF0F172A),
+                            color: isSelected ? KausapColors.accent(context) : KausapColors.textPrimary(context),
                           ),
                         ),
                         Text(
                           d['desc']!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 11,
-                            color: Color(0xFF64748B),
+                            color: KausapColors.textSecondary(context),
                           ),
                         ),
                       ],
@@ -740,11 +770,20 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
         TextField(
           controller: _catchphraseController,
           maxLines: 2,
+          style: TextStyle(fontFamily: 'Inter', color: KausapColors.textPrimary(context)),
           decoration: InputDecoration(
             hintText: 'e.g., "Proud of you palagi!", "Hinga muna bago mag-panic!"',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            hintStyle: TextStyle(color: KausapColors.textMuted(context)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: KausapColors.border(context)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: KausapColors.border(context)),
+            ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: KausapColors.cardBg(context),
           ),
         ),
       ],
@@ -757,11 +796,11 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
       padding: const EdgeInsets.only(top: 10, bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w700,
           fontSize: 13,
-          color: Color(0xFF1E293B),
+          color: KausapColors.textPrimary(context),
         ),
       ),
     );
@@ -792,7 +831,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFCBD5E1),
+                  color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                   width: isSelected ? 2.5 : 1,
                 ),
               ),
@@ -832,10 +871,10 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.white,
+                color: isSelected ? KausapColors.accent(context) : KausapColors.cardBg(context),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                  color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                 ),
               ),
               child: Row(
@@ -848,7 +887,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
                       fontFamily: 'Poppins',
                       fontSize: 11.5,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? Colors.white : const Color(0xFF334155),
+                      color: isSelected ? Colors.white : KausapColors.textSecondary(context),
                     ),
                   ),
                 ],
@@ -881,7 +920,7 @@ class _CustomAvatarStudioScreenState extends State<CustomAvatarStudioScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFCBD5E1),
+                  color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                   width: isSelected ? 2.5 : 1,
                 ),
               ),

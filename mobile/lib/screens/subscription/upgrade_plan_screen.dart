@@ -82,9 +82,10 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: KausapColors.border(context)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -95,7 +96,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: KausapColors.border(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -117,11 +118,11 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                   children: [
                     Text(
                       isAnnualPlan ? 'Kausap AI Pro (Annual)' : 'Kausap AI Pro (Monthly)',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1F2937),
+                        color: KausapColors.textPrimary(context),
                       ),
                     ),
                     const Text(
@@ -141,16 +142,16 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: KausapColors.border(context)),
               ),
               child: Column(
                 children: [
                   _buildSubRow('Billing Cycle', isAnnualPlan ? 'Annual (₱1,899/year)' : 'Monthly (₱199/month)'),
-                  const Divider(height: 18, color: Color(0xFFE2E8F0)),
+                  Divider(height: 18, color: KausapColors.border(context)),
                   _buildSubRow('Access Tier', 'All 4 Specialist Avatars & Features'),
-                  const Divider(height: 18, color: Color(0xFFE2E8F0)),
+                  Divider(height: 18, color: KausapColors.border(context)),
                   _buildSubRow('Renewal Date', isAnnualPlan ? 'August 2027 (Renews Yearly)' : 'Next Month (Renews Monthly)'),
                 ],
               ),
@@ -162,7 +163,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(ctx),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: KausapColors.accent(context),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
@@ -197,8 +198,8 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B))),
-        Text(value, style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+        Text(label, style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: KausapColors.textSecondary(context))),
+        Text(value, style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, fontWeight: FontWeight.w600, color: KausapColors.textPrimary(context))),
       ],
     );
   }
@@ -241,9 +242,10 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: KausapColors.border(context)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -252,7 +254,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.divider,
+                color: KausapColors.border(context),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -261,7 +263,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
             const SizedBox(height: 12),
             Text(
               isAnnual ? 'Welcome to Kausap Pro Annual!' : 'Welcome to Kausap Pro Monthly!',
-              style: AppTextStyles.heading1.copyWith(fontSize: 22),
+              style: AppTextStyles.heading1.copyWith(fontSize: 22, color: KausapColors.textPrimary(context)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -269,7 +271,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
               isAnnual
                   ? 'You unlocked the complete Annual plan with 20% savings, unlimited AI sessions, and all specialist avatars!'
                   : 'You now have full Pro access with all specialist avatars unlocked.',
-              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, height: 1.4),
+              style: AppTextStyles.body.copyWith(color: KausapColors.textSecondary(context), height: 1.4),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -282,7 +284,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: KausapColors.accent(context),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -298,7 +300,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -313,21 +315,22 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         shape: BoxShape.circle,
+                        border: Border.all(color: KausapColors.border(context)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withAlpha(15),
+                            color: Colors.black.withAlpha(KausapColors.isDark(context) ? 40 : 15),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF191C21)),
+                      child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: KausapColors.textPrimary(context)),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text('Upgrade Plan', style: AppTextStyles.heading2.copyWith(fontSize: 18)),
+                  Text('Upgrade Plan', style: AppTextStyles.heading2.copyWith(fontSize: 18, color: KausapColors.textPrimary(context))),
                 ],
               ),
             ),
@@ -342,8 +345,10 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0284C7), Color(0xFF0EA5E9)],
+                      gradient: LinearGradient(
+                        colors: KausapColors.isDark(context)
+                            ? [const Color(0xFF1E3A8A), const Color(0xFF0369A1)]
+                            : [const Color(0xFF0284C7), const Color(0xFF0EA5E9)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -418,7 +423,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
+                      color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
@@ -429,7 +434,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
-                                color: !_isAnnual ? Colors.white : Colors.transparent,
+                                color: !_isAnnual ? KausapColors.cardBg(context) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: !_isAnnual
                                     ? [
@@ -448,7 +453,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                                     fontFamily: 'Inter',
                                     fontSize: 12.5,
                                     fontWeight: !_isAnnual ? FontWeight.w700 : FontWeight.w500,
-                                    color: !_isAnnual ? const Color(0xFF1E293B) : const Color(0xFF64748B),
+                                    color: !_isAnnual ? KausapColors.textPrimary(context) : KausapColors.textSecondary(context),
                                   ),
                                 ),
                               ),
@@ -461,7 +466,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
-                                color: _isAnnual ? Colors.white : Colors.transparent,
+                                color: _isAnnual ? KausapColors.cardBg(context) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: _isAnnual
                                     ? [
@@ -482,7 +487,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                                       fontFamily: 'Inter',
                                       fontSize: 12.5,
                                       fontWeight: _isAnnual ? FontWeight.w700 : FontWeight.w500,
-                                      color: _isAnnual ? const Color(0xFF1E293B) : const Color(0xFF64748B),
+                                      color: _isAnnual ? KausapColors.textPrimary(context) : KausapColors.textSecondary(context),
                                     ),
                                   ),
                                   const SizedBox(width: 4),
@@ -517,12 +522,12 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: KausapColors.cardBg(context),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0x1AC0C9C2)),
+                      border: Border.all(color: KausapColors.border(context)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha(8),
+                          color: Colors.black.withAlpha(KausapColors.isDark(context) ? 35 : 8),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -531,10 +536,10 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Included with Pro', style: AppTextStyles.heading2.copyWith(fontSize: 15)),
+                        Text('Included with Pro', style: AppTextStyles.heading2.copyWith(fontSize: 15, color: KausapColors.textPrimary(context))),
                         const SizedBox(height: 16),
                         _buildFeatureRow('Unlimited AI Companion Chat', 'No daily message limits or slowdowns'),
-                        _buildFeatureRow('Unlock All Specialist Avatars', 'Dr. Kim, Dr. Min, Coach Jeon & custom personas'),
+                        _buildFeatureRow('Unlock All Specialist Avatars', 'Ate Maya, Kuya Ben, Doc Santos, Coach Leo & custom personas'),
                         _buildFeatureRow('Full Wellness Activity Library', 'Access to all guided meditations, breathwork, and journaling'),
                         _buildFeatureRow('Comprehensive Mood Analytics', 'Monthly PDF summary reports of your emotional wellness'),
                         _buildFeatureRow('Ad-Free & Privacy Shield', 'Zero ads and prioritized server response speed'),
@@ -550,25 +555,25 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                   const SizedBox(height: 24),
 
                   // FAQ Section
-                  Text('Frequently Asked Questions', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+                  Text('Frequently Asked Questions', style: AppTextStyles.heading2.copyWith(fontSize: 16, color: KausapColors.textPrimary(context))),
                   const SizedBox(height: 10),
                   ..._faqs.map((faq) {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0x1AC0C9C2)),
+                        border: Border.all(color: KausapColors.border(context)),
                       ),
                       child: ExpansionTile(
                         shape: const Border(),
                         title: Text(
                           faq['question']!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F2937),
+                            color: KausapColors.textPrimary(context),
                           ),
                         ),
                         children: [
@@ -576,10 +581,10 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                             child: Text(
                               faq['answer']!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 13,
-                                color: AppColors.textSecondary,
+                                color: KausapColors.textSecondary(context),
                                 height: 1.45,
                               ),
                             ),
@@ -603,7 +608,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
         width: double.infinity,
         height: 52,
         decoration: BoxDecoration(
-          color: AppColors.primary,
+          color: KausapColors.accent(context),
           borderRadius: BorderRadius.circular(14),
         ),
         child: const Center(
@@ -621,7 +626,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
           child: ElevatedButton(
             onPressed: () => _showManageSubscriptionSheet('monthly'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: KausapColors.accent(context),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               elevation: 0,
@@ -635,14 +640,14 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
           height: 52,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
+            color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFCBD5E1)),
+            border: Border.all(color: KausapColors.border(context)),
           ),
-          child: const Center(
+          child: Center(
             child: Text(
               'Included in Active Annual Plan 👑',
-              style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600, color: KausapColors.textSecondary(context)),
             ),
           ),
         );
@@ -653,7 +658,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
           child: ElevatedButton(
             onPressed: () => _handleUpgrade('monthly'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: KausapColors.accent(context),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               elevation: 0,
@@ -672,7 +677,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
         child: ElevatedButton(
           onPressed: () => _showManageSubscriptionSheet('annual'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
+            backgroundColor: KausapColors.accent(context),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 0,
@@ -702,7 +707,7 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
         child: ElevatedButton(
           onPressed: () => _handleUpgrade('annual'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
+            backgroundColor: KausapColors.accent(context),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 0,
@@ -734,19 +739,19 @@ class _UpgradePlanScreenState extends State<UpgradePlanScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2937),
+                    color: KausapColors.textPrimary(context),
                   ),
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: KausapColors.textSecondary(context),
                   ),
                 ),
               ],

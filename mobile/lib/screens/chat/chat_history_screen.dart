@@ -233,27 +233,27 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: KausapColors.textPrimary(context), size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Chat History',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: AppColors.textPrimary,
+            color: KausapColors.textPrimary(context),
           ),
         ),
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: KausapColors.accent(context)))
           : _sessions.isEmpty
               ? Center(
                   child: Column(
@@ -263,30 +263,30 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                         width: 70,
                         height: 70,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withAlpha(20),
+                          color: KausapColors.accent(context).withAlpha(30),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary, size: 34),
+                        child: Icon(Icons.chat_bubble_outline_rounded, color: KausapColors.accent(context), size: 34),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         'No Past Conversations',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: KausapColors.textPrimary(context),
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 40),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
                         child: Text(
                           'Your conversations with Kausap AI will be saved here so you can review them anytime.',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 13,
-                            color: AppColors.textSecondary,
+                            color: KausapColors.textSecondary(context),
                             height: 1.4,
                           ),
                           textAlign: TextAlign.center,
@@ -328,12 +328,12 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: KausapColors.cardBg(context),
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: KausapColors.border(context)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha(5),
+                              color: Colors.black.withAlpha(KausapColors.isDark(context) ? 35 : 8),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -343,69 +343,69 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(18),
                           child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.primary.withAlpha(25),
-                            child: Text(_getAvatarEmoji(avatarName), style: const TextStyle(fontSize: 18)),
-                          ),
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  avatarName,
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            leading: CircleAvatar(
+                              backgroundColor: KausapColors.accent(context).withAlpha(KausapColors.isDark(context) ? 45 : 30),
+                              child: Text(_getAvatarEmoji(avatarName), style: const TextStyle(fontSize: 18)),
+                            ),
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    avatarName,
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: KausapColors.textPrimary(context),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                dateStr,
-                                style: const TextStyle(
+                                const SizedBox(width: 8),
+                                Text(
+                                  dateStr,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11,
+                                    color: KausapColors.textMuted(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                lastMsg,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 11,
-                                  color: Color(0xFF94A3B8),
+                                  fontSize: 13,
+                                  color: KausapColors.textSecondary(context),
+                                  height: 1.3,
                                 ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              lastMsg,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                color: Color(0xFF64748B),
-                                height: 1.3,
                               ),
                             ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                              tooltip: 'Delete this chat',
+                              onPressed: () => _deleteSession(session),
+                            ),
+                            onTap: () {
+                              if (widget.onResumeSession != null) {
+                                widget.onResumeSession!(
+                                  session['id']?.toString(),
+                                  messages,
+                                  session['avatarId']?.toString(),
+                                  session['avatarName']?.toString(),
+                                );
+                                Navigator.pop(context);
+                              }
+                            },
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                            tooltip: 'Delete this chat',
-                            onPressed: () => _deleteSession(session),
-                          ),
-                          onTap: () {
-                            if (widget.onResumeSession != null) {
-                              widget.onResumeSession!(
-                                session['id']?.toString(),
-                                messages,
-                                session['avatarId']?.toString(),
-                                session['avatarName']?.toString(),
-                              );
-                              Navigator.pop(context);
-                            }
-                          },
                         ),
-                      ), // Material
                       ),
                     );
                   },

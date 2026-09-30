@@ -94,9 +94,10 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: KausapColors.border(context)),
         ),
         child: SafeArea(
           child: Column(
@@ -107,7 +108,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: KausapColors.border(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -130,11 +131,11 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
               const SizedBox(height: 16),
               Text(
                 'Unlock ${avatar.name}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: KausapColors.textPrimary(context),
                 ),
               ),
               const SizedBox(height: 6),
@@ -159,10 +160,10 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
               Text(
                 '${avatar.name} is an advanced specialist persona available exclusively to Kausap Premium members.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 13,
-                  color: Color(0xFF475569),
+                  color: KausapColors.textSecondary(context),
                   height: 1.45,
                 ),
               ),
@@ -240,9 +241,10 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: KausapColors.cardBg(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: KausapColors.border(context)),
         ),
         child: SafeArea(
           child: Column(
@@ -253,7 +255,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: KausapColors.border(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -281,8 +283,8 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                               avatar.imagePath,
                               fit: BoxFit.cover,
                               errorBuilder: (_, _, _) => Container(
-                                color: const Color(0xFFEEF2FF),
-                                child: const Icon(Icons.person, color: AppColors.primary, size: 44),
+                                color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
+                                child: Icon(Icons.person, color: KausapColors.accent(context), size: 44),
                               ),
                             ),
                           ),
@@ -317,21 +319,21 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
               const SizedBox(height: 14),
               Text(
                 avatar.name,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: KausapColors.textPrimary(context),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 avatar.roleTitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF0284C7),
+                  color: KausapColors.accent(context),
                 ),
               ),
               const SizedBox(height: 14),
@@ -340,19 +342,19 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: KausapColors.border(context)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       avatar.bio,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12.5,
-                        color: Color(0xFF334155),
+                        color: KausapColors.textSecondary(context),
                         height: 1.45,
                       ),
                     ),
@@ -364,11 +366,11 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                         Expanded(
                           child: Text(
                             avatar.sampleQuote,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 11.5,
                               fontStyle: FontStyle.italic,
-                              color: Color(0xFF64748B),
+                              color: KausapColors.textMuted(context),
                             ),
                           ),
                         ),
@@ -387,16 +389,17 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEEF2FF),
+                      color: KausapColors.accent(context).withAlpha(KausapColors.isDark(context) ? 40 : 20),
                       borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: KausapColors.accent(context).withAlpha(60)),
                     ),
                     child: Text(
                       '# $tag',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF4F46E5),
+                        color: KausapColors.accent(context),
                       ),
                     ),
                   );
@@ -428,7 +431,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: (avatar.isPremium && !_isProUser)
                         ? const Color(0xFFD97706)
-                        : (avatar.isPremium ? const Color(0xFFD97706) : AppColors.primary),
+                        : (avatar.isPremium ? const Color(0xFFD97706) : KausapColors.accent(context)),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -446,12 +449,12 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                           Navigator.pop(ctx);
                           _openCustomAvatarStudio(editAvatar: avatar);
                         },
-                        icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
-                        label: const Text('Edit Persona', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.primary)),
+                        icon: Icon(Icons.edit_outlined, size: 16, color: KausapColors.accent(context)),
+                        label: Text('Edit Persona', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: KausapColors.accent(context))),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          side: const BorderSide(color: AppColors.primary),
+                          side: BorderSide(color: KausapColors.accent(context)),
                         ),
                       ),
                     ),
@@ -537,7 +540,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: KausapColors.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -552,21 +555,22 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: KausapColors.cardBg(context),
                         shape: BoxShape.circle,
-                        boxShadow: const [
+                        border: Border.all(color: KausapColors.border(context)),
+                        boxShadow: [
                           BoxShadow(
-                            color: Color(0x10000000),
+                            color: Colors.black.withAlpha(KausapColors.isDark(context) ? 40 : 15),
                             blurRadius: 8,
-                            offset: Offset(0, 2),
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Color(0xFF1E293B)),
+                      child: Icon(Icons.arrow_back_ios_new, size: 16, color: KausapColors.textPrimary(context)),
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -575,7 +579,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                           fontFamily: 'Poppins',
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: KausapColors.textPrimary(context),
                         ),
                       ),
                       Text(
@@ -583,7 +587,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 12,
-                          color: Color(0xFF64748B),
+                          color: KausapColors.textSecondary(context),
                         ),
                       ),
                     ],
@@ -601,24 +605,36 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFEEF2FF), Color(0xFFE0F2FE)],
+                    gradient: LinearGradient(
+                      colors: KausapColors.isDark(context)
+                          ? [
+                              KausapColors.cardBg(context),
+                              KausapColors.accent(context).withAlpha(30),
+                            ]
+                          : [
+                              KausapColors.accent(context).withAlpha(20),
+                              KausapColors.accent(context).withAlpha(10),
+                            ],
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.primary.withAlpha(60)),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
+                    border: Border.all(color: KausapColors.accent(context).withAlpha(80)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: KausapColors.accentShadow(context),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
                     ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
+                      Icon(Icons.add_circle_outline_rounded, size: 18, color: KausapColors.accent(context)),
                       const SizedBox(width: 8),
                       Text(
                         '+ Create Custom Companion Persona',
                         style: AppTextStyles.body.copyWith(
-                          color: AppColors.primary,
+                          color: KausapColors.accent(context),
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                         ),
@@ -648,15 +664,15 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary : Colors.white,
+                        color: isSelected ? KausapColors.accent(context) : KausapColors.cardBg(context),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                          color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
                         ),
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: AppColors.primary.withAlpha(50),
+                                  color: KausapColors.accentShadow(context),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -669,7 +685,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                           fontFamily: 'Poppins',
                           fontSize: 12,
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? Colors.white : const Color(0xFF475569),
+                          color: isSelected ? Colors.white : KausapColors.textSecondary(context),
                         ),
                       ),
                     ),
@@ -689,8 +705,10 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFEF3C7), Color(0xFFFFFBEB)],
+                      gradient: LinearGradient(
+                        colors: KausapColors.isDark(context)
+                            ? const [Color(0xFF2C200B), Color(0xFF1E1708)]
+                            : const [Color(0xFFFEF3C7), Color(0xFFFFFBEB)],
                       ),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFFFDE68A)),
@@ -712,7 +730,7 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                                   fontFamily: 'Poppins',
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF92400E),
+                                  color: Color(0xFFD97706),
                                 ),
                               ),
                               Text(
@@ -755,21 +773,21 @@ class _SelectAvatarScreenState extends State<SelectAvatarScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.person_add_alt_1_rounded, size: 48, color: Color(0xFFCBD5E1)),
+                          Icon(Icons.person_add_alt_1_rounded, size: 48, color: KausapColors.textMuted(context)),
                           const SizedBox(height: 12),
-                          const Text(
+                          Text(
                             'No custom companions yet',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF475569),
+                              color: KausapColors.textPrimary(context),
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
+                          Text(
                             'Tap the button above to build your own persona!',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context)),
                           ),
                         ],
                       ),
@@ -832,19 +850,19 @@ class _AvatarCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: KausapColors.cardBg(context),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
-                ? AppColors.primary
-                : (avatar.isPremium ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0)),
+                ? KausapColors.accent(context)
+                : (avatar.isPremium ? const Color(0xFFFDE68A) : KausapColors.border(context)),
             width: isSelected ? 2.5 : (avatar.isPremium ? 1.5 : 1),
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.primary.withAlpha(25)
-                  : (avatar.isPremium ? const Color(0x10D97706) : const Color(0x06000000)),
+                  ? KausapColors.accentShadow(context)
+                  : (avatar.isPremium ? const Color(0x10D97706) : Colors.black.withAlpha(KausapColors.isDark(context) ? 40 : 12)),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -885,22 +903,22 @@ class _AvatarCard extends StatelessWidget {
                         margin: const EdgeInsets.only(right: 4),
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
+                          color: KausapColors.accent(context).withAlpha(KausapColors.isDark(context) ? 40 : 25),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.primary.withAlpha(90)),
+                          border: Border.all(color: KausapColors.accent(context).withAlpha(90)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.edit_outlined, size: 10, color: AppColors.primary),
-                            SizedBox(width: 2),
+                            Icon(Icons.edit_outlined, size: 10, color: KausapColors.accent(context)),
+                            const SizedBox(width: 2),
                             Text(
                               'Edit',
                               style: TextStyle(
                                 fontFamily: 'Poppins',
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
+                                color: KausapColors.accent(context),
                               ),
                             ),
                           ],
@@ -911,11 +929,11 @@ class _AvatarCard extends StatelessWidget {
                     onTap: onInfoTap,
                     child: Container(
                       padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF1F5F9),
+                      decoration: BoxDecoration(
+                        color: KausapColors.isDark(context) ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF64748B)),
+                      child: Icon(Icons.info_outline_rounded, size: 14, color: KausapColors.textSecondary(context)),
                     ),
                   ),
                 ],
@@ -954,8 +972,8 @@ class _AvatarCard extends StatelessWidget {
                               avatar.imagePath,
                               fit: BoxFit.cover,
                               errorBuilder: (_, _, _) => Container(
-                                color: const Color(0xFFEEF2FF),
-                                child: const Icon(Icons.person, color: AppColors.primary, size: 34),
+                                color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
+                                child: Icon(Icons.person, color: KausapColors.accent(context), size: 34),
                               ),
                             ),
                           ),
@@ -963,11 +981,11 @@ class _AvatarCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     avatar.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w700,
                       fontSize: 12.5,
-                      color: Color(0xFF0F172A),
+                      color: KausapColors.textPrimary(context),
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
@@ -979,7 +997,7 @@ class _AvatarCard extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 10,
-                      color: avatar.isPremium ? const Color(0xFFB45309) : const Color(0xFF64748B),
+                      color: avatar.isPremium ? const Color(0xFFB45309) : KausapColors.textSecondary(context),
                       fontWeight: avatar.isPremium ? FontWeight.w600 : FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
@@ -994,16 +1012,16 @@ class _AvatarCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE0F2FE),
+                            color: KausapColors.accent(context).withAlpha(KausapColors.isDark(context) ? 45 : 30),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Active ✓',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 9.5,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF0284C7),
+                              color: KausapColors.accent(context),
                             ),
                           ),
                         ),
@@ -1014,17 +1032,17 @@ class _AvatarCard extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
+                                color: KausapColors.isDark(context) ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                                border: Border.all(color: KausapColors.border(context)),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Edit ✏️',
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 9,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF475569),
+                                  color: KausapColors.textSecondary(context),
                                 ),
                               ),
                             ),
@@ -1038,17 +1056,17 @@ class _AvatarCard extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
+                          color: KausapColors.accent(context).withAlpha(KausapColors.isDark(context) ? 35 : 20),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.primary.withAlpha(70)),
+                          border: Border.all(color: KausapColors.accent(context).withAlpha(70)),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Edit ✏️',
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 9.5,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                            color: KausapColors.accent(context),
                           ),
                         ),
                       ),
