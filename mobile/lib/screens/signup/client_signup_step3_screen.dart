@@ -145,6 +145,10 @@ class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
                                 _SummaryRow('Gender', d['gender']),
                                 _SummaryRow(
                                     'Occupation', d['occupation'] ?? '—'),
+                                _SummaryRow(
+                                    'Nationality', d['nationality'] ?? 'Filipino'),
+                                if (d['hobbies'] != null && d['hobbies'].toString().trim().isNotEmpty)
+                                  _SummaryRow('Hobbies', d['hobbies'].toString()),
                                 if (d['address'] != null)
                                   _SummaryRow('Address', d['address']),
                                 if (d['bio'] != null)
@@ -167,12 +171,14 @@ class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
                                   SizedBox(
                                     height: 24,
                                     width: 24,
-                                    child: Checkbox(
-                                      value: _agreedToTerms,
-                                      activeColor: AppColors.primary,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      onChanged: (val) => setState(() => _agreedToTerms = val ?? false),
+                                    child: IgnorePointer(
+                                      child: Checkbox(
+                                        value: _agreedToTerms,
+                                        activeColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        onChanged: null,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 10),
@@ -197,7 +203,7 @@ class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
                                             recognizer: TapGestureRecognizer()
                                               ..onTap = () => Navigator.push(
                                                     context,
-                                                    MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                                                    MaterialPageRoute(builder: (_) => const PrivacyScreen(initialTab: 0)),
                                                   ),
                                           ),
                                           const TextSpan(text: ' and '),
@@ -211,7 +217,7 @@ class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
                                             recognizer: TapGestureRecognizer()
                                               ..onTap = () => Navigator.push(
                                                     context,
-                                                    MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                                                    MaterialPageRoute(builder: (_) => const PrivacyScreen(initialTab: 1)),
                                                   ),
                                           ),
                                           const TextSpan(

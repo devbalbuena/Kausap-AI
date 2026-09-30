@@ -1187,12 +1187,129 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
                 const SizedBox(height: 8),
                 _buildInfoRow("Occupation / Program", widget.student['occupation'] ?? 'Student'),
                 const SizedBox(height: 8),
+                _buildInfoRow("Nationality", widget.student['nationality'] ?? 'Filipino'),
+                const SizedBox(height: 8),
                 _buildInfoRow("Birthday", widget.student['birthday'] ?? 'Not provided'),
+                const SizedBox(height: 8),
+                _buildInfoRow("Address", widget.student['address'] ?? 'Not provided'),
                 const SizedBox(height: 8),
                 _buildInfoRow("Account Created", _formatDateTime(widget.student['created_at']?.toString())),
               ],
             ),
           ),
+
+          // ── Hobbies & Coping Outlets (Personalized Metaphors) ──
+          if (widget.student['hobbies'] != null && widget.student['hobbies'].toString().trim().isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFBAE6FD)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.palette_outlined, size: 16, color: Color(0xFF0284C7)),
+                      SizedBox(width: 6),
+                      Text(
+                        "Hobbies & Coping Outlets",
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12.5,
+                          color: Color(0xFF0369A1),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    "Used by AI companion and counselor for culturally resonant coping metaphors",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      color: Color(0xFF0284C7),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: widget.student['hobbies']
+                        .toString()
+                        .split(',')
+                        .map((h) => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFF7DD3FC)),
+                              ),
+                              child: Text(
+                                h.trim(),
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0369A1),
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // ── Student Bio / Personal Self-Care Statement ──
+          if (widget.student['bio'] != null && widget.student['bio'].toString().trim().isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.format_quote_rounded, size: 16, color: Color(0xFF64748B)),
+                      SizedBox(width: 6),
+                      Text(
+                        "Student Bio / Self-Care Notes",
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12.5,
+                          color: Color(0xFF334155),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    widget.student['bio'].toString(),
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: Color(0xFF475569),
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
 
           // ── Action Buttons ──

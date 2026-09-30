@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
+import '../screens/settings/privacy_screen.dart';
 
 /// Interactive Animated Kausap AI Companion Mascot ("Kausap Buddy")
 /// Gently floats, breathes calmly in a soothing rhythm, blinks,
@@ -578,6 +579,75 @@ class AuthCard extends StatelessWidget {
 class AuthFooter extends StatelessWidget {
   const AuthFooter({super.key});
 
+  void _showSupportDialog(BuildContext context) {
+    HapticService.lightTap();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.support_agent_rounded, color: AppColors.primary, size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Campus Support & Guidance',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Father Saturnino Urios University\nGuidance & Counseling Center',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Color(0xFF1E293B),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '• Office: 2nd Floor, Morelos Hall, FSUU Main Campus\n'
+              '• Hours: Monday – Friday, 8:00 AM – 5:00 PM\n'
+              '• Support Email: guidance@urios.edu.ph\n'
+              '• Technical Help: support@kausap.ai\n\n'
+              'Emergency 24/7 Crisis Support:\n'
+              '• NCMH Toll-Free: 1553 / 0917-899-8727\n'
+              '• Hopeline PH: 0917-558-4673',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: Color(0xFF64748B),
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            ),
+            child: const Text('Got it', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -591,11 +661,69 @@ class AuthFooter extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('PRIVACY POLICY', style: AppTextStyles.caption.copyWith(fontSize: 9.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
-            const SizedBox(width: 14),
-            Text('TERMS OF SERVICE', style: AppTextStyles.caption.copyWith(fontSize: 9.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
-            const SizedBox(width: 14),
-            Text('SUPPORT', style: AppTextStyles.caption.copyWith(fontSize: 9.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () {
+                HapticService.lightTap();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PrivacyScreen(initialTab: 1)),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Text(
+                  'PRIVACY POLICY',
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 9.5,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text('•', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 10)),
+            const SizedBox(width: 8),
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () {
+                HapticService.lightTap();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PrivacyScreen(initialTab: 0)),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Text(
+                  'TERMS OF SERVICE',
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 9.5,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text('•', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 10)),
+            const SizedBox(width: 8),
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () => _showSupportDialog(context),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Text(
+                  'SUPPORT',
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 9.5,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ],

@@ -6,7 +6,8 @@ import 'package:provider/provider.dart';
 import '../auth/login_screen.dart';
 
 class PrivacyScreen extends StatefulWidget {
-  const PrivacyScreen({super.key});
+  final int initialTab;
+  const PrivacyScreen({super.key, this.initialTab = 0});
 
   @override
   State<PrivacyScreen> createState() => _PrivacyScreenState();
@@ -18,7 +19,11 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 2),
+    );
   }
 
   @override
@@ -310,60 +315,62 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        if (context.watch<AuthProvider>().currentUser != null) ...[
+          const SizedBox(height: 20),
 
-        // Danger zone
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: KausapColors.cardBg(context),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFEF4444).withAlpha(isDark ? 80 : 120)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(isDark ? 30 : 10),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 22),
-                  SizedBox(width: 8),
-                  Text(
-                    'Danger Zone',
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14.5, color: Color(0xFFEF4444)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Permanently delete your account and all stored mental health records. This action cannot be reversed.',
-                style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context), height: 1.4),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _showDeleteAccountDialog,
-                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                  label: const Text('Delete My Account Permanently'),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFEF4444)),
-                    foregroundColor: const Color(0xFFEF4444),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+          // Danger zone
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: KausapColors.cardBg(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFEF4444).withAlpha(isDark ? 80 : 120)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 30 : 10),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Danger Zone',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14.5, color: Color(0xFFEF4444)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Permanently delete your account and all stored mental health records. This action cannot be reversed.',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: KausapColors.textMuted(context), height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _showDeleteAccountDialog,
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    label: const Text('Delete My Account Permanently'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFEF4444)),
+                      foregroundColor: const Color(0xFFEF4444),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

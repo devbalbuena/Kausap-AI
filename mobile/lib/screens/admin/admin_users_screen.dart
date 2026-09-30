@@ -456,6 +456,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final birthday = user['birthday'] ?? 'Not provided';
     final gender = user['gender'] ?? 'Not specified';
     final occupation = user['occupation'] ?? (isAdmin ? 'System Administrator' : 'Student');
+    final nationality = user['nationality'] ?? 'Filipino';
+    final address = user['address'];
+    final bio = user['bio'];
+    final hobbies = user['hobbies'];
     final createdAt = user['created_at']?.toString().split('T')[0] ?? 'Recently';
 
     final currentAdminEmail = context.read<AuthProvider>().currentUser?['email'] ?? 'admin@kausap.ai';
@@ -703,6 +707,20 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       const SizedBox(height: 8),
                       _buildDetailRow("Gender", gender),
                       const SizedBox(height: 8),
+                      _buildDetailRow("Nationality", nationality),
+                      const SizedBox(height: 8),
+                      if (address != null && address.toString().trim().isNotEmpty) ...[
+                        _buildDetailRow("Address", address.toString()),
+                        const SizedBox(height: 8),
+                      ],
+                      if (bio != null && bio.toString().trim().isNotEmpty) ...[
+                        _buildDetailRow("Bio", bio.toString()),
+                        const SizedBox(height: 8),
+                      ],
+                      if (hobbies != null && hobbies.toString().trim().isNotEmpty) ...[
+                        _buildDetailRow("Hobbies", hobbies.toString()),
+                        const SizedBox(height: 8),
+                      ],
                       _buildDetailRow("Registration Date", createdAt),
                       const SizedBox(height: 8),
                       _buildDetailRow("AI Chat Sessions", "$chatCount sessions"),

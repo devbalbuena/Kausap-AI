@@ -138,6 +138,8 @@ def list_users(
                 occupation=u.occupation.value if hasattr(u.occupation, 'value') else (str(u.occupation) if u.occupation else None),
                 nationality=getattr(u, 'nationality', 'Filipino') or 'Filipino',
                 hobbies=getattr(u, 'hobbies', None),
+                address=getattr(u, 'address', None),
+                bio=getattr(u, 'bio', None),
                 share_chat_with_counselor=getattr(u, 'share_chat_with_counselor', False) or False,
             )
         )
@@ -174,7 +176,11 @@ def get_user_detail(
         phone_number=u.phone_number,
         birthday=str(u.birthday) if u.birthday else None,
         gender=u.gender.value if u.gender else None,
-        occupation=u.occupation.value if u.occupation else None,
+        occupation=u.occupation.value if hasattr(u.occupation, 'value') else (str(u.occupation) if u.occupation else None),
+        nationality=getattr(u, 'nationality', 'Filipino') or 'Filipino',
+        hobbies=getattr(u, 'hobbies', None),
+        address=getattr(u, 'address', None),
+        bio=getattr(u, 'bio', None),
         share_chat_with_counselor=getattr(u, 'share_chat_with_counselor', False) or False,
         recent_moods=recent_moods,
         recent_sessions=recent_sessions,
