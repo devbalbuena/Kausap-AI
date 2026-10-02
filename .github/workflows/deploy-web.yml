@@ -1,0 +1,61 @@
+name: 🌐 Build & Deploy Flutter Web to Firebase
+
+on:
+  push:
+    branches:
+      - main  # Triggers automatically on every push to main
+
+jobs:
+  build_and_deploy:
+    name: Build Flutter Web & Deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout the code ──────────────────────────────────────────────
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Flutter (stable channel) ───────────────────────────────
+      - name: 🐦 Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      # ── 3. Print Flutter version (for debugging) ──────────────────────────
+      - name: 🔍 Flutter version info
+        run: flutter --version
+        working-directory: mobile
+
+      # ── 4. Get Flutter dependencies ───────────────────────────────────────
+      - name: 📦 Get Flutter dependencies
+        run: flutter pub get
+        working-directory: mobile
+
+      # ── 5. Analyze code (non-fatal — won't block deploy on lint warnings) ─
+      - name: 🔍 Analyze Flutter code
+        run: flutter analyze --no-fatal-infos
+        working-directory: mobile
+        continue-on-error: true
+
+      # ── 6. Build Flutter Web ──────────────────────────────────────────────
+      #   --web-renderer html   → best compatibility on all browsers (Firefox, Chrome, Edge)
+      #   --release             → minified, production-optimized output
+      #   No dart-define for USE_LOCAL_BACKEND → defaults to false → uses Render prod server
+      - name: 🔨 Build Flutter Web (Release)
+        run: |
+          flutter build web \
+            --release \
+            --web-renderer html \
+            --pwa-strategy offline-first
+        working-directory: mobile
+
+      # ── 7. Deploy to Firebase Hosting ─────────────────────────────────────
+      - name: 🚀 Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: kausap-ai
+          channelId: live
+          entryPoint: mobile  # The firebase.json will be looked up from here

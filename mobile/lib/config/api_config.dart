@@ -1,7 +1,9 @@
 class ApiConfig {
-  // Set to true only if running a local FastAPI server (http://127.0.0.1:8000)
-  // Otherwise, connects 24/7 to the live production Render backend
-  static const bool useLocalBackend = true;
+  // Set to true only when running a local FastAPI server (http://127.0.0.1:8000).
+  // For web/production builds this defaults to false — pointing to the live Render backend.
+  // To override locally: flutter run --dart-define=USE_LOCAL_BACKEND=true
+  static const bool useLocalBackend =
+      bool.fromEnvironment('USE_LOCAL_BACKEND', defaultValue: false);
 
   static const String baseUrl = useLocalBackend
       ? 'http://127.0.0.1:8000'
