@@ -118,6 +118,13 @@ def submit_reactivation_appeal(
 def update_me(payload: UserUpdate, current_user: Annotated[User, Depends(get_current_user)], session: Annotated[Session, Depends(get_session)]):
     """Update the currently authenticated user's profile."""
     update_data = payload.model_dump(exclude_unset=True)
+    
+    # One-time college setup for existing users whose college is not set yet
+    if "college" in update_data:
+        new_college = update_data.pop("college")
+        if (current_user.college is None or current_user.college == "") and new_college:
+            current_user.college = new_college
+
     for key, value in update_data.items():
         setattr(current_user, key, value)
     

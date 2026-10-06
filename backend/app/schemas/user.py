@@ -127,3 +127,14 @@ class UserUpdate(BaseModel):
     hobbies: Optional[str] = None
     department_title: Optional[str] = None
     share_chat_with_counselor: Optional[bool] = None
+    college: Optional[str] = None
+
+    @field_validator("college")
+    @classmethod
+    def valid_college(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        if v not in COLLEGES:
+            raise ValueError(f"Invalid college. Must be one of: {', '.join(COLLEGES.keys())}")
+        return v
+

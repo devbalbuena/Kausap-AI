@@ -33,6 +33,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late String _gender;
   late String _nationality;
   late List<String> _selectedHobbies;
+  String? _selectedCollege;
+  bool _collegeAlreadySet = false;
   bool _isSaving = false;
 
   final List<String> _presetAvatars = [
@@ -82,6 +84,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ? rawHobbies.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
         : ['📚 Reading', '🎵 Music'];
     _avatarUrl = user?['avatar_url'];
+
+    final rawCollege = user?['college']?.toString();
+    if (rawCollege != null && rawCollege.isNotEmpty && Colleges.all.containsKey(rawCollege)) {
+      _selectedCollege = rawCollege;
+      _collegeAlreadySet = true;
+    } else {
+      _selectedCollege = null;
+      _collegeAlreadySet = false;
+    }
   }
 
   @override
@@ -389,6 +400,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'avatar_url': avatarValue,
       };
 
+      if (!_isStaff && !_collegeAlreadySet && _selectedCollege != null) {
+        payload['college'] = _selectedCollege;
+      }
+
       if (_isStaff) {
         payload['department_title'] = _departmentTitleController.text.trim();
         payload['phone_number'] = _phoneController.text.trim();
@@ -610,39 +625,107 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               const SizedBox(height: 16),
 
                               if (!_isStaff) ...[
-                                // College (Read-only)
-                                _buildFieldLabel('FSUU College (Cannot be changed)'),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  initialValue: user?['college'] != null && Colleges.all.containsKey(user!['college'])
-                                      ? '${user['college']} – ${Colleges.all[user['college']]}'
-                                      : (user?['college']?.toString().isNotEmpty == true ? user!['college'].toString() : Colleges.notSet),
-                                  readOnly: true,
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 13.5, fontWeight: FontWeight.w500, color: KausapColors.textMuted(context)),
-                                  decoration: _buildInputDecoration(
-                                    hint: 'College',
-                                    isReadOnly: true,
-                                    suffixIcon: Icons.lock_outline_rounded,
+                                if (_collegeAlreadySet) ...[
+                                  // College (Read-only / Permanently Locked)
+                                  _buildFieldLabel('FSUU College (Permanently Locked)'),
+                                  const SizedBox(height: 6),
+                                  TextFormField(
+                                    initialValue: user?['college'] != null && Colleges.all.containsKey(user!['college'])
+                                        ? '${user['college']} – ${Colleges.all[user['college']]}'
+                                        : (user?['college']?.toString().isNotEmpty == true ? user!['college'].toString() : Colleges.notSet),
+                                    readOnly: true,
+                                    style: TextStyle(fontFamily: 'Inter', fontSize: 13.5, fontWeight: FontWeight.w500, color: KausapColors.textMuted(context)),
+                                    decoration: _buildInputDecoration(
+                                      hint: 'College',
+                                      isReadOnly: true,
+                                      suffixIcon: Icons.lock_outline_rounded,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.lock_rounded, size: 12, color: KausapColors.textMuted(context)),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        'College affiliation was selected at registration and cannot be modified.',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 11,
-                                          color: KausapColors.textMuted(context),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.lock_rounded, size: 12, color: KausapColors.textMuted(context)),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'College affiliation was selected and is permanently locked.',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 11,
+                                            color: KausapColors.textMuted(context),
+                                          ),
                                         ),
                                       ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                ] else ...[
+                                  // College (One-Time Selection Dropdown for legacy accounts)
+                                  _buildFieldLabel('Select Your FSUU College (One-Time Setup)'),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<String>(
+                                    initialValue: _selectedCollege,
+                                    isExpanded: true,
+                                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                                    dropdownColor: KausapColors.cardBg(context),
+                                    decoration: _buildInputDecoration(
+                                      hint: 'Choose your college / department',
+                                      suffixIcon: Icons.school_outlined,
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
+                                    items: Colleges.codes
+                                        .map((c) => DropdownMenuItem(
+                                              value: c,
+                                              child: Text(
+                                                Colleges.label(c),
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: KausapColors.textPrimary(context),
+                                                ),
+                                              ),
+                                            ))
+                                        .toList(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _selectedCollege = val;
+                                      });
+                                    },
+                                    validator: (val) => (val == null || val.isEmpty) ? 'Please select your college' : null,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF59E0B).withAlpha(isDark ? 30 : 20),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xFFF59E0B).withAlpha(isDark ? 90 : 70),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFD97706)),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            '⚠️ One-Time Setup: Once saved, your college affiliation will be permanently locked to your account and cannot be changed.',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w500,
+                                              color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309),
+                                              height: 1.35,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
                               ],
 
                               if (_isStaff) ...[
