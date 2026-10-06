@@ -187,15 +187,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleSocialAuth(String provider) {
+    // Social sign-in is not available during beta testing: send users to manual sign up.
     HapticService.lightTap();
-    _mascotKey.currentState?.triggerMoodBoost(customMessage: "Connecting to $provider! 🚀");
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$provider sign-in is ready for single sign-on (SSO).'),
+        content: Text('$provider sign-in is not available yet. Please create an account with your email.'),
         backgroundColor: AppColors.primary,
         duration: const Duration(seconds: 3),
       ),
     );
+    Navigator.of(context).push(slideRoute(const ClientSignupStep1Screen()));
   }
 
   @override
