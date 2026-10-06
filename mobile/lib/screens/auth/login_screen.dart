@@ -35,6 +35,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordFocusNode = FocusNode();
   final _storage = const FlutterSecureStorage();
 
+  // Google/Facebook sign-in hidden during beta testing; set true to re-enable.
+  static const bool _showSocialLogin = false;
+
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _rememberMe = true;
@@ -398,6 +401,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   : const Text('Sign In'),
                             ),
 
+                            // Social login is disabled during testing (see _showSocialLogin)
+                            if (_showSocialLogin) ...[
                             const SizedBox(height: 20),
 
                             // Divider
@@ -480,6 +485,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                             ),
+                            ],
                           ],
                         ),
                       ),
