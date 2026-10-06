@@ -43,7 +43,7 @@ jobs:
       #   --release             → minified, production-optimized output
       #   No dart-define for USE_LOCAL_BACKEND → defaults to false → uses Render prod server
       - name: 🔨 Build Flutter Web (Release)
-        run: flutter build web --release --pwa-strategy offline-first
+        run: flutter build web --release --pwa-strategy none
         working-directory: mobile
 
       # ── 7. Deploy to Firebase Hosting ─────────────────────────────────────
