@@ -61,6 +61,35 @@ def root():
     return {"status": "ok", "message": "Kausap AI API is running 🚀"}
 
 
+@app.get("/health", tags=["Health"])
+def health():
+    """Tiny endpoint for uptime monitors / app warm-up pings."""
+    return {"status": "ok"}
+
+
+@app.get("/health/ai", tags=["Health"])
+async def health_ai():
+    """Reports whether AI provider keys are configured and whether Gemini answers. Never returns secrets."""
+    from app.core.config import settings
+    from app.core.ai_provider import chat_completion_with_usage, FALLBACK_REPLY
+
+    info = {
+        "gemini_key_configured": bool(settings.GEMINI_API_KEY),
+        "mistral_key_configured": bool(settings.MISTRAL_API_KEY),
+        "openai_key_configured": bool(settings.OPENAI_API_KEY),
+        "elevenlabs_key_configured": bool(settings.ELEVENLABS_API_KEY),
+    }
+    try:
+        text, _, _, _ = await chat_completion_with_usage(
+            [{"role": "user", "content": "Reply with the single word: ok"}], max_tokens=20
+        )
+        info["ai_working"] = text != FALLBACK_REPLY
+    except Exception as e:  # pragma: no cover
+        info["ai_working"] = False
+        info["error"] = str(e)[:120]
+    return info
+
+
 # Routers
 app.include_router(auth.router)
 app.include_router(mood.router)

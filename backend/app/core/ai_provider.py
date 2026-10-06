@@ -30,10 +30,22 @@ GEMINI_MODEL = "gemini-2.5-flash"
 OPENAI_MODEL = "gpt-4o-mini"
 
 # ── Retry configuration ────────────────────────────────────────────────────────
-_GEMINI_MAX_RETRIES = 3          # Total attempts (1 initial + 2 retries)
-_GEMINI_RETRYABLE_CODES = {429, 503}  # Rate-limited or overloaded
-_GEMINI_BACKOFF_BASE = 1.0       # Seconds: 1s → 2s → 4s
+_GEMINI_MAX_RETRIES = 2          # Total attempts per model (1 initial + 1 retry)
+_GEMINI_RETRYABLE_CODES = {500, 502, 503, 504}  # Transient server errors (429 = per-model quota -> try next model at once)
+_GEMINI_BACKOFF_BASE = 1.0       # Seconds: 1s → 2s
 _GEMINI_JITTER_MAX = 0.5         # Max random jitter per attempt
+_GEMINI_REQUEST_TIMEOUT = 20.0   # Seconds per HTTP request
+
+# Gemini model fallback chain (tried in order). gemini-2.5-pro was retired for new keys.
+GEMINI_MODEL_CHAIN = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"]
+
+# Friendly English fallback shown only when every AI provider is unreachable.
+FALLBACK_REPLY = (
+    "I'm still here with you. My connection is a little slow right now, but what you're "
+    "feeling is valid and it matters. Let's take a slow, deep breath together while I get "
+    "back on track — and please try sending your message again in a moment. "
+    "If you need someone right away, the FSUU Guidance Office or the NCMH hotline at 1553 is available."
+)
 
 
 def calculate_cost_usd(prompt_tokens: int, completion_tokens: int, model: str = GEMINI_MODEL) -> float:
@@ -92,6 +104,11 @@ async def _call_gemini(
         },
     }
 
+    # Gemini 2.5 models spend output tokens on hidden "thinking", which can leave the
+    # visible reply empty/truncated at our small token budget. Turn thinking off.
+    if model.startswith("gemini-2.5"):
+        payload["generationConfig"]["thinkingConfig"] = {"thinkingBudget": 0}
+
     if system_text:
         payload["systemInstruction"] = {
             "parts": [{"text": system_text}]
@@ -106,7 +123,7 @@ async def _call_gemini(
 
     for attempt in range(_GEMINI_MAX_RETRIES):
         try:
-            async with httpx.AsyncClient(timeout=25.0) as client:
+            async with httpx.AsyncClient(timeout=_GEMINI_REQUEST_TIMEOUT) as client:
                 res = await client.post(url, json=payload)
 
             if res.status_code == 200:
@@ -115,12 +132,10 @@ async def _call_gemini(
                 if not candidates:
                     raise RuntimeError("Gemini returned empty candidates")
 
-                text = (
-                    candidates[0]
-                    .get("content", {})
-                    .get("parts", [{}])[0]
-                    .get("text", "")
-                )
+                parts = candidates[0].get("content", {}).get("parts", []) or [{}]
+                text = "".join(p.get("text", "") for p in parts if isinstance(p, dict)).strip()
+                if not text:
+                    raise RuntimeError("Gemini returned an empty reply")
                 usage = data.get("usageMetadata", {})
                 prompt_tokens = usage.get("promptTokenCount", 0)
                 completion_tokens = usage.get("candidatesTokenCount", 0)
@@ -236,7 +251,7 @@ async def chat_completion_with_usage(
     """
     # 1. Try Gemini primary (2.5-flash) and secondary (2.5-pro)
     if settings.GEMINI_API_KEY:
-        for gemini_model in [GEMINI_MODEL, "gemini-2.5-pro"]:
+        for gemini_model in GEMINI_MODEL_CHAIN:
             try:
                 return await _call_gemini(
                     messages=messages,
@@ -246,6 +261,8 @@ async def chat_completion_with_usage(
                 )
             except Exception as e:
                 logger.warning(f"Gemini API ({gemini_model}) failed: {e}. Trying next...")
+    else:
+        logger.error("GEMINI_API_KEY is NOT configured on this server — AI replies will use fallbacks.")
 
     # 2. Try Mistral AI fallback (High-speed Mistral / Voxtral)
     if settings.MISTRAL_API_KEY:
@@ -271,14 +288,8 @@ async def chat_completion_with_usage(
         except Exception as e:
             logger.error(f"OpenAI fallback failed: {e}")
 
-    # 4. Empathetic offline fallback response if all providers are unreachable
-    fallback_text = (
-        "Nandito pa rin ako para sa'yo. Pasensya na, medyo mabagal ang aking connection "
-        "ngayong sandali, pero gusto kong malaman mo na valid at mahalaga ang nararamdaman mo. "
-        "Subukan nating huminga nang malalim nang ilang ulit habang nag-aayos ang system. "
-        "Kung kailangan mo ng agarang kausap, nandito ang FSUU Guidance Office o tumawag sa NCMH 1553."
-    )
-    return fallback_text, 0, 0, 0
+    # 4. Empathetic fallback response if all providers are unreachable
+    return FALLBACK_REPLY, 0, 0, 0
 
 
 async def chat_completion(

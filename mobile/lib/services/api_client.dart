@@ -9,7 +9,7 @@ import 'retry_service.dart';
 /// Hard timeout for every HTTP request.
 /// Chosen to be longer than Gemini's max retry window (~12s) but short enough
 /// to give meaningful feedback on slow campus Wi-Fi during 45-student mass testing.
-const Duration _kRequestTimeout = Duration(seconds: 30);
+const Duration _kRequestTimeout = Duration(seconds: 65);
 
 class ApiException implements Exception {
   final int statusCode;

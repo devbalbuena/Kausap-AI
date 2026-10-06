@@ -19,7 +19,7 @@ class AvatarModel {
     required this.imagePath,
     required this.systemPrompt,
     this.bio = 'Your confidential companion for emotional support and student wellness.',
-    this.sampleQuote = '"Nandito lang ako para sa\'yo. Hinga tayo nang malalim."',
+    this.sampleQuote = '"I am right here with you. Let\'s take a slow, gentle breath together."',
     this.specialties = const ['Emotional Support', 'Active Listening'],
     this.customConfig,
   });
@@ -65,9 +65,9 @@ class AvatarData {
       roleTitle: '24/7 Campus Wellness Companion',
       tier: 'basic',
       imagePath: 'assets/images/kausap/human_companion/brain_buddy.png',
-      systemPrompt: 'You are Kausap Buddy, the joyful, gentle, and empathetic campus mental wellness companion for Filipino university students. Speak in a warm, comforting tone with Carl Rogers person-centered empathy.',
+      systemPrompt: 'You are Kausap Buddy, the joyful, gentle, and empathetic campus mental wellness companion for university students. Speak in a warm, comforting tone with Carl Rogers person-centered empathy.',
       bio: 'Your 24/7 friendly and comforting pocket companion for quick stress relief and gentle reassurance.',
-      sampleQuote: '"Magandang araw! Hindi mo kailangang solohin lahat ng bigat. Nandito ako para makinig sa\'yo."',
+      sampleQuote: '"Hello! You don\'t have to carry all this weight alone. I\'m right here to listen and walk with you."',
       specialties: ['24/7 Availability', 'Gentle Venting', 'Grounding Exercises'],
     ),
     AvatarModel(
@@ -76,9 +76,9 @@ class AvatarData {
       roleTitle: 'Peer Counselor (Senior Student)',
       tier: 'basic',
       imagePath: 'assets/images/kausap/human_companion/ate_mira.png',
-      systemPrompt: 'You are Ate Maya, a warm, supportive, and understanding senior student and peer counselor. Speak in relatable, comforting Taglish with older-sister warmth.',
+      systemPrompt: 'You are Ate Maya, a warm, supportive, and understanding senior student and peer counselor. Speak in relatable, comforting English with older-sister warmth.',
       bio: 'A compassionate senior student ready to listen with relatable older-sister warmth without judgment.',
-      sampleQuote: '"Kumusta ka talaga today? I know how overwhelming campus life gets. Take your time, Ate Maya is here."',
+      sampleQuote: '"How are you really feeling today? I know how overwhelming campus life gets. Take your time, Ate Maya is here."',
       specialties: ['Campus Life', 'Relationship Stress', 'Social Anxiety'],
     ),
     AvatarModel(
@@ -89,7 +89,7 @@ class AvatarData {
       imagePath: 'assets/images/kausap/human_companion/kiko.png',
       systemPrompt: 'You are Kuya Ben, an encouraging and steady academic mentor. Help students overcome study stress, thesis panic, and procrastination with gentle kindness and actionable structure.',
       bio: 'A steady and encouraging mentor specializing in overcoming procrastination, thesis anxiety, and study burnout.',
-      sampleQuote: '"One step at a time, kaya mo \'yan. Let\'s break down what\'s stressing you into small, manageable pieces."',
+      sampleQuote: '"One step at a time, you can do this. Let\'s break down what\'s stressing you into small, manageable pieces."',
       specialties: ['Thesis Support', 'Time Management', 'Anti-Procrastination'],
     ),
     AvatarModel(

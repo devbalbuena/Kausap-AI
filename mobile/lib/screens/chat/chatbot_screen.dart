@@ -145,9 +145,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   // Phase 3: Draft message persistence key
   static const String _draftKey = 'chatbot_input_draft';
-  // Phase 4: Safety timeout — if AI hasn't replied in 30s, show a friendly message
+  // Phase 4: Safety timeout — if AI hasn't replied in 60s, show a friendly message
   // rather than leaving the typing indicator spinning indefinitely.
-  static const Duration _kAiResponseTimeout = Duration(seconds: 30);
+  static const Duration _kAiResponseTimeout = Duration(seconds: 60);
   Timer? _sendTimeoutTimer;
 
   MascotEmotion _mascotEmotion = MascotEmotion.neutral;
@@ -265,9 +265,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         if (effectiveMood <= 2) {
           greeting = "I noticed you're having a low day today, $name. 💙 You don't have to carry it alone. Would you like to talk about what's weighing on you, or would you prefer a quick grounding exercise?";
         } else if (effectiveMood == 3) {
-          greeting = "Kumusta $name! 🌿 I see you're feeling okay today. How is everything going so far? I'm right here whenever you need a listening ear.";
+          greeting = "Hello $name! 🌿 I see you're feeling okay today. How is everything going so far? I'm right here whenever you need a warm listening ear.";
         } else {
-          greeting = "Magandang araw $name! ✨ Glad to hear you're feeling ${effectiveMood == 5 ? 'great' : 'good'} today! What's something that made you smile?";
+          greeting = "Good day $name! ✨ I'm so glad to hear you're feeling ${effectiveMood == 5 ? 'wonderful' : 'good'} today! What is something that brought a smile to your face?";
         }
 
         setState(() {
@@ -416,7 +416,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       case 'coach_leo':
         return "Let's map out your next win. What goal are we working on today?";
       case 'tita_grace':
-        return "You are safe here, anak. What's been heavy on your heart lately?";
+        return "You are safe here, my dear. What has been heavy on your heart lately?";
       case 'prof_gabriel':
         return "Let's build your review strategy. What are you preparing for?";
       case 'serena_zen':
@@ -424,7 +424,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       case 'coach_alex':
         return "You showed up — that's already a win! What goal are we energizing today?";
       default:
-        return "Your 24/7 confidential companion for student wellness. How can I support you today?";
+        return "Your safe, gentle space to breathe and share. I'm always here to listen with an open heart — how are you doing today?";
     }
   }
 
@@ -687,7 +687,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         _mascotEmotion = MascotEmotion.neutral;
         _messages.add(const _ChatMessage(
           role: 'assistant',
-          content: 'Pasensya na, medyo nag-iistay ang aking sagot. 💫\n\nMaaaring busy ang server ngayon. Subukan mo ulit mag-send ng iyong mensahe mamaya!',
+          content: "I'm taking a little longer than usual to think, friend. 💫\n\nThe server might be waking up or experiencing high traffic. Please give it a few moments and feel free to send your message again!",
         ));
       });
       _scrollToBottom();
@@ -827,7 +827,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       }
 
       if (isRateLimit) {
-        // Show the server's own friendly Tagalog pacing message as an AI reply
+        // Show the server's own friendly pacing message as an AI reply
         final serverMsg = e.message;
         setState(() {
           _isSending = false;
@@ -837,7 +837,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             role: 'assistant',
             content: serverMsg.isNotEmpty
                 ? serverMsg
-                : 'Pahinga muna tayo nang sandali. 📖💙\n\nNakapagbahagi ka na ng maraming saloobin ngayong oras na ito. Subukan nating mag-relax ng 10–15 minuto at magbalik!',
+                : "Let's take a gentle pause together. 📖💙\n\nYou've shared a lot with me during this hour. Take 10–15 minutes to rest, grab a drink of water, and come back when you're ready!",
           ));
         });
         _scrollToBottom();
@@ -933,14 +933,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   String _getMascotTapSnackMessage() {
     switch (_mascotEmotion) {
       case MascotEmotion.comforting:
-        return "Nandito lang ako para sa'yo, hinga tayo nang malalim. 💜✨";
+        return "I'm right here by your side. Let's take a slow, gentle breath together. 💜✨";
       case MascotEmotion.joyful:
-        return "Kaya mo 'yan! I'm always cheering for you! 🌟😄";
+        return "You can do this! I'm always here cheering you on! 🌟😄";
       case MascotEmotion.celebrating:
-        return "Ang galing mo! I'm so proud of your journey! 🎉✨";
+        return "You're doing amazing! I'm so proud of how far you've come! 🎉✨";
       case MascotEmotion.thinking:
       case MascotEmotion.neutral:
-        return "I'm right here listening, take your time! 💬🌱";
+        return "I'm right here listening with an open heart. Take all the time you need! 💬🌱";
     }
   }
 
@@ -991,7 +991,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('toxic') ||
         lower.contains('breakup') ||
         lower.contains('relationship')) {
-      return "Ang bigat siguro ng nararamdaman mo right now when it comes to the people closest to you. 💜 It's completely okay to feel hurt, frustrated, or misunderstood — I'm $name, and nandito lang ako. Would you like to talk through what happened?";
+      return "It sounds like things feel really heavy right now with the people closest to you. 💜 It is completely valid to feel hurt, frustrated, or misunderstood. I'm $name, and I'm right here with you. Would you like to share what happened?";
     }
 
     // Depression, Sadness, Feeling Down
@@ -1003,7 +1003,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('empty') ||
         lower.contains('heavy') ||
         lower.contains('miserable')) {
-      return "Salamat sa pagtitiwala mo sa akin. 💙 When you're carrying something this heavy, hindi mo kailangang ayusin lahat ngayon — moment by moment lang tayo. I'm $name, and I'm right here. Ano'ng pinakamabigat sa heart mo right now?";
+      return "Thank you for trusting me with how you feel. 💙 When you are carrying something this heavy, you don't have to carry it all by yourself — we can take this one gentle moment at a time. I'm $name, and I'm right here. What feels heaviest on your heart right now?";
     }
 
     // Academic & School / Exam Stress
@@ -1019,7 +1019,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('deadline') ||
         lower.contains('prof') ||
         lower.contains('pressure')) {
-      return "Naiintindihan ko kung gaano ka-suffocating ang academic pressure, lalo na pag ang daming expectations. 💙 Pero alam mo, your grades don't define your worth. I'm $name — tara, let's break things down into small, manageable steps. Ano'ng pinaka-urgent na kailangan mong gawin?";
+      return "I completely understand how overwhelming academic pressure can feel, especially when expectations are high. 💙 But please remember: your grades do not define your worth as a person. I'm $name — let's break this down together into small, gentle steps. What is the most pressing thing on your plate right now?";
     }
 
     // Anxiety & Panic
@@ -1030,7 +1030,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('takot') ||
         lower.contains('nervous') ||
         lower.contains('overwhelm')) {
-      return "Nandito ako, $name. 💙 You're in a safe space right now. Let's try something together: name 3 things you can see around you, then take a slow breath in for 4 seconds... and out for 6. How does your body feel right now?";
+      return "I am right here with you, $name. 💙 You are in a safe and supportive space. Let's try something gentle together: name 3 things you can see around you, then take a slow breath in for 4 seconds... and gently let it go. How does your body feel right now?";
     }
 
     // Sleep & Insomnia
@@ -1041,7 +1041,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('night') ||
         lower.contains('tired') ||
         lower.contains('pagod')) {
-      return "Ang hirap talaga mag-sleep pag ang daming tumatakbo sa isip mo. 🌙 I'm $name — instead of forcing sleep, try mo muna i-write down ang mga thoughts mo para alam ng brain mo safe na 'yun for tomorrow. Gusto mo ba ng calming breathing exercise?";
+      return "It is so tough trying to fall asleep when your mind is racing with thoughts. 🌙 I'm $name — instead of forcing sleep, try jotting down whatever is running through your mind so you know it's safe until tomorrow. Would you like to try a calming breathing exercise together?";
     }
 
     // Loneliness
@@ -1050,7 +1050,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('isolated') ||
         lower.contains('walang kausap') ||
         lower.contains('nobody')) {
-      return "Ang bigat siguro ng pakiramdam na parang walang nakakaintindi. 💜 Pero gusto kong malaman mo — hindi ka nag-iisa. I'm $name, at nandito ako para makinig. What's been on your mind today?";
+      return "It can feel so heavy when it feels like nobody truly understands what you're going through. 💜 But please know that you are not alone right now. I'm $name, and I am genuinely here to listen. What has been on your mind today?";
     }
 
     // Positive / Gratitude
@@ -1061,7 +1061,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('thank') ||
         lower.contains('masaya') ||
         lower.contains('passed')) {
-      return "Ang saya naman! 🌟 Celebrating these moments is such an important part of your journey. I'm $name, and ang proud ko sa'yo! What made you smile today?";
+      return "That is wonderful! 🌟 Celebrating these bright moments is such an important part of your journey. I'm $name, and I'm so happy for you! What brought this joy to your day?";
     }
 
     // Greetings
@@ -1070,11 +1070,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         lower.contains('kamusta') ||
         lower.contains('kumusta') ||
         lower.contains('hey')) {
-      return "Kumusta! 👋 I'm $name, your mental health companion. Nandito lang ako to listen, support, and chat about whatever is on your mind today. How are you feeling right now?";
+      return "Hello! 👋 I'm $name, your mental health companion. I'm right here to listen, support, and walk with you through whatever is on your mind today. How are you feeling right now?";
     }
 
     // Context-sensitive default reflection
-    return "Salamat sa pagbabahagi, that takes real courage. 💙 I'm $name, at nandito lang ako para makinig. Tell me more about what you're experiencing — take your time.";
+    return "Thank you for sharing that with me — opening up takes real courage. 💙 I'm $name, and I am right here listening with care. Tell me more about what you're experiencing, whenever you're ready.";
   }
 
   void _scrollToBottom() {

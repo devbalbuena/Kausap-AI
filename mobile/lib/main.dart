@@ -11,6 +11,7 @@ import 'widgets/friendly_error_widget.dart';
 import 'widgets/pin_lock_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/retry_service.dart';
+import 'services/api_client.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/deactivated_account_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -54,6 +55,9 @@ void main() {
       child: const KausapApp(),
     ),
   );
+
+  // Background warm-up ping: gently triggers Render wakeup as soon as app opens
+  ApiClient().get('/health', silent: true).catchError((_) => null);
 }
 
 class KausapApp extends StatelessWidget {

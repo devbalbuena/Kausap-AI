@@ -247,12 +247,11 @@ async def post_message(
         ).one()
 
         if recent_msg_count > settings.RATE_LIMIT_MESSAGES_PER_HOUR:
-            student_name = current_user.first_name or current_user.full_name or "kaibigan"
+            student_name = current_user.first_name or current_user.full_name or "friend"
             ai_reply_content = (
-                f"Pahinga muna tayo nang sandali, {student_name}. 💙\n\n"
-                "Nakapagbahagi ka na ng maraming saloobin ngayong oras na ito. "
-                "Subukan nating uminom ng kaunting tubig, mag-relax, at magpahinga ng 10-15 minuto. "
-                "Nandito pa rin ako pagbalik mo para ipagpatuloy ang ating kwentuhan!"
+                f"Let's take a little break, {student_name}. 💙\n\n"
+                "You've shared a lot during this past hour. Try drinking some water, stretching, "
+                "and resting for 10–15 minutes. I'll be right here when you come back to continue our conversation!"
             )
             ai_risk_flag = False
         else:
@@ -474,8 +473,8 @@ PERSONA_EDGE_VOICE_MAP_ENGLISH: Dict[str, tuple] = {
     "maya":         ("en-US-AvaMultilingualNeural",    "+4%",  "+1Hz",  "Ate Maya (Ava English)"),
     # 👨 Kuya Ben — natural, grounded, steady big brother (college guy pacing)
     "ben":          ("en-US-AndrewMultilingualNeural", "+3%",  "-1Hz",  "Kuya Ben (Andrew English)"),
-    # 🌟 Buddy Mascot — cheerful, friendly kid companion (ages 10-12, not baby)
-    "buddy":        ("en-US-AnaNeural",                "+2%",  "-2Hz",  "Buddy (Ana Kid)"),
+    # 🌟 Buddy Mascot — warm, natural, friendly adult voice (the old kid voice sounded like a baby)
+    "buddy":        ("en-US-AvaMultilingualNeural",    "+0%",  "+0Hz",  "Buddy (Ava)"),
     # 🩺 Dr. Santos — calm, empathetic, measured clinician
     "santos":       ("en-US-GuyNeural",                "-3%",  "-3Hz",  "Dr. Santos (Guy)"),
     # 💪 Coach Leo — energetic, confident motivational mentor
@@ -496,7 +495,7 @@ PERSONA_EDGE_VOICE_MAP_TAGALOG: Dict[str, tuple] = {
     # 👨 Kuya Ben in Tagalog — Angelo tuned with +8% speed for an authentic Filipino big-brother voice
     "ben":          ("fil-PH-AngeloNeural",            "+8%",  "+1Hz",  "Kuya Ben (Angelo Filipino)"),
     # 🌟 Buddy in Tagalog — lively companion
-    "buddy":        ("en-US-AnaNeural",                "+2%",  "-2Hz",  "Buddy (Ana Kid)"),
+    "buddy":        ("en-US-AvaMultilingualNeural",    "+0%",  "+0Hz",  "Buddy (Ava)"),
     # 🌸 Tita Grace in Tagalog — warm maternal auntie
     "tita_grace":   ("fil-PH-BlessicaNeural",          "-2%",  "-1Hz",  "Tita Grace (Blessica)"),
     # 🩺 Dr. Santos in Tagalog
@@ -606,7 +605,8 @@ async def generate_tts(
     try:
         import edge_tts
 
-        is_tagalog = _detect_is_tagalog(snippet)
+        # The app is English-only, so always use English voices.
+        is_tagalog = False
         
         # Route voice based on detected language:
         if is_tagalog and persona_key in PERSONA_EDGE_VOICE_MAP_TAGALOG:
