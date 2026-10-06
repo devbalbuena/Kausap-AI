@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/haptic_service.dart';
+import '../../utils/colleges.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
@@ -223,6 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 email: email,
                 role: role,
                 avatarUrl: avatarUrl,
+                college: user?['college']?.toString(),
               ),
               const SizedBox(height: 20),
 
@@ -445,6 +447,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String email,
     required String role,
     required String avatarUrl,
+    String? college,
   }) {
     final roleLabel = role.toString().toLowerCase() == 'counselor'
         ? 'Guidance Counselor'
@@ -560,7 +563,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          // ── Academic College Affiliation Badge (Read-Only) ─────────────
+          if (role.toString().toLowerCase() == 'client' ||
+              role.toString().toLowerCase() == 'student' ||
+              (college != null && college.isNotEmpty)) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: college != null && Colleges.all.containsKey(college)
+                    ? Color(Colleges.colorValue(college)).withAlpha(isDark ? 35 : 22)
+                    : KausapColors.inputFill(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: college != null && Colleges.all.containsKey(college)
+                      ? Color(Colleges.colorValue(college)).withAlpha(isDark ? 100 : 70)
+                      : KausapColors.border(context),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: college != null && Colleges.all.containsKey(college)
+                          ? Color(Colleges.colorValue(college)).withAlpha(isDark ? 60 : 40)
+                          : KausapColors.accentSubtle(context),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.account_balance_rounded,
+                      size: 16,
+                      color: college != null && Colleges.all.containsKey(college)
+                          ? Color(Colleges.colorValue(college))
+                          : KausapColors.textMuted(context),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'COLLEGE / ACADEMIC UNIT',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                                color: college != null && Colleges.all.containsKey(college)
+                                    ? Color(Colleges.colorValue(college))
+                                    : KausapColors.textMuted(context),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.lock_rounded,
+                              size: 10,
+                              color: college != null && Colleges.all.containsKey(college)
+                                  ? Color(Colleges.colorValue(college)).withAlpha(180)
+                                  : KausapColors.textMuted(context),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          college != null && Colleges.all.containsKey(college)
+                              ? '$college – ${Colleges.all[college]}'
+                              : (college != null && college.isNotEmpty ? college : Colleges.notSet),
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: KausapColors.textPrimary(context),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
           Divider(height: 1, color: KausapColors.border(context)),
           const SizedBox(height: 14),
 

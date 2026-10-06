@@ -233,6 +233,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     // Shows/hides the offline banner instantly as network status changes,
     // without waiting for the next send attempt.
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      if (kIsWeb) {
+        if (mounted) setState(() => _isOffline = false);
+        return;
+      }
       final hasNet = results.any((r) => r != ConnectivityResult.none);
       if (mounted) {
         setState(() => _isOffline = !hasNet);
@@ -635,6 +639,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   /// Checks if the device appears to have internet by making a quick DNS lookup.
   Future<bool> _hasConnectivity() async {
+    if (kIsWeb) return true;
     try {
       final result = await InternetAddress.lookup('google.com')
           .timeout(const Duration(seconds: 4));

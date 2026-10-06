@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// Monitors both network interface availability AND actual internet reachability.
@@ -25,6 +26,11 @@ class ConnectivityService extends ChangeNotifier {
   Timer? _pingTimer;
 
   void _init() {
+    if (kIsWeb) {
+      _setStatus(true, 'wifi');
+      return;
+    }
+
     // Check initial state
     Connectivity().checkConnectivity().then(_handleResults);
 
@@ -38,6 +44,11 @@ class ConnectivityService extends ChangeNotifier {
   }
 
   void _handleResults(List<ConnectivityResult> results) {
+    if (kIsWeb) {
+      _setStatus(true, 'wifi');
+      return;
+    }
+
     final hasInterface = results.any((r) =>
         r == ConnectivityResult.mobile ||
         r == ConnectivityResult.wifi ||
@@ -59,6 +70,10 @@ class ConnectivityService extends ChangeNotifier {
 
   /// Attempts a DNS lookup to confirm real internet access.
   Future<void> _pingCheck() async {
+    if (kIsWeb) {
+      _setStatus(true, 'wifi');
+      return;
+    }
     try {
       final result = await InternetAddress.lookup('google.com')
           .timeout(const Duration(seconds: 5));

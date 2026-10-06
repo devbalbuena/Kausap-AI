@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/colleges.dart';
 import '../../widgets/cached_avatar.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -607,6 +608,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 ),
                               ),
                               const SizedBox(height: 16),
+
+                              if (!_isStaff) ...[
+                                // College (Read-only)
+                                _buildFieldLabel('FSUU College (Cannot be changed)'),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  initialValue: user?['college'] != null && Colleges.all.containsKey(user!['college'])
+                                      ? '${user['college']} – ${Colleges.all[user['college']]}'
+                                      : (user?['college']?.toString().isNotEmpty == true ? user!['college'].toString() : Colleges.notSet),
+                                  readOnly: true,
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 13.5, fontWeight: FontWeight.w500, color: KausapColors.textMuted(context)),
+                                  decoration: _buildInputDecoration(
+                                    hint: 'College',
+                                    isReadOnly: true,
+                                    suffixIcon: Icons.lock_outline_rounded,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.lock_rounded, size: 12, color: KausapColors.textMuted(context)),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'College affiliation was selected at registration and cannot be modified.',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 11,
+                                          color: KausapColors.textMuted(context),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                              ],
 
                               if (_isStaff) ...[
                                 // Department / Title
