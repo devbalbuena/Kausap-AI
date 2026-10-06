@@ -2,7 +2,7 @@ from datetime import date, datetime
 import uuid
 from typing import Optional
 from pydantic import BaseModel, field_validator
-from app.models.user import UserRole, GenderEnum, OccupationEnum
+from app.models.user import UserRole, GenderEnum, OccupationEnum, COLLEGES
 
 
 class UserCreate(BaseModel):
@@ -69,6 +69,7 @@ class UserRead(BaseModel):
     nationality: Optional[str] = "Filipino"
     hobbies: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
+    college: Optional[str] = None
     department_title: Optional[str] = None
     share_chat_with_counselor: bool = False
     created_at: datetime
@@ -93,7 +94,17 @@ class RegisterRequest(BaseModel):
     nationality: Optional[str] = "Filipino"
     hobbies: Optional[str] = None
     occupation: Optional[OccupationEnum] = None
+    college: Optional[str] = None
     share_chat_with_counselor: bool = False
+
+    @field_validator("college")
+    @classmethod
+    def valid_college(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        if v not in COLLEGES:
+            raise ValueError(f"Invalid college. Must be one of: {', '.join(COLLEGES.keys())}")
+        return v
 
     @field_validator("role")
     @classmethod

@@ -26,6 +26,7 @@ class UserSummary(BaseModel):
     birthday: Optional[str] = None
     gender: Optional[str] = None
     occupation: Optional[str] = None
+    college: Optional[str] = None
     nationality: Optional[str] = "Filipino"
     hobbies: Optional[str] = None
     address: Optional[str] = None
@@ -70,6 +71,7 @@ class UserDetail(BaseModel):
     birthday: Optional[str] = None
     gender: Optional[str] = None
     occupation: Optional[str] = None
+    college: Optional[str] = None
     nationality: Optional[str] = "Filipino"
     hobbies: Optional[str] = None
     address: Optional[str] = None
@@ -89,6 +91,8 @@ class AdminStats(BaseModel):
     total_flagged_messages: int
     total_counselors: Optional[int] = 0
     mood_distribution: Optional[Dict[str, int]] = None
+    # College code -> number of students (includes "Not set" for legacy accounts)
+    students_per_college: Optional[Dict[str, int]] = None
 
 
 # ── Counselor Management Schemas ─────────────────────────────────────────────

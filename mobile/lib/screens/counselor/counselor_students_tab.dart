@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
+import '../../utils/colleges.dart';
 import 'widgets/student_clinical_modal.dart';
 
 class CounselorStudentsTab extends StatefulWidget {
@@ -25,6 +26,7 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   String _filter = 'all'; // 'all', 'active', 'deactivated', 'appeals'
+  String _collegeFilter = 'all'; // 'all', 'unset', or a college code
 
   @override
   void initState() {
@@ -90,6 +92,16 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
       if (_filter == 'deactivated' && s['is_active'] != false) return false;
       if (_filter == 'appeals' && (s['reactivation_appeal'] == null || s['reactivation_appeal'].toString().isEmpty)) return false;
 
+      if (_collegeFilter != 'all') {
+        final c = s['college']?.toString();
+        final hasCollege = c != null && Colleges.all.containsKey(c);
+        if (_collegeFilter == 'unset') {
+          if (hasCollege) return false;
+        } else if (c != _collegeFilter) {
+          return false;
+        }
+      }
+
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final name = (s['full_name'] ?? '').toString().toLowerCase();
@@ -143,6 +155,30 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
                     _buildFilterChip("appeals", "Appeals Pending"),
                   ],
                 ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: _collegeFilter,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Filter by college',
+                  labelStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+                  prefixIcon: const Icon(Icons.school_outlined, size: 18, color: Color(0xFF64748B)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  filled: true,
+                  fillColor: const Color(0xFFF1F5F9),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF0F172A)),
+                items: [
+                  const DropdownMenuItem(value: 'all', child: Text('All colleges')),
+                  ...Colleges.codes.map((c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(Colleges.label(c), overflow: TextOverflow.ellipsis),
+                      )),
+                  const DropdownMenuItem(value: 'unset', child: Text(Colleges.notSet)),
+                ],
+                onChanged: (v) => setState(() => _collegeFilter = v ?? 'all'),
               ),
             ],
           ),
@@ -233,6 +269,11 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
                                             Text(
                                               s['email'] ?? '',
                                               style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B)),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '🎓 ${s['college'] != null && Colleges.all.containsKey(s['college']) ? s['college'] : Colleges.notSet}',
+                                              style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF0284C7)),
                                             ),
                                           ],
                                         ),

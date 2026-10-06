@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth_widgets.dart';
 import 'client_signup_step3_screen.dart';
+import '../../utils/colleges.dart';
 
 /// Client Signup — Step 2: About You
 /// Figma: "Client Signup - Step 2"
-/// Fields: Occupation (dropdown), Address (optional), Bio (optional)
+/// Fields: College (dropdown, permanent), Nationality, Hobbies, Address (optional), Bio (optional)
 class ClientSignupStep2Screen extends StatefulWidget {
   final Map<String, dynamic> step1Data;
   const ClientSignupStep2Screen({super.key, required this.step1Data});
@@ -19,17 +20,9 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
   final _formKey = GlobalKey<FormState>();
   final _addressController = TextEditingController();
   final _bioController = TextEditingController();
-  String? _selectedOccupation = 'Student';
+  String? _selectedCollege;
   String _selectedNationality = 'Filipino';
   final List<String> _selectedHobbies = ['📚 Reading', '🎵 Music'];
-
-  static const List<String> _occupationOptions = [
-    'Student',
-    'Employed',
-    'Self-employed',
-    'Unemployed',
-    'Other',
-  ];
 
   static const List<String> _nationalityOptions = [
     'Filipino',
@@ -62,7 +55,8 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
     if (!_formKey.currentState!.validate()) return;
     final allData = {
       ...widget.step1Data,
-      'occupation': _selectedOccupation,
+      'occupation': 'Student',
+      'college': _selectedCollege,
       'nationality': _selectedNationality,
       'hobbies': _selectedHobbies.isNotEmpty ? _selectedHobbies.join(', ') : null,
       'address': _addressController.text.trim().isEmpty
@@ -115,22 +109,54 @@ class _ClientSignupStep2ScreenState extends State<ClientSignupStep2Screen> {
                                 style: AppTextStyles.subheading),
                             const SizedBox(height: 24),
 
-                            // Occupation
-                            _FieldLabel('I am a...'),
+                            // College (permanent once registered)
+                            _FieldLabel('College'),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              initialValue: _selectedOccupation,
+                              initialValue: _selectedCollege,
+                              isExpanded: true,
                               style: AppTextStyles.inputText,
                               decoration: const InputDecoration(
-                                  hintText: 'Select your occupation'),
-                              items: _occupationOptions
-                                  .map((o) => DropdownMenuItem(
-                                      value: o, child: Text(o)))
+                                  hintText: 'Select your college'),
+                              items: Colleges.codes
+                                  .map((c) => DropdownMenuItem(
+                                        value: c,
+                                        child: Text(
+                                          Colleges.label(c),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ))
                                   .toList(),
                               onChanged: (v) =>
-                                  setState(() => _selectedOccupation = v),
+                                  setState(() => _selectedCollege = v),
                               validator: (v) =>
-                                  v == null ? 'Please select your occupation' : null,
+                                  v == null ? 'Please select your college' : null,
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFFED7AA)),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded,
+                                      size: 16, color: Color(0xFFEA580C)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Choose carefully: once you register, your college cannot be changed and will stay permanently on this account.',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontSize: 11,
+                                        color: const Color(0xFF9A3412),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 16),
 

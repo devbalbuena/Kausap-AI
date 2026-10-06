@@ -3,6 +3,7 @@ import '../../../services/api_client.dart';
 import '../../../services/clinical_audit_service.dart';
 import '../../../utils/haptic_service.dart';
 import '../../../utils/date_helper.dart';
+import '../../../utils/colleges.dart';
 
 class StudentClinicalModal extends StatefulWidget {
   final Map<String, dynamic> student;
@@ -1181,11 +1182,11 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
               children: [
                 _buildInfoRow("Institution", "Father Saturnino Urios University"),
                 const SizedBox(height: 8),
-                _buildInfoRow("Phone", widget.student['phone_number'] ?? 'Not provided'),
+                _buildInfoRow("College", Colleges.label(widget.student['college']?.toString())),
                 const SizedBox(height: 8),
                 _buildInfoRow("Gender", widget.student['gender'] ?? 'Not specified'),
                 const SizedBox(height: 8),
-                _buildInfoRow("Occupation / Program", widget.student['occupation'] ?? 'Student'),
+                _buildInfoRow("Phone", widget.student['phone_number'] ?? 'Not provided'),
                 const SizedBox(height: 8),
                 _buildInfoRow("Nationality", widget.student['nationality'] ?? 'Filipino'),
                 const SizedBox(height: 8),

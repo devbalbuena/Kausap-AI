@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
+import '../../utils/colleges.dart';
 import '../counselor/counselor_dashboard_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_articles_screen.dart';
@@ -13,7 +14,8 @@ import 'widgets/admin_header_actions.dart';
 import '../counselor/widgets/student_clinical_modal.dart';
 
 class AdminUsersScreen extends StatefulWidget {
-  const AdminUsersScreen({super.key});
+  final String initialCollegeFilter;
+  const AdminUsersScreen({super.key, this.initialCollegeFilter = 'all'});
 
   @override
   State<AdminUsersScreen> createState() => _AdminUsersScreenState();
@@ -27,10 +29,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   String _activeFilter = 'all'; // all, student, admin, inactive
+  late String _collegeFilter; // all, unset, or a college code
 
   @override
   void initState() {
     super.initState();
+    _collegeFilter = widget.initialCollegeFilter;
     _fetchUsers();
   }
 
@@ -456,6 +460,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final birthday = user['birthday'] ?? 'Not provided';
     final gender = user['gender'] ?? 'Not specified';
     final occupation = user['occupation'] ?? (isAdmin ? 'System Administrator' : 'Student');
+    final collegeLabel = Colleges.label(user['college']?.toString());
     final nationality = user['nationality'] ?? 'Filipino';
     final address = user['address'];
     final bio = user['bio'];
@@ -699,7 +704,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     children: [
                       _buildDetailRow("Account Role", isAdmin ? "Administrator 🛡️" : "Student / Client 🎓"),
                       const SizedBox(height: 8),
-                      _buildDetailRow("Occupation", occupation),
+                      _buildDetailRow(isAdmin ? "Occupation" : "College", isAdmin ? occupation : collegeLabel),
                       const SizedBox(height: 8),
                       _buildDetailRow("Phone Number", phone),
                       const SizedBox(height: 8),
@@ -946,6 +951,18 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       result = result.where((u) => u['is_deleted'] != true).toList();
     }
 
+    // College filter (students only carry a college)
+    if (_collegeFilter != 'all') {
+      result = result.where((u) {
+        final c = u['college']?.toString();
+        final hasCollege = c != null && Colleges.all.containsKey(c);
+        if (_collegeFilter == 'unset') {
+          return (u['role'] ?? 'client').toString().toLowerCase() == 'client' && !hasCollege;
+        }
+        return c == _collegeFilter;
+      }).toList();
+    }
+
     return result;
   }
 
@@ -1065,6 +1082,31 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       _buildFilterChip("🗑️ Archived ($archivedCount)", _activeFilter == 'archived', () => setState(() => _activeFilter = 'archived')),
                     ],
                   ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: _collegeFilter,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: 'Filter by college',
+                    labelStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+                    prefixIcon: const Icon(Icons.school_outlined, size: 18, color: Color(0xFF64748B)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF0F172A)),
+                  items: [
+                    const DropdownMenuItem(value: 'all', child: Text('All colleges')),
+                    ...Colleges.codes.map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(Colleges.label(c), overflow: TextOverflow.ellipsis),
+                        )),
+                    const DropdownMenuItem(value: 'unset', child: Text(Colleges.notSet)),
+                  ],
+                  onChanged: (v) => setState(() => _collegeFilter = v ?? 'all'),
                 ),
               ],
             ),

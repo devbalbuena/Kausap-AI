@@ -9,7 +9,7 @@ from sqlmodel import Session, select, func
 from app.database import get_session, engine
 from app.core.deps import get_current_admin, get_current_counselor_or_admin
 from app.core.security import get_password_hash
-from app.models.user import User, UserRole, GenderEnum
+from app.models.user import User, UserRole, GenderEnum, COLLEGES
 from app.models.mood import MoodEntry
 from app.models.chat import ChatSession, ChatMessage
 from app.models.audit_log import AuditLog
@@ -67,6 +67,7 @@ def list_users(
     admin: Annotated[User, Depends(get_current_counselor_or_admin)],
     session: Annotated[Session, Depends(get_session)],
     email: Optional[str] = None,
+    college: Optional[str] = None,
     include_deleted: bool = True,
     limit: Annotated[int, Query(ge=1, le=200)] = 200,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -75,6 +76,11 @@ def list_users(
     query = select(User)
     if email:
         query = query.where(User.email.contains(email))
+    if college:
+        if college == "unset":
+            query = query.where(User.college == None)  # noqa: E711
+        else:
+            query = query.where(User.college == college)
     if not include_deleted:
         query = query.where(User.is_deleted == False)
     query = query.order_by(User.created_at.desc()).offset(offset).limit(limit)
@@ -136,6 +142,7 @@ def list_users(
                 birthday=str(u.birthday) if u.birthday else None,
                 gender=u.gender.value if u.gender else None,
                 occupation=u.occupation.value if hasattr(u.occupation, 'value') else (str(u.occupation) if u.occupation else None),
+                college=getattr(u, 'college', None),
                 nationality=getattr(u, 'nationality', 'Filipino') or 'Filipino',
                 hobbies=getattr(u, 'hobbies', None),
                 address=getattr(u, 'address', None),
@@ -177,6 +184,7 @@ def get_user_detail(
         birthday=str(u.birthday) if u.birthday else None,
         gender=u.gender.value if u.gender else None,
         occupation=u.occupation.value if hasattr(u.occupation, 'value') else (str(u.occupation) if u.occupation else None),
+        college=getattr(u, 'college', None),
         nationality=getattr(u, 'nationality', 'Filipino') or 'Filipino',
         hobbies=getattr(u, 'hobbies', None),
         address=getattr(u, 'address', None),
@@ -865,6 +873,16 @@ def admin_stats(
         "distressed": session.exec(select(func.count()).select_from(MoodEntry).where(MoodEntry.mood_level == 1)).one(),
     }
 
+    # Students per college (clients only). Legacy accounts without a college -> "Not set".
+    college_rows = session.exec(
+        select(User.college, func.count()).where(User.role == UserRole.client).group_by(User.college)
+    ).all()
+    students_per_college: Dict[str, int] = {code: 0 for code in COLLEGES}
+    students_per_college["Not set"] = 0
+    for code, count in college_rows:
+        key = code if code in COLLEGES else "Not set"
+        students_per_college[key] = students_per_college.get(key, 0) + count
+
     return AdminStats(
         total_users=total_users,
         total_active_users=total_active,
@@ -875,6 +893,7 @@ def admin_stats(
         total_flagged_messages=total_flagged,
         total_counselors=total_counselors,
         mood_distribution=mood_counts,
+        students_per_college=students_per_college,
     )
 
 

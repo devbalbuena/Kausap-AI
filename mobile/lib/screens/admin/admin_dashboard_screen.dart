@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
+import '../../utils/colleges.dart';
 import 'admin_users_screen.dart';
 import 'admin_moderation_screen.dart';
 import 'admin_system_screen.dart';
@@ -188,6 +189,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     // deployed the distribution field yet — show a note rather than all zeros
     final distributionTotal = greatMoods + goodMoods + okayMoods + downMoods + distressedMoods;
     final bool distributionMissing = distributionTotal == 0 && moodEntries > 0;
+
+    final collegeMap = (_stats!['students_per_college'] as Map<String, dynamic>?) ?? {};
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -711,7 +714,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
               const SizedBox(height: 20),
 
-              // ── 5. Quick Admin Actions ─────────────────────────────────────
+              // ── 5. Students per College Breakdown ───────────────────────────
+              _buildCollegeDistributionCard(collegeMap, totalUsers),
+
+              const SizedBox(height: 20),
+
+              // ── 6. Quick Admin Actions ─────────────────────────────────────
               const Padding(
                 padding: EdgeInsets.only(left: 2),
                 child: Text(
@@ -1248,6 +1256,176 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(value, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
         ],
       ),
+    );
+  }
+
+  Widget _buildCollegeDistributionCard(Map<String, dynamic> collegeMap, int totalStudents) {
+    // Sort colleges: all 9 canonical codes in order, plus 'Not set' if present
+    final List<String> displayKeys = [...Colleges.codes];
+    final int notSetCount = (collegeMap['Not set'] as num?)?.toInt() ?? 0;
+    if (notSetCount > 0 && !displayKeys.contains('Not set')) {
+      displayKeys.add('Not set');
+    }
+
+    // Find maximum count for scaling bar
+    int maxCount = 1;
+    for (final k in displayKeys) {
+      final c = (collegeMap[k] as num?)?.toInt() ?? 0;
+      if (c > maxCount) maxCount = c;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 2),
+          child: Text(
+            'STUDENTS PER COLLEGE',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.school_rounded, color: Color(0xFF0284C7), size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        "College Distribution",
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "$totalStudents Total",
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0284C7),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ...displayKeys.map((code) {
+                final count = (collegeMap[code] as num?)?.toInt() ?? 0;
+                final isNotSet = code == 'Not set';
+                final color = isNotSet ? const Color(0xFF64748B) : Color(Colleges.colorValue(code));
+                final fullName = isNotSet ? 'Legacy / Not specified' : Colleges.fullName(code);
+                final double progress = totalStudents > 0 ? (count / totalStudents) : 0.0;
+
+                return InkWell(
+                  onTap: () {
+                    HapticService.lightTap();
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => AdminUsersScreen(
+                          initialCollegeFilter: isNotSet ? 'unset' : code,
+                        ),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: color.withAlpha(26),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: color.withAlpha(77)),
+                              ),
+                              child: Text(
+                                code,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: color,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                fullName,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1E293B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              "$count",
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: count > 0 ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 4,
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            valueColor: AlwaysStoppedAnimation<Color>(color),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

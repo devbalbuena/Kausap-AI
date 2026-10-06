@@ -220,7 +220,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> with SingleTickerProvider
           title: "1. Information We Collect",
           content:
               "We collect only the information necessary to provide supportive wellness features:\n\n"
-              "• Account Information: Name, email address, student/occupation status, and birthdate.\n"
+              "• Account Information: Name, email address, FSUU college affiliation, and birthdate.\n"
               "• Mood & Wellness Logs: Daily mood levels, feeling tags, journal reflections, and clinical screener scores (PHQ-9 & GAD-7).\n"
               "• Chat Interactions: Messages shared with Kausap AI to generate empathetic context.",
         ),

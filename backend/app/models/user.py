@@ -27,6 +27,21 @@ class OccupationEnum(str, Enum):
     other = "Other"
 
 
+# Hardcoded FSUU colleges: code -> full name. The code is what gets stored in the DB.
+COLLEGES = {
+    "CoN": "College of Nursing",
+    "CEnTech": "College of Engineering and Technology",
+    "CoA": "College of Accountancy",
+    "CIHT": "College of Innovative Hospitality and Tourism",
+    "CORE": "College of Operations, Resources and Entrepreneurship",
+    "CITEC": "College of Information, Technology, Entertainment and Computing",
+    "CTE": "College of Teacher Education",
+    "CAS": "College of Arts and Sciences",
+    "CCJE": "College of Criminal Justice Education",
+}
+
+
+
 class User(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
 
@@ -60,6 +75,9 @@ class User(SQLModel, table=True):
     nationality: Optional[str] = Field(default="Filipino")
     hobbies: Optional[str] = Field(default=None)
     occupation: Optional[OccupationEnum] = Field(default=None)
+
+    # Student college code (see COLLEGES). Chosen once at registration, then locked.
+    college: Optional[str] = Field(default=None, index=True)
 
     # Student privacy & clinical consent control (Default: False = Strictly Confidential)
     share_chat_with_counselor: bool = Field(default=False)

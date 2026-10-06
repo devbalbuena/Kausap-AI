@@ -61,6 +61,7 @@ def register(payload: RegisterRequest, session: Annotated[Session, Depends(get_s
         nationality=payload.nationality or "Filipino",
         hobbies=payload.hobbies,
         occupation=payload.occupation,
+        college=payload.college,
     )
     session.add(user)
     session.commit()

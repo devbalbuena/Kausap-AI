@@ -8,6 +8,7 @@ import '../../services/api_client.dart';
 import '../../widgets/accessible_error_widget.dart';
 import '../home/home_screen.dart';
 import '../settings/privacy_screen.dart';
+import '../../utils/colleges.dart';
 
 /// Client Signup — Step 3: Summary & Submit
 /// Figma: "Client Signup - Step 3"
@@ -56,6 +57,8 @@ class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
         if (widget.signupData['hobbies'] != null)
           'hobbies': widget.signupData['hobbies'],
         'occupation': widget.signupData['occupation'],
+        if (widget.signupData['college'] != null)
+          'college': widget.signupData['college'],
         if (widget.signupData['address'] != null)
           'address': widget.signupData['address'],
         if (widget.signupData['bio'] != null) 'bio': widget.signupData['bio'],
@@ -144,7 +147,7 @@ class _ClientSignupStep3ScreenState extends State<ClientSignupStep3Screen> {
                                 _SummaryRow('Birthday', d['birthday']),
                                 _SummaryRow('Gender', d['gender']),
                                 _SummaryRow(
-                                    'Occupation', d['occupation'] ?? '—'),
+                                    'College', Colleges.label(d['college'])),
                                 _SummaryRow(
                                     'Nationality', d['nationality'] ?? 'Filipino'),
                                 if (d['hobbies'] != null && d['hobbies'].toString().trim().isNotEmpty)
