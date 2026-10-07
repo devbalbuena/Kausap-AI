@@ -23,9 +23,9 @@ class HomeSosBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.red.withAlpha(60),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.red.withAlpha(35),
+              blurRadius: 4,
+              offset: const Offset(0, 1.5),
             ),
           ],
         ),

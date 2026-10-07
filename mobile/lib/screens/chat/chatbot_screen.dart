@@ -4,10 +4,12 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/chat/counselor_sharing_dialog.dart';
 import '../../utils/app_routes.dart';
@@ -128,10 +130,28 @@ class ChatbotScreen extends StatefulWidget {
   State<ChatbotScreen> createState() => _ChatbotScreenState();
 }
 
+class _QuickPromptItem {
+  final String label;
+  final IconData icon;
+  final String prompt;
+  final Color accentColor;
+  final String desc;
+
+  const _QuickPromptItem({
+    required this.label,
+    required this.icon,
+    required this.prompt,
+    required this.accentColor,
+    required this.desc,
+  });
+}
+
 class _ChatbotScreenState extends State<ChatbotScreen>
     with TickerProviderStateMixin {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _inputFocusNode = FocusNode();
+  bool _isInputFocused = false;
 
   final List<_ChatMessage> _messages = [];
   String? _sessionId;
@@ -166,42 +186,50 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   late AnimationController _dotController;
   late Animation<double> _dotAnimation;
 
-  // Quick-Start conversation prompt cards
-  static const List<Map<String, String>> _quickPromptCards = [
-    {
-      'title': "I'm anxious about exams & deadlines 📚",
-      'desc': 'Unpack study stress, manage time, and regain focus',
-      'prompt': "I'm feeling overwhelmed and anxious about my upcoming exams and school deadlines.",
-    },
-    {
-      'title': 'Guide me through a calming breath 🌿',
-      'desc': '2-minute box breathing to reset your nervous system',
-      'prompt': 'Can you guide me through a 2-minute calming breathing exercise right now?',
-    },
-    {
-      'title': 'I just need someone to vent to 💭',
-      'desc': 'Safe, confidential space without any judgment',
-      'prompt': 'I had a really difficult day and I just need a safe space to vent and talk through things.',
-    },
-    {
-      'title': "I can't sleep, my thoughts are racing 😴",
-      'desc': 'Quiet bedtime meditation and nighttime relaxation',
-      'prompt': "I'm having trouble falling asleep because my mind won't stop racing.",
-    },
-    {
-      'title': 'Help me reframe a stressful thought 💡',
-      'desc': 'Positive thought reframing for emotional balance',
-      'prompt': 'Can you help me reframe a stressful thought I keep having and find a more balanced perspective?',
-    },
-  ];
-
-  static const List<String> _quickChips = [
-    '📚 Exam Stress',
-    '🌿 Calming Breath',
-    '💭 Just Venting',
-    '😴 Insomnia',
-    '💡 Positive Reframe',
-    '🛡️ 5-4-3-2-1 Grounding',
+  // Quick-Start conversation prompts with Lucide vector icons
+  static const List<_QuickPromptItem> _quickPrompts = [
+    _QuickPromptItem(
+      label: 'Exam Stress',
+      icon: LucideIcons.graduationCap,
+      prompt: "I'm feeling overwhelmed and anxious about my upcoming exams and school deadlines.",
+      accentColor: Color(0xFF3B82F6),
+      desc: 'Unpack study pressure, manage time, and regain focus',
+    ),
+    _QuickPromptItem(
+      label: 'Calming Breath',
+      icon: LucideIcons.wind,
+      prompt: 'Can you guide me through a 2-minute calming breathing exercise right now?',
+      accentColor: Color(0xFF10B981),
+      desc: '2-minute box breathing to reset your nervous system',
+    ),
+    _QuickPromptItem(
+      label: 'Safe Venting',
+      icon: LucideIcons.heartHandshake,
+      prompt: 'I had a really difficult day and I just need a safe space to vent and talk through things.',
+      accentColor: Color(0xFF8B5CF6),
+      desc: 'A safe, confidential space without any judgment',
+    ),
+    _QuickPromptItem(
+      label: 'Sleep & Calm',
+      icon: LucideIcons.moon,
+      prompt: "I'm having trouble falling asleep because my mind won't stop racing.",
+      accentColor: Color(0xFF6366F1),
+      desc: 'Bedtime relaxation to quiet racing thoughts',
+    ),
+    _QuickPromptItem(
+      label: 'Thought Reframe',
+      icon: LucideIcons.sparkles,
+      prompt: 'Can you help me reframe a stressful thought I keep having and find a more balanced perspective?',
+      accentColor: Color(0xFFF59E0B),
+      desc: 'Positive cognitive reframing for emotional balance',
+    ),
+    _QuickPromptItem(
+      label: '5-4-3-2-1 Grounding',
+      icon: LucideIcons.shieldCheck,
+      prompt: 'Can we do the 5-4-3-2-1 sensory grounding exercise together?',
+      accentColor: Color(0xFF06B6D4),
+      desc: 'Sensory grounding technique to bring you back to the present',
+    ),
   ];
 
   bool _showQuickPrompts = true;
@@ -210,6 +238,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   void initState() {
     super.initState();
     _activeMoodContext = widget.contextualMoodLevel;
+    _inputFocusNode.addListener(() {
+      if (mounted) setState(() => _isInputFocused = _inputFocusNode.hasFocus);
+    });
     _dotController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -478,6 +509,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     // Phase 4: Cancel any pending AI response safety timeout
     _sendTimeoutTimer?.cancel();
     _inputController.dispose();
+    _inputFocusNode.dispose();
     _scrollController.dispose();
     _dotController.dispose();
     super.dispose();
@@ -1136,7 +1168,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       color: const Color(0xFFDC2626),
                       child: Row(
                         children: [
-                          const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+                          const Icon(LucideIcons.wifiOff, color: Colors.white, size: 16),
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
@@ -1151,7 +1183,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           ),
                           GestureDetector(
                             onTap: () => setState(() => _isOffline = false),
-                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                            child: const Icon(LucideIcons.x, color: Colors.white, size: 16),
                           ),
                         ],
                       ),
@@ -1221,7 +1253,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(
                           color: const Color(0xFFEEF2FF),
-                          child: const Icon(Icons.person, color: AppColors.primary, size: 22),
+                          child: const Icon(LucideIcons.user, color: AppColors.primary, size: 22),
                         ),
                       ),
                     ),
@@ -1329,7 +1361,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              isShared ? Icons.shield_rounded : Icons.lock_outline_rounded,
+                              isShared ? LucideIcons.shieldCheck : LucideIcons.lock,
                               size: 10,
                               color: isShared ? const Color(0xFF0284C7) : const Color(0xFF64748B),
                             ),
@@ -1382,7 +1414,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             )
           else
             _HeaderIconBtn(
-              icon: Icons.headphones_rounded,
+              icon: LucideIcons.headphones,
               onTap: _openAmbientSoundscapeSheet,
             ),
           const SizedBox(width: 6),
@@ -1394,7 +1426,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               return Tooltip(
                 message: isShared ? 'Shared with Counselor (Tap to manage)' : 'Confidential: Hidden from counselors (Tap to manage)',
                 child: _HeaderIconBtn(
-                  icon: isShared ? Icons.shield_rounded : Icons.lock_outline_rounded,
+                  icon: isShared ? LucideIcons.shieldCheck : LucideIcons.lock,
                   iconColor: isShared ? const Color(0xFF0284C7) : const Color(0xFF64748B),
                   onTap: () {
                     HapticService.lightTap();
@@ -1410,7 +1442,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
           // Phone call icon
           _HeaderIconBtn(
-            icon: Icons.phone_outlined,
+            icon: LucideIcons.phone,
             onTap: () {
               Navigator.of(context).push(slideUpRoute(VoiceCallScreen(avatar: _currentAvatar)));
             },
@@ -1437,7 +1469,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   ? ClipOval(
                       child: Container(
                         color: const Color(0xFFE0F2FE),
-                        child: const Icon(Icons.menu_rounded, color: AppColors.primary, size: 20),
+                        child: const Icon(LucideIcons.menu, color: AppColors.primary, size: 20),
                       ),
                     )
                   : ClipOval(
@@ -1446,7 +1478,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(
                           color: const Color(0xFFEEF2FF),
-                          child: const Icon(Icons.person, color: AppColors.primary, size: 22),
+                          child: const Icon(LucideIcons.user, color: AppColors.primary, size: 22),
                         ),
                       ),
                     ),
@@ -1465,34 +1497,24 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Avatar Hero Card with Soft Ambient Glow
+          // Avatar Hero Card with Flat 2.0 aesthetics
           AnimatedContainer(
             duration: const Duration(milliseconds: 400),
             curve: Curves.easeInOut,
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: isSpacious ? 24 : 20, vertical: isSpacious ? 32 : 20),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: isSpacious ? 24 : 18),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: KausapColors.isDark(context)
-                    ? [const Color(0xFF1E293B), const Color(0xFF1E293B)]
-                    : [
-                        KausapColors.accent(context).withAlpha(30),
-                        KausapColors.accent(context).withAlpha(12),
-                      ],
-              ),
-              borderRadius: BorderRadius.circular(28),
+              color: KausapColors.cardBg(context),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: KausapColors.isDark(context)
-                    ? const Color(0xFF334155)
-                    : KausapColors.accent(context).withAlpha(60),
+                color: KausapColors.border(context),
+                width: 1,
               ),
               boxShadow: [
                 BoxShadow(
                   color: KausapColors.accentShadow(context),
-                  blurRadius: 22,
-                  offset: const Offset(0, 8),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1.5),
                 ),
               ],
             ),
@@ -1594,10 +1616,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: KausapColors.cardBg(context),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: KausapColors.accent(context).withAlpha(100)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: KausapColors.border(context), width: 1),
                         boxShadow: [
-                          BoxShadow(color: KausapColors.accentShadow(context), blurRadius: 6, offset: const Offset(0, 2)),
+                          BoxShadow(color: KausapColors.accentShadow(context), blurRadius: 4, offset: const Offset(0, 1.5)),
                         ],
                       ),
                       child: Row(
@@ -1677,24 +1699,28 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             ),
             const SizedBox(height: 10),
 
-            // Prompt Cards
-            ..._quickPromptCards.map((item) {
+            // Prompt Cards with Lucide Vector Badges & HCI Ergonomics
+            ..._quickPrompts.map((item) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: Material(
                   color: KausapColors.cardBg(context),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                   child: InkWell(
                     onTap: () {
                       HapticService.lightTap();
-                      _sendMessage(item['prompt']!);
+                      _sendMessage(item.prompt);
                     },
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                     child: Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: KausapColors.border(context)),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: KausapColors.isDark(context)
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE2E8F0),
+                        ),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x06000000),
@@ -1705,25 +1731,37 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       ),
                       child: Row(
                         children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: item.accentColor.withAlpha(24),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: item.accentColor.withAlpha(60)),
+                            ),
+                            child: Icon(item.icon, size: 20, color: item.accentColor),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  item['title']!,
+                                  item.label,
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
-                                    fontSize: 13,
+                                    fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
                                     color: KausapColors.textPrimary(context),
                                   ),
                                 ),
-                                const SizedBox(height: 3),
+                                const SizedBox(height: 2),
                                 Text(
-                                  item['desc']!,
+                                  item.desc,
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 11.5,
+                                    height: 1.35,
                                     color: KausapColors.textMuted(context),
                                   ),
                                 ),
@@ -1732,15 +1770,18 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.all(6),
+                            width: 32,
+                            height: 32,
                             decoration: BoxDecoration(
                               color: KausapColors.accentSubtle(context),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 12,
-                              color: KausapColors.accent(context),
+                            child: Center(
+                              child: Icon(
+                                LucideIcons.arrowUpRight,
+                                size: 16,
+                                color: KausapColors.accent(context),
+                              ),
                             ),
                           ),
                         ],
@@ -1812,7 +1853,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
                               color: const Color(0xFFE4F9FF),
-                              child: const Icon(Icons.smart_toy_rounded,
+                              child: const Icon(LucideIcons.bot,
                                   color: AppColors.primary, size: 18),
                             ),
                           ),
@@ -1832,66 +1873,155 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     children: [
                       // ── Message Text Bubble ──────────────────────────────
                       Container(
-                        constraints: const BoxConstraints(maxWidth: 265),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width > 600
+                              ? 560
+                              : MediaQuery.of(context).size.width * 0.78,
+                        ),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
                           color: KausapColors.cardBg(context),
                           borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(2),
-                            topRight: Radius.circular(16),
-                            bottomLeft: Radius.circular(16),
-                            bottomRight: Radius.circular(16),
+                            topLeft: Radius.circular(4),
+                            topRight: Radius.circular(18),
+                            bottomLeft: Radius.circular(18),
+                            bottomRight: Radius.circular(18),
+                          ),
+                          border: Border.all(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withAlpha(20)
+                                : const Color(0xFFE2E8F0),
+                            width: 1,
                           ),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x0D000000),
-                              blurRadius: 1,
-                              offset: Offset(0, 1),
+                              color: Color(0x0A000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 1.5),
                             ),
                           ],
                         ),
                         child: Text(
                           displayText,
                           style: AppTextStyles.body.copyWith(
-                            fontSize: 14,
+                            fontSize: 14.5,
                             color: KausapColors.textPrimary(context),
-                            height: 1.43,
+                            height: 1.45,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      // ── Listen TTS Button ──────────────────────────────
-                      GestureDetector(
-                        onTap: () => _toggleTts(msg.content, emotion: _detectMascotEmotion('', msg.content)),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: _currentlySpeakingContent == msg.content ? const Color(0xFFE0F2FE) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: _currentlySpeakingContent == msg.content
-                                ? Border.all(color: const Color(0xFFBAE6FD))
-                                : null,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _currentlySpeakingContent == msg.content ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
-                                size: 13,
-                                color: _currentlySpeakingContent == msg.content ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _currentlySpeakingContent == msg.content ? 'Speaking • Tap to stop' : 'Listen 🔊',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: _currentlySpeakingContent == msg.content ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                      const SizedBox(height: 5),
+                      // ── Micro Actions Toolbar (TTS & 1-tap Copy) ────────
+                      Padding(
+                        padding: const EdgeInsets.only(left: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // TTS Listen / Stop Pill
+                            GestureDetector(
+                              onTap: () {
+                                HapticService.selectionChanged();
+                                _toggleTts(msg.content, emotion: _detectMascotEmotion('', msg.content));
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _currentlySpeakingContent == msg.content
+                                      ? const Color(0xFFE0F2FE)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _currentlySpeakingContent == msg.content
+                                        ? const Color(0xFFBAE6FD)
+                                        : Colors.transparent,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _currentlySpeakingContent == msg.content
+                                          ? LucideIcons.volumeX
+                                          : LucideIcons.volume2,
+                                      size: 13,
+                                      color: _currentlySpeakingContent == msg.content
+                                          ? const Color(0xFF0284C7)
+                                          : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _currentlySpeakingContent == msg.content
+                                          ? 'Speaking • Stop'
+                                          : 'Listen',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: _currentlySpeakingContent == msg.content
+                                            ? const Color(0xFF0284C7)
+                                            : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 4),
+                            // 1-Tap Copy to Clipboard
+                            GestureDetector(
+                              onTap: () {
+                                HapticService.lightTap();
+                                Clipboard.setData(ClipboardData(text: displayText));
+                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Row(
+                                      children: [
+                                        Icon(LucideIcons.check, color: Colors.white, size: 16),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Copied to clipboard',
+                                          style: TextStyle(fontFamily: 'Inter', fontSize: 13),
+                                        ),
+                                      ],
+                                    ),
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: const Color(0xFF1E293B),
+                                    duration: const Duration(seconds: 2),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    margin: const EdgeInsets.only(bottom: 80, left: 24, right: 24),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      LucideIcons.copy,
+                                      size: 12,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Copy',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       // ── Action Chip Buttons (one-tap navigation) ────────
@@ -1919,25 +2049,25 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Widget _buildActionChip(BuildContext context, _ActionTag action) {
     // Determine chip color and icon based on resource type
     final (Color bg, Color border, Color fg, IconData icon) = switch (action.type) {
-      'activity' => (const Color(0xFFE0F7F4), const Color(0xFF0D9488), const Color(0xFF0D9488), Icons.self_improvement_rounded),
-      'article'  => (const Color(0xFFEDE9FE), const Color(0xFF7C3AED), const Color(0xFF7C3AED), Icons.article_rounded),
-      'screener' => (const Color(0xFFFFF7ED), const Color(0xFFD97706), const Color(0xFFD97706), Icons.assignment_rounded),
-      'soundscape' => (const Color(0xFFE0F2FE), const Color(0xFF0284C7), const Color(0xFF0284C7), Icons.headphones_rounded),
-      _ => (const Color(0xFFF1F5F9), const Color(0xFF94A3B8), const Color(0xFF475569), Icons.touch_app_rounded),
+      'activity' => (const Color(0xFFE0F7F4), const Color(0xFF0D9488), const Color(0xFF0D9488), LucideIcons.heartPulse),
+      'article'  => (const Color(0xFFEDE9FE), const Color(0xFF7C3AED), const Color(0xFF7C3AED), LucideIcons.bookOpen),
+      'screener' => (const Color(0xFFFFF7ED), const Color(0xFFD97706), const Color(0xFFD97706), LucideIcons.clipboardList),
+      'soundscape' => (const Color(0xFFE0F2FE), const Color(0xFF0284C7), const Color(0xFF0284C7), LucideIcons.headphones),
+      _ => (const Color(0xFFF1F5F9), const Color(0xFF94A3B8), const Color(0xFF475569), LucideIcons.sparkles),
     };
 
     return GestureDetector(
       onTap: () => _handleActionChipTap(context, action),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: border, width: 1.5),
+          border: Border.all(color: border, width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: border.withAlpha(30),
+              color: border.withAlpha(25),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -1946,7 +2076,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: fg),
+            Icon(icon, size: 14, color: fg),
             const SizedBox(width: 6),
             Text(
               action.label,
@@ -1958,7 +2088,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.arrow_forward_ios_rounded, size: 10, color: fg.withAlpha(180)),
+            Icon(LucideIcons.arrowRight, size: 12, color: fg.withAlpha(180)),
           ],
         ),
       ),
@@ -2042,7 +2172,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.emergency_rounded, color: Color(0xFFDC2626), size: 20),
+              const Icon(LucideIcons.phoneCall, color: Color(0xFFDC2626), size: 18),
               const SizedBox(width: 8),
               Text(
                 'Philippine Crisis Hotlines (24/7)',
@@ -2115,23 +2245,27 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             Opacity(
               opacity: msg.isFailed ? 0.65 : 1.0,
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 260),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width > 600
+                      ? 560
+                      : MediaQuery.of(context).size.width * 0.78,
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: msg.isFailed
                       ? const Color(0xFFEF4444)
                       : KausapColors.accent(context),
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(2),
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(4),
+                    bottomLeft: Radius.circular(18),
+                    bottomRight: Radius.circular(18),
                   ),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x0D000000),
-                      blurRadius: 1,
-                      offset: Offset(0, 1),
+                      color: Color(0x12000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 1.5),
                     ),
                   ],
                 ),
@@ -2169,9 +2303,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         msg.content,
                         style: const TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 14,
+                          fontSize: 14.5,
                           color: Colors.white,
-                          height: 1.43,
+                          height: 1.45,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -2203,10 +2337,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.refresh_rounded, size: 12, color: Color(0xFFDC2626)),
+                      Icon(LucideIcons.refreshCw, size: 12, color: Color(0xFFDC2626)),
                       SizedBox(width: 4),
                       Text(
-                        '⚠️ Failed — Tap to retry',
+                        'Failed — Tap to retry',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 11,
@@ -2263,7 +2397,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
                               color: const Color(0xFFE4F9FF),
-                              child: const Icon(Icons.smart_toy_rounded,
+                              child: const Icon(LucideIcons.bot,
                                   color: AppColors.primary, size: 18),
                             ),
                           ),
@@ -2275,17 +2409,22 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             decoration: BoxDecoration(
               color: KausapColors.cardBg(context),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(2),
-                topRight: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(18),
+                bottomLeft: Radius.circular(18),
+                bottomRight: Radius.circular(18),
               ),
-              border: Border.all(color: KausapColors.border(context)),
+              border: Border.all(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withAlpha(20)
+                    : const Color(0xFFE2E8F0),
+                width: 1,
+              ),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x0D000000),
-                  blurRadius: 1,
-                  offset: Offset(0, 1),
+                  color: Color(0x0A000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1.5),
                 ),
               ],
             ),
@@ -2315,43 +2454,62 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     return Container(
       color: KausapColors.scaffoldBg(context),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Horizontal Quick-Prompts Pill Bar ──────────────────────────────
           if (!isEmpty) ...[
             const SizedBox(height: 6),
             SizedBox(
-              height: 34,
+              height: 38,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _quickChips.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _quickPrompts.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
-                  return GestureDetector(
-                    onTap: () {
-                      HapticService.lightTap();
-                      _sendMessage(_quickPromptCards[i % _quickPromptCards.length]['prompt']!);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: KausapColors.cardBg(context),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: KausapColors.border(context)),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x08000000),
-                            blurRadius: 2,
-                            offset: Offset(0, 1),
+                  final item = _quickPrompts[i];
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        HapticService.lightTap();
+                        _sendMessage(item.prompt);
+                      },
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: KausapColors.cardBg(context),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: KausapColors.isDark(context)
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFE2E8F0),
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        _quickChips[i],
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.primary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(8),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(item.icon, size: 14, color: item.accentColor),
+                            const SizedBox(width: 6),
+                            Text(
+                              item.label,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: KausapColors.textPrimary(context),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -2360,151 +2518,258 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
             ),
           ],
+
+          // ── Active Voice Recording Banner ──────────────────────────────────
           if (_isRecordingVoice)
             Container(
-              margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: const Color(0xFFFCA5A5)),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x1ADC2626), blurRadius: 8, offset: Offset(0, 2)),
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.mic_rounded, color: Color(0xFFDC2626), size: 18),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Listening... Speak freely 🎙️',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF991B1B),
-                      ),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDC2626),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(LucideIcons.mic, color: Colors.white, size: 16),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Listening to your voice...',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF991B1B),
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Speak naturally — tap Send when finished',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            color: Color(0xFFB91C1C),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   const _SoundwaveBars(),
                   const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _toggleVoiceRecording,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDC2626),
-                        borderRadius: BorderRadius.circular(10),
+                  ElevatedButton.icon(
+                    onPressed: _toggleVoiceRecording,
+                    icon: const Icon(LucideIcons.send, size: 13, color: Colors.white),
+                    label: const Text(
+                      'Send',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
-                      child: const Text(
-                        'Send Voice',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      minimumSize: const Size(0, 36),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ],
               ),
             ),
+
           const SizedBox(height: 6),
+
+          // ── Modern Floating Input Capsule (HCI Fitts's & Jakob's Law) ─────
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Container(
               decoration: BoxDecoration(
                 color: KausapColors.cardBg(context),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: KausapColors.border(context)),
-                boxShadow: const [
+                border: Border.all(
+                  color: _isInputFocused
+                      ? KausapColors.accent(context)
+                      : KausapColors.border(context),
+                  width: _isInputFocused ? 1.5 : 1.0,
+                ),
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x0D000000),
+                    color: _isInputFocused
+                        ? KausapColors.accentShadow(context)
+                        : Colors.black.withAlpha(6),
                     blurRadius: 4,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 1.5),
                   ),
                 ],
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _showAttachmentMenu,
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
-                      child: Icon(Icons.add_circle_outline,
-                          color: AppColors.textSecondary, size: 22),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: TextField(
-                      controller: _inputController,
-                      maxLines: null,
-                      keyboardType: TextInputType.multiline,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: _sendMessage,
-                      style: AppTextStyles.body.copyWith(
-                          fontSize: 14, color: KausapColors.textPrimary(context)),
-                      decoration: InputDecoration(
-                        hintText: _isRecordingVoice ? 'Listening to your voice...' : 'Start conversation...',
-                        hintStyle: AppTextStyles.body.copyWith(
-                          fontSize: 14,
-                          color: _isRecordingVoice ? const Color(0xFFDC2626) : KausapColors.textMuted(context),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                  // Mic Button (Hold / Tap to record voice note)
-                  Semantics(
-                    label: _isRecordingVoice ? 'Stop voice recording and send' : 'Record voice message',
-                    button: true,
-                    child: GestureDetector(
-                      onTap: _toggleVoiceRecording,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: _isRecordingVoice ? const Color(0xFFFEF2F2) : Colors.transparent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          _isRecordingVoice ? Icons.stop_circle_rounded : Icons.mic_none_rounded,
-                          color: _isRecordingVoice ? const Color(0xFFDC2626) : KausapColors.accent(context),
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  // Send Text Button
-                  Semantics(
-                    label: 'Send text message',
-                    button: true,
-                    child: GestureDetector(
-                      onTap: () => _sendMessage(_inputController.text),
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: KausapColors.accent(context),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: KausapColors.accentShadow(context),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
+                  // Attachment button with accessible touch target
+                  Tooltip(
+                    message: 'Attach photo',
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                      child: InkWell(
+                        onTap: _showAttachmentMenu,
+                        borderRadius: BorderRadius.circular(24),
+                        child: SizedBox(
+                          width: 44,
+                          height: 48,
+                          child: Center(
+                            child: Icon(
+                              LucideIcons.paperclip,
+                              color: KausapColors.textMuted(context),
+                              size: 20,
                             ),
-                          ],
+                          ),
                         ),
-                        child: const Icon(Icons.send_rounded,
-                            color: Colors.white, size: 16),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+
+                  // Auto-growing multiline text field (1 to 5 lines)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: TextField(
+                        controller: _inputController,
+                        focusNode: _inputFocusNode,
+                        minLines: 1,
+                        maxLines: 5,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (text) {
+                          if (text.trim().isNotEmpty) {
+                            _sendMessage(text);
+                          }
+                        },
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14.5,
+                          height: 1.4,
+                          color: KausapColors.textPrimary(context),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: _isRecordingVoice
+                              ? 'Listening... Speak freely'
+                              : 'Message Kausap Buddy...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14.5,
+                            color: _isRecordingVoice
+                                ? const Color(0xFFDC2626)
+                                : KausapColors.textMuted(context),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 10,
+                          ),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Dynamic Action Button: Mic when empty, Send Arrow when typing
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _inputController,
+                    builder: (context, value, _) {
+                      final hasText = value.text.trim().isNotEmpty;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 4, bottom: 4),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          transitionBuilder: (child, anim) =>
+                              ScaleTransition(scale: anim, child: child),
+                          child: hasText
+                              ? Tooltip(
+                                  key: const ValueKey('send_btn'),
+                                  message: 'Send message',
+                                  child: Material(
+                                    color: KausapColors.accent(context),
+                                    shape: const CircleBorder(),
+                                    elevation: 0,
+                                    shadowColor: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        HapticService.lightTap();
+                                        _sendMessage(_inputController.text);
+                                      },
+                                      customBorder: const CircleBorder(),
+                                      child: const SizedBox(
+                                        width: 40,
+                                        height: 40,
+                                        child: Center(
+                                          child: Icon(
+                                            LucideIcons.arrowUp,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Tooltip(
+                                  key: const ValueKey('mic_btn'),
+                                  message: _isRecordingVoice
+                                      ? 'Stop recording'
+                                      : 'Record voice message',
+                                  child: Material(
+                                    color: _isRecordingVoice
+                                        ? const Color(0xFFFEF2F2)
+                                        : Colors.transparent,
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      onTap: _toggleVoiceRecording,
+                                      customBorder: const CircleBorder(),
+                                      child: SizedBox(
+                                        width: 44,
+                                        height: 40,
+                                        child: Center(
+                                          child: Icon(
+                                            _isRecordingVoice
+                                                ? LucideIcons.square
+                                                : LucideIcons.mic,
+                                            color: _isRecordingVoice
+                                                ? const Color(0xFFDC2626)
+                                                : KausapColors.accent(context),
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -2762,21 +3027,24 @@ class _HeaderIconBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 34,
-        height: 34,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
-          color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : Colors.white.withAlpha(220),
+          color: KausapColors.cardBg(context),
           shape: BoxShape.circle,
-          border: Border.all(color: KausapColors.border(context)),
+          border: Border.all(
+            color: KausapColors.border(context),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(18),
-              blurRadius: 5,
-              offset: const Offset(0, 1.5),
+              color: Colors.black.withAlpha(8),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
-        child: Icon(icon, color: iconColor ?? Theme.of(context).colorScheme.primary, size: 18),
+        child: Icon(icon, color: iconColor ?? Theme.of(context).colorScheme.primary, size: 17),
       ),
     );
   }

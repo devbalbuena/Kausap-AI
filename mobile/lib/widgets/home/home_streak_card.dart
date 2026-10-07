@@ -27,16 +27,16 @@ class HomeStreakCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: KausapColors.border(context)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: KausapColors.border(context), width: 1),
         boxShadow: [
           BoxShadow(
             color: KausapColors.accentShadow(context),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -66,17 +66,17 @@ class HomeStreakCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: KausapColors.warningSubtle(context),
+                  color: KausapColors.pastelPeachBg(context),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: KausapColors.warning.withAlpha(60)),
+                  border: Border.all(color: KausapColors.pastelPeachBorder(context)),
                 ),
                 child: Text(
                   rankBadge,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
-                    color: KausapColors.warning,
+                    color: KausapColors.pastelPeachFg(context),
                   ),
                 ),
               ),

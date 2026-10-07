@@ -129,11 +129,11 @@ const activityList = [
     difficulty: 'Medium',
     category: 'Meditation',
     icon: Icons.self_improvement_rounded,
-    gradient: [Color(0xFF4F46E5), Color(0xFF818CF8)],
+    gradient: [Color(0xFF0077B6), Color(0xFF0096C7)],
     tags: [
-      ActivityTag(label: 'Tension Relief', bg: Color(0xFFE0E7FF), border: Color(0xFFC7D2FE), text: Color(0xFF3730A3)),
-      ActivityTag(label: 'Stress', bg: Color(0xFFFFEDD5), border: Color(0xFFFED7AA), text: Color(0xFF9A3412)),
-      ActivityTag(label: 'Restoration', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
+      ActivityTag(label: 'Tension Relief', bg: Color(0xFFF0F9FF), border: Color(0xFFBAE6FD), text: Color(0xFF0369A1)),
+      ActivityTag(label: 'Stress', bg: Color(0xFFFFF7ED), border: Color(0xFFFFEDD5), text: Color(0xFFC2410C)),
+      ActivityTag(label: 'Restoration', bg: Color(0xFFF0FDF4), border: Color(0xFFDCFCE7), text: Color(0xFF15803D)),
     ],
     whatIsThis:
         'After hours of staring at screens and hunching over books, your body holds physical tension '
@@ -178,11 +178,11 @@ const activityList = [
     difficulty: 'Easy',
     category: 'Exercise',
     icon: Icons.directions_walk_rounded,
-    gradient: [Color(0xFFE11D48), Color(0xFFFB7185)],
+    gradient: [Color(0xFFEA580C), Color(0xFFFB923C)],
     tags: [
-      ActivityTag(label: 'Movement', bg: Color(0xFFFFE4E6), border: Color(0xFFFECDD3), text: Color(0xFF9F1239)),
+      ActivityTag(label: 'Movement', bg: Color(0xFFFFF7ED), border: Color(0xFFFFEDD5), text: Color(0xFFC2410C)),
       ActivityTag(label: 'Energy', bg: Color(0xFFFEF3C7), border: Color(0xFFFDE68A), text: Color(0xFF92400E)),
-      ActivityTag(label: 'Nature', bg: Color(0xFFDCFCE7), border: Color(0xFF86EFAC), text: Color(0xFF166534)),
+      ActivityTag(label: 'Nature', bg: Color(0xFFF0FDF4), border: Color(0xFFDCFCE7), text: Color(0xFF15803D)),
     ],
     whatIsThis:
         'Mindful walking bridges active physical movement with present-moment awareness. '
@@ -491,20 +491,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                KausapColors.accent(context),
-                KausapColors.accent(context).withAlpha(190),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: KausapColors.accent(context),
             borderRadius: BorderRadius.circular(9),
             boxShadow: [
               BoxShadow(
                 color: KausapColors.accentShadow(context),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
               ),
             ],
           ),
@@ -644,13 +637,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
     return Container(
       decoration: BoxDecoration(
         color: KausapColors.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: KausapColors.border(context)),
-        boxShadow: const [
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: KausapColors.border(context), width: 1),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+            color: KausapColors.accentShadow(context),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -699,20 +692,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? KausapColors.accent(context) : KausapColors.cardBg(context),
-                  borderRadius: BorderRadius.circular(20),
+                  color: isSelected ? KausapColors.pastelSkyBg(context) : KausapColors.cardBg(context),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isSelected ? KausapColors.accent(context) : KausapColors.border(context),
+                    width: isSelected ? 1.2 : 1.0,
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: KausapColors.accent(context).withAlpha(60),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
                 ),
                 child: Text(
                   label,
@@ -720,7 +705,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     fontFamily: 'Poppins',
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? Colors.white : KausapColors.textMuted(context),
+                    color: isSelected ? KausapColors.accent(context) : KausapColors.textMuted(context),
                   ),
                 ),
               ),
@@ -740,17 +725,18 @@ class _ActivityScreenState extends State<ActivityScreen> {
         gradient: LinearGradient(
           colors: [
             activity.gradient.first,
-            activity.gradient.last.withAlpha(230),
+            activity.gradient.last.withAlpha(220),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: activity.gradient.first.withAlpha(90), width: 1),
         boxShadow: [
           BoxShadow(
-            color: activity.gradient.first.withAlpha(80),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+            color: KausapColors.accentShadow(context),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -862,14 +848,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x22000000),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -906,12 +885,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
       decoration: BoxDecoration(
         color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: KausapColors.border(context)),
-        boxShadow: const [
+        border: Border.all(color: KausapColors.border(context), width: 1),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+            color: KausapColors.accentShadow(context),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -987,16 +966,16 @@ class _ActivityScreenState extends State<ActivityScreen> {
         color: isDone
             ? (KausapColors.isDark(context) ? const Color(0xFF132E20) : const Color(0xFFF0FDF4))
             : KausapColors.cardBg(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDone ? KausapColors.success.withAlpha(120) : KausapColors.border(context),
           width: isDone ? 1.5 : 1,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 12,
-            offset: Offset(0, 3),
+            color: KausapColors.accentShadow(context),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -1020,10 +999,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: activity.gradient),
+                            color: activity.gradient.first.withAlpha(25),
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: activity.gradient.first.withAlpha(50), width: 1),
                           ),
-                          child: Icon(activity.icon, color: Colors.white, size: 16),
+                          child: Icon(activity.icon, color: activity.gradient.first, size: 16),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -1099,7 +1079,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Tag Chips
+                // Tag Chips — Unified clean neutral light slate pills
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
@@ -1107,17 +1087,26 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: tag.bg,
+                        color: KausapColors.isDark(context)
+                            ? const Color(0xFF1E293B)
+                            : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: tag.border),
+                        border: Border.all(
+                          color: KausapColors.isDark(context)
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE2E8F0),
+                          width: 0.8,
+                        ),
                       ),
                       child: Text(
                         tag.label,
                         style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 10,
+                          fontFamily: 'Inter',
+                          fontSize: 10.5,
                           fontWeight: FontWeight.w600,
-                          color: tag.text,
+                          color: KausapColors.isDark(context)
+                              ? const Color(0xFFCBD5E1)
+                              : const Color(0xFF475569),
                         ),
                       ),
                     );

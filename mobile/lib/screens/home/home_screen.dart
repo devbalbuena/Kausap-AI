@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/app_routes.dart';
@@ -1039,13 +1040,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: KausapColors.cardBg(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: KausapColors.border(context)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: KausapColors.border(context), width: 1),
         boxShadow: [
           BoxShadow(
             color: KausapColors.accentShadow(context),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -1181,13 +1182,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: KausapColors.cardBg(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: KausapColors.border(context)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: KausapColors.border(context), width: 1),
         boxShadow: [
           BoxShadow(
             color: KausapColors.accentShadow(context),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -1292,16 +1293,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isAck ? KausapColors.successSubtle(context) : KausapColors.accentSubtle(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isAck ? KausapColors.success.withAlpha(80) : KausapColors.accent(context).withAlpha(80),
-          width: 1.5,
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
             color: KausapColors.accentShadow(context),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -1487,45 +1488,65 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       onMindfulnessTap: () => setState(() => _navIndex = 1),
                     ),
                     const SizedBox(height: 14),
-                    HomeQuickActionCard(
-                      iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : const Color(0xFFFEF3C7),
-                      icon: Icons.edit_note_rounded,
-                      iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFFD97706),
-                      title: 'Daily Journal',
-                      subtitle: 'Write your thoughts and reflect',
-                      onTap: () async {
-                        final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
-                        if (res == true) {
-                          _fetchMoodAndQuestsData();
-                        }
-                      },
+                    Row(
+                      children: [
+                        Expanded(
+                          child: HomeQuickActionBentoCard(
+                            iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : KausapColors.pastelSkyBg(context),
+                            iconBorder: isCustomAccent ? null : KausapColors.pastelSkyBorder(context),
+                            icon: LucideIcons.bot,
+                            iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFF0077B6),
+                            title: 'Talk to Kausap AI',
+                            subtitle: '24/7 Companion',
+                            onTap: () => setState(() => _navIndex = 2),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: HomeQuickActionBentoCard(
+                            iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : KausapColors.pastelPeachBg(context),
+                            iconBorder: isCustomAccent ? null : KausapColors.pastelPeachBorder(context),
+                            icon: LucideIcons.bookOpen,
+                            iconColor: isCustomAccent ? KausapColors.accent(context) : KausapColors.pastelPeachFg(context),
+                            title: 'Daily Journal',
+                            subtitle: 'Reflect & express',
+                            onTap: () async {
+                              final res = await Navigator.of(context).push(slideRoute(const DailyJournalScreen()));
+                              if (res == true) {
+                                _fetchMoodAndQuestsData();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
-                    HomeQuickActionCard(
-                      iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : AppColors.chatbotIcon,
-                      icon: Icons.smart_toy_rounded,
-                      iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFF0077B6),
-                      title: 'Talk to Kausap AI',
-                      subtitle: '24/7 confidential wellness companion',
-                      onTap: () => setState(() => _navIndex = 2),
-                    ),
-                    const SizedBox(height: 12),
-                    HomeQuickActionCard(
-                      iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : const Color(0xFFD1FAE5),
-                      icon: Icons.self_improvement_rounded,
-                      iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFF059669),
-                      title: 'Mindfulness Exercises',
-                      subtitle: 'Breathe, meditate & relax',
-                      onTap: () => setState(() => _navIndex = 1),
-                    ),
-                    const SizedBox(height: 12),
-                    HomeQuickActionCard(
-                      iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : const Color(0xFFEFF6FF),
-                      icon: Icons.analytics_rounded,
-                      iconColor: isCustomAccent ? KausapColors.accent(context) : const Color(0xFF3B82F6),
-                      title: 'Self-Assessments',
-                      subtitle: 'PHQ-9 Depression & GAD-7 Anxiety Screeners',
-                      onTap: () => setState(() => _navIndex = 3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: HomeQuickActionBentoCard(
+                            iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : KausapColors.pastelSageBg(context),
+                            iconBorder: isCustomAccent ? null : KausapColors.pastelSageBorder(context),
+                            icon: LucideIcons.wind,
+                            iconColor: isCustomAccent ? KausapColors.accent(context) : KausapColors.pastelSageFg(context),
+                            title: 'Mindfulness',
+                            subtitle: 'Breathe & relax',
+                            onTap: () => setState(() => _navIndex = 1),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: HomeQuickActionBentoCard(
+                            iconBg: isCustomAccent ? KausapColors.accentSubtle(context) : KausapColors.pastelLilacBg(context),
+                            iconBorder: isCustomAccent ? null : KausapColors.pastelLilacBorder(context),
+                            icon: LucideIcons.clipboardCheck,
+                            iconColor: isCustomAccent ? KausapColors.accent(context) : KausapColors.pastelLilacFg(context),
+                            title: 'Self-Assessments',
+                            subtitle: 'PHQ-9 & GAD-7',
+                            onTap: () => setState(() => _navIndex = 3),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     const HomeQuoteCard(),

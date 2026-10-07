@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/haptic_service.dart';
 
 class HomeQuickActionCard extends StatelessWidget {
   final Color iconBg;
@@ -32,12 +34,12 @@ class HomeQuickActionCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: KausapColors.border(context)),
+            border: Border.all(color: KausapColors.border(context), width: 1),
             boxShadow: [
               BoxShadow(
                 color: KausapColors.accentShadow(context),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
               ),
             ],
           ),
@@ -103,12 +105,12 @@ class HomeQuoteCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: KausapColors.border(context)),
+        border: Border.all(color: KausapColors.border(context), width: 1),
         boxShadow: [
           BoxShadow(
             color: KausapColors.accentShadow(context),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -159,8 +161,8 @@ class HomeScreenerPromoCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: KausapColors.accentShadow(context),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
           ),
         ],
       ),
@@ -212,3 +214,105 @@ class HomeScreenerPromoCard extends StatelessWidget {
     );
   }
 }
+
+/// Flat 2.0 Bento Grid Tile for compact 2-column dashboard layout
+class HomeQuickActionBentoCard extends StatelessWidget {
+  final Color iconBg;
+  final Color? iconBorder;
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const HomeQuickActionBentoCard({
+    super.key,
+    required this.iconBg,
+    this.iconBorder,
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '$title. $subtitle',
+      button: true,
+      child: GestureDetector(
+        onTap: () {
+          HapticService.lightTap();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: KausapColors.border(context), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: KausapColors.accentShadow(context),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: iconBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: iconBorder != null ? Border.all(color: iconBorder!, width: 1) : null,
+                    ),
+                    child: Center(
+                      child: Icon(icon, color: iconColor, size: 18),
+                    ),
+                  ),
+                  Icon(
+                    LucideIcons.arrowUpRight,
+                    color: KausapColors.textHint(context),
+                    size: 15,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: KausapColors.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  color: KausapColors.textMuted(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

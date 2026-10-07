@@ -9,26 +9,30 @@ class AppColors {
   static const Color primaryLight = Color(0xFF00B4D8);
   static const Color primaryDark = Color(0xFF005F92);
 
-  // Accent colors from Figma
-  static const Color accentGreen = Color(0xFF519C6B);   // Start Activity button
-  static const Color accentOrange = Color(0xFFFE8235);  // Book a Session button
-  static const Color sessionCard = Color(0xFF00B4D8);   // Upcoming Session card bg
-  static const Color bookSessionCard = Color(0xFFFDECDF); // Book Session card bg
-  static const Color bookSessionText = Color(0xFF573926); // Brown text
+  // Executive Charcoal (Flat 2.0 dark CTAs, matching reference design)
+  static const Color charcoal = Color(0xFF0F172A);
+  static const Color charcoalSurface = Color(0xFF1E293B);
 
-  // Backgrounds
-  static const Color background = Color(0xFFFBF8FF);
+  // Accent colors — refined, calm, desaturated
+  static const Color accentGreen = Color(0xFF16A34A);   // Start Activity button
+  static const Color accentOrange = Color(0xFFEA580C);  // Warm calm terracotta
+  static const Color sessionCard = Color(0xFFF0F9FF);   // Upcoming Session card bg (soft sky wash)
+  static const Color bookSessionCard = Color(0xFFFFF7ED); // Book Session card bg (soft peach wash)
+  static const Color bookSessionText = Color(0xFFC2410C); // Terracotta text
+
+  // Backgrounds — Flat 2.0 Slate-50 airy canvas
+  static const Color background = Color(0xFFF8FAFC);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color cardBackground = Color(0xFFFFFFFF);
 
-  // Text — Figma: #3D405B
-  static const Color textPrimary = Color(0xFF3D405B);
-  static const Color textSecondary = Color(0xFF717680);
-  static const Color textHint = Color(0xFF9CA3AF);
+  // Text — High legibility Slate-900 & Slate-500
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF64748B);
+  static const Color textHint = Color(0xFF94A3B8);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
 
-  // Input
-  static const Color inputBorder = Color(0xFFD1D5DB);
+  // Input — Flat 1px border
+  static const Color inputBorder = Color(0xFFE2E8F0);
   static const Color inputBorderFocused = Color(0xFF0077B6);
   static const Color inputBorderError = Color(0xFFEF4444);
   static const Color inputBackground = Color(0xFFFFFFFF);
@@ -39,34 +43,34 @@ class AppColors {
   static const Color errorBorder = Color(0xFFFCA5A5);
 
   // Divider
-  static const Color divider = Color(0xFFE5E7EB);
+  static const Color divider = Color(0xFFE2E8F0);
 
   // Link / accent
-  static const Color link = Color(0xFF0077B6);
+  static const Color link = Color(0xFF0284C7);
 
-  // Navbar bar background tint
-  static const Color streakTrack = Color(0xFFECEDF5);
-  static const Color checkinIcon = Color(0xFFFEE9E7);   // heart icon bg
-  static const Color chatbotIcon = Color(0xFFE4F9FF);   // robot icon bg
-  static const Color streakCardBg = Color(0xFFEBF7DC);      // Green-tinted streak card bg (~rgba(201,238,169,0.4))
-  static const Color streakCardBorder = Color(0xFFC9EEA9);   // #C9EEA9
-  static const Color streakCardText = Color(0xFF4E6D36);     // Dark green label text
-  static const Color streakCardTitle = Color(0xFF3D405B);    // Same as textPrimary
-  static const Color streakCardBody = Color(0xFF404944);     // Body text in streak card
+  // Navbar bar background tint & calm icons
+  static const Color streakTrack = Color(0xFFF1F5F9);
+  static const Color checkinIcon = Color(0xFFFEF2F2);   // soft rose icon bg
+  static const Color chatbotIcon = Color(0xFFF0F9FF);   // soft sky icon bg
+  static const Color streakCardBg = Color(0xFFFFF7ED);  // Soft peach wash
+  static const Color streakCardBorder = Color(0xFFFFEDD5);
+  static const Color streakCardText = Color(0xFFC2410C);
+  static const Color streakCardTitle = Color(0xFF0F172A); // Dark slate title
+  static const Color streakCardBody = Color(0xFF475569);  // Slate-600 body text
 
-  // Activity tag colors (from Figma Activity/Start)
-  static const Color tagGreenBg = Color(0xFFEBF7DC);         // rgba(201,238,169,0.4)
-  static const Color tagGreenBorder = Color(0xFFD0E8B0);     // rgba(72,103,48,0.1)
-  static const Color tagGreenText = Color(0xFF4E6D36);       // Anxiety tag
-  static const Color tagOrangeBg = Color(0x338F3C26);        // rgba(143,60,38,0.2) Stress tag
-  static const Color tagOrangeText = Color(0xFF712611);
-  static const Color tagBlueBg = Color(0xFFDFE0FF);          // Sleep issues tag
-  static const Color tagBlueText = Color(0xFF404944);
+  // Activity tag colors — calm desaturated pastel washes
+  static const Color tagGreenBg = Color(0xFFF0FDF4);
+  static const Color tagGreenBorder = Color(0xFFDCFCE7);
+  static const Color tagGreenText = Color(0xFF15803D);
+  static const Color tagOrangeBg = Color(0xFFFFF7ED);
+  static const Color tagOrangeText = Color(0xFFC2410C);
+  static const Color tagBlueBg = Color(0xFFF0F9FF);
+  static const Color tagBlueText = Color(0xFF0369A1);
 
   // Category pill (unselected)
-  static const Color categoryChipBg = Color(0xFFEDECFF);
+  static const Color categoryChipBg = Color(0xFFF1F5F9);
 
-  static const Color activityIcon = Color(0xFFE7FEEE);  // barbell icon bg
+  static const Color activityIcon = Color(0xFFF0FDF4);  // soft sage icon bg
 }
 
 /// Context-aware color utility — reads from the active MaterialApp theme.
@@ -93,11 +97,11 @@ class KausapColors {
   static Color textPrimary(BuildContext context) =>
       Theme.of(context).colorScheme.onSurface;
 
-  /// Secondary text colour (slate-700 in light mode, slate-300 in dark mode)
+  /// Secondary text colour (slate-600 in light mode, slate-300 in dark mode)
   static Color textSecondary(BuildContext context) =>
-      isDark(context) ? const Color(0xFFCBD5E1) : const Color(0xFF334155);
+      isDark(context) ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
 
-  /// Secondary / muted text colour
+  /// Secondary / muted text colour (slate-500 in light mode, slate-400 in dark mode)
   static Color textMuted(BuildContext context) =>
       isDark(context) ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
@@ -105,7 +109,7 @@ class KausapColors {
   static Color textHint(BuildContext context) =>
       isDark(context) ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
-  /// Border / divider colour (light gray in light, slate-dark in dark)
+  /// Border / divider colour (light slate in light, dark slate in dark)
   static Color border(BuildContext context) =>
       isDark(context) ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
 
@@ -125,13 +129,54 @@ class KausapColors {
   static Color accentLight(BuildContext context) =>
       Theme.of(context).colorScheme.primary.withAlpha(isDark(context) ? 50 : 30);
 
-  /// Subtle shadow colour based on accent
+  /// Flat 2.0 neutral card shadow — soft and natural, avoiding neon colored glows
   static Color accentShadow(BuildContext context) =>
-      Theme.of(context).colorScheme.primary.withAlpha(isDark(context) ? 25 : 18);
+      isDark(context) ? Colors.black.withAlpha(25) : Colors.black.withAlpha(8);
 
   /// Input / form field fill colour
   static Color inputFill(BuildContext context) =>
       isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF);
+
+  /// Primary CTA button background (brand accent blue / active theme)
+  static Color primaryCta(BuildContext context) =>
+      Theme.of(context).colorScheme.primary;
+
+  /// Text on primary CTA button
+  static Color onPrimaryCta(BuildContext context) => Colors.white;
+
+  // ── Flat 2.0 Desaturated Pastel Washes (For Bento Cards & Badges) ─────────
+
+  /// Soft Sage wash (Activities, Mindfulness, Health)
+  static Color pastelSageBg(BuildContext context) =>
+      isDark(context) ? const Color(0xFF142E1F) : const Color(0xFFF0FDF4);
+  static Color pastelSageBorder(BuildContext context) =>
+      isDark(context) ? const Color(0xFF166534) : const Color(0xFFDCFCE7);
+  static Color pastelSageFg(BuildContext context) =>
+      isDark(context) ? const Color(0xFF4ADE80) : const Color(0xFF15803D);
+
+  /// Soft Peach/Sand wash (Streaks, Energy, Motivation)
+  static Color pastelPeachBg(BuildContext context) =>
+      isDark(context) ? const Color(0xFF2E1C14) : const Color(0xFFFFF7ED);
+  static Color pastelPeachBorder(BuildContext context) =>
+      isDark(context) ? const Color(0xFF9A3412) : const Color(0xFFFFEDD5);
+  static Color pastelPeachFg(BuildContext context) =>
+      isDark(context) ? const Color(0xFFFB923C) : const Color(0xFFC2410C);
+
+  /// Soft Lilac wash (Journaling, Reflection, Insights)
+  static Color pastelLilacBg(BuildContext context) =>
+      isDark(context) ? const Color(0xFF251A38) : const Color(0xFFFAF5FF);
+  static Color pastelLilacBorder(BuildContext context) =>
+      isDark(context) ? const Color(0xFF6B21A8) : const Color(0xFFF3E8FF);
+  static Color pastelLilacFg(BuildContext context) =>
+      isDark(context) ? const Color(0xFFC084FC) : const Color(0xFF7E22CE);
+
+  /// Soft Sky/Slate wash (AI Chat, Focus, Calm)
+  static Color pastelSkyBg(BuildContext context) =>
+      isDark(context) ? const Color(0xFF132738) : const Color(0xFFF0F9FF);
+  static Color pastelSkyBorder(BuildContext context) =>
+      isDark(context) ? const Color(0xFF075985) : const Color(0xFFE0F2FE);
+  static Color pastelSkyFg(BuildContext context) =>
+      isDark(context) ? const Color(0xFF38BDF8) : const Color(0xFF0369A1);
 
   /// Returns a rich 2-color gradient for the mascot / hero elements based on the active theme accent
   static List<Color> mascotGradient(BuildContext context) {
@@ -280,30 +325,51 @@ class AppTheme {
         colorScheme: ColorScheme.light(
           primary: accentColor,
           surface: AppColors.surface,
+          onSurface: AppColors.textPrimary,
           error: AppColors.error,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.background,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Colors.white,
+          selectedItemColor: accentColor,
+          unselectedItemColor: const Color(0xFF94A3B8),
+          elevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+          ),
+          elevation: 0,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: AppColors.inputBackground,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.inputBorder),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.inputBorder),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.inputBorderFocused, width: 1.5),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: accentColor, width: 1.5),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.inputBorderError),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.inputBorderError, width: 1.5),
           ),
           hintStyle: AppTextStyles.hint,
@@ -317,9 +383,20 @@ class AppTheme {
             disabledBackgroundColor: const Color(0xFFE2E8F0),
             disabledForegroundColor: const Color(0xFF94A3B8),
             minimumSize: const Size(double.infinity, 48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 0,
             textStyle: AppTextStyles.button,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: accentColor,
+            backgroundColor: Colors.white,
+            side: BorderSide(color: accentColor.withAlpha(120), width: 1.2),
+            minimumSize: const Size(double.infinity, 48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+            textStyle: AppTextStyles.button.copyWith(color: accentColor),
           ),
         ),
       );
@@ -343,23 +420,23 @@ class AppTheme {
           fillColor: const Color(0xFF1E293B),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFF334155)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFF334155)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: accentColor, width: 1.5),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.inputBorderError),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.inputBorderError, width: 1.5),
           ),
           hintStyle: AppTextStyles.hint.copyWith(color: const Color(0xFF94A3B8)),
@@ -373,24 +450,40 @@ class AppTheme {
             disabledBackgroundColor: const Color(0xFF334155),
             disabledForegroundColor: const Color(0xFF64748B),
             minimumSize: const Size(double.infinity, 48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 0,
             textStyle: AppTextStyles.button,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFF8FAFC),
+            backgroundColor: const Color(0xFF1E293B),
+            side: const BorderSide(color: Color(0xFF334155), width: 1.2),
+            minimumSize: const Size(double.infinity, 48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+            textStyle: AppTextStyles.button.copyWith(color: const Color(0xFFF8FAFC)),
           ),
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF0F172A),
           foregroundColor: Colors.white,
           elevation: 0,
+          scrolledUnderElevation: 0,
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: const Color(0xFF1E293B),
           selectedItemColor: accentColor,
           unselectedItemColor: const Color(0xFF94A3B8),
+          elevation: 0,
         ),
         cardTheme: CardThemeData(
           color: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFF334155), width: 1),
+          ),
           elevation: 0,
         ),
         dividerColor: const Color(0xFF334155),
