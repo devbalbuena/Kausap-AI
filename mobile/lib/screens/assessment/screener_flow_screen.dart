@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -6,6 +7,9 @@ import '../../theme/app_theme.dart';
 import '../../utils/haptic_service.dart';
 import '../chat/chatbot_screen.dart';
 import '../activity/activity_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../config/api_config.dart';
+import '../../services/api_client.dart';
 
 class ScreenerFlowScreen extends StatefulWidget {
   final String screenerType; // 'phq9' | 'gad7' | 'burnout'
@@ -121,11 +125,16 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
         color = const Color(0xFFF59E0B);
         interpretation = 'Moderate emotional weight noted. University demands may be taking a toll.';
         empatheticInsight = 'You seem to be carrying a noticeable amount of emotional heaviness. Unpacking these feelings with Kausap AI or a trusted mentor can give you clarity and relief.';
+      } else if (totalScore <= 19) {
+        severity = 'Moderately Severe Emotional Weight';
+        color = const Color(0xFFF97316);
+        interpretation = 'Moderately severe symptoms noted over the past 2 weeks. Professional support is recommended.';
+        empatheticInsight = 'You have been carrying a heavy load for a while. You do not have to handle this alone — our FSUU Guidance Office can offer warm, confidential support.';
       } else {
-        severity = 'Elevated Emotional Weight';
+        severity = 'Severe Emotional Weight';
         color = const Color(0xFFEF4444);
-        interpretation = 'Elevated symptoms noted. Extra care and guidance are recommended.';
-        empatheticInsight = 'You have been carrying a very heavy load recently. Please know that you never have to carry this alone. Reaching out to our FSUU Guidance Office can offer warm, supportive care.';
+        interpretation = 'Severe symptoms noted. Please reach out to a guidance counselor or mental health professional soon.';
+        empatheticInsight = 'What you are feeling matters, and you deserve care right now. Please reach out to our FSUU Guidance Office or a trusted person today — you never have to carry this alone.';
       }
     } else if (isGad) {
       if (totalScore <= 4) {
@@ -173,6 +182,22 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
         empatheticInsight = 'Your academic battery is deeply drained. Let\'s slow down together, prioritize what truly matters today, and seek mentor support.';
       }
     }
+
+    // ── Safety escalation rules ───────────────────────────────────────────
+    //  • PHQ-9 item 9 (thoughts of self-harm) answered above 0
+    //  • PHQ-9 total >= 15  • GAD-7 total >= 15
+    final answersList = List<int>.generate(_questions.length, (i) => _answers[i] ?? 0);
+    final bool item9Positive = isPhq && answersList.length >= 9 && answersList[8] > 0;
+    final bool shouldFlag = item9Positive ||
+        (isPhq && totalScore >= 15) ||
+        (isGad && totalScore >= 15);
+    unawaited(_dispatchFlags(
+      shouldFlag: shouldFlag,
+      screener: isPhq ? 'phq9' : 'gad7',
+      score: totalScore,
+      severity: severity,
+      answers: answersList,
+    ));
 
     // Dynamic Comparison with previous check-in of the same test type
     String progressNote = '🌟 First check-in recorded! This sets your personal baseline.';
@@ -239,7 +264,99 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
       color: color,
       empatheticInsight: empatheticInsight,
       progressNote: progressNote,
+      item9Positive: item9Positive,
+      flagged: shouldFlag,
     );
+  }
+
+  static const String _pendingFlagsKey = 'pending_screener_flags';
+
+  /// Retries older undelivered flags first, then sends the new one (serialized to avoid races).
+  Future<void> _dispatchFlags({
+    required bool shouldFlag,
+    required String screener,
+    required int score,
+    required String severity,
+    required List<int> answers,
+  }) async {
+    await _flushPendingFlags();
+    if (shouldFlag) {
+      await _flagToCounselor(
+        screener: screener,
+        score: score,
+        severity: severity,
+        answers: answers,
+      );
+    }
+  }
+
+  /// Sends the flag to the backend; on failure the payload is queued and retried later.
+  Future<void> _flagToCounselor({
+    required String screener,
+    required int score,
+    required String severity,
+    required List<int> answers,
+  }) async {
+    final payload = <String, dynamic>{
+      'screener': screener,
+      'score': score,
+      'severity': severity,
+      'answers': answers,
+    };
+    try {
+      await ApiClient().post(ApiConfig.screenersFlag, body: payload, silent: true);
+    } catch (e) {
+      debugPrint('Screener flag queued for retry: $e');
+      await _queuePendingFlag(payload);
+    }
+  }
+
+  Future<void> _queuePendingFlag(Map<String, dynamic> payload) async {
+    try {
+      final raw = await _storage.read(key: _pendingFlagsKey);
+      final List<dynamic> pending =
+          (raw != null && raw.isNotEmpty) ? (jsonDecode(raw) as List<dynamic>) : <dynamic>[];
+      pending.add(payload);
+      await _storage.write(key: _pendingFlagsKey, value: jsonEncode(pending));
+    } catch (e) {
+      debugPrint('Could not queue screener flag: $e');
+    }
+  }
+
+  /// Retries any flags that could not be delivered earlier (e.g. while offline).
+  Future<void> _flushPendingFlags() async {
+    try {
+      final raw = await _storage.read(key: _pendingFlagsKey);
+      if (raw == null || raw.isEmpty) return;
+      final pending = jsonDecode(raw) as List<dynamic>;
+      final List<dynamic> stillPending = [];
+      for (final item in pending) {
+        try {
+          await ApiClient().post(
+            ApiConfig.screenersFlag,
+            body: Map<String, dynamic>.from(item as Map),
+            silent: true,
+          );
+        } catch (_) {
+          stillPending.add(item);
+        }
+      }
+      if (stillPending.isEmpty) {
+        await _storage.delete(key: _pendingFlagsKey);
+      } else {
+        await _storage.write(key: _pendingFlagsKey, value: jsonEncode(stillPending));
+      }
+    } catch (e) {
+      debugPrint('Pending screener flag flush failed: $e');
+    }
+  }
+
+  Future<void> _callHotline(String number) async {
+    try {
+      await launchUrl(Uri(scheme: 'tel', path: number));
+    } catch (e) {
+      debugPrint('Could not open dialer: $e');
+    }
   }
 
   void _showEmpatheticResultModal({
@@ -250,6 +367,8 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
     required Color color,
     required String empatheticInsight,
     required String progressNote,
+    bool item9Positive = false,
+    bool flagged = false,
   }) {
     showModalBottomSheet(
       context: context,
@@ -262,6 +381,7 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
+          child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,6 +465,75 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
               ),
               const SizedBox(height: 12),
 
+              // Crisis support — shown immediately when PHQ-9 item 9 (self-harm thoughts) is positive
+              if (item9Positive) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withAlpha(25),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFEF4444).withAlpha(120)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.health_and_safety_rounded, color: Color(0xFFEF4444), size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'You are not alone — help is available right now',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: KausapColors.textPrimary(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'You noted thoughts of hurting yourself. Please talk to someone now. The NCMH Crisis Hotline is free and open 24/7.',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          height: 1.4,
+                          color: KausapColors.textSecondary(context),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _callHotline('1553'),
+                          icon: const Icon(Icons.call_rounded, size: 16),
+                          label: const Text(
+                            'Call NCMH Hotline 1553',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF4444),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Also: 0917-899-8727 (NCMH) • FSUU Guidance Center (085) 342-1830 • Emergency 911',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               // Dynamic Progress Badge
               Container(
                 width: double.infinity,
@@ -402,7 +591,19 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              if (flagged) ...[
+                Text(
+                  'For your safety, this result was shared with the Guidance & Counseling Office so a counselor can reach out to support you.',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, height: 1.35, color: KausapColors.textSecondary(context)),
+                ),
+                const SizedBox(height: 8),
+              ],
+              Text(
+                'This is a screening tool, not a diagnosis. Only a licensed mental health professional can diagnose a condition.',
+                style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontStyle: FontStyle.italic, height: 1.35, color: KausapColors.textMuted(context)),
+              ),
+              const SizedBox(height: 16),
 
               // Action Buttons
               Row(
@@ -463,6 +664,7 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

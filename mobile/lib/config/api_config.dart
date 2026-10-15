@@ -57,5 +57,8 @@ class ApiConfig {
   // Journal endpoints
   static const String journal = '/journal';
   static const String journalToday = '/journal/today';
+
+  // Screener safety escalation
+  static const String screenersFlag = '/screeners/flag';
 }
 
