@@ -1,0 +1,26 @@
+flowchart LR
+    classDef act fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef uc fill:#FFFFFF,stroke:#16A34A,stroke-width:1.5px,color:#14532D
+    classDef ext fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+    A([Student / Client]):::act
+    X([AI Provider]):::ext
+    E([Email Service - Brevo]):::ext
+    subgraph S ["Kausap AI System - Student"]
+        direction TB
+        U1([Register / Login]):::uc
+        U2([Reset password via OTP]):::uc
+        U3([Edit profile and settings]):::uc
+        U4([Log daily mood]):::uc
+        U5([Write journal entry]):::uc
+        U6([Chat with Kausap AI]):::uc
+        U7([Use voice playback]):::uc
+        U8([Read articles and react]):::uc
+        U9([View emergency hotlines]):::uc
+        U10([Receive notifications and call-slips]):::uc
+        U11([Consent to share chat with counselor]):::uc
+        U12([Detect risk and escalate]):::uc
+    end
+    A --- U1 & U2 & U3 & U4 & U5 & U6 & U7 & U8 & U9 & U10 & U11
+    U6 -. include .-> U12
+    U6 --- X
+    U2 --- E

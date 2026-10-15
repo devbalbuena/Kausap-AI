@@ -1,0 +1,35 @@
+flowchart TD
+    classDef io fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef pr fill:#F1F5F9,stroke:#475569,stroke-width:1.5px,color:#0F172A
+    classDef dc fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+    classDef al fill:#FEE2E2,stroke:#DC2626,stroke-width:2px,color:#7F1D1D
+    classDef ok fill:#DCFCE7,stroke:#16A34A,stroke-width:2px,color:#14532D
+
+    S([Start: Open Kausap AI app]):::io --> L{Has valid<br/>JWT session?}:::dc
+    L -- No --> LG[Login / Register / Forgot password OTP]:::pr
+    LG --> V{Credentials valid<br/>and account active?}:::dc
+    V -- No --> ER[Show error / deactivation notice]:::al --> LG
+    V -- Yes --> RL{User role?}:::dc
+    L -- Yes --> RL
+
+    RL -- Client / Student --> C1[Student Home: mood, streak, quests]:::ok
+    RL -- Counselor --> C2[Counselor Portal: triage, call-slips, logs]:::ok
+    RL -- Admin --> C3[Admin Control Center: users, articles, audit, telemetry]:::ok
+
+    C1 --> A{Student action}:::dc
+    A -- Mood check-in / Journal --> M[Save entry to PostgreSQL]:::pr --> C1
+    A -- Read articles / hotlines --> AR[Fetch content from API]:::pr --> C1
+    A -- Chat with Kausap AI --> CH[AI Chat Pipeline - see Flowchart 2]:::pr
+    CH --> RF{Risk flagged?}:::dc
+    RF -- Yes --> TR[Create triage flag and notify counselor]:::al --> C2
+    RF -- No --> C1
+
+    C2 --> B{Counselor action}:::dc
+    B -- Review flagged student --> RV[View risk messages / mood trends]:::pr
+    RV --> CS[Issue Guidance Call-Slip: in-app + Brevo email]:::pr --> N[Student receives notification]:::ok --> C1
+    B -- Resolve case --> RS[Log resolution]:::pr --> C2
+
+    C3 --> D{Admin action}:::dc
+    D -- Provision counselor --> PC[Create account + email credentials via Brevo]:::pr --> C3
+    D -- Moderate users / content --> MD[Update records + write immutable AuditLog]:::pr --> C3
+    D -- View telemetry --> TL[Token usage and system health]:::pr --> C3

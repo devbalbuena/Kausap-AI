@@ -1,0 +1,19 @@
+flowchart LR
+    classDef act fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef uc fill:#FFFFFF,stroke:#16A34A,stroke-width:1.5px,color:#14532D
+    classDef ext fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+    A([Guidance Counselor]):::act
+    E([Email Service - Brevo]):::ext
+    subgraph S ["Kausap AI System - Counselor"]
+        direction TB
+        U1([Login / Change password]):::uc
+        U2([Monitor triage queue]):::uc
+        U3([Review flagged messages]):::uc
+        U4([View student mood trends]):::uc
+        U5([Issue guidance call-slip]):::uc
+        U6([Notify student in-app]):::uc
+        U7([Resolve case]):::uc
+    end
+    A --- U1 & U2 & U3 & U4 & U5 & U7
+    U5 -. include .-> U6
+    U5 --- E

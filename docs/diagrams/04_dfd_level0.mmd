@@ -1,0 +1,24 @@
+flowchart LR
+    classDef ent fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef sys fill:#DCFCE7,stroke:#16A34A,stroke-width:3px,color:#14532D
+    classDef ext fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+
+    ST[Student / Client]:::ent
+    CO[Guidance Counselor]:::ent
+    AD[System Administrator]:::ent
+    P(("0<br/>Kausap AI<br/>Mental Wellness<br/>System")):::sys
+    LLM[AI Providers<br/>Gemini / Mistral / OpenAI]:::ext
+    TTS[Edge TTS<br/>Voice Service]:::ext
+    EM[Brevo<br/>Email Service]:::ext
+
+    ST -- "Login details, mood, journal, chat messages, TTS request" --> P
+    P -- "Tokens, streaks, AI replies, articles, hotlines, notifications" --> ST
+    CO -- "Login, case review, call-slips, resolutions" --> P
+    P -- "Triage alerts, flagged messages, student trends" --> CO
+    AD -- "User and counselor management, content, moderation" --> P
+    P -- "Statistics, audit logs, telemetry" --> AD
+    P -- "Prompt + context" --> LLM
+    LLM -- "Generated reply + token usage" --> P
+    P -- "Reply text" --> TTS
+    TTS -- "Audio" --> P
+    P -- "OTP, credentials, call-slip emails" --> EM

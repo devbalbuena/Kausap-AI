@@ -1,0 +1,13 @@
+flowchart LR
+    classDef p fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef d fill:#DCFCE7,stroke:#16A34A,stroke-width:2px,color:#14532D
+    classDef t fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+    classDef r fill:#F3E8FF,stroke:#9333EA,stroke-width:2px,color:#581C87
+
+    BL(["Product Backlog<br/>(features, user stories)"]):::p --> PL["1. Sprint Planning<br/>Select phase scope"]:::p
+    PL --> DS["2. Design<br/>UI mockups, API and DB models"]:::d
+    DS --> DV["3. Development<br/>Flutter app + FastAPI backend"]:::d
+    DV --> TS["4. Testing<br/>Pytest suites, Playwright E2E,<br/>flutter analyze"]:::t
+    TS --> DP["5. Deployment (CI/CD)<br/>GitHub Actions to Render,<br/>Firebase Hosting, APK"]:::t
+    DP --> RV["6. Review and Beta Feedback<br/>Student and counselor testers"]:::r
+    RV -->|"Next increment (Phase 1 to 24+)"| BL

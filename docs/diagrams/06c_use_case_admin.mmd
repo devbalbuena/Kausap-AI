@@ -1,0 +1,19 @@
+flowchart LR
+    classDef act fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef uc fill:#FFFFFF,stroke:#16A34A,stroke-width:1.5px,color:#14532D
+    classDef ext fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+    A([System Administrator]):::act
+    E([Email Service - Brevo]):::ext
+    subgraph S ["Kausap AI System - Administrator"]
+        direction TB
+        U1([Login]):::uc
+        U2([Manage users: deactivate / reactivate]):::uc
+        U3([Provision counselor accounts]):::uc
+        U4([Manage articles]):::uc
+        U5([Manage emergency hotlines]):::uc
+        U6([View audit logs]):::uc
+        U7([View token and system telemetry]):::uc
+        U8([Moderate flagged content]):::uc
+    end
+    A --- U1 & U2 & U3 & U4 & U5 & U6 & U7 & U8
+    U3 --- E

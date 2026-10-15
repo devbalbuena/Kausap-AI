@@ -1,0 +1,135 @@
+erDiagram
+    USER ||--o{ CHATSESSION : starts
+    CHATSESSION ||--o{ CHATMESSAGE : contains
+    USER ||--o{ MOODENTRY : logs
+    USER ||--o{ JOURNALENTRY : writes
+    USER ||--o{ NOTIFICATION : receives
+    USER ||--o{ TOKENUSAGELOG : generates
+    CHATSESSION ||--o{ TOKENUSAGELOG : consumes
+    ARTICLE ||--o{ ARTICLEREACTION : has
+    USER ||--o{ ARTICLEREACTION : gives
+    USER ||--o{ AUDITLOG : "admin performs"
+
+    USER {
+        uuid id PK
+        string email UK
+        string hashed_password
+        enum role "client, counselor, admin"
+        bool is_active
+        bool is_deleted
+        datetime deleted_at
+        string deactivation_reason
+        string first_name
+        string last_name
+        string phone_number
+        date birthday
+        enum gender
+        string address
+        string bio
+        string avatar_url
+        string nationality
+        string hobbies
+        enum occupation
+        string college
+        bool share_chat_with_counselor
+        string department_title
+        datetime created_at
+    }
+    CHATSESSION {
+        uuid id PK
+        uuid user_id FK
+        string topic
+        datetime created_at
+    }
+    CHATMESSAGE {
+        uuid id PK
+        uuid session_id FK
+        string role "user or assistant"
+        text content
+        bool risk_flag
+        datetime created_at
+    }
+    MOODENTRY {
+        uuid id PK
+        uuid user_id FK
+        int mood_level "1 to 5"
+        string emotions
+        int intensity
+        string note
+        datetime created_at
+    }
+    JOURNALENTRY {
+        uuid id PK
+        uuid user_id FK
+        string title
+        text content
+        string entry_date
+        string mood_tag
+        string prompt
+        datetime created_at
+        datetime updated_at
+    }
+    NOTIFICATION {
+        uuid id PK
+        uuid user_id FK
+        string title
+        string body
+        enum type
+        bool is_read
+        bool is_deleted
+        bool is_acknowledged
+        datetime acknowledged_at
+        text call_slip_json
+        datetime created_at
+    }
+    TOKENUSAGELOG {
+        uuid id PK
+        uuid user_id FK
+        uuid session_id FK
+        string model
+        int prompt_tokens
+        int completion_tokens
+        int total_tokens
+        float estimated_cost_usd
+        datetime created_at
+    }
+    ARTICLE {
+        string id PK
+        string title
+        string subtitle
+        string category
+        string author
+        string status
+        bool is_featured
+        int view_count
+        int share_count
+        text content_json
+        datetime created_at
+    }
+    ARTICLEREACTION {
+        string id PK
+        string article_id FK
+        string user_id FK
+        string emoji
+        datetime created_at
+    }
+    AUDITLOG {
+        uuid id PK
+        uuid admin_id
+        string admin_email
+        string action
+        string target_type
+        string target_id
+        string detail
+        datetime created_at
+    }
+    EMERGENCYHOTLINE {
+        string id PK
+        string name
+        string phone
+        string email
+        string category "campus, national, emergency"
+        string type "call or sms"
+        bool is_active
+        int sort_order
+    }

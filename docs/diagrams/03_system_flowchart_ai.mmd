@@ -1,0 +1,28 @@
+flowchart TD
+    classDef io fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef pr fill:#F1F5F9,stroke:#475569,stroke-width:1.5px,color:#0F172A
+    classDef dc fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+    classDef al fill:#FEE2E2,stroke:#DC2626,stroke-width:2px,color:#7F1D1D
+    classDef ok fill:#DCFCE7,stroke:#16A34A,stroke-width:2px,color:#14532D
+
+    S([Student sends chat message]):::io --> G1{Layer 1: Self-harm or<br/>crisis keywords?}:::dc
+    G1 -- Yes --> X1[Set risk_flag, create counselor triage,<br/>show NCMH 1553 and campus hotlines]:::al --> E1([Emergency support displayed]):::al
+    G1 -- No --> G2{Layer 2: Hourly rate<br/>limit exceeded?}:::dc
+    G2 -- Yes --> X2[Gentle pacing notice]:::ok --> E2([End]):::ok
+    G2 -- No --> G3{Layer 3: Asks for diagnosis<br/>or medication?}:::dc
+    G3 -- Yes --> X3[Non-clinical boundary, refer to professional]:::ok --> E3([End]):::ok
+    G3 -- No --> CTX[Assemble context: persona, mood, history]:::pr
+    CTX --> P1{Gemini 2.5 Flash<br/>responds?}:::dc
+    P1 -- No --> P2{Gemini 3.1 Flash Lite /<br/>3 Flash Preview?}:::dc
+    P2 -- No --> P3{Mistral Small<br/>responds?}:::dc
+    P3 -- No --> P4{OpenAI GPT-4o-mini<br/>responds?}:::dc
+    P4 -- No --> FB[Compassionate offline fallback reply]:::ok
+    P1 -- Yes --> R[AI reply]:::ok
+    P2 -- Yes --> R
+    P3 -- Yes --> R
+    P4 -- Yes --> R
+    R --> LOG[Save messages + token usage log]:::pr
+    FB --> LOG
+    LOG --> TTS{Voice playback<br/>requested?}:::dc
+    TTS -- Yes --> T[Edge TTS audio generation]:::pr --> D([Deliver reply to student]):::io
+    TTS -- No --> D

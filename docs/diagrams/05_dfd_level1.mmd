@@ -1,0 +1,60 @@
+flowchart TB
+    classDef ent fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef pr fill:#DCFCE7,stroke:#16A34A,stroke-width:2px,color:#14532D
+    classDef ds fill:#F3E8FF,stroke:#9333EA,stroke-width:2px,color:#581C87
+    classDef ext fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+
+    ST[Student]:::ent
+    CO[Counselor]:::ent
+    AD[Administrator]:::ent
+    LLM[AI Providers]:::ext
+    EM[Brevo Email]:::ext
+
+    P1(("1.0<br/>Authentication<br/>and Account")):::pr
+    P2(("2.0<br/>Mood and<br/>Journal Tracking")):::pr
+    P3(("3.0<br/>AI Chat and<br/>Risk Detection")):::pr
+    P4(("4.0<br/>Triage and<br/>Notifications")):::pr
+    P5(("5.0<br/>Content and<br/>Hotlines")):::pr
+    P6(("6.0<br/>Administration<br/>and Audit")):::pr
+
+    D1[("D1 Users")]:::ds
+    D2[("D2 Mood and Journal Entries")]:::ds
+    D3[("D3 Chat Sessions and Messages")]:::ds
+    D4[("D4 Notifications")]:::ds
+    D5[("D5 Articles, Reactions, Hotlines")]:::ds
+    D6[("D6 Audit and Token Logs")]:::ds
+
+    ST -- "credentials, profile" --> P1
+    CO -- "credentials" --> P1
+    AD -- "credentials" --> P1
+    P1 <--> D1
+    P1 -- "OTP / credentials" --> EM
+
+    ST -- "mood, journal" --> P2
+    P2 <--> D2
+    P2 -- "streak, trends" --> ST
+
+    ST -- "chat message" --> P3
+    P3 <--> D3
+    P3 -- "prompt" --> LLM
+    LLM -- "reply, tokens" --> P3
+    P3 -- "AI reply" --> ST
+    P3 -- "token usage" --> D6
+    P3 -- "risk flag" --> P4
+
+    D2 -- "distress trends" --> P4
+    D3 -- "flagged messages" --> P4
+    P4 <--> D4
+    P4 -- "triage alerts" --> CO
+    CO -- "call-slip, resolution" --> P4
+    P4 -- "notification, call-slip" --> ST
+    P4 -- "call-slip email" --> EM
+
+    AD -- "articles, hotlines" --> P5
+    P5 <--> D5
+    P5 -- "articles, hotlines" --> ST
+
+    AD -- "moderation, counselor provisioning" --> P6
+    P6 <--> D1
+    P6 --> D6
+    P6 -- "stats, audit, telemetry" --> AD
