@@ -10,7 +10,7 @@ except ImportError:
     _sentry_available = False
 
 from app.database import create_db_and_tables
-from app.routers import auth, mood, chat, admin, notification, articles, crisis, journal
+from app.routers import auth, mood, chat, admin, notification, articles, crisis, journal, screener
 
 # Initialize Sentry error monitoring if SENTRY_DSN is configured
 sentry_dsn = os.getenv("SENTRY_DSN")
@@ -101,3 +101,4 @@ app.include_router(articles.admin_router)
 app.include_router(crisis.router)
 app.include_router(crisis.admin_router)
 app.include_router(journal.router)
+app.include_router(screener.router)
