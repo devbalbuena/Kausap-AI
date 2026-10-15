@@ -229,7 +229,7 @@ class AboutScreen extends StatelessWidget {
                   icon: Icons.assignment_turned_in_outlined,
                   iconColor: const Color(0xFF7C3AED),
                   label: 'Clinical Instruments',
-                  value: 'Standardized PHQ-9 (Depression) & GAD-7 (Anxiety) licensed assessments',
+                  value: 'PHQ-9 (Depression) & GAD-7 (Anxiety) standardized screening questionnaires \u2014 screening tools only, not a diagnosis',
                 ),
                 _divider(context),
                 _buildInfoRow(

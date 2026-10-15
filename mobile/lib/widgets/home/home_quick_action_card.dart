@@ -183,7 +183,7 @@ class HomeScreenerPromoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Take evidence-based PHQ-9 & GAD-7 screeners to track depression and anxiety trends.',
+                  'Take the standardized PHQ-9 & GAD-7 screening questionnaires to track depression and anxiety trends (not a diagnosis).',
                   style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.3),
                 ),
               ],

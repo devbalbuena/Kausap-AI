@@ -114,7 +114,7 @@ class HelpFaqScreen extends StatelessWidget {
               _buildFaqItem(
                 context,
                 'How do the PHQ-9 and GAD-7 screeners work?',
-                'The Patient Health Questionnaire-9 (PHQ-9) and Generalized Anxiety Disorder-7 (GAD-7) are standardized clinical self-assessments. They help you track your depression and anxiety severity over time and generate confidential wellness summaries.',
+                'The Patient Health Questionnaire-9 (PHQ-9) and Generalized Anxiety Disorder-7 (GAD-7) are widely used, standardized self-screening questionnaires. They help you track your depression and anxiety symptoms over time. They are screening tools, not a diagnosis \u2014 only a licensed professional can diagnose. For your safety, a high score (15 or above) or any thought of self-harm is shared with the Guidance & Counseling Office so a counselor can reach out to support you.',
               ),
               _buildFaqItem(
                 context,
