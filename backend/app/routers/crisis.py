@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
@@ -208,7 +208,7 @@ def update_hotline(
                 value = value.strip()
             setattr(hotline, key, value)
 
-        hotline.updated_at = datetime.utcnow()
+        hotline.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         session.add(hotline)
         session.commit()
         session.refresh(hotline)
@@ -247,7 +247,7 @@ def delete_hotline(
 
     hotline_name = hotline.name
     hotline.is_active = False  # SOFT DELETE
-    hotline.updated_at = datetime.utcnow()
+    hotline.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     session.add(hotline)
     session.commit()
     session.refresh(hotline)

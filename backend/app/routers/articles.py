@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Dict, List, Optional
 import json
 import uuid
@@ -287,8 +287,8 @@ def admin_create_article(
         theme_color_hex=payload.theme_color_hex,
         content_json=payload.content_json,
         is_published=payload.is_published,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     session.add(article)
     session.commit()
@@ -314,7 +314,7 @@ def admin_update_article(
     update_data = payload.dict(exclude_unset=True)
     for field, val in update_data.items():
         setattr(article, field, val)
-    article.updated_at = datetime.utcnow()
+    article.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     session.add(article)
     session.commit()
@@ -340,7 +340,7 @@ def admin_patch_article(
     update_data = payload.dict(exclude_unset=True)
     for field, val in update_data.items():
         setattr(article, field, val)
-    article.updated_at = datetime.utcnow()
+    article.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     session.add(article)
     session.commit()

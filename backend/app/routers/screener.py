@@ -15,7 +15,7 @@ Safety rules (kept in sync with the mobile app):
 These are screening results only, not a diagnosis.
 """
 from typing import Annotated, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -94,7 +94,7 @@ def flag_screener_result(
     )
 
     # Avoid flooding the triage queue with identical alerts from repeated retakes.
-    since = datetime.utcnow() - timedelta(hours=_DEDUPE_HOURS)
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=_DEDUPE_HOURS)
     existing = session.exec(
         select(ChatMessage)
         .join(ChatSession, ChatMessage.session_id == ChatSession.id)

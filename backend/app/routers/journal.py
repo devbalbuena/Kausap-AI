@@ -1,6 +1,6 @@
 from typing import Annotated, List, Optional
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from app.database import get_session
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/journal", tags=["Daily Journal"])
 
 def _get_pht_today_str() -> str:
     """Return today's date in Philippine/Singapore Standard Time (UTC+8)."""
-    pht_now = datetime.utcnow() + timedelta(hours=8)
+    pht_now = datetime.now(timezone.utc) + timedelta(hours=8)
     return pht_now.strftime("%Y-%m-%d")
 
 
@@ -58,7 +58,7 @@ def create_journal_entry(
 ):
     """Create a new distinct journal entry (supports multiple entries per day)."""
     entry_date = payload.entry_date or _get_pht_today_str()
-    now_utc = datetime.utcnow()
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
 
     new_entry = JournalEntry(
         user_id=current_user.id,
@@ -95,7 +95,7 @@ def update_journal_entry(
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(entry, key, value)
-    entry.updated_at = datetime.utcnow()
+    entry.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     session.add(entry)
     session.commit()
