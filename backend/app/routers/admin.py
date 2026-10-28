@@ -33,7 +33,10 @@ from app.services.email_service import (
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
-counselor_verification_cache: Dict[str, str] = {}
+# Counselor registration OTP cache: { email -> { 'code': str, 'expires_at': datetime } }
+# Entries auto-expire after 15 minutes to prevent stale codes.
+counselor_verification_cache: Dict[str, Dict] = {}
+_COUNSELOR_OTP_TTL_MINUTES = 15
 
 
 def _write_audit(
@@ -964,7 +967,10 @@ def send_counselor_verification_code(
         )
 
     code = "".join(random.choices(string.digits, k=6))
-    counselor_verification_cache[email_clean] = code
+    counselor_verification_cache[email_clean] = {
+        "code": code,
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=_COUNSELOR_OTP_TTL_MINUTES),
+    }
 
     counselor_name = f"{payload.first_name} {payload.last_name}".strip() if payload.first_name else "Counselor"
     send_counselor_verification_otp_email(
@@ -978,7 +984,7 @@ def send_counselor_verification_code(
     return {
         "message": f"Institutional verification code dispatched to {email_clean}",
         "email": email_clean,
-        "expires_in_seconds": 600,
+        "expires_in_seconds": _COUNSELOR_OTP_TTL_MINUTES * 60,
         "dev_code": code,
     }
 
@@ -1001,14 +1007,26 @@ def create_counselor(
 
     # Verify code if provided or required
     if payload.verification_code:
-        expected_code = counselor_verification_cache.get(email_clean)
-        if expected_code and expected_code != payload.verification_code.strip():
+        record = counselor_verification_cache.get(email_clean)
+        if record:
+            # Check TTL expiry
+            if datetime.now(timezone.utc) > record["expires_at"]:
+                del counselor_verification_cache[email_clean]
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Verification code has expired. Please request a new one.",
+                )
+            if record["code"] != payload.verification_code.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired verification code. Please request a new code.",
+                )
+            del counselor_verification_cache[email_clean]
+        else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired verification code. Please request a new code.",
+                detail="Verification code not found or already used. Please request a new one.",
             )
-        if email_clean in counselor_verification_cache:
-            del counselor_verification_cache[email_clean]
 
     # Validate gender
     gender_enum = GenderEnum.female
