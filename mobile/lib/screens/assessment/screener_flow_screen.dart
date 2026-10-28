@@ -203,7 +203,11 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
     String progressNote = '🌟 First check-in recorded! This sets your personal baseline.';
     final List<Map<String, dynamic>> historyList = [];
     try {
-      final raw = await _storage.read(key: 'assessment_history');
+      final historyKey = await _getAssessmentHistoryKey();
+      var raw = await _storage.read(key: historyKey);
+      if ((raw == null || raw.isEmpty) && historyKey != 'assessment_history') {
+        raw = await _storage.read(key: 'assessment_history');
+      }
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
@@ -244,7 +248,10 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
       };
 
       historyList.insert(0, entry);
-      await _storage.write(key: 'assessment_history', value: jsonEncode(historyList));
+      await _storage.write(key: historyKey, value: jsonEncode(historyList));
+      if (historyKey != 'assessment_history') {
+        await _storage.write(key: 'assessment_history', value: jsonEncode(historyList));
+      }
     } catch (e) {
       debugPrint('Error saving assessment result: $e');
     }
@@ -267,6 +274,20 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
       item9Positive: item9Positive,
       flagged: shouldFlag,
     );
+  }
+
+  Future<String> _getAssessmentHistoryKey() async {
+    try {
+      final profileRaw = await _storage.read(key: 'cached_user_profile');
+      if (profileRaw != null && profileRaw.isNotEmpty) {
+        final user = jsonDecode(profileRaw);
+        final id = user['id'] ?? user['email'];
+        if (id != null && id.toString().trim().isNotEmpty) {
+          return 'assessment_history_${id.toString().trim()}';
+        }
+      }
+    } catch (_) {}
+    return 'assessment_history';
   }
 
   static const String _pendingFlagsKey = 'pending_screener_flags';

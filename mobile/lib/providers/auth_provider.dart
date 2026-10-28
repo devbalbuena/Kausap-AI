@@ -119,6 +119,8 @@ class AuthProvider extends ChangeNotifier {
     await _authService.logout();
     await _storage.delete(key: 'cached_user_profile');
     await _storage.delete(key: 'user_avatar_override');
+    await _storage.delete(key: 'journal_active_draft');
+    await _storage.delete(key: 'assessment_history');
     _currentUser = null;
     _isAuthenticated = false;
     notifyListeners();

@@ -101,6 +101,21 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     _draftDebounceTimer = Timer(const Duration(milliseconds: 600), _saveDraft);
   }
 
+  /// Returns a user-scoped draft key if cached user profile is available.
+  Future<String> _getEffectiveDraftKey() async {
+    try {
+      final profileRaw = await _storage.read(key: 'cached_user_profile');
+      if (profileRaw != null && profileRaw.isNotEmpty) {
+        final user = jsonDecode(profileRaw);
+        final id = user['id'] ?? user['email'];
+        if (id != null && id.toString().trim().isNotEmpty) {
+          return '${_draftKey}_${id.toString().trim()}';
+        }
+      }
+    } catch (_) {}
+    return _draftKey;
+  }
+
   /// Persist current content, mood tag, and prompt to local storage as a draft.
   Future<void> _saveDraft() async {
     final text = _journalController.text;
@@ -110,19 +125,24 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
       return;
     }
     try {
+      final key = await _getEffectiveDraftKey();
       final payload = jsonEncode({
         'content': text,
         'mood_tag': _selectedMoodTag,
         'prompt': _activePrompt,
       });
-      await _storage.write(key: _draftKey, value: payload);
+      await _storage.write(key: key, value: payload);
     } catch (_) {}
   }
 
   /// Restore a previously saved draft (called during initState for new entries).
   Future<void> _loadDraft() async {
     try {
-      final raw = await _storage.read(key: _draftKey);
+      final key = await _getEffectiveDraftKey();
+      var raw = await _storage.read(key: key);
+      if ((raw == null || raw.isEmpty) && key != _draftKey) {
+        raw = await _storage.read(key: _draftKey);
+      }
       if (raw == null || raw.isEmpty) return;
       final data = jsonDecode(raw) as Map<String, dynamic>;
       final draftContent = data['content']?.toString() ?? '';
@@ -145,7 +165,11 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
   /// Remove the persisted draft from local storage.
   Future<void> _deleteDraft() async {
     try {
-      await _storage.delete(key: _draftKey);
+      final key = await _getEffectiveDraftKey();
+      await _storage.delete(key: key);
+      if (key != _draftKey) {
+        await _storage.delete(key: _draftKey);
+      }
     } catch (_) {}
   }
 
