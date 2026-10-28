@@ -8,20 +8,36 @@ from app.schemas.auth import Token, RegisterResponse, LoginRequest, ForgotPasswo
 import random
 import string
 import uuid
+from datetime import datetime, timezone, timedelta
 
-# In-memory storage for OTPs and reset tokens (for demonstration)
-otp_cache = {}  # dict of email -> str (OTP)
-reset_token_cache = {}  # dict of token -> email
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.deps import get_current_user, get_current_user_allow_inactive
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, Field
+
+# ── In-memory OTP / reset-token stores with TTL and brute-force protection ─────
+# Each entry: { 'otp': str, 'expires_at': datetime, 'attempts': int }
+otp_cache: dict = {}        # email -> { otp, expires_at, attempts }
+reset_token_cache: dict = {}  # token  -> email
+
+_OTP_TTL_MINUTES = 10       # OTP valid for 10 minutes
+_OTP_MAX_ATTEMPTS = 3       # Lock after 3 wrong guesses
+
+
+def _utcnow() -> datetime:
+    """Return a timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
+
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 class AppealRequest(BaseModel):
     appeal_message: str
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, description="New password (minimum 8 characters)")
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
@@ -107,7 +123,7 @@ def submit_reactivation_appeal(
 ):
     """Allow a deactivated user to submit an appeal to the guidance center."""
     current_user.reactivation_appeal = payload.appeal_message.strip()
-    current_user.reactivation_appeal_at = datetime.utcnow()
+    current_user.reactivation_appeal_at = _utcnow().replace(tzinfo=None)
     session.add(current_user)
     session.commit()
     session.refresh(current_user)
@@ -137,36 +153,56 @@ def update_me(payload: UserUpdate, current_user: Annotated[User, Depends(get_cur
 
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest, session: Annotated[Session, Depends(get_session)]):
-    """Generate and send a 6-digit OTP for password reset."""
+    """Generate and send a 6-digit OTP for password reset (expires in 10 minutes)."""
     user = session.exec(select(User).where(User.email == payload.email)).first()
     if not user:
-        # Prevent email enumeration by returning a success message anyway
+        # Prevent email enumeration — always return the same message
         return {"message": "If that email is registered, we have sent a verification code."}
-    
-    # Generate 6-digit OTP
+
     otp = ''.join(random.choices(string.digits, k=6))
-    otp_cache[payload.email] = otp
-    
-    # In a real app, send this via email/SMS here. We'll just print it.
-    print(f"--- MOCK EMAIL --- Sent OTP {otp} to {payload.email}")
-    
+    otp_cache[payload.email] = {
+        "otp": otp,
+        "expires_at": _utcnow() + timedelta(minutes=_OTP_TTL_MINUTES),
+        "attempts": 0,
+    }
+
+    # In production: send via email/SMS. Printed here for development.
+    print(f"--- MOCK EMAIL --- Sent OTP {otp} to {payload.email} (valid {_OTP_TTL_MINUTES} min)")
+
     return {"message": "If that email is registered, we have sent a verification code."}
 
 
 @router.post("/verify-code")
 def verify_code(payload: VerifyCodeRequest):
-    """Verify the 6-digit OTP and issue a reset token."""
-    expected_otp = otp_cache.get(payload.email)
-    if not expected_otp or expected_otp != payload.code:
+    """Verify the 6-digit OTP (with expiry + attempt limit) and issue a one-time reset token."""
+    record = otp_cache.get(payload.email)
+
+    if not record:
         raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
-    
-    # OTP is valid, generate a temporary reset token
+
+    # Check TTL expiry
+    if _utcnow() > record["expires_at"]:
+        del otp_cache[payload.email]
+        raise HTTPException(status_code=400, detail="Verification code has expired. Please request a new one.")
+
+    # Brute-force guard: lock after max attempts
+    if record["attempts"] >= _OTP_MAX_ATTEMPTS:
+        del otp_cache[payload.email]
+        raise HTTPException(status_code=429, detail="Too many incorrect attempts. Please request a new verification code.")
+
+    if record["otp"] != payload.code:
+        record["attempts"] += 1
+        remaining = _OTP_MAX_ATTEMPTS - record["attempts"]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid verification code. {remaining} attempt(s) remaining."
+        )
+
+    # OTP valid — generate a single-use reset token and clear the OTP
     reset_token = str(uuid.uuid4())
     reset_token_cache[reset_token] = payload.email
-    
-    # Remove OTP so it can't be reused
     del otp_cache[payload.email]
-    
+
     return {"message": "Code verified", "reset_token": reset_token}
 
 
@@ -194,21 +230,15 @@ def reset_password(payload: ResetPasswordRequest, session: Annotated[Session, De
 
 @router.put("/change-password")
 def change_password(
-    payload: dict,
+    payload: ChangePasswordRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)]
 ):
-    """Change password for the currently authenticated user."""
-    old_password = payload.get("old_password", "")
-    new_password = payload.get("new_password", "")
-
-    if not verify_password(old_password, current_user.hashed_password):
+    """Change password for the currently authenticated user (validated schema)."""
+    if not verify_password(payload.old_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
-    if len(new_password) < 8:
-        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
-
-    current_user.hashed_password = hash_password(new_password)
+    current_user.hashed_password = hash_password(payload.new_password)
     session.add(current_user)
     session.commit()
 
