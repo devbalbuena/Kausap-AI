@@ -52,12 +52,14 @@ def create_mood_entry(
         else:
             emotions_str = str(payload.emotions)
 
+    cleaned_note = payload.note.strip() if (payload.note and payload.note.strip()) else None
+
     entry = MoodEntry(
         user_id=current_user.id,
         mood_level=payload.mood_level,
         emotions=emotions_str,
         intensity=payload.intensity,
-        note=payload.note,
+        note=cleaned_note,
     )
     session.add(entry)
     session.commit()

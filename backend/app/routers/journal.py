@@ -57,16 +57,24 @@ def create_journal_entry(
     session: Annotated[Session, Depends(get_session)],
 ):
     """Create a new distinct journal entry (supports multiple entries per day)."""
+    if not payload.content or not payload.content.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Journal reflection cannot be empty or whitespace only.",
+        )
+
+    cleaned_content = payload.content.strip()
+    cleaned_title = payload.title.strip() if payload.title and payload.title.strip() else "Daily Reflection"
     entry_date = payload.entry_date or _get_pht_today_str()
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
 
     new_entry = JournalEntry(
         user_id=current_user.id,
-        title=payload.title or "Daily Reflection",
-        content=payload.content,
+        title=cleaned_title,
+        content=cleaned_content,
         entry_date=entry_date,
-        mood_tag=payload.mood_tag,
-        prompt=payload.prompt,
+        mood_tag=payload.mood_tag.strip() if payload.mood_tag and payload.mood_tag.strip() else None,
+        prompt=payload.prompt.strip() if payload.prompt and payload.prompt.strip() else None,
         created_at=now_utc,
         updated_at=now_utc,
     )
@@ -91,6 +99,23 @@ def update_journal_entry(
     ).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Journal entry not found")
+
+    if payload.content is not None:
+        if not payload.content.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Journal reflection cannot be empty or whitespace only.",
+            )
+        payload.content = payload.content.strip()
+
+    if payload.title is not None:
+        payload.title = payload.title.strip() or "Daily Reflection"
+
+    if payload.mood_tag is not None:
+        payload.mood_tag = payload.mood_tag.strip() if payload.mood_tag.strip() else None
+
+    if payload.prompt is not None:
+        payload.prompt = payload.prompt.strip() if payload.prompt.strip() else None
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
