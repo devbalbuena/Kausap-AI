@@ -522,12 +522,19 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Today Date Banner
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Today Date Banner
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
@@ -780,6 +787,7 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
               // Journal Text Input Area
               Expanded(
                 child: Container(
+                  constraints: const BoxConstraints(minHeight: 180),
                   decoration: BoxDecoration(
                     color: KausapColors.cardBg(context),
                     borderRadius: BorderRadius.circular(18),
@@ -889,6 +897,11 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    ),
+  );
+},
         ),
       ),
     );
