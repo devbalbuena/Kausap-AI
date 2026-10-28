@@ -66,20 +66,29 @@ def _extract_mood_analytics(db: Session, user_id: uuid.UUID) -> Tuple[Optional[i
     """
     Fetch today's mood level and compute longitudinal 7-14 day wellness trends & emotion tags.
     Returns (today_mood_level, mood_trend_context).
-    """
-    now = datetime.utcnow()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    fourteen_days_ago = today_start - timedelta(days=14)
 
-    # 1. Today's latest mood entry (with 24h fallback for timezone offsets)
+    Date boundaries are aligned with Philippine Standard Time (PST / UTC+8) so that
+    students who log entries between 12:00 AM and 7:59 AM PHT are correctly included
+    in "today's" analytics rather than counted against yesterday's UTC day.
+    """
+    _PHT_OFFSET = timedelta(hours=8)
+    now_utc = datetime.now(timezone.utc)
+    pht_now = now_utc + _PHT_OFFSET
+    pht_today = pht_now.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    # Convert PHT midnight back to UTC for database comparison (naive UTC, matching DB storage)
+    today_start_utc = pht_today - _PHT_OFFSET
+    fourteen_days_ago = today_start_utc - timedelta(days=14)
+    now = today_start_utc  # keep variable name for downstream 24h fallback
+
+    # 1. Today's latest mood entry aligned to PHT midnight boundary
     today_mood_entry = db.exec(
         select(MoodEntry)
         .where(MoodEntry.user_id == user_id)
-        .where(MoodEntry.created_at >= today_start)
+        .where(MoodEntry.created_at >= today_start_utc)
         .order_by(MoodEntry.created_at.desc())
     ).first()
     if not today_mood_entry:
-        twenty_four_hours_ago = now - timedelta(hours=24)
+        twenty_four_hours_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
         today_mood_entry = db.exec(
             select(MoodEntry)
             .where(MoodEntry.user_id == user_id)
@@ -99,7 +108,7 @@ def _extract_mood_analytics(db: Session, user_id: uuid.UUID) -> Tuple[Optional[i
     if not entries:
         return today_mood_level, None
 
-    seven_days_ago = today_start - timedelta(days=7)
+    seven_days_ago = today_start_utc - timedelta(days=7)
     recent_7d = [
         e for e in entries
         if _to_naive_utc(e.created_at) is not None and _to_naive_utc(e.created_at) >= seven_days_ago
