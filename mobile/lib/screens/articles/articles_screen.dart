@@ -108,6 +108,20 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
     } catch (_) {}
   }
 
+  Future<void> _toggleBookmark(String articleId) async {
+    HapticService.lightTap();
+    final isSaved = await ArticlesStorageService.toggleBookmark(articleId);
+    if (mounted) {
+      setState(() {
+        if (isSaved) {
+          if (!_bookmarkedIds.contains(articleId)) _bookmarkedIds.add(articleId);
+        } else {
+          _bookmarkedIds.remove(articleId);
+        }
+      });
+    }
+  }
+
   Future<void> _openArticle(ArticleModel article) async {
     HapticService.lightTap();
     await Navigator.of(context).push(slideRoute(ArticleDetailScreen(article: article)));
@@ -154,12 +168,13 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
       child: Container(
         height: 180,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withAlpha(40), width: 1),
           boxShadow: [
             BoxShadow(
-              color: article.themeColor.withAlpha(90),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: KausapColors.accentShadow(context),
+              blurRadius: 4,
+              offset: const Offset(0, 1.5),
             ),
           ],
         ),
@@ -172,13 +187,13 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                 themeColor: article.themeColor,
                 categoryIcon: article.categoryIcon,
                 height: 180,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   gradient: LinearGradient(
                     colors: [
                       Colors.black.withAlpha(190),
@@ -199,34 +214,42 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B),
-                          borderRadius: BorderRadius.circular(6),
+                          color: Colors.white.withAlpha(50),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withAlpha(80)),
                         ),
-                        child: const Text(
-                          '📌 FEATURED',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 0.8,
-                          ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('✨', style: TextStyle(fontSize: 11)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Featured Guide',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withAlpha(45),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withAlpha(70)),
                         ),
                         child: Text(
                           article.category,
                           style: const TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 9.5,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
@@ -239,7 +262,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     article.title,
                     style: const TextStyle(
                       fontFamily: 'Poppins',
-                      fontSize: 17,
+                      fontSize: 16.5,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                       height: 1.25,
@@ -247,20 +270,44 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Text(
                         article.readTime,
                         style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white70),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
+                      Container(width: 3, height: 3, decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white54)),
+                      const SizedBox(width: 8),
                       Text(
-                        'By ${article.author}',
+                        article.author,
                         style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Colors.white70),
                       ),
                       const Spacer(),
-                      const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.menu_book_rounded, size: 13, color: KausapColors.accent(context)),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Read Now',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: KausapColors.accent(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -276,11 +323,22 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('🕐 Recently Read',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: KausapColors.textPrimary(context))),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recently Read',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: KausapColors.textPrimary(context)),
+            ),
+            Text(
+              '${_recentlyRead.length} items',
+              style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w500, color: KausapColors.textMuted(context)),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 90,
+          height: 94,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: _recentlyRead.length,
@@ -290,21 +348,62 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
               return GestureDetector(
                 onTap: () => _openArticle(a),
                 child: Container(
-                  width: 200,
+                  width: 210,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: a.themeColor.withAlpha(15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: a.themeColor.withAlpha(60)),
+                    color: KausapColors.cardBg(context),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: KausapColors.border(context), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: KausapColors.accentShadow(context),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1.5),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(a.categoryIcon, size: 16, color: a.themeColor),
-                      const SizedBox(height: 4),
-                      Text(a.title,
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: KausapColors.textPrimary(context)),
-                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: a.themeColor.withAlpha(22),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: a.themeColor.withAlpha(50), width: 0.8),
+                            ),
+                            child: Icon(a.categoryIcon, size: 12, color: a.themeColor),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              a.category.toUpperCase(),
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: a.themeColor,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        a.title,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: KausapColors.textPrimary(context),
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
@@ -358,20 +457,13 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            KausapColors.accent(context),
-                            KausapColors.accent(context).withAlpha(190),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: KausapColors.accent(context),
                         borderRadius: BorderRadius.circular(9),
                         boxShadow: [
                           BoxShadow(
-                            color: KausapColors.accent(context).withAlpha(50),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            color: KausapColors.accentShadow(context),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1.5),
                           ),
                         ],
                       ),
@@ -539,60 +631,49 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               child: Container(
-                height: 44,
                 decoration: BoxDecoration(
                   color: KausapColors.cardBg(context),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: KausapColors.border(context)),
+                  border: Border.all(color: KausapColors.border(context), width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+                      color: KausapColors.accentShadow(context),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
                     ),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    Icon(Icons.search_rounded, color: KausapColors.textMuted(context), size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (val) => setState(() => _searchQuery = val),
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textPrimary(context)),
-                        decoration: InputDecoration(
-                          hintText: 'Search articles & mental wellness guides...',
-                          hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textMuted(context)),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                    if (_searchQuery.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Icon(Icons.close_rounded, size: 18, color: KausapColors.textMuted(context)),
-                        ),
-                      ),
-                  ],
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 13.5, color: KausapColors.textPrimary(context)),
+                  decoration: InputDecoration(
+                    hintText: 'Search articles, mental health guides...',
+                    hintStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, color: KausapColors.textHint(context)),
+                    prefixIcon: Icon(Icons.search_rounded, color: KausapColors.textHint(context), size: 20),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear_rounded, size: 18, color: KausapColors.textHint(context)),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
                 ),
               ),
             ),
+            const SizedBox(height: 8),
 
-            // Category Chips Bar
+            // Category Chips Bar (Consistent with Activity Page)
             SizedBox(
-              height: 44,
+              height: 40,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _categories.length,
                 itemBuilder: (context, index) {
                   final isSelected = index == _selectedCategoryIndex;
@@ -610,27 +691,18 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       },
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? (isBookmarkChip ? const Color(0xFFD97706) : KausapColors.accent(context))
+                              ? (isBookmarkChip ? const Color(0xFFFEF3C7) : KausapColors.pastelSkyBg(context))
                               : KausapColors.cardBg(context),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: isSelected
-                                ? (isBookmarkChip ? const Color(0xFFD97706) : KausapColors.accent(context))
+                                ? (isBookmarkChip ? const Color(0xFFF59E0B) : KausapColors.accent(context))
                                 : KausapColors.border(context),
+                            width: isSelected ? 1.2 : 1.0,
                           ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: (isBookmarkChip ? const Color(0xFFD97706) : KausapColors.accent(context))
-                                        .withValues(alpha: 0.3),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : null,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -638,10 +710,12 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                             Text(
                               categoryName,
                               style: TextStyle(
-                                fontFamily: 'Inter',
+                                fontFamily: 'Poppins',
                                 fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected ? Colors.white : KausapColors.textMuted(context),
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected
+                                    ? (isBookmarkChip ? const Color(0xFFD97706) : KausapColors.accent(context))
+                                    : KausapColors.textMuted(context),
                               ),
                             ),
                             if (isBookmarkChip && _bookmarkedIds.isNotEmpty) ...[
@@ -649,7 +723,7 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? Colors.white.withAlpha(50) : const Color(0xFFFEF3C7),
+                                  color: isSelected ? const Color(0xFFF59E0B) : const Color(0xFFFEF3C7),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
@@ -736,23 +810,60 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                        itemCount: filtered.length + (_featuredArticle != null ? 1 : 0) + (_recentlyRead.isNotEmpty && _selectedCategoryIndex == 0 && _searchQuery.isEmpty ? 1 : 0),
+                        itemCount: filtered.length +
+                            (_featuredArticle != null ? 1 : 0) +
+                            (_recentlyRead.isNotEmpty && _selectedCategoryIndex == 0 && _searchQuery.isEmpty ? 1 : 0) +
+                            1,
                         itemBuilder: (context, index) {
-                          int offset = 0;
+                          final hasFeatured = _featuredArticle != null;
+                          final hasRecent = _recentlyRead.isNotEmpty && _selectedCategoryIndex == 0 && _searchQuery.isEmpty;
+                          final headerIndex = (hasFeatured ? 1 : 0) + (hasRecent ? 1 : 0);
 
                           // Featured Hero
-                          if (_featuredArticle != null) {
-                            if (index == 0) return Padding(padding: const EdgeInsets.only(bottom: 14), child: _buildFeaturedHeroCard(_featuredArticle!));
-                            offset++;
+                          if (hasFeatured && index == 0) {
+                            return Padding(padding: const EdgeInsets.only(bottom: 14), child: _buildFeaturedHeroCard(_featuredArticle!));
                           }
 
                           // Recently Read
-                          if (_recentlyRead.isNotEmpty && _selectedCategoryIndex == 0 && _searchQuery.isEmpty) {
-                            if (index == offset) return Padding(padding: const EdgeInsets.only(bottom: 14), child: _buildRecentlyReadSection());
-                            offset++;
+                          final recentIndex = hasFeatured ? 1 : 0;
+                          if (hasRecent && index == recentIndex) {
+                            return Padding(padding: const EdgeInsets.only(bottom: 14), child: _buildRecentlyReadSection());
                           }
 
-                          final article = filtered[index - offset];
+                          // Section Header (Matching Activity screen)
+                          if (index == headerIndex) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 2, bottom: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _selectedCategoryIndex == 1
+                                        ? 'Saved Factsheets'
+                                        : (_searchQuery.isNotEmpty ? 'Search Results' : 'All Factsheets & Guides'),
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: KausapColors.textPrimary(context),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${filtered.length} articles',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: KausapColors.textMuted(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          final articleIndex = index - (headerIndex + 1);
+                          final article = filtered[articleIndex];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 14),
                             child: _buildArticleCard(article),
@@ -767,224 +878,274 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
     );
   }
 
+  Widget _buildNeutralTag(BuildContext context, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: KausapColors.isDark(context) ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: KausapColors.isDark(context) ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          color: KausapColors.isDark(context) ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+        ),
+      ),
+    );
+  }
+
   Widget _buildArticleCard(ArticleModel article) {
     final isSaved = _bookmarkedIds.contains(article.id);
-    return GestureDetector(
-      onTap: () => _openArticle(article),
-      child: Container(
-        decoration: BoxDecoration(
-          color: KausapColors.cardBg(context),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-          border: Border.all(color: KausapColors.border(context)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Top Cover Image with Floating Category & Read Time Tags ──
-            Stack(
-              children: [
-                ArticleCoverImage(
-                  imageUrl: article.imageUrl,
-                  category: article.category,
-                  themeColor: article.themeColor,
-                  categoryIcon: article.categoryIcon,
-                  height: 125,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                ),
-                // Gradient scrim overlay
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.black.withAlpha(85),
-                          Colors.transparent,
-                          Colors.black.withAlpha(50),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: KausapColors.cardBg(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: KausapColors.border(context), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: KausapColors.accentShadow(context),
+            blurRadius: 4,
+            offset: const Offset(0, 1.5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _openArticle(article),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Top Cover Image with Floating Category & Bookmark Action ──
+              Stack(
+                children: [
+                  ArticleCoverImage(
+                    imageUrl: article.imageUrl,
+                    category: article.category,
+                    themeColor: article.themeColor,
+                    categoryIcon: article.categoryIcon,
+                    height: 125,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                  ),
+                  // Gradient scrim overlay
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withAlpha(75),
+                            Colors.transparent,
+                            Colors.black.withAlpha(40),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                // Floating category chip
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(235),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 4),
-                      ],
+                  // Floating category badge
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(235),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.black.withAlpha(15), width: 0.8),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x15000000), blurRadius: 4),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(article.categoryIcon, size: 12, color: article.themeColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            article.category.toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: article.themeColor,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ),
+                  // Bookmark & Read time on top right
+                  Positioned(
+                    top: 10,
+                    right: 10,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(article.categoryIcon, size: 12, color: article.themeColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          article.category,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: article.themeColor,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withAlpha(160),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            article.readTime,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.5,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _toggleBookmark(article.id),
+                          child: Container(
+                            padding: const EdgeInsets.all(4.5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(235),
+                              shape: BoxShape.circle,
+                              boxShadow: const [
+                                BoxShadow(color: Color(0x15000000), blurRadius: 4),
+                              ],
+                            ),
+                            child: Icon(
+                              isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                              color: isSaved ? const Color(0xFFF59E0B) : const Color(0xFF64748B),
+                              size: 15,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-                // Read time & Saved tag on top right
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isSaved) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF59E0B),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.bookmark_rounded, color: Colors.white, size: 11),
-                              SizedBox(width: 2),
-                              Text(
-                                'Saved',
+                ],
+              ),
+
+              // ── Card Content Body ──
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      article.title,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                        color: KausapColors.textPrimary(context),
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      article.subtitle,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        color: KausapColors.textMuted(context),
+                        height: 1.35,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Tag Chips — Unified clean neutral light slate pills (matching Activity screen)
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _buildNeutralTag(context, article.category),
+                        _buildNeutralTag(context, article.readTime),
+                        if (article.authorRole.isNotEmpty)
+                          _buildNeutralTag(context, article.authorRole),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Bottom Row: Author + Action Button (matching Activity screen pill)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 11,
+                              backgroundColor: article.themeColor.withAlpha(25),
+                              child: Text(
+                                article.author.isNotEmpty ? article.author[0] : 'K',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 10,
-                                  color: Colors.white,
                                   fontWeight: FontWeight.w700,
+                                  color: article.themeColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              article.author,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: KausapColors.textMuted(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: KausapColors.accentSubtle(context),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 13,
+                                color: KausapColors.accent(context),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Read',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: KausapColors.accent(context),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 5),
                       ],
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withAlpha(160),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          article.readTime,
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10.5,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-
-            // ── Card Content Body ──
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    article.title,
-                    style: AppTextStyles.heading2.copyWith(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w700,
-                      color: KausapColors.textPrimary(context),
-                      height: 1.3,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    article.subtitle,
-                    style: AppTextStyles.body.copyWith(
-                      fontSize: 12.5,
-                      color: KausapColors.textMuted(context),
-                      height: 1.35,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(height: 1, color: KausapColors.border(context)),
-                  const SizedBox(height: 10),
-
-                  // Author & Read action
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 11,
-                            backgroundColor: article.themeColor.withAlpha(30),
-                            child: Text(
-                              article.author.isNotEmpty ? article.author[0] : 'K',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: article.themeColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            article.author,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              color: KausapColors.textMuted(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Text(
-                            'Read Article',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: KausapColors.accent(context),
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Icon(Icons.arrow_forward_rounded, size: 14, color: KausapColors.accent(context)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
