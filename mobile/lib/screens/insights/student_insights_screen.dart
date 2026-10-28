@@ -253,28 +253,22 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     return Row(
       children: [
         Container(
-          width: 32,
-          height: 32,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                KausapColors.accent(context),
-                KausapColors.accent(context).withAlpha(190),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            color: KausapColors.isDark(context)
+                ? const Color(0xFF0369A1).withAlpha(40)
+                : const Color(0xFFF0F9FF),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: KausapColors.isDark(context)
+                  ? const Color(0xFF0284C7).withAlpha(90)
+                  : const Color(0xFFBAE6FD),
+              width: 1,
             ),
-            borderRadius: BorderRadius.circular(9),
-            boxShadow: [
-              BoxShadow(
-                color: KausapColors.accent(context).withAlpha(50),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: const Center(
-            child: Icon(Icons.analytics_rounded, color: Colors.white, size: 18),
+            child: Icon(Icons.analytics_rounded, color: Color(0xFF0284C7), size: 18),
           ),
         ),
         const SizedBox(width: 10),
@@ -683,40 +677,86 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  KausapColors.accent(context),
-                  KausapColors.accent(context).withAlpha(200),
-                ],
+                colors: KausapColors.isDark(context)
+                    ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+                    : [const Color(0xFFF0F9FF), const Color(0xFFF8FAFC)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: KausapColors.accent(context).withAlpha(50), blurRadius: 10, offset: const Offset(0, 4))],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: KausapColors.isDark(context)
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFBAE6FD).withAlpha(180),
+                width: 1,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x06000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1.5),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.spa_rounded, color: Colors.white, size: 18),
-                    SizedBox(width: 8),
-                    Text("Self-Reflection Hub", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: KausapColors.isDark(context)
+                            ? const Color(0xFF0369A1).withAlpha(60)
+                            : const Color(0xFF0284C7).withAlpha(25),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: const Icon(Icons.spa_rounded, color: Color(0xFF0284C7), size: 15),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "Self-Reflection Hub",
+                      style: TextStyle(
+                        color: Color(0xFF0369A1),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   "Understand how you've been feeling with quick, confidential self-check-ins.",
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold, height: 1.3),
+                  style: TextStyle(
+                    color: KausapColors.textPrimary(context),
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                    height: 1.35,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.white.withAlpha(50), borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: KausapColors.isDark(context)
+                            ? const Color(0xFF1E293B)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(
+                          color: KausapColors.isDark(context)
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFBAE6FD),
+                        ),
+                      ),
                       child: Text(
                         "${_assessmentHistory.length} Completed Check-Ins",
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Color(0xFF0284C7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -724,12 +764,29 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                       onTap: _exportReport,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                        child: Row(
+                        decoration: BoxDecoration(
+                          color: KausapColors.isDark(context)
+                              ? const Color(0xFF1E293B)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(
+                            color: KausapColors.isDark(context)
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFBAE6FD),
+                          ),
+                        ),
+                        child: const Row(
                           children: [
-                            Icon(Icons.download_rounded, size: 14, color: KausapColors.accent(context)),
-                            const SizedBox(width: 4),
-                            Text("Download Report", style: TextStyle(color: KausapColors.accent(context), fontSize: 11, fontWeight: FontWeight.bold)),
+                            Icon(Icons.download_rounded, size: 14, color: Color(0xFF0284C7)),
+                            SizedBox(width: 5),
+                            Text(
+                              "Download Report",
+                              style: TextStyle(
+                                color: Color(0xFF0284C7),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -749,7 +806,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             title: "Mood & Energy Check-In (PHQ-9)",
             description: "Reflect on your mood, sleep, focus, and energy levels over the last 2 weeks.",
             time: "3 mins",
-            color: const Color(0xFF10B981),
+            color: const Color(0xFF0D9488),
             icon: Icons.wb_sunny_rounded,
             onTap: () => _startDirectScreener('phq9'),
           ),
@@ -759,7 +816,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             title: "Stress & Peace of Mind Check-In (GAD-7)",
             description: "Check your daily worry, nervousness, and tension levels to find balance.",
             time: "2 mins",
-            color: const Color(0xFF6366F1),
+            color: const Color(0xFF0284C7),
             icon: Icons.waves_rounded,
             onTap: () => _startDirectScreener('gad7'),
           ),
@@ -812,12 +869,39 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                   ElevatedButton(
                     onPressed: () => _startDirectScreener('phq9'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: KausapColors.accent(context),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      backgroundColor: KausapColors.isDark(context)
+                          ? const Color(0xFF0369A1).withAlpha(40)
+                          : const Color(0xFFF0F9FF),
+                      foregroundColor: const Color(0xFF0284C7),
+                      elevation: 0,
+                      side: BorderSide(
+                        color: KausapColors.isDark(context)
+                            ? const Color(0xFF0284C7).withAlpha(90)
+                            : const Color(0xFFBAE6FD),
+                        width: 1,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text("Take First Check-In"),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Take First Check-In",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12.5,
+                            color: Color(0xFF0369A1),
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: Color(0xFF0284C7),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1103,13 +1187,20 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    final isDark = KausapColors.isDark(context);
+    final badgeBg = isDark ? color.withAlpha(35) : color.withAlpha(24);
+    final badgeBorder = isDark ? color.withAlpha(80) : color.withAlpha(55);
+    final btnBg = isDark ? color.withAlpha(35) : color.withAlpha(24);
+    final btnBorder = isDark ? color.withAlpha(90) : color.withAlpha(65);
+    final textColor = isDark ? color.withAlpha(240) : color;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: KausapColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: KausapColors.border(context)),
-        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1.5))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1118,17 +1209,29 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, color: color, size: 20),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: badgeBorder),
+                ),
+                child: Icon(
+                  icon,
+                  color: textColor,
+                  size: 19,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: KausapColors.textPrimary(context))),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: KausapColors.subtleBg(context), borderRadius: BorderRadius.circular(8)),
-                child: Text(time, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: KausapColors.textMuted(context))),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: KausapColors.subtleBg(context),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: KausapColors.border(context)),
+                ),
+                child: Text(time, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: KausapColors.textMuted(context))),
               ),
             ],
           ),
@@ -1140,13 +1243,32 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
             child: ElevatedButton(
               onPressed: onTap,
               style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                foregroundColor: Colors.white,
+                backgroundColor: btnBg,
+                foregroundColor: textColor,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                side: BorderSide(color: btnBorder, width: 1),
+                padding: const EdgeInsets.symmetric(vertical: 11),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text("Start Check-In", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Start Check-In",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 14,
+                    color: textColor,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
