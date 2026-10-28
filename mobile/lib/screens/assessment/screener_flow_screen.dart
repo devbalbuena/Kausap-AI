@@ -17,6 +17,38 @@ class ScreenerFlowScreen extends StatefulWidget {
 
   const ScreenerFlowScreen({super.key, required this.screenerType, this.onComplete});
 
+  static const String pendingFlagsKey = 'pending_screener_flags';
+  static const FlutterSecureStorage _globalStorage = FlutterSecureStorage();
+
+  /// Retries any flags that could not be delivered earlier (e.g. while offline).
+  /// Safe to call globally upon network restoration.
+  static Future<void> flushPendingFlags() async {
+    try {
+      final raw = await _globalStorage.read(key: pendingFlagsKey);
+      if (raw == null || raw.isEmpty) return;
+      final pending = jsonDecode(raw) as List<dynamic>;
+      final List<dynamic> stillPending = [];
+      for (final item in pending) {
+        try {
+          await ApiClient().post(
+            ApiConfig.screenersFlag,
+            body: Map<String, dynamic>.from(item as Map),
+            silent: true,
+          );
+        } catch (_) {
+          stillPending.add(item);
+        }
+      }
+      if (stillPending.isEmpty) {
+        await _globalStorage.delete(key: pendingFlagsKey);
+      } else {
+        await _globalStorage.write(key: pendingFlagsKey, value: jsonEncode(stillPending));
+      }
+    } catch (e) {
+      debugPrint('Pending screener flag flush failed: $e');
+    }
+  }
+
   @override
   State<ScreenerFlowScreen> createState() => _ScreenerFlowScreenState();
 }
@@ -290,8 +322,6 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
     return 'assessment_history';
   }
 
-  static const String _pendingFlagsKey = 'pending_screener_flags';
-
   /// Retries older undelivered flags first, then sends the new one (serialized to avoid races).
   Future<void> _dispatchFlags({
     required bool shouldFlag,
@@ -300,7 +330,7 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
     required String severity,
     required List<int> answers,
   }) async {
-    await _flushPendingFlags();
+    await ScreenerFlowScreen.flushPendingFlags();
     if (shouldFlag) {
       await _flagToCounselor(
         screener: screener,
@@ -334,41 +364,13 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
 
   Future<void> _queuePendingFlag(Map<String, dynamic> payload) async {
     try {
-      final raw = await _storage.read(key: _pendingFlagsKey);
+      final raw = await _storage.read(key: ScreenerFlowScreen.pendingFlagsKey);
       final List<dynamic> pending =
           (raw != null && raw.isNotEmpty) ? (jsonDecode(raw) as List<dynamic>) : <dynamic>[];
       pending.add(payload);
-      await _storage.write(key: _pendingFlagsKey, value: jsonEncode(pending));
+      await _storage.write(key: ScreenerFlowScreen.pendingFlagsKey, value: jsonEncode(pending));
     } catch (e) {
       debugPrint('Could not queue screener flag: $e');
-    }
-  }
-
-  /// Retries any flags that could not be delivered earlier (e.g. while offline).
-  Future<void> _flushPendingFlags() async {
-    try {
-      final raw = await _storage.read(key: _pendingFlagsKey);
-      if (raw == null || raw.isEmpty) return;
-      final pending = jsonDecode(raw) as List<dynamic>;
-      final List<dynamic> stillPending = [];
-      for (final item in pending) {
-        try {
-          await ApiClient().post(
-            ApiConfig.screenersFlag,
-            body: Map<String, dynamic>.from(item as Map),
-            silent: true,
-          );
-        } catch (_) {
-          stillPending.add(item);
-        }
-      }
-      if (stillPending.isEmpty) {
-        await _storage.delete(key: _pendingFlagsKey);
-      } else {
-        await _storage.write(key: _pendingFlagsKey, value: jsonEncode(stillPending));
-      }
-    } catch (e) {
-      debugPrint('Pending screener flag flush failed: $e');
     }
   }
 

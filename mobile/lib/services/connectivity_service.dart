@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../screens/assessment/screener_flow_screen.dart';
 
 /// Monitors both network interface availability AND actual internet reachability.
 /// Exposes [isOnline], [connectionType], and [lastChecked] for reactive UI updates.
@@ -41,6 +42,9 @@ class ConnectivityService extends ChangeNotifier {
 
     // Periodic real internet reachability check every 15s
     _pingTimer = Timer.periodic(const Duration(seconds: 15), (_) => _pingCheck());
+
+    // Flush any pending emergency screener flags on startup
+    ScreenerFlowScreen.flushPendingFlags();
   }
 
   void _handleResults(List<ConnectivityResult> results) {
@@ -96,10 +100,14 @@ class ConnectivityService extends ChangeNotifier {
   }
 
   void _setStatus(bool online, String type) {
+    final wasOffline = !_isOnline;
     final changed = _isOnline != online || _connectionType != type;
     _isOnline = online;
     _connectionType = type;
     _lastChecked = DateTime.now();
+    if (online && wasOffline) {
+      ScreenerFlowScreen.flushPendingFlags();
+    }
     if (changed) notifyListeners();
   }
 
