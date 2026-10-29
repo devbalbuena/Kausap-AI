@@ -524,10 +524,29 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     return _sessionId!;
   }
 
+  Future<String> _getChatHistoryKey() async {
+    try {
+      final profileRaw = await _storage.read(key: 'cached_user_profile');
+      if (profileRaw != null && profileRaw.isNotEmpty) {
+        final user = jsonDecode(profileRaw);
+        final id = user['id'] ?? user['email'];
+        if (id != null && id.toString().trim().isNotEmpty) {
+          final trimmedId = id.toString().trim();
+          return 'chat_history_sessions_$trimmedId';
+        }
+      }
+    } catch (_) {}
+    return 'chat_history_sessions';
+  }
+
   Future<void> _saveSessionToHistory() async {
     if (_messages.isEmpty) return;
     try {
-      final raw = await _storage.read(key: 'chat_history_sessions');
+      final key = await _getChatHistoryKey();
+      var raw = await _storage.read(key: key);
+      if ((raw == null || raw.isEmpty) && key != 'chat_history_sessions') {
+        raw = await _storage.read(key: 'chat_history_sessions');
+      }
       List<Map<String, dynamic>> list = [];
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw);
@@ -559,7 +578,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       // Limit to 20 past sessions
       if (list.length > 20) list = list.sublist(0, 20);
 
-      await _storage.write(key: 'chat_history_sessions', value: jsonEncode(list));
+      await _storage.write(key: key, value: jsonEncode(list));
+      if (key != 'chat_history_sessions') {
+        await _storage.delete(key: 'chat_history_sessions');
+      }
     } catch (e) {
       debugPrint('Error saving session to local history: $e');
     }

@@ -33,13 +33,32 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     _loadSessions();
   }
 
+  Future<String> _getChatHistoryKey() async {
+    try {
+      final profileRaw = await _storage.read(key: 'cached_user_profile');
+      if (profileRaw != null && profileRaw.isNotEmpty) {
+        final user = jsonDecode(profileRaw);
+        final id = user['id'] ?? user['email'];
+        if (id != null && id.toString().trim().isNotEmpty) {
+          final trimmedId = id.toString().trim();
+          return 'chat_history_sessions_$trimmedId';
+        }
+      }
+    } catch (_) {}
+    return 'chat_history_sessions';
+  }
+
   Future<void> _loadSessions() async {
     setState(() => _isLoading = true);
     final List<Map<String, dynamic>> list = [];
+    final chatKey = await _getChatHistoryKey();
 
     // 1. Local history (instant, works offline)
     try {
-      final raw = await _storage.read(key: 'chat_history_sessions');
+      var raw = await _storage.read(key: chatKey);
+      if ((raw == null || raw.isEmpty) && chatKey != 'chat_history_sessions') {
+        raw = await _storage.read(key: 'chat_history_sessions');
+      }
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
@@ -125,7 +144,10 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
           return db.compareTo(da);
         });
 
-        await _storage.write(key: 'chat_history_sessions', value: jsonEncode(list));
+        await _storage.write(key: chatKey, value: jsonEncode(list));
+        if (chatKey != 'chat_history_sessions') {
+          await _storage.delete(key: 'chat_history_sessions');
+        }
       }
     } catch (e) {
       debugPrint('Error syncing chat sessions from backend: $e');
@@ -151,7 +173,11 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     setState(() {
       _sessions.removeWhere((s) => s['id']?.toString() == sessionId);
     });
-    await _storage.write(key: 'chat_history_sessions', value: jsonEncode(_sessions));
+    final chatKey = await _getChatHistoryKey();
+    await _storage.write(key: chatKey, value: jsonEncode(_sessions));
+    if (chatKey != 'chat_history_sessions') {
+      await _storage.delete(key: 'chat_history_sessions');
+    }
 
     // Also delete permanently from backend database if valid UUID
     if (sessionId != null && sessionId.isNotEmpty && sessionId.contains('-')) {
