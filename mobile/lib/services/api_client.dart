@@ -46,7 +46,45 @@ class ApiClient {
     try {
       final body = jsonDecode(response.body);
       if (body is Map && body.containsKey('detail')) {
-        errorMessage = body['detail'].toString();
+        final detail = body['detail'];
+        if (detail is String) {
+          errorMessage = detail;
+        } else if (detail is List && detail.isNotEmpty) {
+          final List<String> errorList = [];
+          for (final item in detail) {
+            if (item is Map && item.containsKey('msg')) {
+              final msg = item['msg']?.toString() ?? '';
+              final loc = item['loc'];
+              String? field;
+              if (loc is List && loc.isNotEmpty) {
+                final last = loc.last.toString();
+                if (last != 'body' && last != '__root__') {
+                  field = last;
+                }
+              }
+              if (field != null &&
+                  field.isNotEmpty &&
+                  !msg.toLowerCase().contains(field.toLowerCase())) {
+                final capitalized = field[0].toUpperCase() +
+                    field.substring(1).replaceAll('_', ' ');
+                errorList.add('$capitalized: $msg');
+              } else {
+                errorList.add(msg);
+              }
+            } else if (item != null) {
+              errorList.add(item.toString());
+            }
+          }
+          if (errorList.isNotEmpty) {
+            errorMessage = errorList.join('\n');
+          } else {
+            errorMessage = detail.toString();
+          }
+        } else {
+          errorMessage = detail.toString();
+        }
+      } else if (body is Map && body.containsKey('message')) {
+        errorMessage = body['message'].toString();
       }
     } catch (_) {
       // Body is not JSON
@@ -99,7 +137,15 @@ class ApiClient {
   }
 
   Future<dynamic> get(String path, {Map<String, String>? queryParams, bool silent = false}) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}$path').replace(queryParameters: queryParams);
+    final baseUri = Uri.parse('${ApiConfig.baseUrl}$path');
+    final uri = (queryParams != null && queryParams.isNotEmpty)
+        ? baseUri.replace(
+            queryParameters: {
+              ...baseUri.queryParameters,
+              ...queryParams,
+            },
+          )
+        : baseUri;
     
     final response = await _executeWithRetry(() async {
       final headers = await _getHeaders();
