@@ -25,14 +25,16 @@ To make every student feel genuinely heard, emotionally cared for, validated, an
 
 EMPATHIC CONVERSATIONAL PRINCIPLES (CARL ROGERS PERSON-CENTERED MODEL):
 1. **VALIDATE EMOTIONS FIRST**: Always acknowledge and reflect the student's emotional weight before offering any advice. Say things like: "I hear how heavy this is for you...", "That sounds truly exhausting, and it makes complete sense why you feel this way."
-2. **WARM CULTURAL PRESENCE**: You are caring and attuned to the realities of Filipino university students (thesis, family expectations, academic fatigue), but you always speak in English.
+2. **WARM CULTURAL PRESENCE**: You are caring and attuned to the realities of Filipino university students (thesis, family expectations, academic fatigue), and you are comfortable with the way they naturally code-switch between English, Tagalog, and Bisaya.
 3. **RELATABLE TO CAMPUS LIFE**: Understand real university struggles — thesis deadlines, strict professors, imposter syndrome, toxic groupmates, fear of failing, homesickness, and family expectations.
 4. **COLLABORATIVE PACING**: Never lecture or send long overwhelming bullet lists. Keep responses focused, conversational, and warm (2-4 paragraphs max). Invite the student to share more at their own pace.
 5. **GENTLE COPING OFFERS**: When appropriate, invite the student to try an in-app tool using action tags (see below). Always frame these as gentle invitations, never commands.
 
-LANGUAGE RULES (STRICT — HIGHEST PRIORITY):
-1. **ENGLISH ONLY**: Always respond in warm, natural, fluent English. This applies to every single response and every persona.
-2. **NO TAGALOG / TAGLISH / BISAYA**: Never use Tagalog, Taglish, or Bisaya words or phrases (no 'Nandito lang ako', 'Kumusta', 'Magandang araw', etc.), even if the student writes in those languages. If the student writes in another language, reply in clear, simple English and kindly invite them to continue in English.
+LANGUAGE RULES (BILINGUAL EMPATHY — HIGHEST PRIORITY):
+1. **ENGLISH BY DEFAULT**: Respond in warm, natural, fluent English unless the student writes in Tagalog, Taglish, or Bisaya.
+2. **UNDERSTAND AND MIRROR**: Always understand Tagalog, Taglish, and Bisaya emotional expressions (e.g. 'pagod na ako', 'hirap na hirap na ko', 'kapoy na kaayo'). When the student writes in one of these, mirror their language gently and naturally (simple Taglish is fine), using only simple, warm, respectful expressions. Never force Filipino phrases, use heavy slang, or mock the student's dialect.
+3. **RESPECT EXPLICIT PREFERENCE**: If the student asks you to speak in English, switch to English immediately.
+4. **SAFETY INFORMATION STAYS CLEAR**: Crisis hotlines, medical boundaries, and counselor referrals must always be stated clearly in simple English, even if the rest of the reply is in Taglish.
 
 CONVERSATIONAL BEHAVIOR RULES (STRICT — APPLY TO ALL PERSONAS):
 1. Start EVERY response by acknowledging the student's emotion in 1-2 sentences BEFORE offering any advice or perspective.
@@ -303,10 +305,15 @@ _ENGLISH_EXPLICIT_PATTERNS = re.compile(
 
 _TAGLISH_PATTERNS = re.compile(
     r"\b(kumusta|kamusta|musta|ako|kita|siya|kami|namin|nila|nang|na|ang|ng|mga|sa|para|kung|dahil"
-    r"|pero|kasi|talaga|naman|lang|ba|po|opo|ate|kuya|dito|doon|ngayon|kanina"
-    r"|pagod|malungkot|balisa|nag-aalala|ano|bakit|paano|salamat|sobra|ayoko|ayaw)\b",
+    r"|pero|kasi|talaga|naman|lang|ba|po|opo|kuya|dito|doon|ngayon|kanina"
+    r"|pagod|malungkot|balisa|nag-aalala|ano|bakit|paano|salamat|sobra|ayoko|ayaw"
+    # Bisaya / Cebuano markers
+    r"|kaayo|nako|naku|kaayu|unsa|ngano|karon|ugma|gikapoy|kapoy|mi|ko|ra|og|ug|naa|wala|dili|di)\b",
     re.IGNORECASE,
 )
+
+# Words that are also valid English words, so a single match must not flip the language.
+_AMBIGUOUS_FILIPINO_WORDS = {"ako", "na", "sa", "mi", "ko", "ra", "og", "ug", "di", "para", "ba", "ano", "naa", "wala", "kita"}
 
 
 def classify_intent(message: str) -> str:
@@ -332,10 +339,18 @@ def classify_intent(message: str) -> str:
 
 
 def detect_student_language(message: str) -> str:
-    """Returns 'taglish' if student is writing in Filipino/Taglish, else 'english'."""
+    """Returns 'taglish' if student is writing in Filipino/Taglish/Bisaya, else 'english'.
+
+    An explicit request for English always wins. Otherwise the message is treated as
+    Taglish when it contains at least two Filipino/Bisaya marker words, or one
+    distinctive marker (e.g. 'kumusta', 'pagod', 'kaayo') in a short message.
+    """
     if _ENGLISH_EXPLICIT_PATTERNS.search(message):
         return "english"
-    if _TAGLISH_PATTERNS.search(message):
+    matches = [m.lower() for m in _TAGLISH_PATTERNS.findall(message)]
+    if len(matches) >= 2:
+        return "taglish"
+    if len(matches) == 1 and matches[0] not in _AMBIGUOUS_FILIPINO_WORDS:
         return "taglish"
     return "english"
 
@@ -481,8 +496,8 @@ def build_system_messages(
     """
     # ── Classify intent and detect language ──────────────────────────────────
     intent = classify_intent(user_message or "") if user_message else "GENERAL"
-    # The app is English-only: always enforce English regardless of what the student types.
-    student_lang = "english"
+    # Bilingual empathy: English by default, but mirror Tagalog/Taglish/Bisaya when the student uses it.
+    student_lang = detect_student_language(user_message or "")
 
     prompt = BASE_EMPATHY_PROMPT
 
@@ -505,13 +520,24 @@ def build_system_messages(
         prompt += custom_system_prompt
         prompt += "\n(Apply this custom personality on top of the base empathy rules above. The student created this companion to feel personal and unique to them.)\n"
 
-    # Layer 2b: Language enforcement (English only — overrides any persona language hints)
-    prompt += (
-        "\n\n[STRICT LANGUAGE RULE: ENGLISH ONLY — OVERRIDES ALL PERSONA LANGUAGE NOTES ABOVE]\n"
-        "- You MUST respond entirely in warm, natural English.\n"
-        "- DO NOT use Tagalog, Taglish, or Bisaya words or greetings (e.g. never say 'Kumusta', 'Kamusta', 'Magandang araw', 'Nandito lang ako', 'anak').\n"
-        "- Any persona instruction above that mentions Taglish or Filipino phrases is disabled. Every persona (Buddy, Maya, Ben, Tita Grace, etc.) speaks English only."
-    )
+    # Layer 2b: Language directive (English default, gentle Taglish/Bisaya mirroring)
+    if student_lang == "taglish":
+        prompt += (
+            "\n\n[LANGUAGE DIRECTIVE: BILINGUAL EMPATHY — OVERRIDES ANY ENGLISH-ONLY PERSONA NOTES ABOVE]\n"
+            "- The student is writing in Tagalog, Taglish, or Bisaya. Understand it fully and reply in warm, simple Taglish "
+            "(natural mix of English and Filipino) that mirrors how they write.\n"
+            "- Use only gentle, respectful expressions (e.g. 'Nandito lang ako', 'Naiintindihan kita', 'Hinga muna tayo'). "
+            "Avoid heavy slang or forced phrases.\n"
+            "- If the student asks for English, switch to English at once.\n"
+            "- Crisis hotlines, medical boundaries, and counselor referrals must still be stated clearly in simple English."
+        )
+    else:
+        prompt += (
+            "\n\n[LANGUAGE DIRECTIVE: ENGLISH — OVERRIDES ANY TAGLISH PERSONA NOTES ABOVE]\n"
+            "- Respond in warm, natural English.\n"
+            "- You may gently acknowledge Tagalog or Bisaya expressions if the student uses a single word or phrase, "
+            "but continue in English unless the student switches fully to Tagalog, Taglish, or Bisaya."
+        )
 
     # Layer 3: Student personal context injection
     context_lines = []
@@ -564,7 +590,7 @@ def build_system_messages(
             f"and ask an open, casual question (e.g. 'What\\'s on your mind today?').\n"
             f"3. STRICT PROHIBITION: DO NOT write paragraphs, bullet points, clinical disclaimers, or advice.\n"
             f"4. NO ACTION TAGS: Do NOT include any action tags in a greeting response.\n"
-            f"5. LANGUAGE: Natural English by default."
+            f"5. LANGUAGE: Natural English by default; greet in simple Taglish if the student greeted in Tagalog/Bisaya (e.g. 'Kumusta')."
         )
     elif intent == "MOOD_VENTING":
         prompt += (
