@@ -431,15 +431,17 @@ class TtsRequest(BaseModel):
 # - When speaking English: Uses conversational American/multilingual models (Ava/Andrew)
 #   with +3% to +4% rate for natural, alert college-student pacing.
 
+# NOTE: words that are also common English words ('may', 'ate', 'para', 'kuya', 'tita') are
+# intentionally excluded so English replies are never routed to a Filipino voice by mistake.
 TAGALOG_KEYWORDS = {
     'kumusta', 'kamusta', 'nandito', 'talaga', 'salamat', 'hindi', 'di', 'wag', 'huwag',
     'bakit', 'kayang', 'kaya', 'hinga', 'pahinga', 'oo', 'magandang', 'masaya', 'lungkot',
-    'pagod', 'para', 'naman', 'ba', 'po', 'opo', 'kuya', 'ate', 'tita', 'ikaw', 'ako',
+    'pagod', 'naman', 'ba', 'po', 'opo', 'ikaw', 'ako',
     'kami', 'tayo', 'sila', 'kanila', 'akin', 'iyong', 'aking', 'ano', 'kasi', 'pero',
     'gusto', 'pwede', 'pala', 'yata', 'lang', 'din', 'rin', 'dun', 'dito', 'diyan',
     'ganun', 'ganito', 'subukan', 'samahan', 'kwento', 'pag-asa', 'buhay', 'araw', 'gabi',
     'natin', 'mo', 'ko', 'nyo', 'ninyo', 'mga', 'nga', 'ito', 'iyan', 'iyon', 'ayan',
-    'walang', 'may', 'meron', 'wala', 'sana', 'napagod', 'nahihirapan', 'sarili', 'tulong'
+    'walang', 'meron', 'wala', 'sana', 'napagod', 'nahihirapan', 'sarili', 'tulong'
 }
 
 def _detect_is_tagalog(text: str) -> bool:
@@ -614,9 +616,10 @@ async def generate_tts(
     try:
         import edge_tts
 
-        # The app is English-only, so always use English voices.
-        is_tagalog = False
-        
+        # Bilingual empathy: use Filipino neural voices when the reply is written in Tagalog/Taglish.
+        # English replies (the default) keep using the English persona voices.
+        is_tagalog = _detect_is_tagalog(snippet)
+
         # Route voice based on detected language:
         if is_tagalog and persona_key in PERSONA_EDGE_VOICE_MAP_TAGALOG:
             voice_name, rate, pitch, label = PERSONA_EDGE_VOICE_MAP_TAGALOG[persona_key]
