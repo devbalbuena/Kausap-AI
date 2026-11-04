@@ -8,11 +8,11 @@ from sqlmodel import Session, select, func
 
 from app.database import get_session
 from app.core.deps import get_current_user
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.mood import MoodEntry
 from app.schemas.mood import MoodEntryCreate, MoodEntryRead, MoodEntryUpdate, MoodSummary
 
-from app.models.notification import Notification, NotificationType
+from app.models.notification import Notification, NotificationType, RED_ALERT_TITLE
 
 router = APIRouter(prefix="/mood", tags=["Mood"])
 
@@ -31,6 +31,59 @@ def _own_entry_or_404(
     if entry.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your mood entry")
     return entry
+
+
+def _notify_counselors_of_red_alert(
+    session: Session,
+    student: User,
+    consecutive_days: int,
+    today_start_utc: datetime,
+) -> int:
+    """
+    Send an instant in-app alert to every active counselor when a student reaches the
+    3-day Red Alert (3+ consecutive rough days). Deduplicated per counselor, student and day.
+    Returns the number of counselor notifications created.
+    """
+    counselors = session.exec(
+        select(User).where(
+            User.role == UserRole.counselor,
+            User.is_active == True,  # noqa: E712
+            User.is_deleted == False,  # noqa: E712
+        )
+    ).all()
+
+    student_name = student.full_name or student.email.split("@")[0]
+    body = (
+        f"{student_name} has logged {consecutive_days} consecutive days of low mood. "
+        "Open the Triage Queue to review the case and issue a Guidance Call-Slip if needed."
+    )
+
+    created = 0
+    for counselor in counselors:
+        already_sent = session.exec(
+            select(Notification).where(
+                Notification.user_id == counselor.id,
+                Notification.title == RED_ALERT_TITLE,
+                Notification.body == body,
+                Notification.created_at >= today_start_utc,
+            )
+        ).first()
+        if already_sent:
+            continue
+        session.add(
+            Notification(
+                user_id=counselor.id,
+                title=RED_ALERT_TITLE,
+                body=body,
+                type=NotificationType.alert,
+                is_read=False,
+            )
+        )
+        created += 1
+
+    if created:
+        session.commit()
+    return created
 
 
 # ── endpoints ─────────────────────────────────────────────────────────────────
@@ -129,6 +182,14 @@ def create_mood_entry(
                 )
                 session.add(urgent_notif)
                 session.commit()
+
+                # Escalate to the counselor dashboard immediately (never blocks the student's mood log)
+                try:
+                    _notify_counselors_of_red_alert(
+                        session, current_user, consecutive_rough, today_start_utc
+                    )
+                except Exception:
+                    session.rollback()
     except Exception:
         pass
 
