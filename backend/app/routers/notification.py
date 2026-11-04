@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select, func
 from app.database import get_session
 from app.models.user import User, UserRole
-from app.models.notification import Notification, NotificationType
+from app.models.notification import Notification, NotificationType, RED_ALERT_TITLE
 from app.models.mood import MoodEntry
 from app.models.chat import ChatMessage, ChatSession
 from app.models.audit_log import AuditLog
@@ -38,7 +38,12 @@ def _ensure_daily_notifications(session: Session, user: User) -> List[Notificati
     # Check if user has received any notification today (in PHT calendar day)
     today_notifs = session.exec(
         select(Notification)
-        .where(Notification.user_id == user.id, Notification.created_at >= today_start_utc)
+        .where(
+            Notification.user_id == user.id,
+            Notification.created_at >= today_start_utc,
+            # Instant Red Alert escalations must not suppress the daily digest.
+            Notification.title != RED_ALERT_TITLE,
+        )
     ).all()
 
     user_role_str = str(user.role.value if hasattr(user.role, 'value') else user.role).lower()

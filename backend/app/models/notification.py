@@ -13,6 +13,12 @@ class NotificationType(str, Enum):
     guidance_notice = "guidance_notice"
 
 
+# Title used for the instant counselor escalation sent when a student reaches a 3-day Red Alert.
+# The daily counselor summary ignores notifications with this title when deciding whether it still
+# needs to generate that day's digest, so the instant alert never suppresses the digest.
+RED_ALERT_TITLE = "🚨 Red Alert: 3-Day Low Mood"
+
+
 class NotificationBase(SQLModel):
     title: str
     body: str
