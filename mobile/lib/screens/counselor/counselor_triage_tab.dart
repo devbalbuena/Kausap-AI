@@ -514,6 +514,8 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: const Color(0xFF0284C7),
+                            minimumSize: const Size(0, 36),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -752,6 +754,9 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                         children: [
                           TextButton(
                             onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                            ),
                             child: const Text(
                               "Discard",
                               style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B), fontWeight: FontWeight.w600),
@@ -774,6 +779,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0284C7),
                               foregroundColor: Colors.white,
+                              minimumSize: const Size(0, 42),
                               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 1,
@@ -1022,6 +1028,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF7C3AED),
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text("Archive Record", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
@@ -1145,6 +1152,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text("Delete Permanently", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),

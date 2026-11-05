@@ -481,6 +481,8 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: const Color(0xFF0284C7),
+                            minimumSize: const Size(0, 36),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -719,6 +721,9 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                         children: [
                           TextButton(
                             onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                            ),
                             child: const Text(
                               "Discard",
                               style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B), fontWeight: FontWeight.w600),
@@ -741,6 +746,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0284C7),
                               foregroundColor: Colors.white,
+                              minimumSize: const Size(0, 42),
                               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 1,
@@ -1651,6 +1657,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                           foregroundColor: const Color(0xFF16A34A),
                           side: const BorderSide(color: Color(0xFFBBF7D0)),
                           backgroundColor: const Color(0xFFF0FDF4),
+                          minimumSize: const Size(0, 32),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
@@ -2021,6 +2028,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF4F46E5),
                             side: const BorderSide(color: Color(0xFFC7D2FE)),
+                            minimumSize: const Size(0, 36),
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
@@ -2035,6 +2043,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF16A34A),
                             foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 36),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             elevation: 0,
