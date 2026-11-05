@@ -47,11 +47,24 @@ jobs:
         working-directory: mobile
 
       # ── 7. Deploy to Firebase Hosting ─────────────────────────────────────
-      - name: 🚀 Deploy to Firebase Hosting
+      - name: 🚀 Deploy to Firebase Hosting (Action)
+        id: deploy_action
         uses: FirebaseExtended/action-hosting-deploy@v0
+        continue-on-error: true
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: kausap-ai
           channelId: live
           entryPoint: mobile  # The firebase.json will be looked up from here
+
+      - name: 🚀 Fallback Deploy via Firebase CLI
+        if: steps.deploy_action.outcome != 'success'
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_KEY" > sa_key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/sa_key.json
+          npx --yes firebase-tools deploy --only hosting --project kausap-ai --non-interactive
+          rm -f sa_key.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        working-directory: mobile
