@@ -308,7 +308,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     HapticService.lightTap();
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final flagId = flag['id'].toString();
-    final studentName = flag['user_name'] ?? flag['user_email']?.toString().split('@')[0] ?? 'Student';
+    final studentName = flag['student_name'] ?? flag['user_name'] ?? 'Student';
     final studentEmail = flag['user_email'] ?? '';
     final studentId = flag['user_id']?.toString() ?? '';
 
@@ -342,454 +342,453 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setSheetState) => Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.92,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            boxShadow: [
-              BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -4)),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── Top Bar / Window Header ──
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0284C7),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        builder: (context, setSheetState) {
+          Future<void> submitNotice() async {
+            if (isSubmitting) return;
+            setSheetState(() => isSubmitting = true);
+            try {
+              final authUser = context.read<AuthProvider>().currentUser;
+              final counselorFullName = "${authUser?['first_name'] ?? ''} ${authUser?['last_name'] ?? ''}".trim().isEmpty
+                  ? 'Guidance Counselor'
+                  : "${authUser?['first_name'] ?? ''} ${authUser?['last_name'] ?? ''}".trim();
+              final counselorDept = authUser?['department_title'] ?? 'Guidance Counselor';
+
+              final callSlipPayload = {
+                "flag_id": flagId,
+                "user_id": studentId,
+                "user_email": studentEmail,
+                "student_name": studentName,
+                "counselor_name": counselorFullName,
+                "counselor_department": counselorDept,
+                "subject": subjectCtrl.text.trim(),
+                "location": locationCtrl.text.trim(),
+                "appointment_date": selectedDate,
+                "appointment_time": selectedTime,
+                "counselor_note": noteCtrl.text.trim(),
+                "urgency": selectedUrgency,
+                "issued_at": DateTime.now().toIso8601String(),
+              };
+
+              // 1. API Call
+              await _api.post(
+                '/admin/flagged-messages/$flagId/issue-notice',
+                body: callSlipPayload,
+                silent: true,
+              );
+
+              // 2. Save to local In-Action cache
+              final localInAction = await _loadLocalInAction();
+              localInAction.removeWhere((i) => i['id'].toString() == flagId);
+              final updatedRecord = Map<String, dynamic>.from(flag);
+              updatedRecord['status'] = 'in_action';
+              updatedRecord['call_slip'] = callSlipPayload;
+              updatedRecord['is_acknowledged'] = false;
+              localInAction.insert(0, updatedRecord);
+              await _saveLocalInAction(localInAction);
+
+              // 3. Clinical Audit Log
+              await ClinicalAuditService.recordLog(
+                action: 'issue_guidance_notice',
+                targetType: 'Student Distress Case',
+                targetId: flagId,
+                detail: 'Issued physical call-slip for $studentName: ${subjectCtrl.text.trim()}',
+              );
+
+              if (ctx.mounted) Navigator.pop(ctx);
+
+              // 4. Update UI State & Switch Tab to "In Action" (Index 1)
+              setState(() {
+                final idx = _flaggedMessages.indexWhere((f) => f['id'].toString() == flagId);
+                if (idx != -1) {
+                  _flaggedMessages[idx] = updatedRecord;
+                }
+              });
+              _tabController.animateTo(1);
+
+              HapticService.success();
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Notice dispatched to $studentName! Moved to 'In Action'.",
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: const Color(0xFF0284C7),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.mark_email_unread_rounded, color: Colors.white, size: 22),
-                    const SizedBox(width: 10),
-                    const Expanded(
+              );
+            } catch (e) {
+              setSheetState(() => isSubmitting = false);
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text("Failed to dispatch notice: $e"),
+                  backgroundColor: const Color(0xFFDC2626),
+                ),
+              );
+            }
+          }
+
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: 680,
+                maxHeight: MediaQuery.of(context).size.height * 0.90,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -4)),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Top Bar / Window Header ──
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0284C7),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.mark_email_unread_rounded, color: Colors.white, size: 22),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Compose Guidance Notice & Call-Slip",
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                "Father Saturnino Urios University · Guidance & Counseling Center",
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 10.5,
+                                  color: Color(0xFFBAE6FD),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Prominent Header Send Button
+                        ElevatedButton.icon(
+                          onPressed: isSubmitting ? null : submitNotice,
+                          icon: isSubmitting
+                              ? const SizedBox(
+                                  width: 13,
+                                  height: 13,
+                                  child: CircularProgressIndicator(color: Color(0xFF0284C7), strokeWidth: 2),
+                                )
+                              : const Icon(Icons.send_rounded, size: 14, color: Color(0xFF0284C7)),
+                          label: Text(
+                            isSubmitting ? "Sending..." : "Send",
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.5,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF0284C7),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+                          onPressed: () => Navigator.pop(ctx),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Scrollable Email Compose Body ──
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            "Compose Guidance Notice & Call-Slip",
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                          // ── To Field ──
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
-                          ),
-                          Text(
-                            "Father Saturnino Urios University · Guidance & Counseling Center",
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11,
-                              color: Color(0xFFBAE6FD),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
-                      onPressed: () => Navigator.pop(ctx),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ),
-
-              // ── Scrollable Email Compose Body ──
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── To Field ──
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Text(
-                              "To:",
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF64748B),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE0F2FE),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFBAE6FD)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircleAvatar(
-                                    radius: 10,
-                                    backgroundColor: const Color(0xFF0284C7),
-                                    child: Text(
-                                      studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S',
-                                      style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    "$studentName ($studentEmail)",
-                                    style: const TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF0369A1),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // ── Subject Field ──
-                      TextField(
-                        controller: subjectCtrl,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.subject_rounded, size: 18, color: Color(0xFF0284C7)),
-                          labelText: "Subject",
-                          labelStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF64748B)),
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // ── Email Message Body ──
-                      const Text(
-                        "Email Message & Guidance Instructions *",
-                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF334155)),
-                      ),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: noteCtrl,
-                        maxLines: 4,
-                        decoration: InputDecoration(
-                          hintText: "Type supportive consultation message or instructions for the student...",
-                          hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.all(14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ── Optional Physical Visit & Schedule Details ──
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFCBD5E1)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                            child: Row(
                               children: [
+                                const Text(
+                                  "To:",
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
                                 Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFE0F2FE),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: const Icon(Icons.event_note_rounded, size: 16, color: Color(0xFF0284C7)),
-                                ),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(
-                                        "Physical Visit & Timing (Optional)",
-                                        style: TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12.5,
-                                          color: Color(0xFF0F172A),
+                                      CircleAvatar(
+                                        radius: 10,
+                                        backgroundColor: const Color(0xFF0284C7),
+                                        child: Text(
+                                          studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S',
+                                          style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       ),
+                                      const SizedBox(width: 6),
                                       Text(
-                                        "Select specific slot or leave as Flexible Walk-in if you are occupied.",
-                                        style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, color: Color(0xFF64748B)),
+                                        "$studentName ${studentEmail.isNotEmpty ? '($studentEmail)' : ''}".trim(),
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF0369A1),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
+                          ),
+                          const SizedBox(height: 12),
 
-                            // Consultation Date
-                            const Text("Consultation Date:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: presetDates.map((d) {
-                                final isSel = selectedDate == d;
-                                return ChoiceChip(
-                                  label: Text(d),
-                                  selected: isSel,
-                                  selectedColor: const Color(0xFF0284C7),
-                                  backgroundColor: Colors.white,
-                                  labelStyle: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 11,
-                                    fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSel ? Colors.white : const Color(0xFF475569),
+                          // ── Subject Field ──
+                          TextField(
+                            controller: subjectCtrl,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.subject_rounded, size: 18, color: Color(0xFF0284C7)),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              hintText: "Email Subject",
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5)),
+                            ),
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // ── Email Message Field ──
+                          const Text(
+                            "Email Message & Guidance Instructions *",
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: noteCtrl,
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              hintText: "Explain why the student is being invited and provide reassuring guidance instructions...",
+                              contentPadding: const EdgeInsets.all(12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5)),
+                            ),
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, height: 1.4),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // ── Appointment Details ──
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0F9FF),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFBAE6FD)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF0284C7)),
+                                    const SizedBox(width: 6),
+                                    const Text("Physical Visit & Timing (Optional)", style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0369A1))),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                const Text("Select specific slot or leave as Flexible Walk-in if you are occupied.", style: TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF0284C7))),
+                                const Divider(height: 16, color: Color(0xFFBAE6FD)),
+
+                                // Date Chips
+                                const Text("Consultation Date:", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: presetDates.map((date) {
+                                    final isSel = selectedDate == date;
+                                    return ChoiceChip(
+                                      label: Text(date, style: TextStyle(fontSize: 10.5, fontWeight: isSel ? FontWeight.w700 : FontWeight.w500, color: isSel ? Colors.white : const Color(0xFF334155))),
+                                      selected: isSel,
+                                      selectedColor: const Color(0xFF0284C7),
+                                      backgroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: isSel ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1))),
+                                      onSelected: (_) => setSheetState(() => selectedDate = date),
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Time Chips
+                                const Text("Preferred Time Slot:", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: presetTimes.map((time) {
+                                    final isSel = selectedTime == time;
+                                    return ChoiceChip(
+                                      label: Text(time, style: TextStyle(fontSize: 10.5, fontWeight: isSel ? FontWeight.w700 : FontWeight.w500, color: isSel ? Colors.white : const Color(0xFF334155))),
+                                      selected: isSel,
+                                      selectedColor: const Color(0xFF0284C7),
+                                      backgroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: isSel ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1))),
+                                      onSelected: (_) => setSheetState(() => selectedTime = time),
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Urgency Chips
+                                const Text("Priority Level:", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: presetUrgencies.map((urg) {
+                                    final isSel = selectedUrgency == urg;
+                                    return ChoiceChip(
+                                      label: Text(urg, style: TextStyle(fontSize: 10.5, fontWeight: isSel ? FontWeight.w700 : FontWeight.w500, color: isSel ? Colors.white : const Color(0xFF334155))),
+                                      selected: isSel,
+                                      selectedColor: const Color(0xFF0284C7),
+                                      backgroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: isSel ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1))),
+                                      onSelected: (_) => setSheetState(() => selectedUrgency = urg),
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Location
+                                const Text("Office Location:", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: locationCtrl,
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF0284C7)),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
                                   ),
-                                  side: BorderSide(color: isSel ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1)),
-                                  onSelected: (v) {
-                                    if (v) setSheetState(() => selectedDate = d);
-                                  },
-                                );
-                              }).toList(),
+                                  style: const TextStyle(fontSize: 11.5),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 12),
-
-                            // Preferred Time Slot
-                            const Text("Preferred Time Slot:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: presetTimes.map((t) {
-                                final isSel = selectedTime == t;
-                                return ChoiceChip(
-                                  label: Text(t),
-                                  selected: isSel,
-                                  selectedColor: const Color(0xFF0284C7),
-                                  backgroundColor: Colors.white,
-                                  labelStyle: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 10.5,
-                                    fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSel ? Colors.white : const Color(0xFF475569),
-                                  ),
-                                  side: BorderSide(color: isSel ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1)),
-                                  onSelected: (v) {
-                                    if (v) setSheetState(() => selectedTime = t);
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Priority Level
-                            const Text("Priority Level:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: presetUrgencies.map((u) {
-                                final isSel = selectedUrgency == u;
-                                final color = u.contains('Urgent') ? const Color(0xFFDC2626) : const Color(0xFF0284C7);
-                                return ChoiceChip(
-                                  label: Text(u),
-                                  selected: isSel,
-                                  selectedColor: color,
-                                  backgroundColor: Colors.white,
-                                  labelStyle: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 10.5,
-                                    fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSel ? Colors.white : const Color(0xFF475569),
-                                  ),
-                                  side: BorderSide(color: isSel ? color : const Color(0xFFCBD5E1)),
-                                  onSelected: (v) {
-                                    if (v) setSheetState(() => selectedUrgency = u);
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Location
-                            const Text("Office Location:", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5)),
-                            const SizedBox(height: 4),
-                            TextField(
-                              controller: locationCtrl,
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF0284C7)),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
-                              ),
-                              style: const TextStyle(fontSize: 11.5),
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
 
-              // ── Bottom Action Footer ──
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
-                      child: const Text("Discard", style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+                  // ── Bottom Action Footer ──
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
                     ),
-                    ElevatedButton.icon(
-                      onPressed: isSubmitting
-                          ? null
-                          : () async {
-                              setSheetState(() => isSubmitting = true);
-                              try {
-                                final authUser = context.read<AuthProvider>().currentUser;
-                                final counselorFullName = "${authUser?['first_name'] ?? ''} ${authUser?['last_name'] ?? ''}".trim().isEmpty
-                                    ? 'Guidance Counselor'
-                                    : "${authUser?['first_name'] ?? ''} ${authUser?['last_name'] ?? ''}".trim();
-                                final counselorDept = authUser?['department_title'] ?? 'Guidance Counselor';
-
-                                final callSlipPayload = {
-                                  "flag_id": flagId,
-                                  "user_id": studentId,
-                                  "user_email": studentEmail,
-                                  "student_name": studentName,
-                                  "counselor_name": counselorFullName,
-                                  "counselor_department": counselorDept,
-                                  "subject": subjectCtrl.text.trim(),
-                                  "location": locationCtrl.text.trim(),
-                                  "appointment_date": selectedDate,
-                                  "appointment_time": selectedTime,
-                                  "counselor_note": noteCtrl.text.trim(),
-                                  "urgency": selectedUrgency,
-                                  "issued_at": DateTime.now().toIso8601String(),
-                                };
-
-                                // 1. API Call
-                                await _api.post(
-                                  '/admin/flagged-messages/$flagId/issue-notice',
-                                  body: callSlipPayload,
-                                  silent: true,
-                                );
-
-                                // 2. Save to local In-Action cache
-                                final localInAction = await _loadLocalInAction();
-                                localInAction.removeWhere((i) => i['id'].toString() == flagId);
-                                final updatedRecord = Map<String, dynamic>.from(flag);
-                                updatedRecord['status'] = 'in_action';
-                                updatedRecord['call_slip'] = callSlipPayload;
-                                updatedRecord['is_acknowledged'] = false;
-                                localInAction.insert(0, updatedRecord);
-                                await _saveLocalInAction(localInAction);
-
-                                // 3. Clinical Audit Log
-                                await ClinicalAuditService.recordLog(
-                                  action: 'issue_guidance_notice',
-                                  targetType: 'Student Distress Case',
-                                  targetId: flagId,
-                                  detail: 'Issued physical call-slip for $studentName: ${subjectCtrl.text.trim()}',
-                                );
-
-                                if (ctx.mounted) Navigator.pop(ctx);
-
-                                // 4. Update UI State & Switch Tab to "In Action" (Index 1)
-                                setState(() {
-                                  final idx = _flaggedMessages.indexWhere((f) => f['id'].toString() == flagId);
-                                  if (idx != -1) {
-                                    _flaggedMessages[idx] = updatedRecord;
-                                  }
-                                });
-                                _tabController.animateTo(1);
-
-                                HapticService.success();
-                                scaffoldMessenger.showSnackBar(
-                                  SnackBar(
-                                    content: Row(
-                                      children: [
-                                        const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            "Notice dispatched to $studentName! Moved to 'In Action'.",
-                                            style: const TextStyle(fontWeight: FontWeight.w600),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    backgroundColor: const Color(0xFF0284C7),
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                );
-                              } catch (e) {
-                                setSheetState(() => isSubmitting = false);
-                                scaffoldMessenger.showSnackBar(
-                                  SnackBar(content: Text("Failed to dispatch notice: $e"), backgroundColor: const Color(0xFFDC2626)),
-                                );
-                              }
-                            },
-                      icon: isSubmitting
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.send_rounded, size: 16),
-                      label: Text(
-                        isSubmitting ? "Sending..." : "Send Notice & Email",
-                        style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0284C7),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 1,
+                    child: SafeArea(
+                      top: false,
+                      child: Row(
+                        children: [
+                          TextButton(
+                            onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                            child: const Text(
+                              "Discard",
+                              style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const Spacer(),
+                          ElevatedButton.icon(
+                            onPressed: isSubmitting ? null : submitNotice,
+                            icon: isSubmitting
+                                ? const SizedBox(
+                                    width: 15,
+                                    height: 15,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.send_rounded, size: 15),
+                            label: Text(
+                              isSubmitting ? "Sending..." : "Send Notice & Email",
+                              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0284C7),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 1,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
