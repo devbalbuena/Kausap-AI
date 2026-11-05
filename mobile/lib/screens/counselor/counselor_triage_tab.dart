@@ -344,6 +344,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
       isScrollControlled: true,
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
+      constraints: const BoxConstraints(maxWidth: 680),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) {
           Future<void> submitNotice() async {
@@ -439,13 +440,11 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
             }
           }
 
-          return Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: 680,
-                maxHeight: MediaQuery.of(context).size.height * 0.90,
-              ),
+          return Container(
+            width: double.infinity,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.90,
+            ),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -786,8 +785,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                   ),
                 ],
               ),
-            ),
-          );
+            );
         },
       ),
     );
