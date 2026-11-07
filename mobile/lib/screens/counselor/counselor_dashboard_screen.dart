@@ -246,7 +246,9 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> wit
           Semantics(
             label: _unreadCount > 0 ? 'Notifications, $_unreadCount unread alerts' : 'Notifications',
             button: true,
-            child: GestureDetector(
+            child: Tooltip(
+              message: _unreadCount > 0 ? 'Notifications ($_unreadCount unread)' : 'Notifications',
+              child: GestureDetector(
               onTap: () async {
                 HapticService.lightTap();
                 final result = await Navigator.of(context).push(slideRoute(const NotificationsScreen()));
@@ -324,6 +326,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> wit
                   },
                 ),
               ),
+            ),
             ),
           ),
           if (_selectedTabIndex == 0)
@@ -1991,30 +1994,38 @@ All crisis escalations and student logs have been securely handled and archived 
   }
 
   Widget _buildNavItem(IconData icon, String label, bool isSelected, VoidCallback? onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-              size: 22,
+    return Semantics(
+      label: '$label tab',
+      selected: isSelected,
+      button: true,
+      child: Tooltip(
+        message: 'Switch to $label',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                  size: 22,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
