@@ -1,6 +1,7 @@
 from datetime import datetime
 import uuid
 from typing import Optional
+from sqlalchemy import Index
 from sqlmodel import Field, SQLModel
 
 
@@ -12,6 +13,10 @@ class MoodEntryBase(SQLModel):
 
 
 class MoodEntry(MoodEntryBase, table=True):
+    __table_args__ = (
+        Index("ix_moodentry_user_created", "user_id", "created_at"),
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)

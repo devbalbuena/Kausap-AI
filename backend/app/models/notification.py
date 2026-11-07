@@ -2,6 +2,7 @@ from datetime import datetime
 import uuid
 from typing import Optional
 from enum import Enum
+from sqlalchemy import Index
 from sqlmodel import Field, SQLModel
 
 
@@ -31,6 +32,10 @@ class NotificationBase(SQLModel):
 
 
 class Notification(NotificationBase, table=True):
+    __table_args__ = (
+        Index("ix_notification_user_deleted_created", "user_id", "is_deleted", "created_at"),
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
