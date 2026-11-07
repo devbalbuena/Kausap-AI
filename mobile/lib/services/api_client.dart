@@ -119,8 +119,21 @@ class ApiClient {
         if (attempts > 1 && !silent) RetryService().stopRetry();
         return response;
       } catch (e) {
-        if (attempts >= _maxRetries || !_shouldRetry(e as Exception)) {
+        final ex = e is Exception ? e : Exception(e.toString());
+        if (attempts >= _maxRetries || !_shouldRetry(ex)) {
           if (!silent) RetryService().stopRetry();
+          if (e is TimeoutException) {
+            throw ApiException(
+              408,
+              'The server is taking longer than usual to respond. Please try again in a moment.',
+            );
+          }
+          if (e is SocketException || e is http.ClientException) {
+            throw ApiException(
+              503,
+              'Unable to reach the Kausap AI server. Please check your internet connection and try again.',
+            );
+          }
           rethrow;
         }
         
