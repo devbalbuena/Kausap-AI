@@ -59,6 +59,48 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
     '🍃 How I took care of myself today:',
   ];
 
+  static const Map<String, List<String>> _moodLinkedPrompts = {
+    '🌿 Calm': [
+      '🌿 What brought me peace today:',
+      '🍃 A quiet moment I want to remember:',
+      '✨ How I can protect this calm energy:',
+    ],
+    '😊 Grateful': [
+      '💖 3 things I am grateful for today:',
+      '🤝 Someone who made my day lighter:',
+      '🌟 A small blessing I noticed today:',
+    ],
+    '💭 Reflective': [
+      '💭 A lesson today taught me:',
+      '🧠 What is on my mind right now:',
+      '🔍 Something I understood about myself today:',
+    ],
+    '⚡ Stressed': [
+      '⚡ What drained my energy the most today:',
+      '🧘 One worry I can set down for tonight:',
+      '🎯 One tiny step I can handle tomorrow:',
+    ],
+    '💪 Motivated': [
+      '🎯 One small win I had today:',
+      '🚀 What I am excited to work on next:',
+      '💪 A challenge I handled well today:',
+    ],
+    '🌧️ Down': [
+      '🌧️ What feels heaviest in my heart right now:',
+      '💙 One gentle thing I can do for myself tonight:',
+      '🌱 Something that helped me get through today:',
+    ],
+  };
+
+  List<String> get _activePromptSuggestions {
+    final moodList = _selectedMoodTag != null ? _moodLinkedPrompts[_selectedMoodTag] : null;
+    if (moodList == null || moodList.isEmpty) return _promptTemplates;
+    return [
+      ...moodList,
+      ..._promptTemplates.where((p) => !moodList.contains(p)),
+    ];
+  }
+
   bool get _isEditing => widget.entryToEdit != null;
 
   int _todayEntryCount = 0;
@@ -748,9 +790,11 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
               const SizedBox(height: 12),
 
               // Reflection Starter Prompts Chips
-              const Text(
-                'Starter Prompts (Tap to add)',
-                style: TextStyle(
+              Text(
+                _selectedMoodTag != null
+                    ? 'Prompts for $_selectedMoodTag (Tap to add)'
+                    : 'Starter Prompts (Tap to add)',
+                style: const TextStyle(
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w600,
                   fontSize: 12.5,
@@ -762,10 +806,10 @@ class _DailyJournalScreenState extends State<DailyJournalScreen> {
                 height: 32,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _promptTemplates.length,
+                  itemCount: _activePromptSuggestions.length,
                   separatorBuilder: (context, index) => const SizedBox(width: 8),
                   itemBuilder: (ctx, i) {
-                    final prompt = _promptTemplates[i];
+                    final prompt = _activePromptSuggestions[i];
                     return ActionChip(
                       label: Text(prompt),
                       onPressed: () => _insertPrompt(prompt),
