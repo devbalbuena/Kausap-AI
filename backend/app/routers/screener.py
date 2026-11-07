@@ -33,6 +33,12 @@ GAD7_FLAG_SCORE = 15
 _DEDUPE_HOURS = 6
 _ANSWER_LABELS = {1: "several days", 2: "more than half the days", 3: "nearly every day"}
 
+_DEFAULT_HOTLINES = [
+    "FSUU Guidance & Counseling Center: (085) 342-1830",
+    "NCMH 24/7 Crisis Hotline: 1553 / 0917-899-8727",
+    "Hopeline Philippines: 0917-558-4673",
+]
+
 
 class ScreenerFlagRequest(BaseModel):
     screener: str = Field(description="'phq9' or 'gad7'")
@@ -46,6 +52,11 @@ class ScreenerFlagResponse(BaseModel):
     flagged: bool
     reasons: List[str] = []
     message_id: Optional[str] = None
+    item9_positive: bool = False
+    safety_banner_en: Optional[str] = None
+    safety_banner_tl: Optional[str] = None
+    safety_banner_ceb: Optional[str] = None
+    hotlines: List[str] = Field(default_factory=list)
 
 
 def evaluate_flag_reasons(screener: str, score: int, answers: List[int]) -> List[str]:
@@ -62,6 +73,39 @@ def evaluate_flag_reasons(screener: str, score: int, answers: List[int]) -> List
         if score >= GAD7_FLAG_SCORE:
             reasons.append(f"GAD-7 total score {score}/21 is in the severe range")
     return reasons
+
+
+def build_bilingual_safety_banners(item9_positive: bool) -> dict:
+    """Return English, Tagalog, and Bisaya (Cebuano) crisis support banners for flagged screeners."""
+    if item9_positive:
+        return {
+            "safety_banner_en": (
+                "You matter deeply, and you do not have to carry these heavy thoughts alone. "
+                "Please reach out to the FSUU Guidance & Counseling Center or call NCMH 1553 right away."
+            ),
+            "safety_banner_tl": (
+                "Mahalaga ka at hindi mo kailangang pasanin ito nang mag-isa. "
+                "Mangyaring makipag-ugnayan agad sa FSUU Guidance Center o tumawag sa NCMH 1553."
+            ),
+            "safety_banner_ceb": (
+                "Importante kaayo ka ug dili nimo kinahanglan pas-anon kini nga ikaw ra. "
+                "Palihug duol dayon sa FSUU Guidance Center o tawag sa NCMH 1553."
+            ),
+        }
+    return {
+        "safety_banner_en": (
+            "Your screening indicates elevated distress. A confidential support check-in with "
+            "the FSUU Guidance & Counseling Center is warmly recommended."
+        ),
+        "safety_banner_tl": (
+            "Nagpapakita ang iyong resulta ng mataas na antas ng bigat. "
+            "Inirerekomenda ang kumpidensyal na pag-uusap sa FSUU Guidance Center."
+        ),
+        "safety_banner_ceb": (
+            "Nagpakita ang imong resulta og taas nga gibug-aton sa gibati. "
+            "Girekomenda ang kompidensyal nga pakighinabi sa FSUU Guidance Center."
+        ),
+    }
 
 
 @router.post("/flag", response_model=ScreenerFlagResponse)
@@ -83,6 +127,9 @@ def flag_screener_result(
     reasons = evaluate_flag_reasons(kind, payload.score, payload.answers)
     if not reasons:
         return ScreenerFlagResponse(flagged=False)
+
+    item9_pos = ("phq" in kind) and len(payload.answers) >= 9 and payload.answers[8] > 0
+    banners = build_bilingual_safety_banners(item9_pos)
 
     max_score = 27 if test_label == "PHQ-9" else 21
     content = (
@@ -106,7 +153,14 @@ def flag_screener_result(
         )
     ).first()
     if existing:
-        return ScreenerFlagResponse(flagged=True, reasons=reasons, message_id=str(existing.id))
+        return ScreenerFlagResponse(
+            flagged=True,
+            reasons=reasons,
+            message_id=str(existing.id),
+            item9_positive=item9_pos,
+            hotlines=list(_DEFAULT_HOTLINES),
+            **banners,
+        )
 
     chat_session = ChatSession(user_id=current_user.id, topic=f"{test_label} Screener Alert")
     session.add(chat_session)
@@ -123,4 +177,11 @@ def flag_screener_result(
     session.commit()
     session.refresh(msg)
 
-    return ScreenerFlagResponse(flagged=True, reasons=reasons, message_id=str(msg.id))
+    return ScreenerFlagResponse(
+        flagged=True,
+        reasons=reasons,
+        message_id=str(msg.id),
+        item9_positive=item9_pos,
+        hotlines=list(_DEFAULT_HOTLINES),
+        **banners,
+    )
