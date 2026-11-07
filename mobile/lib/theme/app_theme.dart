@@ -562,5 +562,25 @@ class AppTheme {
         dividerColor: const Color(0xFF000000),
         iconTheme: const IconThemeData(color: Color(0xFF000000)),
       );
+
+  /// Safe button style for ElevatedButton/ElevatedButton.icon placed inside a
+  /// Row or AlertDialog.actions where horizontal constraints are unbounded.
+  static ButtonStyle inlineElevatedButtonStyle({
+    Color backgroundColor = AppColors.primary,
+    Color foregroundColor = Colors.white,
+    double minHeight = 40,
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    double borderRadius = 10,
+  }) {
+    return ElevatedButton.styleFrom(
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      minimumSize: Size(0, minHeight),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: padding,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)),
+    );
+  }
 }
 

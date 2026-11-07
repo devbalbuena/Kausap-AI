@@ -121,6 +121,7 @@ class _CounselorProfileScreenState extends State<CounselorProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),

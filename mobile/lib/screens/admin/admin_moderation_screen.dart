@@ -859,6 +859,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF16A34A),
                 foregroundColor: Colors.white,
+                minimumSize: const Size(0, 40),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: const Text("Confirm Resolution", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
@@ -934,6 +935,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF16A34A),
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text("Resolve All", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
@@ -1010,6 +1012,7 @@ class _AdminModerationScreenState extends State<AdminModerationScreen> with Sing
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text("Close", style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
