@@ -415,6 +415,9 @@ _PRESCRIPTION_PATTERNS = [
     r"\bmaganda bang uminom ng\b",
     r"\bang gamot\b",
     r"\bang tamang gamot\b",
+    r"\bunsa nga tambal\b",
+    r"\bpwede ba ko moinom og tambal\b",
+    r"\btagai ko og tambal\b",
 ]
 
 _DIAGNOSIS_PATTERNS = [
@@ -430,6 +433,7 @@ _DIAGNOSIS_PATTERNS = [
     r"\bmayroon ba akong\b",
     r"\bmay (disorder|sakit sa isip|problema sa isip)\b",
     r"\biba ba ako\b",
+    r"\bnaa ba koy (depression|anxiety|bipolar|disorder|sakit sa pangisip)\b",
 ]
 
 _COMPILED_PRESCRIPTION = [re.compile(p, re.IGNORECASE) for p in _PRESCRIPTION_PATTERNS]
