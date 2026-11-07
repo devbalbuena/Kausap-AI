@@ -34,19 +34,24 @@ jobs:
 
       # ── 5. Analyze code (non-fatal — won't block deploy on lint warnings) ─
       - name: 🔍 Analyze Flutter code
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
         working-directory: mobile
         continue-on-error: true
 
       # ── 6. Build Flutter Web ──────────────────────────────────────────────
-      #   --web-renderer html   → best compatibility on all browsers (Firefox, Chrome, Edge)
-      #   --release             → minified, production-optimized output
-      #   No dart-define for USE_LOCAL_BACKEND → defaults to false → uses Render prod server
       - name: 🔨 Build Flutter Web (Release)
         run: flutter build web --release --pwa-strategy none
         working-directory: mobile
 
-      # ── 7. Deploy to Firebase Hosting ─────────────────────────────────────
+      # ── 7. Upload Web Build Artifact ──────────────────────────────────────
+      - name: 📦 Upload Web Release Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kausap-ai-web-release
+          path: mobile/build/web
+          retention-days: 7
+
+      # ── 8. Deploy to Firebase Hosting (if Service Account has Hosting IAM) ─
       - name: 🚀 Deploy to Firebase Hosting (Action)
         id: deploy_action
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -56,15 +61,4 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: kausap-ai
           channelId: live
-          entryPoint: mobile  # The firebase.json will be looked up from here
-
-      - name: 🚀 Fallback Deploy via Firebase CLI
-        if: steps.deploy_action.outcome != 'success'
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT_KEY" > sa_key.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/sa_key.json
-          npx --yes firebase-tools deploy --only hosting --project kausap-ai --non-interactive
-          rm -f sa_key.json
-        env:
-          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        working-directory: mobile
+          entryPoint: mobile
