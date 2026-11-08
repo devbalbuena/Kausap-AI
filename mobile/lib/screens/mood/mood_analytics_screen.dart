@@ -16,6 +16,8 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
   bool _isLoading = true;
   String? _error;
   List<Map<String, dynamic>> _entries = [];
+  int _selectedRangeDays = 7; // 7 or 30
+  bool _showAllRecent = false;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
@@ -77,12 +79,13 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
     }
   }
 
-  /// Returns last 7 days of mood data as FlSpot list.
-  List<FlSpot> _getLast7DaySpots() {
+  /// Returns mood data for the selected day window (7 or 30 days) as FlSpot list.
+  List<FlSpot> _getRangeSpots(int rangeDays) {
     final now = DateTime.now();
     final spots = <FlSpot>[];
+    final maxIdx = rangeDays - 1;
 
-    for (int i = 6; i >= 0; i--) {
+    for (int i = maxIdx; i >= 0; i--) {
       final day = now.subtract(Duration(days: i));
       final dayStr = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
 
@@ -94,7 +97,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
 
       if (dayEntries.isNotEmpty) {
         final avg = dayEntries.map((e) => (e['mood_level'] as num).toDouble()).reduce((a, b) => a + b) / dayEntries.length;
-        spots.add(FlSpot((6 - i).toDouble(), avg));
+        spots.add(FlSpot((maxIdx - i).toDouble(), avg));
       }
       // Skip days with no data — the line will have gaps
     }
@@ -102,11 +105,39 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
     return spots;
   }
 
-  String _dayLabel(int index) {
+  String _dayLabel(int index, int rangeDays) {
     final now = DateTime.now();
-    final day = now.subtract(Duration(days: 6 - index));
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return labels[day.weekday - 1];
+    final maxIdx = rangeDays - 1;
+    final day = now.subtract(Duration(days: maxIdx - index));
+    if (rangeDays <= 7) {
+      const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return labels[day.weekday - 1];
+    }
+    return '${day.month}/${day.day}';
+  }
+
+  Widget _buildRangeToggleChip(String label, int days) {
+    final isSelected = _selectedRangeDays == days;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedRangeDays = days),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -144,6 +175,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _fetchMoodData,
+                        style: ElevatedButton.styleFrom(minimumSize: const Size(0, 40)),
                         child: const Text('Retry'),
                       ),
                     ],
@@ -157,8 +189,9 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
   }
 
   Widget _buildBody() {
-    final spots = _getLast7DaySpots();
+    final spots = _getRangeSpots(_selectedRangeDays);
     final hasData = spots.isNotEmpty;
+    final visibleEntries = _showAllRecent ? _entries : _entries.take(7).toList();
 
     return RefreshIndicator(
       onRefresh: _fetchMoodData,
@@ -173,19 +206,29 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
           if (_entries.isNotEmpty) _buildInsightsCard(),
           if (_entries.isNotEmpty) const SizedBox(height: 20),
 
-          // ── 7-Day Line Chart ──────────────────────────────────────────────
+          // ── 7-Day / 30-Day Line Chart ─────────────────────────────────────
           _buildCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  const Icon(Icons.show_chart_rounded, color: AppColors.primary, size: 22),
-                  const SizedBox(width: 8),
-                  Text('7-Day Mood Trend', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
-                ]),
+                Row(
+                  children: [
+                    const Icon(Icons.show_chart_rounded, color: AppColors.primary, size: 22),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '$_selectedRangeDays-Day Mood Trend',
+                        style: AppTextStyles.heading2.copyWith(fontSize: 16),
+                      ),
+                    ),
+                    _buildRangeToggleChip('7 Days', 7),
+                    const SizedBox(width: 6),
+                    _buildRangeToggleChip('30 Days', 30),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'Your emotional journey this week',
+                  'Tap or hover any point to inspect your daily mood score',
                   style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 12),
                 ),
                 const SizedBox(height: 20),
@@ -194,7 +237,31 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
                         height: 180,
                         child: LineChart(
                           LineChartData(
-                            lineTouchData: const LineTouchData(enabled: false),
+                            minX: 0,
+                            maxX: (_selectedRangeDays - 1).toDouble(),
+                            lineTouchData: LineTouchData(
+                              enabled: true,
+                              touchTooltipData: LineTouchTooltipData(
+                                getTooltipColor: (_) => const Color(0xFF0F172A),
+                                getTooltipItems: (touchedSpots) {
+                                  return touchedSpots.map((spot) {
+                                    final level = spot.y.round().clamp(1, 5);
+                                    final emoji = _moodLabels[level] ?? '😐';
+                                    final label = _moodNames[level] ?? 'Okay';
+                                    final dayText = _dayLabel(spot.x.toInt(), _selectedRangeDays);
+                                    return LineTooltipItem(
+                                      '$dayText: $emoji $label (${spot.y.toStringAsFixed(1)}/5)',
+                                      const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    );
+                                  }).toList();
+                                },
+                              ),
+                            ),
                             gridData: FlGridData(
                               show: true,
                               drawVerticalLine: false,
@@ -219,12 +286,13 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
                               bottomTitles: AxisTitles(
                                 sideTitles: SideTitles(
                                   showTitles: true,
+                                  interval: _selectedRangeDays <= 7 ? 1 : 5,
                                   reservedSize: 24,
                                   getTitlesWidget: (value, _) => Text(
-                                    _dayLabel(value.toInt()),
+                                    _dayLabel(value.toInt(), _selectedRangeDays),
                                     style: const TextStyle(
                                       fontFamily: 'Poppins',
-                                      fontSize: 11,
+                                      fontSize: 10.5,
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
@@ -277,7 +345,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
                               const Icon(Icons.sentiment_neutral_rounded, size: 40, color: AppColors.textSecondary),
                               const SizedBox(height: 8),
                               Text(
-                                'No mood entries yet this week.\nComplete a daily check-in to see your trends!',
+                                'No mood entries yet in this $_selectedRangeDays-day window.\nComplete a daily check-in to see your trends!',
                                 textAlign: TextAlign.center,
                                 style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontSize: 13),
                               ),
@@ -299,11 +367,32 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  const Icon(Icons.history_rounded, color: AppColors.primary, size: 22),
-                  const SizedBox(width: 8),
-                  Text('Recent Check-ins', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
-                ]),
+                Row(
+                  children: [
+                    const Icon(Icons.history_rounded, color: AppColors.primary, size: 22),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('Recent Check-ins', style: AppTextStyles.heading2.copyWith(fontSize: 16)),
+                    ),
+                    if (_entries.length > 7)
+                      TextButton(
+                        onPressed: () => setState(() => _showAllRecent = !_showAllRecent),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(0, 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        ),
+                        child: Text(
+                          _showAllRecent ? 'Show Less' : 'Show All (${_entries.length})',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 if (_entries.isEmpty)
                   Padding(
@@ -316,7 +405,7 @@ class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen>
                     ),
                   )
                 else
-                  ..._entries.take(7).map((entry) => _buildEntryRow(entry)),
+                  ...visibleEntries.map((entry) => _buildEntryRow(entry)),
               ],
             ),
           ),
