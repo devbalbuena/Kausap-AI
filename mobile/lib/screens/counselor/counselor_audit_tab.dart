@@ -24,6 +24,7 @@ class _CounselorAuditTabState extends State<CounselorAuditTab> {
 
   final List<String> _categories = [
     'All',
+    'Call-Slips Issued',
     'Triage Resolved',
     'Archived Logs',
     'Deactivations',
@@ -149,6 +150,7 @@ class _CounselorAuditTabState extends State<CounselorAuditTab> {
 
   String _formatActionTitle(String rawAction) {
     final act = rawAction.toLowerCase();
+    if (act.contains('issue_guidance_notice') || act.contains('call_slip')) return "Guidance Call-Slip Issued";
     if (act.contains('resolve')) return "Crisis Triage Resolved";
     if (act.contains('archive_triage')) return "Triage Incident Archived";
     if (act.contains('deactivat')) return "Student Account Deactivated";
@@ -161,6 +163,7 @@ class _CounselorAuditTabState extends State<CounselorAuditTab> {
 
   Color _getActionColor(String rawAction) {
     final act = rawAction.toLowerCase();
+    if (act.contains('issue_guidance_notice') || act.contains('call_slip')) return const Color(0xFF0284C7);
     if (act.contains('resolve') || act.contains('reactivat') || act.contains('appeal')) return const Color(0xFF16A34A);
     if (act.contains('archive_triage')) return const Color(0xFF7C3AED);
     if (act.contains('deactivat')) return const Color(0xFFDC2626);
@@ -170,6 +173,7 @@ class _CounselorAuditTabState extends State<CounselorAuditTab> {
 
   IconData _getActionIcon(String rawAction) {
     final act = rawAction.toLowerCase();
+    if (act.contains('issue_guidance_notice') || act.contains('call_slip')) return Icons.mark_email_unread_rounded;
     if (act.contains('resolve')) return Icons.check_circle_rounded;
     if (act.contains('archive_triage')) return Icons.inventory_2_rounded;
     if (act.contains('deactivat')) return Icons.block_rounded;
@@ -437,16 +441,48 @@ institutional mental health protocols.
                           ),
                         );
                       },
-                      icon: const Icon(Icons.copy_rounded, size: 16),
-                      label: const Text("Copy Text"),
+                      icon: const Icon(Icons.copy_rounded, size: 15),
+                      label: const Text("Copy Text", style: TextStyle(fontSize: 12)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF0F172A),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        minimumSize: const Size(0, 42),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final csvRows = <String>[
+                          'created_at,action,target_type,target_id,staff_email,detail',
+                          ..._auditLogs.take(100).map((l) {
+                            String esc(dynamic v) => '"${(v ?? '').toString().replaceAll('"', '""').replaceAll('\n', ' ')}"';
+                            return '${esc(l['created_at'])},${esc(l['action'])},${esc(l['target_type'])},${esc(l['target_id'])},${esc(l['admin_email'])},${esc(l['detail'])}';
+                          }),
+                        ].join('\n');
+                        Clipboard.setData(ClipboardData(text: csvRows));
+                        HapticService.lightTap();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Audit CSV copied to clipboard! 📊"),
+                            backgroundColor: Color(0xFF0284C7),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.table_chart_outlined, size: 15),
+                      label: const Text("Copy CSV", style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0284C7),
+                        side: const BorderSide(color: Color(0xFFBAE6FD)),
+                        minimumSize: const Size(0, 42),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
@@ -486,6 +522,7 @@ institutional mental health protocols.
       final target = (log['target_type'] ?? '').toString().toLowerCase();
       final detail = (log['detail'] ?? '').toString().toLowerCase();
 
+      if (_activeCategory == 'Call-Slips Issued' && !action.contains('issue_guidance_notice') && !action.contains('call_slip')) return false;
       if (_activeCategory == 'Triage Resolved' && !action.contains('resolve') && !action.contains('triage')) return false;
       if (_activeCategory == 'Archived Logs' && !action.contains('archive_triage')) return false;
       if (_activeCategory == 'Deactivations' && !action.contains('deactivat')) return false;
