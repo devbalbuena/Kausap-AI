@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -2024,9 +2025,11 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     final filtered = currentList.where((item) {
       if (_resolvedSearch.isEmpty) return true;
       final q = _resolvedSearch.toLowerCase();
-      final name = (item['user_name'] ?? item['user_email'] ?? '').toString().toLowerCase();
+      final name = (item['user_name'] ?? '').toString().toLowerCase();
+      final email = (item['user_email'] ?? '').toString().toLowerCase();
       final note = (item['resolution_note'] ?? '').toString().toLowerCase();
-      return name.contains(q) || note.contains(q);
+      final content = (item['content'] ?? '').toString().toLowerCase();
+      return name.contains(q) || email.contains(q) || note.contains(q) || content.contains(q);
     }).toList();
 
     return Column(
@@ -2040,9 +2043,19 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                 controller: _resolvedSearchCtrl,
                 onChanged: (val) => setState(() => _resolvedSearch = val),
                 decoration: InputDecoration(
-                  hintText: "Search resolved logs by student or note...",
+                  hintText: "Search resolved logs by student, email, trigger, or clinical note...",
                   hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
                   prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
+                  suffixIcon: _resolvedSearch.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            _resolvedSearchCtrl.clear();
+                            setState(() => _resolvedSearch = '');
+                          },
+                        )
+                      : null,
                   contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   filled: true,
                   fillColor: const Color(0xFFF1F5F9),
@@ -2123,6 +2136,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                     final item = filtered[i];
                     final student = item['user_name'] ?? item['user_email']?.toString().split('@')[0] ?? 'Student';
                     final email = item['user_email'] ?? '';
+                    final triggerContent = (item['content'] ?? '').toString().trim();
                     final note = item['resolution_note'] ?? 'Resolved by Counselor';
                     final resolvedAt = item['resolved_at']?.toString().split('T')[0] ?? 'Today';
                     final isArchived = item['is_archived'] == true;
@@ -2232,6 +2246,29 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                             ],
                           ),
                           const Divider(height: 16, color: Color(0xFFF1F5F9)),
+                          if (triggerContent.isNotEmpty) ...[
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Text(
+                                'Original Trigger: "$triggerContent"',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  fontStyle: FontStyle.italic,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                          ],
                           Text(
                             "Clinical Action: $note",
                             style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF334155), fontWeight: FontWeight.w500),
@@ -2797,9 +2834,45 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
                   children: [
                     Icon(type == 'sms' ? Icons.sms_outlined : Icons.phone_rounded, size: 14, color: themeColor),
                     const SizedBox(width: 4),
-                    Text(
-                      phone,
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5, color: themeColor),
+                    Flexible(
+                      child: Text(
+                        phone,
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 11.5, color: themeColor),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () {
+                        HapticService.lightTap();
+                        Clipboard.setData(ClipboardData(text: phone));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Copied "$phone" to clipboard.'),
+                            backgroundColor: themeColor,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: themeColor.withAlpha(18),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.copy_rounded, size: 11, color: themeColor),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Copy',
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w600, color: themeColor),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
