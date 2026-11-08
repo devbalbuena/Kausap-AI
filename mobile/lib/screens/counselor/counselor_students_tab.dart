@@ -27,6 +27,7 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
   final TextEditingController _searchController = TextEditingController();
   String _filter = 'all'; // 'all', 'active', 'deactivated', 'appeals'
   String _collegeFilter = 'all'; // 'all', 'unset', or a college code
+  String _sortBy = 'flags'; // 'flags', 'moods', 'name', 'newest'
 
   @override
   void initState() {
@@ -111,6 +112,31 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
       return true;
     }).toList();
 
+    filtered.sort((a, b) {
+      switch (_sortBy) {
+        case 'flags':
+          final fa = (a['flagged_messages_count'] as num?)?.toInt() ?? 0;
+          final fb = (b['flagged_messages_count'] as num?)?.toInt() ?? 0;
+          if (fb != fa) return fb.compareTo(fa);
+          final ma = (a['mood_entries_count'] as num?)?.toInt() ?? 0;
+          final mb = (b['mood_entries_count'] as num?)?.toInt() ?? 0;
+          return mb.compareTo(ma);
+        case 'moods':
+          final ma = (a['mood_entries_count'] as num?)?.toInt() ?? 0;
+          final mb = (b['mood_entries_count'] as num?)?.toInt() ?? 0;
+          return mb.compareTo(ma);
+        case 'name':
+          final na = (a['full_name'] ?? a['email'] ?? '').toString().toLowerCase();
+          final nb = (b['full_name'] ?? b['email'] ?? '').toString().toLowerCase();
+          return na.compareTo(nb);
+        case 'newest':
+        default:
+          final ca = (a['created_at'] ?? '').toString();
+          final cb = (b['created_at'] ?? '').toString();
+          return cb.compareTo(ca);
+      }
+    });
+
     return Column(
       children: [
         // ── Search & Filter Row ──
@@ -157,28 +183,60 @@ class _CounselorStudentsTabState extends State<CounselorStudentsTab> {
                 ),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _collegeFilter,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: 'Filter by college',
-                  labelStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12),
-                  prefixIcon: const Icon(Icons.school_outlined, size: 18, color: Color(0xFF64748B)),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  filled: true,
-                  fillColor: const Color(0xFFF1F5F9),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                ),
-                style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF0F172A)),
-                items: [
-                  const DropdownMenuItem(value: 'all', child: Text('All colleges')),
-                  ...Colleges.codes.map((c) => DropdownMenuItem(
-                        value: c,
-                        child: Text(Colleges.label(c), overflow: TextOverflow.ellipsis),
-                      )),
-                  const DropdownMenuItem(value: 'unset', child: Text(Colleges.notSet)),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _collegeFilter,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Filter by college',
+                        labelStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+                        prefixIcon: const Icon(Icons.school_outlined, size: 18, color: Color(0xFF64748B)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        filled: true,
+                        fillColor: const Color(0xFFF1F5F9),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF0F172A)),
+                      items: [
+                        const DropdownMenuItem(value: 'all', child: Text('All colleges')),
+                        ...Colleges.codes.map((c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(Colleges.label(c), overflow: TextOverflow.ellipsis),
+                            )),
+                        const DropdownMenuItem(value: 'unset', child: Text(Colleges.notSet)),
+                      ],
+                      onChanged: (v) => setState(() => _collegeFilter = v ?? 'all'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _sortBy,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Sort by',
+                        labelStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+                        prefixIcon: const Icon(Icons.sort_rounded, size: 18, color: Color(0xFF64748B)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                        filled: true,
+                        fillColor: const Color(0xFFF1F5F9),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF0F172A)),
+                      items: const [
+                        DropdownMenuItem(value: 'flags', child: Text('Most Flagged Alerts', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'moods', child: Text('Most Mood Check-ins', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'name', child: Text('Name (A-Z)', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'newest', child: Text('Newest Joined', overflow: TextOverflow.ellipsis)),
+                      ],
+                      onChanged: (v) => setState(() => _sortBy = v ?? 'flags'),
+                    ),
+                  ),
                 ],
-                onChanged: (v) => setState(() => _collegeFilter = v ?? 'all'),
               ),
             ],
           ),
