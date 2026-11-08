@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
@@ -17,6 +18,81 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
   List<Map<String, dynamic>> _notices = [];
   bool _isLoading = true;
   String? _error;
+  String _statusFilter = 'all'; // 'all', 'pending', 'confirmed'
+
+  void _copyCallSlipDetails({
+    required String title,
+    required String counselorName,
+    required String counselorDept,
+    required String location,
+    required String apptDate,
+    required String apptTime,
+    required String counselorNote,
+    required bool isAck,
+  }) {
+    HapticService.lightTap();
+    final summary = [
+      'FSUU GUIDANCE & COUNSELING CALL-SLIP',
+      'Subject: $title',
+      'Status: ${isAck ? "Visit Confirmed" : "Action Needed"}',
+      'Counselor: $counselorName ($counselorDept)',
+      'Location: $location',
+      'Schedule: $apptDate • $apptTime',
+      'Instructions: $counselorNote',
+    ].join('\n');
+    Clipboard.setData(ClipboardData(text: summary));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.copy_all_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Call-slip appointment details copied to clipboard.',
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF0284C7),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Widget _buildStatusFilterChip(String label, String value, Color activeColor) {
+    final isSelected = _statusFilter == value;
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        setState(() => _statusFilter = value);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -103,6 +179,14 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pendingCount = _notices.where((n) => n['is_acknowledged'] != true).length;
+    final confirmedCount = _notices.where((n) => n['is_acknowledged'] == true).length;
+    final filteredNotices = _notices.where((n) {
+      if (_statusFilter == 'pending') return n['is_acknowledged'] != true;
+      if (_statusFilter == 'confirmed') return n['is_acknowledged'] == true;
+      return true;
+    }).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -122,76 +206,141 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A)),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0284C7)),
+            tooltip: 'Refresh Notices',
+            onPressed: _fetchNotices,
+          ),
+        ],
       ),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-            : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.info_outline_rounded, size: 42, color: Color(0xFF94A3B8)),
-                        const SizedBox(height: 12),
-                        Text(_error!, style: const TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: _fetchNotices,
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                          child: const Text('Retry', style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                  )
-                : _notices.isEmpty
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: SafeArea(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : _error != null
                     ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.info_outline_rounded, size: 42, color: Color(0xFF94A3B8)),
+                            const SizedBox(height: 12),
+                            Text(_error!, style: const TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: _fetchNotices,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                minimumSize: const Size(0, 40),
+                              ),
+                              child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _notices.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 88,
+                                    height: 88,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withAlpha(20),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.mark_email_read_outlined, size: 44, color: AppColors.primary),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  const Text(
+                                    'No Guidance Notices',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'When the Urios Guidance & Counseling Center sends you an official call-slip or invitation, it will appear here.',
+                                    style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : Column(
                             children: [
-                              Container(
-                                width: 88,
-                                height: 88,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withAlpha(20),
-                                  shape: BoxShape.circle,
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      _buildStatusFilterChip(
+                                        'All (${_notices.length})',
+                                        'all',
+                                        const Color(0xFF0284C7),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _buildStatusFilterChip(
+                                        '⏳ Action Needed ($pendingCount)',
+                                        'pending',
+                                        const Color(0xFFD97706),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _buildStatusFilterChip(
+                                        '✅ Confirmed ($confirmedCount)',
+                                        'confirmed',
+                                        const Color(0xFF16A34A),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                child: const Icon(Icons.mark_email_read_outlined, size: 44, color: AppColors.primary),
                               ),
-                              const SizedBox(height: 20),
-                              const Text(
-                                'No Guidance Notices',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'When the Urios Guidance & Counseling Center sends you an official call-slip or invitation, it will appear here.',
-                                style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
-                                textAlign: TextAlign.center,
+                              Expanded(
+                                child: filteredNotices.isEmpty
+                                    ? Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Text(
+                                            _statusFilter == 'pending'
+                                                ? 'All guidance notices have been confirmed! 🎉'
+                                                : 'No confirmed notices yet.',
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : RefreshIndicator(
+                                        onRefresh: _fetchNotices,
+                                        color: AppColors.primary,
+                                        child: ListView.separated(
+                                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                                          itemCount: filteredNotices.length,
+                                          separatorBuilder: (_, _) => const SizedBox(height: 16),
+                                          itemBuilder: (context, index) {
+                                            final notice = filteredNotices[index];
+                                            return _buildNoticeCard(notice);
+                                          },
+                                        ),
+                                      ),
                               ),
                             ],
                           ),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _fetchNotices,
-                        color: AppColors.primary,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.all(20),
-                          itemCount: _notices.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final notice = _notices[index];
-                            return _buildNoticeCard(notice);
-                          },
-                        ),
-                      ),
+          ),
+        ),
       ),
     );
   }
@@ -526,12 +675,41 @@ class _GuidanceNoticesScreenState extends State<GuidanceNoticesScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0284C7),
                         foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 44),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
                     ),
                   ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _copyCallSlipDetails(
+                      title: title.toString(),
+                      counselorName: counselorName.toString(),
+                      counselorDept: counselorDept.toString(),
+                      location: location.toString(),
+                      apptDate: apptDate.toString(),
+                      apptTime: apptTime.toString(),
+                      counselorNote: counselorNote,
+                      isAck: isAck,
+                    ),
+                    icon: const Icon(Icons.copy_all_rounded, size: 16),
+                    label: const Text(
+                      'Copy Call-Slip Details',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0284C7),
+                      minimumSize: const Size(0, 40),
+                      side: const BorderSide(color: Color(0xFFBAE6FD)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
