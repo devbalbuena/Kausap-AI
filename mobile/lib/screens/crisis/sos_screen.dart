@@ -215,6 +215,7 @@ class _SosScreenState extends State<SosScreen> with SingleTickerProviderStateMix
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                minimumSize: const Size(0, 40),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: const Text('OK', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),

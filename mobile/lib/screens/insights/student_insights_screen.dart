@@ -880,6 +880,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
                             : const Color(0xFFBAE6FD),
                         width: 1,
                       ),
+                      minimumSize: const Size(0, 40),
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),

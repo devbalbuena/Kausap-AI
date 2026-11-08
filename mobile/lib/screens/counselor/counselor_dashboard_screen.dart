@@ -421,7 +421,12 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> wit
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _fetchStats,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
               child: const Text('Try Again'),
             ),
           ],
