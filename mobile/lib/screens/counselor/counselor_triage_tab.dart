@@ -24,6 +24,9 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
   String _activeSearch = '';
   final TextEditingController _activeSearchCtrl = TextEditingController();
   String _activeSourceFilter = 'all'; // 'all', 'sos', 'screener', 'chat'
+  String _inActionSearch = '';
+  final TextEditingController _inActionSearchCtrl = TextEditingController();
+  String _inActionAckFilter = 'all'; // 'all', 'awaiting', 'confirmed'
   String _resolvedSearch = '';
   final TextEditingController _resolvedSearchCtrl = TextEditingController();
   bool _showArchivedResolved = false;
@@ -132,6 +135,7 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
   void dispose() {
     _tabController.dispose();
     _activeSearchCtrl.dispose();
+    _inActionSearchCtrl.dispose();
     _resolvedSearchCtrl.dispose();
     super.dispose();
   }
@@ -1636,9 +1640,125 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
     );
   }
 
+  bool _matchesInActionFilter(dynamic rawItem) {
+    final item = rawItem is Map ? rawItem : <String, dynamic>{};
+    final student = (item['user_name'] ?? '').toString().toLowerCase();
+    final email = (item['user_email'] ?? '').toString().toLowerCase();
+    final callSlip = item['call_slip'] is Map ? Map<String, dynamic>.from(item['call_slip']) : <String, dynamic>{};
+    final note = (callSlip['counselor_note'] ?? '').toString().toLowerCase();
+    final isAck = item['is_acknowledged'] == true;
+
+    if (_inActionSearch.trim().isNotEmpty) {
+      final q = _inActionSearch.trim().toLowerCase();
+      if (!student.contains(q) && !email.contains(q) && !note.contains(q)) {
+        return false;
+      }
+    }
+
+    if (_inActionAckFilter == 'awaiting' && isAck) return false;
+    if (_inActionAckFilter == 'confirmed' && !isAck) return false;
+    return true;
+  }
+
+  Widget _buildInActionFilterHeader({required int totalCount, required int shownCount}) {
+    final filters = <Map<String, String>>[
+      {'key': 'all', 'label': 'All In Action'},
+      {'key': 'awaiting', 'label': '⏳ Awaiting Student View'},
+      {'key': 'confirmed', 'label': '✅ Confirmed by Student'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _inActionSearchCtrl,
+            onChanged: (v) => setState(() => _inActionSearch = v),
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 12.5),
+            decoration: InputDecoration(
+              hintText: 'Search In-Action call-slips by student or note...',
+              hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+              prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
+              suffixIcon: _inActionSearch.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
+                      onPressed: () {
+                        _inActionSearchCtrl.clear();
+                        setState(() => _inActionSearch = '');
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.4),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ...filters.map((f) {
+                  final isSelected = _inActionAckFilter == f['key'];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(f['label']!),
+                      selected: isSelected,
+                      onSelected: (_) {
+                        HapticService.lightTap();
+                        setState(() => _inActionAckFilter = f['key']!);
+                      },
+                      selectedColor: const Color(0xFFEEF2FF),
+                      backgroundColor: const Color(0xFFF8FAFC),
+                      labelStyle: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF475569),
+                      ),
+                      side: BorderSide(
+                        color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFE2E8F0),
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  );
+                }),
+                const SizedBox(width: 4),
+                Text(
+                  'Showing $shownCount of $totalCount',
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Tab 1: In Action (Issued Guidance Call-Slips awaiting physical session) ──
-  Widget _buildInActionList(List<dynamic> list) {
-    if (list.isEmpty) {
+  Widget _buildInActionList(List<dynamic> rawList) {
+    final list = rawList.where(_matchesInActionFilter).toList();
+    if (rawList.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1667,10 +1787,40 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _fetchFlaggedMessages,
-      color: const Color(0xFF6366F1),
-      child: ListView.separated(
+    return Column(
+      children: [
+        _buildInActionFilterHeader(totalCount: rawList.length, shownCount: list.length),
+        Expanded(
+          child: list.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.filter_alt_off_rounded, color: Color(0xFF94A3B8), size: 38),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "No Matching In-Action Call-Slips",
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton(
+                        onPressed: () {
+                          _inActionSearchCtrl.clear();
+                          setState(() {
+                            _inActionSearch = '';
+                            _inActionAckFilter = 'all';
+                          });
+                        },
+                        style: TextButton.styleFrom(minimumSize: const Size(0, 36)),
+                        child: const Text("Clear Search & Filters"),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _fetchFlaggedMessages,
+                  color: const Color(0xFF6366F1),
+                  child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: list.length,
         separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -1861,6 +2011,9 @@ class _CounselorTriageTabState extends State<CounselorTriageTab> with SingleTick
           );
         },
       ),
+    ),
+        ),
+      ],
     );
   }
 
