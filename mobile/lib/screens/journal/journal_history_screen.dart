@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
@@ -21,11 +22,49 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
   static const _storage = FlutterSecureStorage();
   bool _isLoading = true;
   List<Map<String, dynamic>> _entries = [];
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedMoodFilter = 'All';
 
   @override
   void initState() {
     super.initState();
     _loadHistory();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<String> get _availableMoodTags {
+    final tags = <String>{};
+    for (final e in _entries) {
+      final tag = (e['mood_tag'] ?? e['type'])?.toString().trim();
+      if (tag != null && tag.isNotEmpty) {
+        tags.add(tag);
+      }
+    }
+    return ['All', ...tags];
+  }
+
+  List<Map<String, dynamic>> get _filteredEntries {
+    final q = _searchQuery.trim().toLowerCase();
+    return _entries.where((e) {
+      final tag = (e['mood_tag'] ?? e['type'])?.toString().trim() ?? '';
+      if (_selectedMoodFilter != 'All' && tag != _selectedMoodFilter) {
+        return false;
+      }
+      if (q.isEmpty) return true;
+      final content = (e['content'] ?? '').toString().toLowerCase();
+      final prompt = (e['prompt'] ?? '').toString().toLowerCase();
+      final dateStr = _formatDisplayDate(e).toLowerCase();
+      return content.contains(q) ||
+          prompt.contains(q) ||
+          tag.toLowerCase().contains(q) ||
+          dateStr.contains(q);
+    }).toList();
   }
 
   Future<void> _loadHistory() async {
@@ -106,6 +145,7 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
             ),
             child: const Text('Delete'),
           ),
@@ -268,6 +308,22 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                       ),
                     ),
                   ),
+                const SizedBox(width: 6),
+                IconButton(
+                  tooltip: 'Copy Reflection',
+                  icon: const Icon(Icons.copy_all_rounded, size: 19, color: Color(0xFF0284C7)),
+                  onPressed: () {
+                    HapticService.lightTap();
+                    Clipboard.setData(ClipboardData(text: content.toString()));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Journal entry copied to clipboard.'),
+                        backgroundColor: Color(0xFF0284C7),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
             if (prompt != null && prompt.isNotEmpty) ...[
@@ -318,6 +374,7 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                     label: const Text('Edit Entry'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
+                      minimumSize: const Size(0, 42),
                       side: const BorderSide(color: AppColors.primary),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -334,6 +391,7 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                     icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
                     label: const Text('Delete', style: TextStyle(color: Color(0xFFEF4444))),
                     style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 42),
                       side: const BorderSide(color: Color(0xFFFCA5A5)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -445,15 +503,124 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                       ],
                     ),
                   )
-                : RefreshIndicator(
-                    onRefresh: _loadHistory,
-                    color: AppColors.primary,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                      itemCount: _entries.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (ctx, i) {
-                        final entry = _entries[i];
+                : Column(
+                    children: [
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextField(
+                              controller: _searchController,
+                              onChanged: (v) => setState(() => _searchQuery = v),
+                              decoration: InputDecoration(
+                                hintText: 'Search reflections by keyword, prompt, or date...',
+                                hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF94A3B8)),
+                                prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFF64748B)),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _searchQuery = '');
+                                        },
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                ),
+                              ),
+                            ),
+                            if (_availableMoodTags.length > 1) ...[
+                              const SizedBox(height: 10),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: _availableMoodTags.map((tag) {
+                                    final isSelected = _selectedMoodFilter == tag;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          HapticService.lightTap();
+                                          setState(() => _selectedMoodFilter = tag);
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 180),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? AppColors.primary : const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(18),
+                                            border: Border.all(
+                                              color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            tag == 'All' ? 'All (${_entries.length})' : tag,
+                                            style: TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontSize: 11.5,
+                                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                              color: isSelected ? Colors.white : const Color(0xFF475569),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      Expanded(
+                        child: _filteredEntries.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.search_off_rounded, size: 42, color: Color(0xFF94A3B8)),
+                                      const SizedBox(height: 10),
+                                      const Text(
+                                        'No Matching Reflections',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                          color: Color(0xFF334155),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
+                                        'Try adjusting your search keywords or mood filter.',
+                                        style: TextStyle(fontFamily: 'Inter', fontSize: 12.5, color: Color(0xFF64748B)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: _loadHistory,
+                                color: AppColors.primary,
+                                child: ListView.separated(
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                                  itemCount: _filteredEntries.length,
+                                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                  itemBuilder: (ctx, i) {
+                                    final entry = _filteredEntries[i];
                         final moodTag = entry['mood_tag'] ?? entry['type'];
                         final content = entry['content'] ?? '';
 
@@ -560,6 +727,9 @@ class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
                         );
                       },
                     ),
+                  ),
+                      ),
+                    ],
                   ),
       ),
     );
