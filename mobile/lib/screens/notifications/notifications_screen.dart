@@ -7,6 +7,7 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/skeleton_widgets.dart';
 import '../journal/daily_journal_screen.dart';
 import '../insights/student_insights_screen.dart';
+import '../guidance/guidance_notices_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -19,6 +20,45 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationService _service = NotificationService();
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
+  String _selectedFilter = 'all'; // 'all', 'unread', 'guidance', 'alert', 'wellness'
+
+  bool _isGuidanceNotice(Map<String, dynamic> notif) {
+    final type = notif['type']?.toString().toLowerCase() ?? '';
+    final title = notif['title']?.toString().toLowerCase() ?? '';
+    return type == 'guidance_notice' ||
+        title.contains('guidance') ||
+        title.contains('call-slip') ||
+        title.contains('consultation notice');
+  }
+
+  bool _matchesCategoryFilter(Map<String, dynamic> notif) {
+    if (_selectedFilter == 'all') return true;
+    if (_selectedFilter == 'unread') return notif['is_read'] != true;
+    final type = notif['type']?.toString().toLowerCase() ?? '';
+    final title = notif['title']?.toString().toLowerCase() ?? '';
+    final body = notif['body']?.toString().toLowerCase() ?? '';
+    if (_selectedFilter == 'guidance') {
+      return _isGuidanceNotice(notif);
+    }
+    if (_selectedFilter == 'alert') {
+      return type == 'alert' ||
+          title.contains('crisis') ||
+          title.contains('triage') ||
+          title.contains('flag') ||
+          title.contains('distress') ||
+          body.contains('escalation');
+    }
+    if (_selectedFilter == 'wellness') {
+      return type == 'mood' ||
+          type == 'journal' ||
+          type == 'assessment' ||
+          type == 'session' ||
+          title.contains('check-in') ||
+          title.contains('journal') ||
+          title.contains('mood');
+    }
+    return true;
+  }
 
   @override
   void initState() {
@@ -118,6 +158,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
             ),
             child: const Text('Clear All'),
           ),
@@ -148,7 +189,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final title = notif['title']?.toString().toLowerCase() ?? '';
     final body = notif['body']?.toString().toLowerCase() ?? '';
 
-    if (title.contains('crisis') || title.contains('triage') || title.contains('flag') || body.contains('triage') || body.contains('escalation')) {
+    if (_isGuidanceNotice(notif)) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const GuidanceNoticesScreen()));
+    } else if (title.contains('crisis') || title.contains('triage') || title.contains('flag') || body.contains('triage') || body.contains('escalation')) {
       Navigator.pop(context, 'open_triage');
     } else if (title.contains('distress') || title.contains('appeal') || title.contains('student') || body.contains('low moods') || body.contains('appeal')) {
       Navigator.pop(context, 'open_students');
@@ -197,6 +240,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   IconData _iconForType(String? type) {
     switch (type) {
+      case 'guidance_notice':
+        return Icons.account_balance_rounded;
       case 'mood':
         return Icons.sentiment_satisfied_alt_rounded;
       case 'session':
@@ -214,6 +259,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Color _colorForType(String? type) {
     switch (type) {
+      case 'guidance_notice':
+        return const Color(0xFF0369A1);
       case 'mood':
         return const Color(0xFF0284C7);
       case 'session':
@@ -229,9 +276,52 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Widget _buildFilterChip(String label, String value, {int? count}) {
+    final isSelected = _selectedFilter == value;
+    final display = count != null && count > 0 ? '$label ($count)' : label;
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        setState(() => _selectedFilter = value);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha(35),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          display,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasUnread = _notifications.any((n) => n['is_read'] != true);
+    final unreadCount = _notifications.where((n) => n['is_read'] != true).length;
+    final guidanceCount = _notifications.where(_isGuidanceNotice).length;
+    final filteredNotifications = _notifications.where(_matchesCategoryFilter).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -299,17 +389,77 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ? const SkeletonSessionList(count: 5)
                 : _notifications.isEmpty
                     ? _buildEmptyState()
-                    : RefreshIndicator(
-                        color: AppColors.primary,
-                        onRefresh: _fetchNotifications,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          itemCount: _notifications.length,
-                          itemBuilder: (context, index) {
-                            final notif = _notifications[index];
-                            return _buildDismissibleCard(notif);
-                          },
-                        ),
+                    : Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            color: Colors.white,
+                            padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _buildFilterChip('All', 'all', count: _notifications.length),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip('Unread', 'unread', count: unreadCount),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip('🏛️ Guidance Notices', 'guidance', count: guidanceCount),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip('🚨 Alerts', 'alert'),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip('🌿 Wellness', 'wellness'),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                          Expanded(
+                            child: filteredNotifications.isEmpty
+                                ? Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(28),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.filter_list_off_rounded, size: 42, color: Color(0xFF94A3B8)),
+                                          const SizedBox(height: 10),
+                                          const Text(
+                                            'No matching notifications',
+                                            style: TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 15,
+                                              color: Color(0xFF334155),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          const Text(
+                                            'Try switching to another filter category above.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 12.5,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                : RefreshIndicator(
+                                    color: AppColors.primary,
+                                    onRefresh: _fetchNotifications,
+                                    child: ListView.builder(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      itemCount: filteredNotifications.length,
+                                      itemBuilder: (context, index) {
+                                        final notif = filteredNotifications[index];
+                                        return _buildDismissibleCard(notif);
+                                      },
+                                    ),
+                                  ),
+                          ),
+                        ],
                       ),
           ),
         ),
@@ -417,6 +567,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ),
                       ],
                     ),
+                    if (_isGuidanceNotice(notif)) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFBAE6FD)),
+                        ),
+                        child: const Text(
+                          '🏛️ FSUU Guidance Office Call-Slip',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0369A1),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       notif['body'] ?? '',
@@ -427,6 +597,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         height: 1.4,
                       ),
                     ),
+                    if (_isGuidanceNotice(notif)) ...[
+                      const SizedBox(height: 8),
+                      const Row(
+                        children: [
+                          Text(
+                            'View Official Call-Slip & Confirm Visit',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_rounded, size: 13, color: Color(0xFF0284C7)),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
