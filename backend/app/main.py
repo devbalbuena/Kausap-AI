@@ -1,6 +1,6 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 try:
@@ -42,10 +42,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow Flutter mobile app and any local dev tools
+CORS_ORIGIN_REGEX = (
+    r"http://(localhost|127\.0\.0\.1)(:\d+)?"
+    r"|https://.*\.onrender\.com"
+    r"|https://.*\.vercel\.app"
+    r"|https://.*\.web\.app"
+    r"|https://.*\.firebaseapp\.com"
+)
+
+# CORS — allow Flutter mobile/web app (including Firebase Hosting) and local dev tools
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?|https://.*\.onrender\.com|https://.*\.vercel\.app",
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
@@ -54,6 +62,16 @@ app.add_middleware(
 
 # GZip Compression — reduce network bandwidth by up to 80% on slow Wi-Fi
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=()")
+    return response
 
 
 @app.get("/", tags=["Health"])
