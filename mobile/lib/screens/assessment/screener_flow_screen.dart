@@ -488,71 +488,136 @@ class _ScreenerFlowScreenState extends State<ScreenerFlowScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Crisis support — shown immediately when PHQ-9 item 9 (self-harm thoughts) is positive
-              if (item9Positive) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withAlpha(25),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFEF4444).withAlpha(120)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.health_and_safety_rounded, color: Color(0xFFEF4444), size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'You are not alone — help is available right now',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                color: KausapColors.textPrimary(context),
+              // Bilingual Crisis Support Card — shown when PHQ-9 Item 9 > 0 or high-risk score is flagged
+              if (item9Positive || flagged) ...[
+                StatefulBuilder(
+                  builder: (context, setBannerLangState) {
+                    String selectedLang = 'en';
+                    return StatefulBuilder(
+                      builder: (ctxBanner, setInnerLang) {
+                        final Map<String, Map<String, String>> messages = {
+                          'en': {
+                            'title': item9Positive
+                                ? 'You are not alone — help is available right now'
+                                : 'Compassionate campus support is here for you',
+                            'body': item9Positive
+                                ? 'You noted thoughts of hurting yourself. You matter deeply, and you do not have to carry this alone. Please connect with FSUU Guidance or call NCMH 1553 (free 24/7).'
+                                : 'Your screening shows elevated distress. A confidential, supportive check-in with the FSUU Guidance & Counseling Center is warmly recommended.',
+                          },
+                          'tl': {
+                            'title': item9Positive
+                                ? 'Hindi ka nag-iisa — may handang tumulong sa iyo ngayon'
+                                : 'Nandito ang FSUU Guidance upang umalalay sa iyo',
+                            'body': item9Positive
+                                ? 'Mahalaga ka at hindi mo kailangang pasanin ang bigat na ito nang mag-isa. Mangyaring makipag-ugnayan agad sa FSUU Guidance Center o tumawag sa NCMH 1553 (libreng 24/7).'
+                                : 'Nagpapakita ang iyong resulta ng mataas na antas ng bigat. Inirerekomenda ang kumpidensyal na pag-uusap sa FSUU Guidance & Counseling Center.',
+                          },
+                          'ceb': {
+                            'title': item9Positive
+                                ? 'Wala ka nag-inusara — naay andam motabang nimo karon'
+                                : 'Ania ang FSUU Guidance aron moabag kanimo',
+                            'body': item9Positive
+                                ? 'Importante kaayo ka ug dili nimo kinahanglan pas-anon kini nga ikaw ra. Palihug duol dayon sa FSUU Guidance Center o tawag sa NCMH 1553 (libre 24/7).'
+                                : 'Nagpakita ang imong resulta og taas nga gibug-aton sa gibati. Girekomenda ang kompidensyal nga pakighinabi sa FSUU Guidance & Counseling Center.',
+                          },
+                        };
+                        final currentMsg = messages[selectedLang] ?? messages['en']!;
+
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withAlpha(25),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFEF4444).withAlpha(120)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.health_and_safety_rounded, color: Color(0xFFEF4444), size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      currentMsg['title']!,
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                        color: KausapColors.textPrimary(context),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                children: [
+                                  {'code': 'en', 'label': 'English'},
+                                  {'code': 'tl', 'label': 'Tagalog'},
+                                  {'code': 'ceb', 'label': 'Bisaya'},
+                                ].map((lang) {
+                                  final isSel = selectedLang == lang['code'];
+                                  return ChoiceChip(
+                                    label: Text(lang['label']!),
+                                    selected: isSel,
+                                    onSelected: (_) => setInnerLang(() => selectedLang = lang['code']!),
+                                    selectedColor: const Color(0xFFFEE2E2),
+                                    backgroundColor: Colors.white,
+                                    labelStyle: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 10.5,
+                                      fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                                      color: isSel ? const Color(0xFFDC2626) : const Color(0xFF475569),
+                                    ),
+                                    side: BorderSide(
+                                      color: isSel ? const Color(0xFFEF4444) : const Color(0xFFE2E8F0),
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                currentMsg['body']!,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  height: 1.4,
+                                  color: KausapColors.textSecondary(context),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _callHotline('1553'),
+                                  icon: const Icon(Icons.call_rounded, size: 16),
+                                  label: const Text(
+                                    'Call NCMH Hotline 1553',
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Also: 0917-899-8727 (NCMH) • FSUU Guidance Center (085) 342-1830 • Emergency 911',
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context)),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'You noted thoughts of hurting yourself. Please talk to someone now. The NCMH Crisis Hotline is free and open 24/7.',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          height: 1.4,
-                          color: KausapColors.textSecondary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _callHotline('1553'),
-                          icon: const Icon(Icons.call_rounded, size: 16),
-                          label: const Text(
-                            'Call NCMH Hotline 1553',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEF4444),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Also: 0917-899-8727 (NCMH) • FSUU Guidance Center (085) 342-1830 • Emergency 911',
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: KausapColors.textMuted(context)),
-                      ),
-                    ],
-                  ),
+                        );
+                      },
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
               ],
