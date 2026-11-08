@@ -793,22 +793,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Row(children: [
           if (_showQuickEscape) ...[
             Semantics(
-              label: 'Quick escape',
+              label: 'Quick escape to neutral screen',
               button: true,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const QuickEscapeScreen(),
-                    fullscreenDialog: true,
+              child: Tooltip(
+                message: 'Quick Escape',
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const QuickEscapeScreen(),
+                      fullscreenDialog: true,
+                    ),
                   ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.shield_outlined, color: Colors.red.shade400, size: 20),
                   ),
-                  child: Icon(Icons.shield_outlined, color: Colors.red.shade400, size: 20),
                 ),
               ),
             ),

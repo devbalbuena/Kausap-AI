@@ -254,6 +254,7 @@ class _SosScreenState extends State<SosScreen> with SingleTickerProviderStateMix
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
+          tooltip: 'Back',
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF991B1B)),
           onPressed: () => Navigator.pop(context),
         ),
@@ -324,11 +325,16 @@ class _SosScreenState extends State<SosScreen> with SingleTickerProviderStateMix
                     borderRadius: BorderRadius.circular(18),
                     boxShadow: const [BoxShadow(color: Color(0x30DC2626), blurRadius: 14, offset: Offset(0, 6))],
                   ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: _isSendingAlert ? null : () => _sendSosAlert(context),
+                  child: Semantics(
+                    label: 'Request Guidance Alert SOS — dispatches immediate priority flag to campus guidance center',
+                    button: true,
+                    child: Tooltip(
+                      message: 'Send immediate SOS distress alert to FSUU Guidance Center',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: _isSendingAlert ? null : () => _sendSosAlert(context),
                       child: Padding(
                         padding: const EdgeInsets.all(18),
                         child: Row(
@@ -377,6 +383,8 @@ class _SosScreenState extends State<SosScreen> with SingleTickerProviderStateMix
                             const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
                           ],
                         ),
+                      ),
+                    ),
                       ),
                     ),
                   ),
