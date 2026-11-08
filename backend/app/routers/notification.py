@@ -125,7 +125,7 @@ def _ensure_daily_notifications(session: Session, user: User) -> List[Notificati
 
             # 4. Morning Campus Wellness Summary Digest
             total_students_count = len(students)
-            total_moods_count = len(session.exec(select(MoodEntry)).all())
+            total_moods_count = int(session.exec(select(func.count()).select_from(MoodEntry)).one() or 0)
             session.add(Notification(
                 user_id=user.id,
                 title="📊 Daily Campus Wellness Pulse",
