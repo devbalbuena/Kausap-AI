@@ -15,6 +15,45 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
   static const _storage = FlutterSecureStorage();
   bool _isLoading = true;
   List<Map<String, dynamic>> _history = [];
+  String _selectedScreenerFilter = 'all'; // 'all', 'phq9', 'gad7', 'burnout'
+
+  List<Map<String, dynamic>> get _filteredHistory {
+    if (_selectedScreenerFilter == 'all') return _history;
+    return _history.where((item) {
+      final name = (item['testName'] ?? '').toString().toLowerCase();
+      if (_selectedScreenerFilter == 'phq9') return name.contains('phq') || name.contains('mood');
+      if (_selectedScreenerFilter == 'gad7') return name.contains('gad') || name.contains('stress');
+      if (_selectedScreenerFilter == 'burnout') return name.contains('burnout') || name.contains('fatigue');
+      return true;
+    }).toList();
+  }
+
+  Widget _buildFilterChip(String label, String value, Color accentColor) {
+    final isSelected = _selectedScreenerFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedScreenerFilter = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? accentColor : KausapColors.cardBg(context),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? accentColor : KausapColors.border(context),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : KausapColors.textPrimary(context),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -222,8 +261,11 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
 
     return Scaffold(
       backgroundColor: KausapColors.scaffoldBg(context),
-      body: SafeArea(
-        child: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: SafeArea(
+            child: Column(
           children: [
             // Header
             Padding(
@@ -325,14 +367,48 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                             ),
                           ),
                         )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                          itemCount: _history.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final item = _history[index];
-                            final severity = item['severity'] as String? ?? 'Minimal';
-                            final color = _getSeverityColor(severity);
+                      : Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _buildFilterChip('All (${_history.length})', 'all', accentColor),
+                                    const SizedBox(width: 8),
+                                    _buildFilterChip('☀️ PHQ-9', 'phq9', const Color(0xFF10B981)),
+                                    const SizedBox(width: 8),
+                                    _buildFilterChip('🌊 GAD-7', 'gad7', const Color(0xFF6366F1)),
+                                    const SizedBox(width: 8),
+                                    _buildFilterChip('🎓 Burnout', 'burnout', const Color(0xFFD97706)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: _filteredHistory.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        'No assessments found in this category.',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 13.5,
+                                          color: KausapColors.textMuted(context),
+                                        ),
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                                      itemCount: _filteredHistory.length,
+                                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                      itemBuilder: (context, index) {
+                                        final item = _filteredHistory[index];
+                                        final severity = item['severity'] as String? ?? 'Minimal';
+                                        final color = _getSeverityColor(severity);
+                                        final numScore = (item['score'] as num?)?.toDouble() ?? 0.0;
+                                        final numMax = (item['maxScore'] as num?)?.toDouble() ?? 27.0;
+                                        final progress = numMax > 0 ? (numScore / numMax).clamp(0.0, 1.0) : 0.0;
 
                             return Container(
                               padding: const EdgeInsets.all(18),
@@ -406,6 +482,16 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: LinearProgressIndicator(
+                                      value: progress,
+                                      minHeight: 6,
+                                      backgroundColor: color.withAlpha(isDark ? 35 : 22),
+                                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                                    ),
+                                  ),
                                   if (item['interpretation'] != null &&
                                       (item['interpretation'] as String).isNotEmpty) ...[
                                     const SizedBox(height: 10),
@@ -431,10 +517,15 @@ class _AssessmentHistoryScreenState extends State<AssessmentHistoryScreen> {
                                 ],
                               ),
                             );
-                          },
+                                      },
+                                    ),
+                            ),
+                          ],
                         ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );
