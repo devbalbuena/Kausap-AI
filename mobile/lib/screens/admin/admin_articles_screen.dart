@@ -94,7 +94,11 @@ class _AdminArticlesScreenState extends State<AdminArticlesScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
+            ),
             child: const Text('Delete'),
           ),
         ],

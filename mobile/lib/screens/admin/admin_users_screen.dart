@@ -97,6 +97,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF16A34A),
                 foregroundColor: Colors.white,
+                minimumSize: const Size(0, 40),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: const Text('Reactivate', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
@@ -222,6 +223,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFDC2626),
                   foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 40),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 child: const Text('Deactivate', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),

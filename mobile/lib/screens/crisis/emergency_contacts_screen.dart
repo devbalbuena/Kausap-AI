@@ -298,6 +298,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                minimumSize: const Size(0, 40),
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
