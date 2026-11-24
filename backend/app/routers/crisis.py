@@ -162,8 +162,8 @@ def create_hotline(
         admin_email=current_user.email,
         action="CREATE_HOTLINE",
         target_type="EmergencyHotline",
-        target_id=hotline.id,
-        details_json=f'{{"name": "{hotline.name}", "phone": "{hotline.phone}", "category": "{hotline.category}"}}',
+        target_id=str(hotline.id),
+        detail=f'{{"name": "{hotline.name}", "phone": "{hotline.phone}", "category": "{hotline.category}"}}',
     )
     session.add(audit)
     session.commit()
@@ -219,8 +219,8 @@ def update_hotline(
         admin_email=current_user.email,
         action="UPDATE_HOTLINE",
         target_type="EmergencyHotline",
-        target_id=hotline.id,
-        details_json=f'{{"name": "{hotline.name}", "phone": "{hotline.phone}", "is_active": {str(hotline.is_active).lower()}}}',
+        target_id=str(hotline.id),
+        detail=f'{{"name": "{hotline.name}", "phone": "{hotline.phone}", "is_active": {str(hotline.is_active).lower()}}}',
     )
     session.add(audit)
     session.commit()
@@ -258,8 +258,8 @@ def delete_hotline(
         admin_email=current_user.email,
         action="SOFT_DELETE_HOTLINE",
         target_type="EmergencyHotline",
-        target_id=hotline.id,
-        details_json=f'{{"soft_deleted_name": "{hotline_name}", "is_active": false}}',
+        target_id=str(hotline.id),
+        detail=f'{{"soft_deleted_name": "{hotline_name}", "is_active": false}}',
     )
     session.add(audit)
     session.commit()
