@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../utils/haptic_service.dart';
+import '../../utils/crisis_defaults.dart';
 
 class CrisisResourcesSheet extends StatefulWidget {
   const CrisisResourcesSheet({super.key});
@@ -16,54 +17,7 @@ class _CrisisResourcesSheetState extends State<CrisisResourcesSheet> {
   bool _isLoading = true;
 
   // Fallback list of hotlines in case of offline state
-  static const List<Map<String, String>> _fallbackHotlines = [
-    {
-      'name': 'FSUU Guidance Center Emergency Line',
-      'number': '(085) 342-1830',
-      'email': 'guidance@urios.edu.ph',
-      'description': 'Main Campus, Father Saturnino Urios University, Butuan City',
-      'category': 'campus',
-      'type': 'call',
-    },
-    {
-      'name': 'National Crisis Hotline (NCMH)',
-      'number': '1553',
-      'email': 'ncmh.gov.ph',
-      'description': '24/7 Toll-free nationwide mental health crisis helpline',
-      'category': 'national',
-      'type': 'call',
-    },
-    {
-      'name': 'Hopeline Philippines',
-      'number': '0917-558-4673',
-      'email': 'hopeline@ngf-hope.org',
-      'description': '24/7 suicide prevention & crisis emotional support',
-      'category': 'national',
-      'type': 'call',
-    },
-    {
-      'name': 'In Touch Community Services',
-      'number': '02-8893-7603',
-      'email': 'crisisline@in-touch.org',
-      'description': 'Multilingual crisis support services',
-      'category': 'national',
-      'type': 'call',
-    },
-    {
-      'name': 'Philippine Emergency 911',
-      'number': '911',
-      'description': 'Immediate police, ambulance & first responders',
-      'category': 'emergency',
-      'type': 'call',
-    },
-    {
-      'name': 'Text Crisis Line',
-      'number': '09178626820',
-      'description': 'Text HELLO to this number for confidential chat support',
-      'category': 'national',
-      'type': 'sms',
-    },
-  ];
+  static const List<Map<String, dynamic>> _fallbackHotlines = CrisisDefaults.fallbackHotlines;
 
   List<Map<String, dynamic>> _hotlines = [];
 
