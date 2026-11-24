@@ -46,6 +46,37 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
   bool _loadingMoods = true;
   List<dynamic> _moods = [];
   String? _moodError;
+  String _selectedMoodFilter = 'all'; // 'all', 'low', 'okay', 'positive'
+
+  Widget _buildMoodFilterChip(String label, String value, Color activeColor) {
+    final isSelected = _selectedMoodFilter == value;
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        setState(() => _selectedMoodFilter = value);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
 
   bool _loadingChats = true;
   List<dynamic> _chatSessions = [];
@@ -479,15 +510,59 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _fetchMoodHistory,
-      color: const Color(0xFF0284C7),
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: _moods.length,
-        separatorBuilder: (ctx, i) => const SizedBox(height: 12),
-        itemBuilder: (ctx, i) {
-          final m = _moods[i];
+    final lowCount = _moods.where((m) => ((m['mood_level'] as num?)?.toInt() ?? 3) <= 2).length;
+    final okayCount = _moods.where((m) => ((m['mood_level'] as num?)?.toInt() ?? 3) == 3).length;
+    final posCount = _moods.where((m) => ((m['mood_level'] as num?)?.toInt() ?? 3) >= 4).length;
+
+    final filteredMoods = _moods.where((m) {
+      final level = (m['mood_level'] as num?)?.toInt() ?? 3;
+      if (_selectedMoodFilter == 'low') return level <= 2;
+      if (_selectedMoodFilter == 'okay') return level == 3;
+      if (_selectedMoodFilter == 'positive') return level >= 4;
+      return true;
+    }).toList();
+
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildMoodFilterChip('All (${_moods.length})', 'all', const Color(0xFF0284C7)),
+                const SizedBox(width: 8),
+                _buildMoodFilterChip('💔 Distressed/Low ($lowCount)', 'low', const Color(0xFFDC2626)),
+                const SizedBox(width: 8),
+                _buildMoodFilterChip('😐 Okay ($okayCount)', 'okay', const Color(0xFF64748B)),
+                const SizedBox(width: 8),
+                _buildMoodFilterChip('😊 Positive ($posCount)', 'positive', const Color(0xFF16A34A)),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: filteredMoods.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No mood check-ins match this filter.',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _fetchMoodHistory,
+                  color: const Color(0xFF0284C7),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filteredMoods.length,
+                    separatorBuilder: (ctx, i) => const SizedBox(height: 12),
+                    itemBuilder: (ctx, i) {
+                      final m = filteredMoods[i];
           final level = (m['mood_level'] as num?)?.toInt() ?? 3;
           final visuals = _getMoodVisuals(level);
           final dateStr = _formatDateTime(m['created_at']?.toString());
@@ -645,8 +720,11 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
               ],
             ),
           );
-        },
-      ),
+                    },
+                  ),
+                ),
+        ),
+      ],
     );
   }
 
@@ -818,25 +896,69 @@ class _StudentClinicalModalState extends State<StudentClinicalModal> with Single
         separatorBuilder: (ctx, i) => const SizedBox(height: 14),
         itemBuilder: (ctx, i) {
           if (i == 0) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFA7F3D0)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Student Consent Active: The student has voluntarily authorized counselor access to these AI chat transcripts for clinical guidance.",
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF065F46), height: 1.35),
+            final allIds = [
+              for (int idx = 0; idx < _chatSessions.length; idx++)
+                _chatSessions[idx]['id']?.toString() ?? '${idx + 1}'
+            ];
+            final allExpanded = allIds.isNotEmpty && allIds.every(_expandedSessionIds.contains);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 18),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Student Consent Active: The student has voluntarily authorized counselor access to these AI chat transcripts for clinical guidance.",
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF065F46), height: 1.35),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      HapticService.lightTap();
+                      setState(() {
+                        if (allExpanded) {
+                          _expandedSessionIds.clear();
+                        } else {
+                          _expandedSessionIds.addAll(allIds);
+                        }
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 32),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    ),
+                    icon: Icon(
+                      allExpanded ? Icons.unfold_less_rounded : Icons.unfold_more_rounded,
+                      size: 16,
+                      color: const Color(0xFF7C3AED),
+                    ),
+                    label: Text(
+                      allExpanded ? 'Collapse All Transcripts' : 'Expand All Transcripts (${_chatSessions.length})',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF7C3AED),
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             );
           }
           final s = _chatSessions[i - 1];
