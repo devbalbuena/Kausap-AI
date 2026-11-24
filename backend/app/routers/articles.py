@@ -193,7 +193,7 @@ def react_to_article(
     if not article:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
-    allowed_emojis = ["💡", "❤️", "🙏", "🌿", "👏"]
+    allowed_emojis = ["💡", "❤️", "🙏", "🌿", "👏", "😢", "😮", "🤗", "💪"]
     if payload.emoji not in allowed_emojis:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reaction emoji")
 
