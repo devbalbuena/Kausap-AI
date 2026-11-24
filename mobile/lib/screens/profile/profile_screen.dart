@@ -27,6 +27,7 @@ import 'edit_profile_screen.dart';
 import 'achievements_screen.dart';
 import 'assessment_history_screen.dart';
 import '../../widgets/cached_avatar.dart';
+import '../../utils/date_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -46,16 +47,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fetchUserStats();
   }
 
-  DateTime? _parseDateLocal(dynamic created) {
-    if (created == null) return null;
-    try {
-      final str = created.toString();
-      final dt = DateTime.parse(str);
-      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
-    } catch (_) {
-      return null;
-    }
-  }
 
   Future<void> _fetchUserStats() async {
     // 1. Fetch Streak & Total Mood Logs from /mood
@@ -64,7 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (moodData is List) {
         final Set<String> daysWithMood = {};
         for (final entry in moodData) {
-          final dt = _parseDateLocal(entry['created_at']);
+          final dt = DateHelper.parseLocal(entry['created_at']);
           if (dt != null) {
             daysWithMood.add(DateFormat('yyyy-MM-dd').format(dt));
           }

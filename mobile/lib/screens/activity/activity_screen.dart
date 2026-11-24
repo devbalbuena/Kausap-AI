@@ -13,6 +13,7 @@ import '../../config/api_config.dart';
 import '../../services/offline_mood_queue.dart';
 import '../profile/profile_screen.dart';
 import 'activity_start_screen.dart';
+import '../../utils/date_helper.dart';
 
 // ── Data model for an activity ──────────────────────────────────────────────
 class ActivityItem {
@@ -253,16 +254,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     await _storage.write(key: 'favorite_activities', value: jsonEncode(_favoriteIds.toList()));
   }
 
-  DateTime? _parseDateLocal(dynamic created) {
-    if (created == null) return null;
-    try {
-      final str = created.toString();
-      final dt = DateTime.parse(str);
-      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
-    } catch (_) {
-      return null;
-    }
-  }
 
   Future<void> _loadStatsAndMood() async {
     // Check mood from API or offline
@@ -271,7 +262,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       final moodData = await ApiClient().get(ApiConfig.mood, silent: true);
       if (moodData is List) {
         final todayEntries = moodData.where((e) {
-          final dt = _parseDateLocal(e['created_at']);
+          final dt = DateHelper.parseLocal(e['created_at']);
           return dt != null &&
               dt.year == now.year &&
               dt.month == now.month &&

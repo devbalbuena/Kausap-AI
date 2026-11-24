@@ -22,6 +22,7 @@ import '../chat/chatbot_screen.dart';
 import '../activity/activity_screen.dart';
 import '../../widgets/home/mood_influence_sheet.dart';
 import '../../services/offline_mood_queue.dart';
+import '../../utils/date_helper.dart';
 
 class StudentInsightsScreen extends StatefulWidget {
   final int? refreshTrigger;
@@ -428,17 +429,6 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
     );
   }
 
-  // Robust date parser that handles UTC strings and converts to local timezone
-  DateTime? _parseDateLocal(dynamic created) {
-    if (created == null) return null;
-    try {
-      final str = created.toString();
-      final dt = DateTime.parse(str);
-      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
-    } catch (_) {
-      return null;
-    }
-  }
 
   // Robust feelings & emotions list extractor (handles List, String, JSON-encoded List, and CSV)
   static String _cleanEmotionText(String input) {
@@ -514,7 +504,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       final targetDate = monday.add(Duration(days: i));
 
       final matching = _moodEntries.where((e) {
-        final dt = _parseDateLocal(e['created_at']);
+        final dt = DateHelper.parseLocal(e['created_at']);
         return dt != null &&
             dt.year == targetDate.year &&
             dt.month == targetDate.month &&
@@ -541,14 +531,14 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       final monday = DateTime(now.year, now.month, now.day)
           .subtract(Duration(days: now.weekday - 1));
       return _moodEntries.where((e) {
-        final dt = _parseDateLocal(e['created_at']);
+        final dt = DateHelper.parseLocal(e['created_at']);
         return dt != null && !dt.isBefore(monday);
       }).toList();
     } else {
       // 'monthly': current calendar month
       final monthStart = DateTime(now.year, now.month, 1);
       return _moodEntries.where((e) {
-        final dt = _parseDateLocal(e['created_at']);
+        final dt = DateHelper.parseLocal(e['created_at']);
         return dt != null && !dt.isBefore(monthStart);
       }).toList();
     }
@@ -2358,7 +2348,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       final end = now.subtract(Duration(days: week * 7));
 
       final matching = _moodEntries.where((e) {
-        final dt = _parseDateLocal(e['created_at']);
+        final dt = DateHelper.parseLocal(e['created_at']);
         if (dt == null) return false;
         return dt.isAfter(start) && dt.isBefore(end.add(const Duration(days: 1)));
       }).toList();
@@ -2480,7 +2470,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
       final dateStr = item['created_at']?.toString() ?? '';
       String formattedDate = dateStr;
       try {
-        final dt = _parseDateLocal(dateStr);
+        final dt = DateHelper.parseLocal(dateStr);
         if (dt != null) {
           final now = DateTime.now();
           final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
@@ -2602,7 +2592,7 @@ class _StudentInsightsScreenState extends State<StudentInsightsScreen> with Sing
 
     String formattedDate = dateStr;
     try {
-      final dt = _parseDateLocal(dateStr);
+      final dt = DateHelper.parseLocal(dateStr);
       if (dt != null) {
         formattedDate = DateFormat('MMMM d, yyyy • h:mm a').format(dt);
       }

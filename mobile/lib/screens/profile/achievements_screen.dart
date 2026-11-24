@@ -7,6 +7,7 @@ import '../../services/api_client.dart';
 import '../../config/api_config.dart';
 import '../../services/offline_mood_queue.dart';
 import 'widgets/badge_unlocked_dialog.dart';
+import '../../utils/date_helper.dart';
 
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({super.key});
@@ -29,16 +30,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     _loadUserProgress();
   }
 
-  DateTime? _parseDateLocal(dynamic created) {
-    if (created == null) return null;
-    try {
-      final str = created.toString();
-      final dt = DateTime.parse(str);
-      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
-    } catch (_) {
-      return null;
-    }
-  }
 
   Future<void> _loadUserProgress() async {
     try {
@@ -48,7 +39,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
       final dates = <String>{};
       for (final e in entries) {
-        final dt = _parseDateLocal(e['created_at']);
+        final dt = DateHelper.parseLocal(e['created_at']);
         if (dt != null) {
           dates.add(DateFormat('yyyy-MM-dd').format(dt));
         }

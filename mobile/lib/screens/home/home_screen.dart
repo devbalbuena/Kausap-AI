@@ -44,6 +44,7 @@ import '../crisis/quick_escape_screen.dart';
 import '../articles/articles_data.dart';
 import '../articles/articles_screen.dart';
 import '../guidance/guidance_notices_screen.dart';
+import '../../utils/date_helper.dart';
 
 /// Client Home Screen — Clean Modular Architecture
 /// Sections: Header, Companion Hero, 1-Tap Mood Check-In, Streak, SOS Banner,
@@ -528,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Check today's mood from API entries
     if (moodData.isNotEmpty) {
       final todayEntries = moodData.where((e) {
-        final dt = _parseDateLocal(e['created_at']);
+        final dt = DateHelper.parseLocal(e['created_at']);
         return dt != null &&
             dt.year == now.year &&
             dt.month == now.month &&
@@ -553,7 +554,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // 2. Compute Streak locally from moodData
     final Set<String> daysWithMood = {};
     for (final entry in moodData) {
-      final dt = _parseDateLocal(entry['created_at']);
+      final dt = DateHelper.parseLocal(entry['created_at']);
       if (dt != null) {
         daysWithMood.add(DateFormat('yyyy-MM-dd').format(dt));
       }
@@ -584,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     for (int i = 0; i < 7; i++) {
       final targetDate = monday.add(Duration(days: i));
       final dayEntries = moodData.where((e) {
-        final dt = _parseDateLocal(e['created_at']);
+        final dt = DateHelper.parseLocal(e['created_at']);
         return dt != null &&
             dt.year == targetDate.year &&
             dt.month == targetDate.month &&
@@ -675,16 +676,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-  DateTime? _parseDateLocal(dynamic created) {
-    if (created == null) return null;
-    try {
-      final str = created.toString();
-      final dt = DateTime.parse(str);
-      return dt.isUtc ? dt.toLocal() : (str.endsWith('Z') || str.contains('+') ? dt.toLocal() : DateTime.parse('${str}Z').toLocal());
-    } catch (_) {
-      return null;
-    }
-  }
 
   Future<void> _fetchUnreadCount() async {
     final connectivity = ConnectivityService();
