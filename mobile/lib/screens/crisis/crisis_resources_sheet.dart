@@ -20,6 +20,37 @@ class _CrisisResourcesSheetState extends State<CrisisResourcesSheet> {
   static const List<Map<String, dynamic>> _fallbackHotlines = CrisisDefaults.fallbackHotlines;
 
   List<Map<String, dynamic>> _hotlines = [];
+  String _selectedCategory = 'all'; // 'all', 'campus', 'national', 'emergency'
+
+  Widget _buildCategoryChip(String label, String category, Color activeColor) {
+    final isSelected = _selectedCategory == category;
+    return GestureDetector(
+      onTap: () {
+        HapticService.lightTap();
+        setState(() => _selectedCategory = category);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -53,6 +84,11 @@ class _CrisisResourcesSheetState extends State<CrisisResourcesSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredHotlines = _hotlines.where((h) {
+      if (_selectedCategory == 'all') return true;
+      return (h['category'] ?? 'national').toString().toLowerCase() == _selectedCategory;
+    }).toList();
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -103,19 +139,37 @@ class _CrisisResourcesSheetState extends State<CrisisResourcesSheet> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildCategoryChip('All (${_hotlines.length})', 'all', AppColors.primary),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('🏫 Campus Guidance', 'campus', const Color(0xFF0284C7)),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('🇵🇭 National 24/7', 'national', const Color(0xFF16A34A)),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('🚑 911 Emergency', 'emergency', const Color(0xFFDC2626)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             const Divider(height: 1),
             ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.58,
+                maxHeight: MediaQuery.of(context).size.height * 0.56,
               ),
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 shrinkWrap: true,
-                itemCount: _hotlines.length,
+                itemCount: filteredHotlines.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
-                  final hotline = _hotlines[index];
+                  final hotline = filteredHotlines[index];
                   final isSms = hotline['type'] == 'sms';
                   final category = hotline['category'] ?? 'national';
 
@@ -188,7 +242,7 @@ class _CrisisResourcesSheetState extends State<CrisisResourcesSheet> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                hotline['number'] ?? '',
+                                (hotline['number'] ?? hotline['phone'] ?? '').toString(),
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
                                   color: iconColor,
@@ -218,7 +272,7 @@ class _CrisisResourcesSheetState extends State<CrisisResourcesSheet> {
                           tooltip: 'Copy number',
                           onPressed: () {
                             HapticService.lightTap();
-                            final number = hotline['number'] ?? '';
+                            final number = (hotline['number'] ?? hotline['phone'] ?? '').toString();
                             Clipboard.setData(ClipboardData(text: number));
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
