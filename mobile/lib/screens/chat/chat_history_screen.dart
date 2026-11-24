@@ -26,6 +26,25 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   static const _storage = FlutterSecureStorage();
   bool _isLoading = true;
   List<Map<String, dynamic>> _sessions = [];
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  List<Map<String, dynamic>> get _filteredSessions {
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return _sessions;
+    return _sessions.where((s) {
+      final avatarName = (s['avatarName'] ?? '').toString().toLowerCase();
+      final dateStr = _formatSessionDate(s['date']?.toString()).toLowerCase();
+      final rawMsgs = s['messages'] as List? ?? [];
+      final matchesMsg = rawMsgs.any((m) {
+        if (m is Map) {
+          return (m['content'] ?? '').toString().toLowerCase().contains(q);
+        }
+        return false;
+      });
+      return avatarName.contains(q) || dateStr.contains(q) || matchesMsg;
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -163,9 +182,45 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     // Clear any active SnackBars when user leaves Chat History
     ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
     super.dispose();
+  }
+
+  Future<bool> _confirmDeleteSession(Map<String, dynamic> session) async {
+    final avatarName = session['avatarName']?.toString() ?? 'Kausap AI';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Delete Conversation?',
+          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          'Are you sure you want to delete this conversation with $avatarName? This action cannot be undone.',
+          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 40),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
   }
 
   Future<void> _deleteSession(Map<String, dynamic> session) async {
@@ -278,9 +333,12 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
         ),
         centerTitle: true,
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: KausapColors.accent(context)))
-          : _sessions.isEmpty
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: _isLoading
+              ? Center(child: CircularProgressIndicator(color: KausapColors.accent(context)))
+              : _sessions.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -321,11 +379,61 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                     ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  itemCount: _sessions.length,
-                  itemBuilder: (context, idx) {
-                    final session = _sessions[idx];
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (v) => setState(() => _searchQuery = v),
+                        decoration: InputDecoration(
+                          hintText: 'Search conversations by companion or message...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.5,
+                            color: KausapColors.textMuted(context),
+                          ),
+                          prefixIcon: Icon(Icons.search_rounded, size: 18, color: KausapColors.textMuted(context)),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear_rounded, size: 16, color: KausapColors.textMuted(context)),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: KausapColors.cardBg(context),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: KausapColors.border(context)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: KausapColors.border(context)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: _filteredSessions.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No matching conversations found.',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13.5,
+                                  color: KausapColors.textMuted(context),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              itemCount: _filteredSessions.length,
+                              itemBuilder: (context, idx) {
+                                final session = _filteredSessions[idx];
                     final dateStr = _formatSessionDate(session['date'] as String?);
                     final avatarName = session['avatarName'] as String? ?? 'Kausap AI';
                     final rawMsgs = session['messages'] as List? ?? [];
@@ -350,6 +458,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                         ),
                         child: const Icon(Icons.delete_rounded, color: Colors.white),
                       ),
+                      confirmDismiss: (_) => _confirmDeleteSession(session),
                       onDismissed: (_) => _deleteSession(session),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -417,7 +526,11 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
                               tooltip: 'Delete this chat',
-                              onPressed: () => _deleteSession(session),
+                              onPressed: () async {
+                                if (await _confirmDeleteSession(session)) {
+                                  _deleteSession(session);
+                                }
+                              },
                             ),
                             onTap: () {
                               if (widget.onResumeSession != null) {
@@ -434,8 +547,13 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                         ),
                       ),
                     );
-                  },
+                              },
+                            ),
+                    ),
+                  ],
                 ),
+        ),
+      ),
     );
   }
 }
