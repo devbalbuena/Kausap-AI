@@ -90,9 +90,37 @@ def test_security_headers_on_health_endpoint() -> None:
     assert "geolocation=()" in (res.headers.get("Permissions-Policy") or "")
 
 
+def test_audit_log_detail_and_article_reaction_emojis() -> None:
+    import uuid
+    import inspect
+    from app.models.audit_log import AuditLog
+    from app.routers import crisis, articles
+
+    # 1. Verify AuditLog.detail is properly populated and crisis.py uses detail=
+    crisis_src = inspect.getsource(crisis)
+    assert "details_json=" not in crisis_src, "crisis.py should use AuditLog.detail, not details_json"
+    assert "detail=" in crisis_src
+
+    log = AuditLog(
+        admin_id=uuid.uuid4(),
+        admin_email="counselor@urios.edu.ph",
+        action="CREATE_HOTLINE",
+        target_type="EmergencyHotline",
+        target_id="fsuu-default-1",
+        detail='{"name": "FSUU Guidance", "phone": "(085) 342-1830", "category": "campus"}',
+    )
+    assert log.detail is not None and "FSUU Guidance" in log.detail
+
+    # 2. Verify all 8 mobile article reaction emojis are allowed in articles.py
+    articles_src = inspect.getsource(articles.react_to_article)
+    for emoji in ["💡", "❤️", "🌿", "👏", "😢", "😮", "🤗", "💪"]:
+        assert emoji in articles_src, f"Expected mobile reaction emoji {emoji} in react_to_article"
+
+
 if __name__ == "__main__":
     test_chat_and_journal_sanitization()
     test_mood_and_hotline_validation()
     test_cors_origin_regex()
     test_security_headers_on_health_endpoint()
-    print("ALL SECURITY, VALIDATION & CORS TESTS PASSED!")
+    test_audit_log_detail_and_article_reaction_emojis()
+    print("ALL SECURITY, VALIDATION, AUDIT & CORS TESTS PASSED!")
